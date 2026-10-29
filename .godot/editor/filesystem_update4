@@ -1,0 +1,12 @@
+res://scripts/sandbox/sandbox_map_view.gd
+res://scripts/sandbox/sandbox_hero.gd
+res://scripts/ui/roster_screen.gd
+res://scripts/ui/ui_kit.gd
+res://scripts/sandbox/sandbox_screen.gd
+res://scripts/core/sprite_composer.gd
+res://scripts/data/hero_tables.gd
+res://scripts/sandbox/skill_tables.gd
+res://tests/smoke_mission.gd
+res://scripts/core/hero_data.gd
+res://scripts/core/hero_generator.gd
+res://tests/test_core.gd

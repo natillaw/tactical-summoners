@@ -1,0 +1,9 @@
+description = "Start a Tactical Summoners session: read the lite context, state STATE_HASH, task and a 5-line plan"
+prompt = """
+Read CONTEXT_LITE.md in the project root (do not read other docs unless the task needs one; name the exact file if so).
+Then reply with ONLY:
+1. The STATE_HASH.
+2. The single task you will work on{{args}} (if no task was given above, choose the first open task in the board and say why).
+3. A 5-line plan.
+Then stop and wait for my OK. Do not edit any file yet.
+"""
