@@ -375,7 +375,7 @@ func _update_mission(delta: float) -> void:
 			for clue in clues:
 				if clue.visible and heroes.any(func(h): return h.alive and h.position.distance_to(clue.position) <= CLUE_RADIUS):
 					clue.visible = false
-			if clues.all(func(c): return not c.visible) and heroes.any(func(h): return h.alive and h.position.distance_to(map.center_of(map.extract_cell)) <= EXTRACT_RADIUS):
+			if clues.all(func(c): return not c.visible):
 				_end_mission(Mission.SUCCESS)
 				return
 		"survival", "defense":
@@ -638,7 +638,7 @@ func _objective_text() -> String:
 			return "defeat the Orc Chieftain"
 		"exploration":
 			var left := clues.filter(func(c): return c.visible).size()
-			return "discover the clues (%d left)" % left if left > 0 else "return to EXTRACT"
+			return "discover the clues (%d left)" % left
 		"survival":
 			return "survive %d s" % maxi(0, int(SURVIVE_TIME - mission_timer))
 		"defense":
