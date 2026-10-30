@@ -43,3 +43,15 @@ Retrato y marco para 5 ranuras numeradas; iconos de habilidad con overlay de coo
 
 ## Carpetas sugeridas
 `assets/_inbox/` → (`tools/Import-Asset.ps1`) → `assets/pixel/{characters,enemies,tilesets,ui,effects}/`.
+
+## Lista de deseos para mejorar pueblo y bosque (investigado 2026-10-30; NO descargado)
+La red de la sesión en la nube no permite itch.io ni OpenGameArt, así que el dueño los descarga y los deja en `assets/_inbox/`. Antes de usarlos hay que leer la licencia en la página de cada uno.
+| Prioridad | Pack | Para qué | Enlace | Licencia (según la búsqueda; verificar) |
+|---|---|---|---|---|
+| 1 | Tiny Pixel Fantasy – Base Pack (Caz, el mismo artista de los héroes) | Casas y exteriores de pueblo, bosque y pradera, cuevas y castillos, con el mismo estilo que los héroes | https://cazwolf.itch.io/tiny-pixel-fantasy1 | "Name your own price" (se puede pagar 0); EULA del autor |
+| 2 | Pixel Fantasy Tiles – Basics (Caz) | Tiles básicos complementarios del mismo autor | https://cazwolf.itch.io/pixel-fantasy-tiles-basics | Verificar |
+| 3 | Adventure Awaits Asset Pack 10 | 16×16 top-down: 2 árboles y 3 casas | https://opengameart.org/content/adventure-awaits-asset-pack-10 | CC0 |
+| 4 | Free Forest Tilesets (Ulerinn) | Tiles de bosque de 16, 32 y 48 px | https://ulerinn.itch.io/free-forest-tilesets | CC0 |
+| 5 | Pixel Village (fin-nio) | 6 casas y 3 árboles (tiles de 8×8) | https://fin-nio.itch.io/pixel-village | Uso comercial y no comercial permitido |
+| — | The Fantasy Tileset (Ventilatore) | 7 árboles × 5 colores y 6 casas con puertas animadas | https://ventilatore.itch.io/the-fantasy-tileset | Precio y licencia sin confirmar |
+Hasta que lleguen, árboles, arbustos, rocas, flores, casas y el pozo se dibujan por código (`scripts/sandbox/proc_art.gd`).
