@@ -144,6 +144,7 @@ func _nearest_hero(heroes: Array) -> SandboxHero:
 
 func _strike(heroes: Array) -> void:
     _do_lunge()
+    CombatVFX.spawn_strip16(get_parent(), _aim + Vector2(0, -12), "spritepilot-combat-pack", "claw-slash-16px_strip8.png")
     for h in heroes:
         if h.alive and h.position.distance_to(_aim) <= strike_radius:
             h.take_damage(CombatRules.damage(atk, int(h.hero.get_stats()["def"])), self)
