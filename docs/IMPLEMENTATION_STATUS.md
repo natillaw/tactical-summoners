@@ -32,11 +32,12 @@ Leyenda: **I** implementado (sin ejecutar) · **ID** implementado pero defectuos
 | 1 habilidad activa por clase (Q) | I | `scripts/sandbox/skill_tables.gd` | La biblioteca D-022 no existe (F-010) |
 | Misión "Recover the relic" | I (v2, probado) | `sandbox_screen.gd` | Relicario en `map.relic_cell`, extracción en `map.extract_cell` (F-003/F-013 reparados) |
 | Torre pisos 1-10 + mapa procedural | P (v2, probado por `smoke_tower` en pisos 1/5/10) | `scripts/core/tower_expedition.gd`, `procedural_map.gd` | F-002 reparado. Falta selector de piso en la UI y misiones por tipo (F-020) |
-| HQ (pantalla de asignación + producción fija) | P | `scripts/ui/hq_screen.gd`, `Game.process_headquarters_turn` | Sistemas paralelos `hq_facilities`/`town_buildings` (F-009) |
+| **Pueblo (pantalla inicial, D-030)** | I (v3, probado: `test_town`, `boot`, `tower` + capturas) | `scripts/ui/town_screen.gd`, `scripts/sandbox/town_*.gd`, `scripts/data/town_tables.gd` | 14 edificios con niveles; construir/mejorar con materiales; producción × nivel; save v6. Herrería/alquimia sin efecto hasta P-19/P-20 |
+| HQ (pantalla de asignación, desde el Ayuntamiento) | I | `scripts/ui/hq_screen.gd` | Producción depende del nivel del edificio |
 | HQ explorable | P (v2, probado: se construye sin errores) | `scripts/sandbox/hq_world.gd` | F-001 reparado (en v1 era error en ejecución; el juego sí arrancaba). Sin decorado (P-04) |
 | Animaciones en código (D-020) | I | `scripts/sandbox/hero_anim.gd`, `sprite_composer.gd` | No verificadas visualmente |
 | Sprites de enemigos y tiles (Pixel Crawler) | I | `enemy_sprites.gd`, `map_tiles.gd` | — |
-| VFX de combate | ID | `combat_vfx.gd` | Ruta inexistente (F-012) |
+| VFX de combate | I (v3) | `combat_vfx.gd` | F-012 reparado; efectos SpritePilot en ataques, habilidades y golpes enemigos |
 | Diálogo por rasgo al entrar | P | `hero_chatter.gd` | Siempre habla del relicario |
 | Personalidad de 8 dimensiones, síntesis, sacrificio, equipo, inventario, loot, afijos, sets, crafting, biomas, eventos, jefes, audio, fuente pixel | N | — | — |
 
