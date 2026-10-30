@@ -15,7 +15,7 @@ const DEATH_W := {"orc_warrior": 96, "skeleton_base": 96}     # every other mob:
 ## Used by the forest floors (TowerExpedition "foes"). Some creatures hop or fly instead of walking.
 const VOXEL_ROOT := "res://assets/packs/voxel-dungeon-pack-full/creatures/sheets/"
 const VOXEL_W := 64
-const VOXEL_SCALE := 0.8
+const VOXEL_SCALE := 1.0
 
 static var _cache: Dictionary = {}
 

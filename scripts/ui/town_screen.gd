@@ -169,10 +169,17 @@ func _show_panel(id: String) -> void:
         for res in produces:
             parts.append("+%d %s" % [int(produces[res]) * maxi(1, level), res])
         _panel_box.add_child(UIKit.label("Per worker each turn: " + ", ".join(parts), 14, UIKit.TEXT))
+    var experts: Array = (b.get("experts", []) as Array).map(func(p): return String(HeroTables.PROFESSIONS[p]["name"]))
+    if not experts.is_empty():
+        var ex := UIKit.label("Experts (x%d): %s" % [TownTables.EXPERT_MULT, ", ".join(experts)], 13, UIKit.MUTED)
+        ex.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        ex.custom_minimum_size = Vector2(300, 0)
+        _panel_box.add_child(ex)
     var workers: Array = []
     for hid in Game.heroes:
-        if (Game.heroes[hid] as HeroData).hq_assignment == id:
-            workers.append((Game.heroes[hid] as HeroData).hero_name.split(" ")[0])
+        var wh := Game.heroes[hid] as HeroData
+        if wh.hq_assignment == id:
+            workers.append(wh.hero_name.split(" ")[0] + (" (expert)" if TownTables.is_expert(id, wh.profession) else ""))
     if not workers.is_empty():
         _panel_box.add_child(UIKit.label("Workers: " + ", ".join(workers), 14, UIKit.TEXT))
     if level > 0 and String(b["open"]) == "tower":

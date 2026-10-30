@@ -20,6 +20,14 @@ const PICKUP_RADIUS := 40.0
 const EXTRACT_RADIUS := 56.0
 const REWARD_GEMS := 100          # placeholder rewards (T-020): real tuning comes with the economy
 const REWARD_STONES := 1
+const SURVIVE_TIME := 75.0        # survival: seconds to hold out
+const HOLD_TIME := 60.0           # defense: seconds a hero must stand at the shrine
+const SHRINE_RADIUS := 120.0
+const WAVE_EVERY := 12.0
+const WAVE_MAX_ALIVE := 14
+const CLUE_RADIUS := 56.0
+const MISSION_TITLES := {"retrieval": "Recover the relic", "combat": "Clear the floor", "rescue": "Rescue the villager",
+	"exploration": "Explore the forest", "survival": "Survive the onslaught", "defense": "Hold the shrine", "boss": "Defeat the chieftain"}
 
 var floor_number: int = 0
 var map: NavMap = null
@@ -28,6 +36,15 @@ var enemies: Array[SandboxEnemy] = []
 var selected: Array[SandboxHero] = []
 var mission_state: Mission = Mission.ACTIVE
 var relic: SandboxRelic
+var mission_type: String = "retrieval"      # from TowerExpedition (floor 0 = training ground relic)
+var mission_timer: float = 0.0
+var clues: Array[SandboxRelic] = []
+var shrine: SandboxRelic = null
+var boss: SandboxEnemy = null
+var reward: Dictionary = {}
+var _wave_timer: float = 0.0
+var _escort: AnimatedSprite2D = null           # rescued villager following its carrier
+var _rng := RandomNumberGenerator.new()
 var carrier: SandboxHero = null
 var defeated: int = 0
 var elapsed: float = 0.0
@@ -85,11 +102,14 @@ func _ready() -> void:
 	_viewport.add_child(camera)
 	camera.make_current()
 
-	relic = SandboxRelic.new()
+	mission_type = String(TowerExpedition.get_floor_config(floor_number)["mission"]) if floor_number > 0 else "retrieval"
+	_rng.seed = hash(floor_number) ^ 0x5eed
+	relic = SandboxRelic.new("captive" if mission_type == "rescue" else "relic")
 	relic.position = map.center_of(map.relic_cell)      # never the extraction cell (F-003)
 	_world.add_child(relic)
 	_build_squad()
 	_build_enemies()
+	_setup_mission()
 	_build_ui()
 	select_all()
 	group_view()
@@ -127,13 +147,54 @@ func _build_enemies() -> void:
 	if cells.is_empty():
 		cells = [Vector2i(10, 10)]
 	for i in cells.size():
-		var c: Vector2i = cells[i]
-		var e := SandboxEnemy.new()
-		e.setup_type(TowerExpedition.foe_for(floor_number, i) if floor_number > 0 else ENEMY_TYPES[i % ENEMY_TYPES.size()])
-		e.position = map.center_of(c)
-		e.died.connect(func(_e): defeated += 1)
-		_world.add_child(e)
-		enemies.append(e)
+		_spawn_enemy(cells[i], TowerExpedition.foe_for(floor_number, i) if floor_number > 0 else ENEMY_TYPES[i % ENEMY_TYPES.size()])
+
+
+func _spawn_enemy(c: Vector2i, type_id: String) -> SandboxEnemy:
+	var e := SandboxEnemy.new()
+	e.setup_type(type_id)
+	e.position = map.center_of(c)
+	e.died.connect(func(_e): defeated += 1)
+	_world.add_child(e)
+	enemies.append(e)
+	return e
+
+
+## Per-floor objective (D-031 floors use the mission type from TowerExpedition).
+func _setup_mission() -> void:
+	relic.visible = mission_type == "retrieval" or mission_type == "rescue"
+	match mission_type:
+		"boss":
+			if not enemies.is_empty():
+				boss = enemies[0]
+				boss.make_boss()
+		"exploration":
+			var spots: Array[Vector2i] = []
+			for c in map.treasure_cells + map.enemy_spawn_cells:
+				if not spots.has(c) and Vector2(c).distance_to(Vector2(map.extract_cell)) > 8.0:
+					spots.append(c)
+			spots.append(map.relic_cell)
+			for i in mini(3, spots.size()):
+				var clue := SandboxRelic.new("clue")
+				clue.position = map.center_of(spots[spots.size() - 1 - i])
+				_world.add_child(clue)
+				clues.append(clue)
+		"defense":
+			shrine = SandboxRelic.new("shrine")
+			shrine.position = map.center_of(map.extract_cell) + Vector2(0, -40)
+			_world.add_child(shrine)
+
+
+func mission_title() -> String:
+	return String(MISSION_TITLES.get(mission_type, MISSION_NAME))
+
+
+func _spawn_wave() -> void:
+	if living_enemies().size() >= WAVE_MAX_ALIVE or map.enemy_spawn_cells.is_empty():
+		return
+	for i in 2:
+		var c: Vector2i = map.enemy_spawn_cells[_rng.randi() % map.enemy_spawn_cells.size()]
+		_spawn_enemy(c, TowerExpedition.foe_for(floor_number, _rng.randi()))
 
 
 func living_heroes() -> Array:
@@ -152,8 +213,13 @@ func _build_ui() -> void:
 
 	var panel := PanelContainer.new()
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.position = Vector2(12, 56)
+	panel.modulate = Color(1, 1, 1, 0.88)
 	add_child(panel)
+	# bottom-left so the map and the heroes' speech stay visible
+	panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	panel.offset_left = 12
+	panel.offset_bottom = -44
 	var pv := VBoxContainer.new()
 	pv.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(pv)
@@ -296,6 +362,43 @@ func tick(delta: float) -> void:
 
 func _update_mission(delta: float) -> void:
 	elapsed += delta
+	match mission_type:
+		"combat":
+			if living_enemies().is_empty():
+				_end_mission(Mission.SUCCESS)
+				return
+		"boss":
+			if boss != null and not boss.alive:
+				_end_mission(Mission.SUCCESS)
+				return
+		"exploration":
+			for clue in clues:
+				if clue.visible and heroes.any(func(h): return h.alive and h.position.distance_to(clue.position) <= CLUE_RADIUS):
+					clue.visible = false
+			if clues.all(func(c): return not c.visible) and heroes.any(func(h): return h.alive and h.position.distance_to(map.center_of(map.extract_cell)) <= EXTRACT_RADIUS):
+				_end_mission(Mission.SUCCESS)
+				return
+		"survival", "defense":
+			_wave_timer += delta
+			if _wave_timer >= WAVE_EVERY:
+				_wave_timer = 0.0
+				_spawn_wave()
+			if mission_type == "survival":
+				mission_timer += delta
+			elif heroes.any(func(h): return h.alive and h.position.distance_to(shrine.position) <= SHRINE_RADIUS):
+				mission_timer += delta
+				shrine.progress = clampf(mission_timer / HOLD_TIME, 0.0, 1.0)
+			if mission_timer >= (SURVIVE_TIME if mission_type == "survival" else HOLD_TIME) and not living_heroes().is_empty():
+				_end_mission(Mission.SUCCESS)
+				return
+	if mission_type != "retrieval" and mission_type != "rescue":
+		if living_heroes().is_empty():
+			_end_mission(Mission.FAILED)
+		return
+	if _escort != null:
+		_escort.visible = carrier != null
+		if carrier != null:
+			_escort.position = carrier.position + Vector2(-20, 6)
 	if carrier == null and relic.visible:
 		for h in heroes:
 			if h.alive and h.position.distance_to(relic.position) <= PICKUP_RADIUS:
@@ -303,6 +406,12 @@ func _update_mission(delta: float) -> void:
 				h.carrying = true
 				h.queue_redraw()
 				relic.visible = false
+				if mission_type == "rescue" and _escort == null:
+					_escort = AnimatedSprite2D.new()
+					_escort.sprite_frames = CazArt.villager_frames(3)
+					_escort.offset = Vector2(0, -16)
+					_world.add_child(_escort)
+					_escort.play("idle_down")
 				break
 	if carrier != null and carrier.position.distance_to(map.center_of(map.extract_cell)) <= EXTRACT_RADIUS:
 		_end_mission(Mission.SUCCESS)
@@ -320,7 +429,7 @@ func _on_hero_died(h: SandboxHero) -> void:
 		relic.position = h.position
 		relic.visible = true
 	var cause := "Slain by %s" % h.killed_by if h.killed_by != "" else "Fell in battle"
-	Game.record_death(h.hero, cause, MISSION_NAME)
+	Game.record_death(h.hero, cause, mission_title() if floor_number > 0 else MISSION_NAME)
 
 
 func _end_mission(state: Mission) -> void:
@@ -329,21 +438,29 @@ func _end_mission(state: Mission) -> void:
 		h.stop()
 	if state == Mission.SUCCESS and real_squad and not reward_given:
 		reward_given = true
-		Game.grant(REWARD_GEMS, REWARD_STONES, 0)
+		if floor_number > 0:
+			reward = Game.complete_floor(floor_number)
+		else:
+			Game.grant(REWARD_GEMS, REWARD_STONES, 0)
 	_show_result()
 
 
 func result_text() -> String:
 	var lines: Array = []
 	lines.append("MISSION COMPLETE" if mission_state == Mission.SUCCESS else "MISSION FAILED")
-	lines.append(MISSION_NAME)
+	lines.append(mission_title() if floor_number > 0 else MISSION_NAME)
 	lines.append("Time: %d:%02d" % [floori(elapsed / 60.0), int(elapsed) % 60])
 	lines.append("Enemies defeated: %d / %d" % [defeated, enemies.size()])
 	lines.append("Survivors: %d / %d" % [living_heroes().size(), heroes.size()])
 	if not fallen.is_empty():
 		lines.append("Fallen (permanent): %s" % ", ".join(fallen))
 	if mission_state == Mission.SUCCESS:
-		lines.append("Reward: %d gems, %d stone (placeholder)" % [REWARD_GEMS, REWARD_STONES] if real_squad else "Reward: none (test squad)")
+		if not real_squad:
+			lines.append("Reward: none (test squad)")
+		elif floor_number > 0:
+			lines.append("Reward: %d gems, %d stones, %d materials, %d books" % [int(reward.get("gems", 0)), int(reward.get("stones", 0)), int(reward.get("materials", 0)), int(reward.get("books", 0))])
+		else:
+			lines.append("Reward: %d gems, %d stone (placeholder)" % [REWARD_GEMS, REWARD_STONES])
 	return "\n".join(lines)
 
 
@@ -514,6 +631,20 @@ func _objective_text() -> String:
 			return "complete"
 		Mission.FAILED:
 			return "failed"
+	match mission_type:
+		"combat":
+			return "defeat every enemy (%d left)" % living_enemies().size()
+		"boss":
+			return "defeat the Orc Chieftain"
+		"exploration":
+			var left := clues.filter(func(c): return c.visible).size()
+			return "discover the clues (%d left)" % left if left > 0 else "return to EXTRACT"
+		"survival":
+			return "survive %d s" % maxi(0, int(SURVIVE_TIME - mission_timer))
+		"defense":
+			return "keep a hero at the shrine (%d%%)" % int(shrine.progress * 100.0)
+		"rescue":
+			return "escort the villager to EXTRACT" if carrier != null else "find the villager calling for help"
 	if carrier != null:
 		return "carry the relic to EXIT"
 	if map is SandboxMap:

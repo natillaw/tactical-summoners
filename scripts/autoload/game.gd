@@ -5,7 +5,7 @@ extends Node
 signal changed
 
 const DEFAULT_SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 6
+const SAVE_VERSION := 7
 const PARTY_SIZE := 5            # slots 0-2 = front row, slots 3-4 = back row
 const XP_PER_BOOK := 100
 
@@ -25,7 +25,8 @@ var memorial: Array = []         # fallen heroes, oldest first, NEVER capped or 
 var _signatures: Dictionary = {} # appearance signatures already owned -> no duplicate looks
 var hq_outputs: Dictionary = {"food": 50, "materials": 50, "medicine": 50}
 var town_buildings: Dictionary = TownTables.start_levels()   # building id -> level (0 = not built), D-030
-var tower_maps: Dictionary = {} # floor_num (str) -> {"seed": int, "width": int, "height": int, "grid_rows": Array}
+var tower_maps: Dictionary = {}
+var tower_cleared: Dictionary = {}   # floor (str) -> times completed (D-031: every floor is unlocked) # floor_num (str) -> {"seed": int, "width": int, "height": int, "grid_rows": Array}
 
 
 func _ready() -> void:
@@ -273,6 +274,20 @@ func get_or_create_tower_floor_map(floor_num: int) -> ProceduralMap:
         return pmap
 
 
+## Floor completion reward (owner: "sí" to quick progression, 2026-10-30). Placeholder numbers:
+## deeper floors pay more materials (for town buildings), stones (promotion) and gems; even floors give a book.
+func complete_floor(floor_num: int) -> Dictionary:
+    var r := {"gems": 50 * floor_num, "stones": 1 + floor_num / 4, "materials": 20 + floor_num * 10, "books": 1 if floor_num % 2 == 0 else 0}
+    var key := str(floor_num)
+    tower_cleared[key] = int(tower_cleared.get(key, 0)) + 1
+    gems += int(r["gems"])
+    stones += int(r["stones"])
+    books += int(r["books"])
+    hq_outputs["materials"] = int(hq_outputs.get("materials", 0)) + int(r["materials"])
+    _commit()
+    return r
+
+
 func process_headquarters_turn() -> Dictionary:
     var summary := {"food_produced": 0, "materials_produced": 0, "medicine_produced": 0, "events": 0}
     var facility_workers := {}
@@ -291,8 +306,9 @@ func process_headquarters_turn() -> Dictionary:
             var worker := w as HeroData
             if level <= 0:
                 continue                     # assigned to a building that is not built yet
+            var mult := TownTables.EXPERT_MULT if TownTables.is_expert(String(fac), worker.profession) else 1
             for res in produces:
-                var amount: int = int(produces[res]) * level
+                var amount: int = int(produces[res]) * level * mult
                 hq_outputs[res] = int(hq_outputs.get(res, 0)) + amount
                 summary[String(res) + "_produced"] = int(summary.get(String(res) + "_produced", 0)) + amount
             worker.add_memory("work_" + String(fac), "Worked at the %s." % String(TownTables.info(String(fac)).get("name", fac)), "", 1)
@@ -329,6 +345,7 @@ func new_game() -> void:
     hq_outputs = {"food": 50, "materials": 50, "medicine": 50}
     town_buildings = TownTables.start_levels()
     tower_maps.clear()
+    tower_cleared.clear()
     SpriteComposer.clear_cache()
     _commit()
 
@@ -360,6 +377,7 @@ func save_game() -> bool:
         "hq_outputs": hq_outputs,
         "town_buildings": town_buildings,
         "tower_maps": tower_maps,
+        "tower_cleared": tower_cleared,
     }
     return _write_atomic(JSON.stringify(data))
 
@@ -439,6 +457,7 @@ func apply_save(data: Dictionary) -> void:
     hq_outputs = HeroData.intify(data.get("hq_outputs", {"food": 50, "materials": 50, "medicine": 50}) as Dictionary)
     town_buildings = HeroData.intify(data.get("town_buildings", TownTables.start_levels()) as Dictionary)
     tower_maps = HeroData.intify(data.get("tower_maps", {}) as Dictionary)
+    tower_cleared = HeroData.intify(data.get("tower_cleared", {}) as Dictionary)
 
 
 ## Old save versions get upgraded here when the format changes.
@@ -467,5 +486,7 @@ func _migrate(data: Dictionary) -> Dictionary:
                 tb[bid] = int(old_fac.get(bid, TownTables.info(bid)["start"]))
         data["town_buildings"] = tb
         data.erase("hq_facilities")
+    if v < 7:
+        data["tower_cleared"] = {}      # v6 -> v7: tower floor completions
     data["version"] = SAVE_VERSION
     return data

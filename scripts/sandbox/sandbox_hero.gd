@@ -300,9 +300,27 @@ func _draw() -> void:
 	var font := ThemeDB.fallback_font
 	draw_string(font, Vector2(-4, -52), str(slot + 1), HORIZONTAL_ALIGNMENT_CENTER, -1, 14, col)
 	if chatter_timer > 0.0 and chatter_text != "":
-		var text_w: float = font.get_string_size(chatter_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x + 16
-		var box_rect := Rect2(-text_w * 0.5 - 8, -85, text_w + 16, 26)
-		draw_rect(box_rect, Color(0.1, 0.1, 0.15, 0.9))
-		draw_rect(box_rect, Color(0.6, 0.7, 0.9, 0.8), false, 1.5)
-		draw_colored_polygon(PackedVector2Array([Vector2(-4, -59), Vector2(4, -59), Vector2(0, -52)]), Color(0.1, 0.1, 0.15, 0.9))
-		draw_string(font, Vector2(-text_w * 0.5, -68), chatter_text, HORIZONTAL_ALIGNMENT_CENTER, text_w + 16, 12, Color.WHITE)
+		var lines := _wrap_words(chatter_text, 28)
+		var widest := 0.0
+		for ln in lines:
+			widest = maxf(widest, font.get_string_size(ln, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x)
+		var box := Rect2(-widest * 0.5 - 6, -62 - 14 * lines.size(), widest + 12, 14 * lines.size() + 6)
+		draw_rect(box, Color(0.98, 0.97, 0.92, 0.95))
+		draw_rect(box, Color(0.2, 0.18, 0.15), false, 1.0)
+		draw_colored_polygon(PackedVector2Array([Vector2(-4, -56), Vector2(4, -56), Vector2(0, -51)]), Color(0.98, 0.97, 0.92))
+		for k in lines.size():
+			draw_string(font, Vector2(-widest * 0.5, box.position.y + 13 + k * 14), lines[k], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.15, 0.12, 0.1))
+
+
+static func _wrap_words(text: String, width: int) -> Array:
+	var out: Array = []
+	var cur := ""
+	for w in text.split(" "):
+		if cur.length() + w.length() + 1 > width and cur != "":
+			out.append(cur)
+			cur = w
+		else:
+			cur = w if cur == "" else cur + " " + w
+	if cur != "":
+		out.append(cur)
+	return out
