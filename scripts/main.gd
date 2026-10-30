@@ -60,6 +60,16 @@ func show_screen(screen: String) -> void:
         "sandbox":
             s = SandboxScreen.new()
             s.back_requested.connect(show_screen.bind("menu"))
+        "hq":
+            var hq_screen := HQScreen.new()
+            hq_screen.back_requested.connect(show_screen.bind("menu"))
+            hq_screen.explore_requested.connect(show_screen.bind("hq_world"))
+            s = hq_screen
+        "hq_world":
+            var world := HQWorld.new()
+            world.back_requested.connect(show_screen.bind("hq"))
+            _content.add_child(world)
+            return
         _:
             s = MainMenu.new()
             s.navigate.connect(show_screen)

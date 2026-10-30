@@ -75,3 +75,16 @@ Project: `tactical_summoners/` (Godot 4.x, GDScript, UI built in code). Run `too
 - Mission "Recover the relic": relic in far room (cell 32,3), carrier extracts at EXIT (36,12); relic drops where its carrier falls; result screen; placeholder reward (100 gems, 1 stone) only for the real saved party.
 - Permanent death: `Game.record_death` removes the hero from roster/party, writes `Game.memorial` (never capped), survivors -2 Trust (`ally_fell`). Save v3 adds `memorial` (v2 migrates to empty). `MemorialScreen` from the main menu.
 - Tests added: `test_memorial`, `smoke_combat`, `smoke_mission`; `Run-Tests.ps1` now runs 7 suites.
+
+## Phase 2 — Hero Simulation & Living Headquarters (2026-10-29)
+- **Persistent Memories:** `HeroData.memories` records structured event-driven memories (summoned, customized, worked HQ, witnessed death) with importance and timestamps, capped at 50 per hero.
+- **Hero Relationships:** `HeroData.relationships` tracks interpersonal dynamics between heroes with dynamic status tiers (`unfamiliar`, `acquaintance`, `friend`, `trusted_ally`, `hostile`) updated via shared work and mission events.
+- **Living Headquarters & Facilities:** `Game` manages facility assignments (`hq_assignment`), activity states (`activity_state`), and `process_headquarters_turn()` which leverages past-life occupations (Chef, Blacksmith, Medic) to produce resources (`food`, `materials`, `medicine`) and build co-worker relationships.
+- **Save v4 & Migration:** Save version upgraded to 4, adding `hq_facilities`, `hq_outputs`, and migrating v3 saves seamlessly.
+- **Testing:** Added `tests/test_simulation.gd`. `Run-Tests.ps1` now executes 10 suites (`core`, `summons v2`, `ui smoke`, `sandbox`, `memorial v3`, `combat`, `mission`, `animation`, `art`, `simulation`), all 10 PASS.
+
+## Procedural Generation Repair & Integration (2026-10-29)
+- **Multi-Attempt Room Placement & Connectivity:** `ProceduralMap` now uses a multi-attempt placement algorithm with explicit retry limits and fallback generation, connected via sequential corridor carving and branching loops.
+- **Data-Driven Enemy Population & POIs:** Enemy spawn points (`enemy_spawn_cells`) and points of interest (`treasure_cells`) are populated according to floor configuration budgets (`TowerExpedition`).
+- **Reachability Validation & Navigation Safety:** Implemented `_validate_map()` to guarantee reachability from player start to goal, along with strict walkability checks in `find_path()` and `nearest_walkable()`.
+- **Testing:** Expanded `tests/test_procedural.gd` covering room generation, enemy population, POIs, pathfinding, determinism, and map persistence. All **12 automated test suites** pass successfully.

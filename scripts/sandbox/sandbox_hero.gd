@@ -92,12 +92,12 @@ func tick(delta: float) -> void:
 	if path.is_empty():
 		_play("idle_" + facing)
 		return
-	var target: Vector2 = path[0]
-	var to := target - position
+	var next_wp: Vector2 = path[0]
+	var to := next_wp - position
 	var dist := to.length()
 	var step := speed * delta
 	if dist <= step + ARRIVE_EPS:
-		position = target
+		position = next_wp
 		path.remove_at(0)
 	else:
 		var dir := to / dist
@@ -147,6 +147,7 @@ func combat_tick(enemies: Array, map: SandboxMap) -> void:
 		if _cooldown <= 0.0:
 			_cooldown = attack_interval()
 			_anim_lock = HeroAnim.play_attack(_sprite, facing, _side, is_ranged())
+			CombatVFX.spawn_effect(get_parent(), target.position, "spritepilot-combat-pack", "16px", "sword-slash-16px_strip7.png", 16, 16, 7, 2.5)
 			target.take_damage(attack_damage(target.defense), self)
 	elif path.is_empty() or auto_path:
 		var p := map.find_path(position, target.position)

@@ -1,0 +1,599 @@
+{
+  "image": "atlas.png",
+  "facings": {
+    "down": "toward the viewer",
+    "up": "away from the viewer",
+    "side": "facing right; flip for left"
+  },
+  "animations": {
+    "dagger_icon": {
+      "asset": "dagger",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          32,
+          32
+        ]
+      ]
+    },
+    "mace_icon": {
+      "asset": "mace",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          32,
+          32,
+          32
+        ]
+      ]
+    },
+    "bow_icon": {
+      "asset": "bow",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          64,
+          32,
+          32
+        ]
+      ]
+    },
+    "staff_icon": {
+      "asset": "staff",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          96,
+          32,
+          32
+        ]
+      ]
+    },
+    "staff_fire_icon": {
+      "asset": "staff_fire",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          128,
+          32,
+          32
+        ]
+      ]
+    },
+    "spear_icon": {
+      "asset": "spear",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          160,
+          32,
+          32
+        ]
+      ]
+    },
+    "warhammer_icon": {
+      "asset": "warhammer",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          192,
+          32,
+          32
+        ]
+      ]
+    },
+    "helmet_icon": {
+      "asset": "helmet",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          224,
+          32,
+          32
+        ]
+      ]
+    },
+    "chestplate_icon": {
+      "asset": "chestplate",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          256,
+          32,
+          32
+        ]
+      ]
+    },
+    "boots_icon": {
+      "asset": "boots",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          288,
+          32,
+          32
+        ]
+      ]
+    },
+    "ring_ruby_icon": {
+      "asset": "ring_ruby",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          320,
+          32,
+          32
+        ]
+      ]
+    },
+    "ring_silver_icon": {
+      "asset": "ring_silver",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          352,
+          32,
+          32
+        ]
+      ]
+    },
+    "amulet_emerald_icon": {
+      "asset": "amulet_emerald",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          384,
+          32,
+          32
+        ]
+      ]
+    },
+    "amulet_ruby_icon": {
+      "asset": "amulet_ruby",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          416,
+          32,
+          32
+        ]
+      ]
+    },
+    "scroll_icon": {
+      "asset": "scroll",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          448,
+          32,
+          32
+        ]
+      ]
+    },
+    "book_purple_icon": {
+      "asset": "book_purple",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          480,
+          32,
+          32
+        ]
+      ]
+    },
+    "book_red_icon": {
+      "asset": "book_red",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          512,
+          32,
+          32
+        ]
+      ]
+    },
+    "book_blue_icon": {
+      "asset": "book_blue",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          544,
+          32,
+          32
+        ]
+      ]
+    },
+    "coin_icon": {
+      "asset": "coin",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          576,
+          32,
+          32
+        ]
+      ]
+    },
+    "coin_stack_icon": {
+      "asset": "coin_stack",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          608,
+          32,
+          32
+        ]
+      ]
+    },
+    "gem_ruby_icon": {
+      "asset": "gem_ruby",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          640,
+          32,
+          32
+        ]
+      ]
+    },
+    "gem_emerald_icon": {
+      "asset": "gem_emerald",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          672,
+          32,
+          32
+        ]
+      ]
+    },
+    "gem_sapphire_icon": {
+      "asset": "gem_sapphire",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          704,
+          32,
+          32
+        ]
+      ]
+    },
+    "potion_red_icon": {
+      "asset": "potion_red",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          736,
+          32,
+          32
+        ]
+      ]
+    },
+    "potion_blue_icon": {
+      "asset": "potion_blue",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          768,
+          32,
+          32
+        ]
+      ]
+    },
+    "potion_green_icon": {
+      "asset": "potion_green",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          800,
+          32,
+          32
+        ]
+      ]
+    },
+    "potion_yellow_icon": {
+      "asset": "potion_yellow",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          832,
+          32,
+          32
+        ]
+      ]
+    },
+    "bread_icon": {
+      "asset": "bread",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          864,
+          32,
+          32
+        ]
+      ]
+    },
+    "meat_icon": {
+      "asset": "meat",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          896,
+          32,
+          32
+        ]
+      ]
+    },
+    "apple_red_icon": {
+      "asset": "apple_red",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          928,
+          32,
+          32
+        ]
+      ]
+    },
+    "apple_green_icon": {
+      "asset": "apple_green",
+      "animation": "icon",
+      "w": 32,
+      "h": 32,
+      "frameCount": 1,
+      "frameMs": 120,
+      "frameDurationsMs": [
+        120
+      ],
+      "rects": [
+        [
+          0,
+          960,
+          32,
+          32
+        ]
+      ]
+    }
+  }
+}

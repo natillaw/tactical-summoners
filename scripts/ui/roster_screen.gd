@@ -186,9 +186,20 @@ func _show_detail() -> void:
 	else:
 		_detail.add_child(_wrapped("No recorded past-life occupation.", 15, UIKit.MUTED))
 
+	# Phase 2 & 3: Simulation & Headquarters
+	_detail.add_child(UIKit.label("Simulation & Headquarters", 20, UIKit.ACCENT))
+	_detail.add_child(UIKit.label("HQ Assignment: %s" % (h.hq_assignment if h.hq_assignment != "" else "Idle / Quarters"), 15, UIKit.ACCENT))
+	_detail.add_child(UIKit.label("Memories recorded: %d" % h.memories.size(), 14, UIKit.MUTED))
+	for m in h.memories.slice(-3):
+		_detail.add_child(_wrapped("• [%s] %s" % [String(m["type"]).capitalize(), String(m["text"])], 13, UIKit.TEXT))
+	if h.discovered_secrets.size() > 0:
+		_detail.add_child(UIKit.label("Discovered Secrets: %d" % h.discovered_secrets.size(), 14, UIKit.ACCENT))
+		for sec in h.discovered_secrets:
+			_detail.add_child(_wrapped("• %s" % sec, 13, UIKit.TEXT))
 
-func _wrapped(text: String, size: int, color: Color) -> Label:
-	var l := UIKit.label(text, size, color)
+
+func _wrapped(text: String, p_size: int, color: Color) -> Label:
+	var l := UIKit.label(text, p_size, color)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.custom_minimum_size = Vector2(380, 0)
 	return l

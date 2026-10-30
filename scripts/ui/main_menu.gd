@@ -28,9 +28,7 @@ func _ready() -> void:
     vb.add_child(UIKit.button("Party", func(): navigate.emit("party"), Vector2(360, 56)))
     vb.add_child(UIKit.button("Memorial  (fallen heroes)", func(): navigate.emit("memorial"), Vector2(360, 56)))
     vb.add_child(UIKit.button("Sandbox  (real-time control test)", func(): navigate.emit("sandbox"), Vector2(360, 56)))
-    var tower := UIKit.button("Tower  (next drop)", func(): pass, Vector2(360, 56))
-    tower.disabled = true
-    vb.add_child(tower)
+    vb.add_child(UIKit.button("Living Headquarters", func(): navigate.emit("hq"), Vector2(360, 56)))
 
     _summary = UIKit.label("", 16, UIKit.MUTED)
     _summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

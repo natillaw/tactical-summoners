@@ -1,8 +1,8 @@
 description = "End a session: log entry, rebuild context files, run the consistency check"
 prompt = """
 Finish this session following AGENTS.md "End of every session":
-1. Run python tools/sync/ts_sync.py log --agent "Gemini" --did "..." --verified "..." --next "..." (fill the three fields honestly; "verified" must name the command you ran and its result, or say NOT RUN).
+1. Run python infos/tools/sync/ts_sync.py log --agent "Gemini" --did "..." --verified "..." --next "..." (fill the three fields honestly; "verified" must name the command you ran and its result, or say NOT RUN).
 2. Update docs/ai-context/CURRENT_STATE.md for what changed. Only tick ROADMAP items you verified.
-3. Run python tools/sync/ts_sync.py lite, then bundle, then check. If check reports errors, fix them.
+3. Run python infos/tools/sync/ts_sync.py lite, then bundle, then check. If check reports errors, fix them.
 4. Tell me the new STATE_HASH and list the files you changed. Do not run git push; I will do that.
 """

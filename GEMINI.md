@@ -1,6 +1,6 @@
 # GEMINI.md - Tactical Summoners
 
-@./AGENTS.md
+@./infos/AGENTS.md
 
 The shared protocol above (AGENTS.md) is mandatory. Everything below is extra for Gemini CLI.
 

@@ -12,13 +12,13 @@ const GOOD := Color(0.45, 0.85, 0.50)
 const BAD := Color(0.95, 0.40, 0.40)
 
 
-static func box(bg: Color, border: Color = Color(0, 0, 0, 0), border_w: int = 0, radius: int = 8, margin: int = 8) -> StyleBoxFlat:
+static func box(bg: Color, border: Color = Color(0, 0, 0, 0), border_w: int = 0, radius: int = 8, p_margin: int = 8) -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
 	s.bg_color = bg
 	s.border_color = border
 	s.set_border_width_all(border_w)
 	s.set_corner_radius_all(radius)
-	s.set_content_margin_all(margin)
+	s.set_content_margin_all(p_margin)
 	return s
 
 

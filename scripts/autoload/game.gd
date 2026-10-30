@@ -5,7 +5,7 @@ extends Node
 signal changed
 
 const DEFAULT_SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 3
+const SAVE_VERSION := 5
 const PARTY_SIZE := 5            # slots 0-2 = front row, slots 3-4 = back row
 const XP_PER_BOOK := 100
 
@@ -23,6 +23,10 @@ var pull_count: int = 0          # total summons ever done (global pull number)
 var summon_log: Array = []       # newest last, capped: lets any pull be reproduced from its seed
 var memorial: Array = []         # fallen heroes, oldest first, NEVER capped or edited (D-011)
 var _signatures: Dictionary = {} # appearance signatures already owned -> no duplicate looks
+var hq_facilities: Dictionary = {"kitchen": 1, "workshop": 1, "infirmary": 1, "common": 1}
+var hq_outputs: Dictionary = {"food": 50, "materials": 50, "medicine": 50}
+var town_buildings: Dictionary = {"town_hall": 1, "dorm_1": 1, "dorm_2": 1, "blacksmith": 1, "kitchen": 1, "infirmary": 1}
+var tower_maps: Dictionary = {} # floor_num (str) -> {"seed": int, "width": int, "height": int, "grid_rows": Array}
 
 
 func _ready() -> void:
@@ -43,7 +47,7 @@ func pull(count: int, banner_id: String = SummonConfig.DEFAULT_BANNER) -> Array:
         push_error("Summon banner '%s' is invalid: %s" % [banner_id, ", ".join(problems)])
         return []
     var cost := SummonConfig.cost_for(banner, count)
-    if gems < cost:
+    if gems < cost or not can_summon(count):
         return []
     gems -= cost
     var out: Array = []
@@ -58,6 +62,7 @@ func pull(count: int, banner_id: String = SummonConfig.DEFAULT_BANNER) -> Array:
         h.summon_index = pull_count
         h.origin_banner = banner_id
         h.add_event("summoned", {"banner": banner_id, "banner_version": int(banner["version"]), "pull": pull_count})
+        h.add_memory("summoned", "Summoned from the %s banner into the order." % banner_id, "", 2)
         heroes[h.id] = h
         _signatures[h.signature()] = true
         _log_pull(h, banner_id, int(banner["version"]), before4, before5)
@@ -190,9 +195,111 @@ func record_death(h: HeroData, cause: String = "", mission: String = "") -> bool
         if party[i] == h.id:
             party[i] = ""
     for other in party_heroes():
-        (other as HeroData).add_event("ally_fell", {"name": h.display_name()}, -2, 0)
+        var oh := other as HeroData
+        oh.add_event("ally_fell", {"name": h.display_name()}, -2, 0)
+        oh.add_memory("witnessed_death", "Witnessed the fall of %s in combat." % h.display_name(), h.id, 3)
+        oh.update_relationship(h.id, -5, "death")
     _commit()
     return true
+
+
+# --- headquarters & simulation (Phase 2 & Mega Prompt Town & Persistent Maps) --------
+
+func assign_hq(hero_id: String, facility: String) -> void:
+    if not heroes.has(hero_id):
+        return
+    var h: HeroData = heroes[hero_id]
+    h.hq_assignment = facility
+    h.activity_state = "working" if facility != "" else "resting"
+    h.add_memory("hq_assign", "Assigned to %s" % (facility if facility != "" else "Quarters"), "", 1)
+    _commit()
+
+
+func unassign_hq(hero_id: String) -> void:
+    assign_hq(hero_id, "")
+
+
+func max_hero_capacity() -> int:
+    var cap := 5 # base town population
+    for b_id in town_buildings:
+        if b_id.begins_with("dorm"):
+            cap += int(town_buildings[b_id]) * 5
+    return cap
+
+
+func can_summon(count: int) -> bool:
+    return heroes.size() + count <= max_hero_capacity()
+
+
+func upgrade_building(bid: String, cost: int) -> bool:
+    if hq_outputs.get("materials", 0) < cost:
+        return false
+    hq_outputs["materials"] -= cost
+    if not town_buildings.has(bid):
+        town_buildings[bid] = 1
+    else:
+        town_buildings[bid] = int(town_buildings[bid]) + 1
+    _commit()
+    return true
+
+
+func get_or_create_tower_floor_map(floor_num: int) -> ProceduralMap:
+    var f_key := str(floor_num)
+    if tower_maps.has(f_key):
+        var m_data: Dictionary = tower_maps[f_key]
+        var pmap := ProceduralMap.new(int(m_data["width"]), int(m_data["height"]), int(m_data["seed"]), floor_num)
+        return pmap
+    else:
+        var cfg := TowerExpedition.get_floor_config(floor_num)
+        var f_seed := rng.randi()
+        var pmap := ProceduralMap.new(int(cfg["width"]), int(cfg["height"]), f_seed, floor_num)
+        tower_maps[f_key] = {
+            "seed": f_seed,
+            "width": pmap.width,
+            "height": pmap.height,
+            "grid_rows": pmap.grid_rows.duplicate()
+        }
+        _commit()
+        return pmap
+
+
+func process_headquarters_turn() -> Dictionary:
+    var summary := {"food_produced": 0, "materials_produced": 0, "medicine_produced": 0, "events": 0}
+    var facility_workers := {}
+    for id in heroes:
+        var h: HeroData = heroes[id]
+        if h.hq_assignment != "":
+            if not facility_workers.has(h.hq_assignment):
+                facility_workers[h.hq_assignment] = []
+            (facility_workers[h.hq_assignment] as Array).append(h)
+    
+    for fac in facility_workers:
+        var workers: Array = facility_workers[fac]
+        for w in workers:
+            var worker := w as HeroData
+            match fac:
+                "kitchen":
+                    hq_outputs["food"] += 5
+                    summary["food_produced"] += 5
+                    worker.add_memory("work_kitchen", "Prepared provisions in the kitchen.", "", 1)
+                "workshop":
+                    hq_outputs["materials"] += 4
+                    summary["materials_produced"] += 4
+                    worker.add_memory("work_workshop", "Crafted tools and maintained gear in the workshop.", "", 1)
+                "infirmary":
+                    hq_outputs["medicine"] += 3
+                    summary["medicine_produced"] += 3
+                    worker.add_memory("work_infirmary", "Tended to the wounded in the infirmary.", "", 1)
+                "common", "training":
+                    worker.add_memory("work_common", "Spent time socializing and training in headquarters.", "", 1)
+            summary["events"] += 1
+            
+            for other in workers:
+                var o := other as HeroData
+                if o.id != worker.id:
+                    worker.update_relationship(o.id, 1, "hq_work")
+    _commit()
+    return summary
 
 
 # --- debug / reset ----------------------------------------------------------------
@@ -216,6 +323,10 @@ func new_game() -> void:
     heroes.clear()
     _signatures.clear()
     party = ["", "", "", "", ""]
+    hq_facilities = {"kitchen": 1, "workshop": 1, "infirmary": 1, "common": 1}
+    hq_outputs = {"food": 50, "materials": 50, "medicine": 50}
+    town_buildings = {"town_hall": 1, "dorm_1": 1, "dorm_2": 1, "blacksmith": 1, "kitchen": 1, "infirmary": 1}
+    tower_maps.clear()
     SpriteComposer.clear_cache()
     _commit()
 
@@ -244,6 +355,10 @@ func save_game() -> bool:
         "memorial": memorial,
         "party": party,
         "heroes": hero_list,
+        "hq_facilities": hq_facilities,
+        "hq_outputs": hq_outputs,
+        "town_buildings": town_buildings,
+        "tower_maps": tower_maps,
     }
     return _write_atomic(JSON.stringify(data))
 
@@ -320,6 +435,10 @@ func apply_save(data: Dictionary) -> void:
         var id := str(saved_party[i])
         if heroes.has(id):
             party[i] = id
+    hq_facilities = HeroData.intify(data.get("hq_facilities", {"kitchen": 1, "workshop": 1, "infirmary": 1, "common": 1}) as Dictionary)
+    hq_outputs = HeroData.intify(data.get("hq_outputs", {"food": 50, "materials": 50, "medicine": 50}) as Dictionary)
+    town_buildings = HeroData.intify(data.get("town_buildings", {"town_hall": 1, "dorm_1": 1, "dorm_2": 1, "blacksmith": 1, "kitchen": 1, "infirmary": 1}) as Dictionary)
+    tower_maps = HeroData.intify(data.get("tower_maps", {}) as Dictionary)
 
 
 ## Old save versions get upgraded here when the format changes.
@@ -332,5 +451,11 @@ func _migrate(data: Dictionary) -> Dictionary:
         data["summon_log"] = []
     if v < 3:
         data["memorial"] = []         # v2 -> v3: memorial of fallen heroes appears
+    if v < 4:
+        data["hq_facilities"] = {"kitchen": 1, "workshop": 1, "infirmary": 1, "common": 1}
+        data["hq_outputs"] = {"food": 50, "materials": 50, "medicine": 50}
+    if v < 5:
+        data["town_buildings"] = {"town_hall": 1, "dorm_1": 1, "dorm_2": 1, "blacksmith": 1, "kitchen": 1, "infirmary": 1}
+        data["tower_maps"] = {}
     data["version"] = SAVE_VERSION
     return data

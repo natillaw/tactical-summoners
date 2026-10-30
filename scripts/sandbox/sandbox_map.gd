@@ -1,7 +1,7 @@
 class_name SandboxMap
 extends RefCounted
 ## Fixed curated test map (T-004). "#" = wall, "." = floor. Pathfinding via AStarGrid2D.
-## Procedural worlds are deferred (D-003), so this stays a hand-made layout.
+## Provides full property compatibility with ProceduralMap (`spawn_cells`, `goal_cell`, `enemy_spawn_cells`).
 
 const CELL := 48
 const ROWS := [
@@ -32,10 +32,15 @@ const ROWS := [
 ]
 const SPAWN_CELLS := [Vector2i(3, 10), Vector2i(3, 11), Vector2i(3, 12), Vector2i(2, 11), Vector2i(4, 11)]
 const GOAL_CELL := Vector2i(36, 12)
+const ENEMY_CELLS := [Vector2i(20, 6), Vector2i(22, 9), Vector2i(24, 14), Vector2i(34, 10), Vector2i(35, 14)]
 
 var width: int
 var height: int
 var grid: AStarGrid2D
+var spawn_cells: Array[Vector2i] = SPAWN_CELLS
+var goal_cell: Vector2i = GOAL_CELL
+var enemy_spawn_cells: Array[Vector2i] = ENEMY_CELLS
+var treasure_cells: Array[Vector2i] = [Vector2i(15, 6)]
 
 
 func _init() -> void:

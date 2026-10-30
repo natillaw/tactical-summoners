@@ -26,11 +26,89 @@ var summon_index: int = 0         # global pull number when summoned (0 = unknow
 var trust: int = 50               # long-term, 0-100: belief that the commander protects/keeps promises
 var obedience: int = 50           # long-term, 0-100: command discipline
 var composure: int = 100          # short-term mission steadiness, 0-100 (resets between missions)
+# Simulation fields (Phase 2 & 3): memories, relationships, hq assignments, activity states, secrets
+var memories: Array = []          # [{"id": String, "type": String, "text": String, "time": int, "actor_id": String, "importance": int}]
+var relationships: Dictionary = {} # other_id -> {"level": int, "status": String, "interactions": int}
+var hq_assignment: String = ""    # "" or facility id ("kitchen", "workshop", "infirmary", "common", "training")
+var activity_state: String = "resting" # "resting", "working", "training", "recovering", "socializing"
+var discovered_secrets: Array = [] # secret IDs discovered
+var secret_clues: Array = []      # discovered clue strings
+
 # Structured event ledger: [{seq, type, trust, obedience, info}], newest last, capped.
 var events: Array = []
 var event_seq: int = 0
 
 const EVENT_CAP := 100
+const MEMORY_CAP := 50
+
+
+func add_memory(type: String, text: String, actor_id: String = "", importance: int = 1) -> void:
+    memories.append({
+        "id": "mem_%d_%d" % [Time.get_ticks_msec(), memories.size()],
+        "type": type,
+        "text": text,
+        "time": event_seq,
+        "actor_id": actor_id,
+        "importance": importance
+    })
+    while memories.size() > MEMORY_CAP:
+        memories.pop_front()
+
+
+func update_relationship(other_id: String, delta: int, _context: String = "") -> void:
+    if other_id == "" or other_id == id:
+        return
+    var rel: Dictionary
+    if relationships.has(other_id):
+        rel = (relationships[other_id] as Dictionary).duplicate()
+    else:
+        rel = {"level": 0, "status": "unfamiliar", "interactions": 0}
+    rel["level"] = clampi(int(rel["level"]) + delta, -100, 100)
+    rel["interactions"] = int(rel["interactions"]) + 1
+    var lvl: int = rel["level"]
+    if lvl < -25:
+        rel["status"] = "hostile"
+    elif lvl < 0:
+        rel["status"] = "acquaintance"
+    elif lvl <= 20:
+        rel["status"] = "acquaintance"
+    elif lvl <= 50:
+        rel["status"] = "friend"
+    else:
+        rel["status"] = "trusted_ally"
+    relationships[other_id] = rel
+
+
+func get_relationship(other_id: String) -> Dictionary:
+    if relationships.has(other_id):
+        return relationships[other_id]
+    return {"level": 0, "status": "unfamiliar", "interactions": 0}
+
+
+func discover_secret(secret_id: String, clue_text: String) -> bool:
+    if discovered_secrets.has(secret_id):
+        return false # idempotent protection against duplicate discovery rewards
+    discovered_secrets.append(secret_id)
+    if clue_text != "" and not secret_clues.has(clue_text):
+        secret_clues.append(clue_text)
+    add_memory("secret_discovery", "Discovered secret technique: %s" % secret_id, "", 3)
+    add_event("discovered_secret", {"secret_id": secret_id}, 5, 2)
+    return true
+
+
+func rescue_hero(other_hero: HeroData) -> void:
+    if other_hero == null or other_hero.id == id:
+        return
+    add_memory("rescue", "Rescued %s from mortal danger." % other_hero.display_name(), other_hero.id, 3)
+    update_relationship(other_hero.id, 15, "rescue")
+    add_event("rescued_ally", {"ally_id": other_hero.id}, 5, 0)
+
+
+func cooperate_with(other_hero: HeroData) -> void:
+    if other_hero == null or other_hero.id == id:
+        return
+    add_memory("cooperate", "Worked closely with %s." % other_hero.display_name(), other_hero.id, 2)
+    update_relationship(other_hero.id, 3, "cooperation")
 
 
 func base_display_name() -> String:
@@ -186,6 +264,12 @@ func to_dict() -> Dictionary:
         "composure": composure,
         "event_seq": event_seq,
         "events": events.duplicate(true),
+        "memories": memories.duplicate(true),
+        "relationships": intify(relationships.duplicate(true)),
+        "hq_assignment": hq_assignment,
+        "activity_state": activity_state,
+        "discovered_secrets": discovered_secrets.duplicate(),
+        "secret_clues": secret_clues.duplicate(),
     }
 
 
@@ -223,4 +307,10 @@ static func from_dict(d: Dictionary) -> HeroData:
         h.composure = 100
     h.events = intify(d.get("events", []) as Array)
     h.event_seq = int(d.get("event_seq", h.events.size()))
+    h.memories = intify(d.get("memories", []) as Array)
+    h.relationships = (d.get("relationships", {}) as Dictionary).duplicate()
+    h.hq_assignment = str(d.get("hq_assignment", ""))
+    h.activity_state = str(d.get("activity_state", "resting"))
+    h.discovered_secrets = (d.get("discovered_secrets", []) as Array).duplicate()
+    h.secret_clues = (d.get("secret_clues", []) as Array).duplicate()
     return h

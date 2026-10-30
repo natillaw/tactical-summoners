@@ -2,7 +2,8 @@
  Runs every headless test for Tactical Summoners. No editor needed.
    powershell -ExecutionPolicy Bypass -File tools\Run-Tests.ps1
  Optional: -Godot "C:\path\to\Godot_v4.x.exe"
- Prints one PASS/FAIL line per suite and writes tools\last_test_run.txt (give that file to the AI).
+ Prints one PASS/FAIL line per suite and writes tools\last_test_run.txt.
+ Strict verification of process exit codes and success markers.
 #>
 param([string]$Godot = "")
 $ErrorActionPreference = "Continue"
@@ -34,14 +35,18 @@ $suites = @(
   @{ name = "combat";        args = @("res://tests/smoke_combat.tscn", "--quit-after", "3000");         ok = "ALL PASSED" },
   @{ name = "mission";       args = @("res://tests/smoke_mission.tscn", "--quit-after", "3000");        ok = "ALL PASSED" },
   @{ name = "animation";     args = @("res://tests/smoke_anim.tscn", "--quit-after", "3000");           ok = "ALL PASSED" },
-  @{ name = "art";           args = @("res://tests/smoke_art.tscn", "--quit-after", "3000");            ok = "ALL PASSED" }
+  @{ name = "art";           args = @("res://tests/smoke_art.tscn", "--quit-after", "3000");            ok = "ALL PASSED" },
+  @{ name = "simulation";    args = @("--script", "res://tests/test_simulation.gd");                    ok = "ALL PASSED" },
+  @{ name = "deep systems";  args = @("--script", "res://tests/test_deep_systems.gd");                  ok = "ALL PASSED" },
+  @{ name = "procedural";    args = @("--script", "res://tests/test_procedural.gd");                    ok = "ALL PASSED" }
 )
 $bad = 0
 foreach ($s in $suites) {
   $out = & $Godot --headless --path . @($s.args) 2>&1 | Out-String
-  $pass = $out -match [regex]::Escape($s.ok) -and $out -notmatch "FAIL  " -and $out -notmatch "SCRIPT ERROR"
+  $exitCode = $LASTEXITCODE
+  $pass = ($exitCode -eq 0) -and ($out -match [regex]::Escape($s.ok)) -and ($out -notmatch "FAIL  ") -and ($out -notmatch "SCRIPT ERROR")
   if ($pass) { Write-Host ("PASS  " + $s.name) -ForegroundColor Green } else { Write-Host ("FAIL  " + $s.name) -ForegroundColor Red; $bad++ }
-  $log.Add("=== $($s.name): " + $(if ($pass) { "PASS" } else { "FAIL" }))
+  $log.Add("=== $($s.name): " + $(if ($pass) { "PASS" } else { "FAIL (exit=$exitCode)" }))
   if (-not $pass) { $log.Add(($out -split "`n" | Where-Object { $_ -match "FAIL|ERROR|Parse|SCRIPT" } | Select-Object -First 25) -join "`n") }
 }
 $log | Set-Content "tools\last_test_run.txt" -Encoding UTF8
