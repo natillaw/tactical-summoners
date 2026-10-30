@@ -1,5 +1,5 @@
 # Capturas de claude/tactical-summoners-audit-b3sqpo
-Commit `cd98b06` — 2026-10-30 20:37 UTC
+Commit `8d5a311` — 2026-10-30 20:46 UTC
 
 ## 01_town.png
 ![](01_town.png)
@@ -22,6 +22,9 @@ Commit `cd98b06` — 2026-10-30 20:37 UTC
 ## 02_summon.png
 ![](02_summon.png)
 
+## 03_floor10_squad.png
+![](03_floor10_squad.png)
+
 ## 03_floor1_squad.png
 ![](03_floor1_squad.png)
 
@@ -36,6 +39,9 @@ Commit `cd98b06` — 2026-10-30 20:37 UTC
 
 ## 03_floor5_squad.png
 ![](03_floor5_squad.png)
+
+## 04_floor10_map.png
+![](04_floor10_map.png)
 
 ## 04_floor1_map.png
 ![](04_floor1_map.png)
