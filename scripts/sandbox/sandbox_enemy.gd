@@ -109,6 +109,14 @@ func make_boss() -> void:
         _sprite.scale *= 1.5
 
 
+func aim_point() -> Vector2:
+    return _aim
+
+
+func windup_left() -> float:
+    return _timer if state == State.WINDUP else 0.0
+
+
 func is_telegraphing() -> bool:
     return state == State.WINDUP
 

@@ -20,8 +20,16 @@ var _side: String = "right"          # last horizontal facing (up/down attacks r
 var chatter_text: String = ""
 var chatter_timer: float = 0.0
 
-## Order state (Phase 2 grows this): "auto" | "move" | "attack" | "rescue".
+## Order state (D-040): "auto" | "move" | "attack" | "attack_move" | "hold" | "follow" | "retreat" | "rescue".
 var order: String = "auto"
+var order_point: Vector2 = Vector2.ZERO     # attack-move destination / hold spot
+var follow_leader: SandboxHero = null
+var _dodge_t: float = 0.0
+const KITE_DISTANCE := 70.0
+const FOLLOW_DISTANCE := 90.0
+const FOLLOW_LEASH := 170.0
+const ORDER_LABELS := {"auto": "Auto", "move": "Moving", "attack": "Attacking", "attack_move": "Attack-moving",
+	"hold": "Holding", "follow": "Following", "retreat": "Retreating", "rescue": "Rescuing"}
 var auto_path: bool = false         # true while walking toward a target on its own
 var target: SandboxEnemy = null
 var rescue_target: SandboxHero = null
@@ -105,11 +113,54 @@ func order_rescue(ally: SandboxHero) -> void:
 	_repath = 0.0
 
 
-func stop() -> void:
+## Walk to a point, fighting anything met on the way, then go back to Auto.
+func order_attack_move(point: Vector2, map: NavMap) -> bool:
+	_clear_orders()
+	order = "attack_move"
+	order_point = point
+	path = map.find_path(position, point)
+	return not path.is_empty()
+
+
+## Stay here: fight only what comes into range, never chase.
+func order_hold() -> void:
+	_clear_orders()
+	order = "hold"
+	order_point = position
+
+
+## Stay close to another hero, fight near them, never wander off.
+func order_follow(leader: SandboxHero) -> void:
+	_clear_orders()
+	order = "follow"
+	follow_leader = leader
+
+
+## Run to the extraction point without stopping to fight (then hold there).
+func order_retreat(point: Vector2, map: NavMap) -> bool:
+	_clear_orders()
+	order = "retreat"
+	path = map.find_path(position, point)
+	return not path.is_empty()
+
+
+func order_label() -> String:
+	return String(ORDER_LABELS.get(order, order))
+
+
+func _clear_orders() -> void:
 	path.clear()
-	order = "auto"
+	auto_path = false
+	target = null
 	rescue_target = null
 	rescue_progress = 0.0
+	follow_leader = null
+	_repath = 0.0
+
+
+func stop() -> void:
+	_clear_orders()
+	order = "auto"
 
 
 # --- simulation --------------------------------------------------------------------------------
@@ -125,6 +176,7 @@ func tick(delta: float) -> void:
 	_anim_lock = maxf(0.0, _anim_lock - delta)
 	skill_cd = maxf(0.0, skill_cd - delta)
 	_repath = maxf(0.0, _repath - delta)
+	_dodge_t = maxf(0.0, _dodge_t - delta)
 	if chatter_timer > 0.0:
 		chatter_timer = maxf(0.0, chatter_timer - delta)
 	if _fx > 0.0:
@@ -161,11 +213,17 @@ func attack_interval() -> float:
 	return float(stats.get("interval", CombatRules.hero_interval(int(stats.get("spd", 5)))))
 
 
-## Autonomy + order execution for one step. A move order always wins; an attack order sticks to
-## its target; a rescue order walks to the ally and channels; otherwise pick the nearest threat.
+## Autonomy + order execution for one step. Explicit orders come first (D-016); within an order
+## the hero still fights sensibly: keeps range by role, needs line of sight to shoot, steps out of
+## telegraphed strikes (bounded autonomy, D-014) and never chases while holding or following.
 func combat_tick(enemies: Array, map: NavMap) -> void:
 	if not alive:
 		return
+	if _dodge_t > 0.0 and not path.is_empty():
+		return                                   # finishing a dodge step
+	if order != "move" and order != "retreat" and order != "rescue" and can_move():
+		if _try_dodge(enemies, map):
+			return
 	match order:
 		"rescue":
 			_rescue_tick(map)
@@ -174,6 +232,16 @@ func combat_tick(enemies: Array, map: NavMap) -> void:
 			if not path.is_empty():
 				return                               # obeying a direct move
 			order = "auto"
+		"retreat":
+			if path.is_empty():
+				order_hold()
+			return                                   # no fighting while retreating
+		"follow":
+			if follow_leader == null or not is_instance_valid(follow_leader) or not follow_leader.alive:
+				order = "auto"
+			elif position.distance_to(follow_leader.position) > FOLLOW_DISTANCE and (path.is_empty() or _repath <= 0.0) and target == null:
+				_repath = REPATH_EVERY
+				path = map.find_path(position, follow_leader.position)
 	if not can_act():
 		return
 	if target != null and (not is_instance_valid(target) or not target.alive):
@@ -182,26 +250,85 @@ func combat_tick(enemies: Array, map: NavMap) -> void:
 			order = "auto"
 			FloatingText.spawn(self, "target down", Color(0.8, 0.8, 0.8), false)
 	if target == null:
-		target = _nearest(enemies, CombatRules.HERO_PERCEPTION)
+		var radius := attack_range() if order == "hold" else CombatRules.HERO_PERCEPTION
+		target = _nearest(enemies, radius)
 		if target == null:
-			if auto_path:
-				path.clear()
-				auto_path = false
+			match order:
+				"attack_move":
+					if path.is_empty():
+						if position.distance_to(order_point) < 30.0:
+							order = "auto"
+						else:
+							path = map.find_path(position, order_point)
+				"follow", "hold":
+					pass
+				_:
+					if auto_path:
+						path.clear()
+						auto_path = false
 			return
 	var d := position.distance_to(target.position)
-	if d <= attack_range():
+	var sees := not is_ranged() or map.has_line_of_sight(position + Vector2(0, -12), target.position + Vector2(0, -12))
+	if d <= attack_range() and sees:
+		if is_ranged() and d < KITE_DISTANCE and order != "hold" and _kite(target, map):
+			return
 		path.clear()
 		auto_path = false
 		_face(target.position - position)
 		if _cooldown <= 0.0:
 			_cooldown = attack_interval()
 			_basic_attack(target)
-	elif _repath <= 0.0 or path.is_empty():
+		return
+	if order == "hold":
+		target = null                            # out of reach: holding means not chasing
+		return
+	if order == "follow" and follow_leader != null and target.position.distance_to(follow_leader.position) > FOLLOW_LEASH:
+		target = null
+		return
+	if _repath <= 0.0 or path.is_empty():
 		_repath = REPATH_EVERY
 		var p := map.find_path(position, target.position)
 		if not p.is_empty():
 			path = p
 			auto_path = true
+
+
+## Steps out of an enemy's telegraphed strike circle if there is still time (D-014: bounded,
+## predictable, never overrides an explicit move/retreat/rescue order).
+func _try_dodge(enemies: Array, map: NavMap) -> bool:
+	for e in enemies:
+		if not e.alive or not e.is_telegraphing() or e.windup_left() < 0.15:
+			continue
+		var aim: Vector2 = e.aim_point()
+		var r: float = e.strike_radius
+		if position.distance_to(aim) > r + 4.0:
+			continue
+		var away := position - aim
+		if away.length() < 1.0:
+			away = Vector2.RIGHT.rotated(float(slot))
+		var spot := aim + away.normalized() * (r + 22.0)
+		if map.is_blocked(spot):
+			spot = aim - away.normalized().orthogonal() * (r + 22.0)
+		if map.is_blocked(spot):
+			return false
+		path.clear()
+		path.append(spot)
+		auto_path = true
+		_dodge_t = 0.6
+		return true
+	return false
+
+
+## Ranged heroes back off when a foe gets too close (keep their role distance).
+func _kite(foe: SandboxEnemy, map: NavMap) -> bool:
+	var spot := position + (position - foe.position).normalized() * 80.0
+	if map.is_blocked(spot) or not map.has_line_of_sight(position, spot):
+		return false
+	path.clear()
+	path.append(spot)
+	auto_path = true
+	_dodge_t = 0.4
+	return true
 
 
 func _basic_attack(t: SandboxEnemy) -> void:

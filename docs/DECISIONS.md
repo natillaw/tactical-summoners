@@ -135,6 +135,18 @@ Commit + push solo a la rama de trabajo de Claude cada vez que se termina un blo
 - Ranuras: arma principal, arma secundaria o escudo (las armas a dos manos ocupan ambas), casco, pechera, guantes, pantalones, botas, 2 anillos, amuleto y accesorio especial. Al morir, el héroe pierde su equipo con él. Los legendarios y míticos tienen identidad y efectos propios. (Implementación en la fase de progresión; sin valores inventados.)
 - El grupo habitual es de 5 (D-017); habrá encuentros especiales (raids) de hasta 10 héroes. La arquitectura no debe fijar el tamaño del grupo en 5 en más sitios.
 
+### D-040 — Teclas de combate (2026-10-30, dueño; resuelve C-6)
+Habilidades en **Q/W/E/R**. Órdenes: **A** atacar avanzando, **H** mantener posición, **F** seguir, **C** reagrupar, **X** retirada, **S** parar, **M** mapa; 1-5 / Tab / G sin cambios. Todas las órdenes tienen también botón en el panel. Clic derecho contextual (atacar / rescatar / mover).
+
+### D-041 — Recurso de habilidades por clase (2026-10-30, dueño)
+Cada clase gestiona su propio recurso, además de los enfriamientos: **Furia** (Warrior: sube al golpear y al recibir daño, baja fuera de combate), **Concentración** (Rogue y Ranger: se regenera de forma constante), **Maná** (Mage y Cleric: reserva grande según INT/TEM, regeneración lenta). Commoner/Novice usan **Aguante** (como la Concentración) de forma provisional. Números en datos.
+
+### D-042 — Interrupciones solo por control (2026-10-30, dueño)
+Una carga o canalización (de héroes, enemigos o jefes) solo se corta con aturdimiento, empuje o habilidades marcadas como "interrumpir". El daño normal no interrumpe. Excepción ya decidida: el rescate (D-036) sí se corta al recibir daño.
+
+### D-043 — Los héroes nacen con 1 habilidad activa (2026-10-30, dueño; matiza D-022)
+Cada héroe empieza con **una** activa de su clase. Las demás (hasta 4 activas en Q/W/E/R, más la definitiva de D-022 en el futuro) se **aprenden**: al subir de nivel, entrenando y con **libros de habilidades**, entre otras vías. Las habilidades aprendidas se guardan en el héroe. (El entrenamiento y los libros de habilidades llegarán con sus sistemas; el aprendizaje por nivel, en la fase 3.)
+
 ---
 
 ## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)
