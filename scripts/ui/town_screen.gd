@@ -187,10 +187,15 @@ func _show_panel(id: String) -> void:
         for k in Game.skill_books:
             books += int(Game.skill_books[k])
         _panel_box.add_child(UIKit.label("Skill books in the archive: %d (heroes read them from their panel)" % books, 13, UIKit.MUTED))
-        var trans_btn := UIKit.button("Transcribe a skill book (%d materials)" % Game.library_cost(), _on_transcribe.bind(id), Vector2(300, 40))
-        trans_btn.focus_mode = Control.FOCUS_NONE
-        trans_btn.disabled = int(Game.hq_outputs.get("materials", 0)) < Game.library_cost()
-        _panel_box.add_child(trans_btn)
+        _panel_box.add_child(UIKit.label("Transcribe a book (%d materials) for class:" % Game.library_cost(), 13, UIKit.TEXT))
+        var grid := GridContainer.new()
+        grid.columns = 3
+        _panel_box.add_child(grid)
+        for cls in Game.roster_classes():
+            var trans_btn := UIKit.button(String(HeroTables.CLASSES[cls]["name"]), _on_transcribe.bind(id, String(cls)), Vector2(96, 32))
+            trans_btn.focus_mode = Control.FOCUS_NONE
+            trans_btn.disabled = int(Game.hq_outputs.get("materials", 0)) < Game.library_cost()
+            grid.add_child(trans_btn)
     if level > 0 and String(b["open"]) == "tower":
         _add_tower_buttons()
     elif level > 0 and String(b["open"]) != "":
@@ -208,8 +213,8 @@ func _show_panel(id: String) -> void:
     _panel.visible = true
 
 
-func _on_transcribe(id: String) -> void:
-    Game.library_transcribe()
+func _on_transcribe(id: String, class_id: String) -> void:
+    Game.library_transcribe(class_id)
     _show_panel(id)
 
 

@@ -158,6 +158,20 @@ Botín de la torre (el jefe del piso 10, uno garantizado), un edificio nuevo del
 
 ---
 
+### D-047 — Tiempo del pueblo mixto (2026-10-30, dueño)
+El reloj del pueblo corre despacio mientras el jugador está en el pueblo y salta por días al volver de la torre. Sin esperas de tiempo real fuera del juego ni aceleración con gemas. Detalle técnico en `docs/design/HQ_PROFESSIONS_RESEARCH.md` §4.5 (simulación por ciclos, independiente de la escena).
+
+### D-048 — Solo construyen héroes con profesión de constructor (2026-10-30, dueño)
+Cada obra (construir o mejorar) necesita un héroe asignado con la profesión de constructor (principal o secundaria). El número de obras simultáneas = constructores disponibles. Riesgo anotado: al empezar sin ningún constructor el pueblo queda bloqueado; se preguntará cómo evitarlo.
+
+### D-049 — Profesión principal + secundaria (2026-10-30, dueño; matiza P-05)
+Cada héroe tiene como máximo 2 profesiones con nivel y experiencia. Cambiar exige olvidar una. La vida pasada se convierte en la profesión principal inicial.
+
+### D-050 — Colocación libre en cuadrícula (2026-10-30, dueño; matiza D-030)
+Colocar, mover y demoler edificios sobre una cuadrícula con vista previa válida/inválida, comprobación de espacio y de un camino libre hasta la puerta. Los edificios actuales conservan su sitio al migrar. El terreno se amplía con el edificio central.
+
+---
+
 ## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)
 
 | ID | Tema | Lo que existe / origen | Pregunta abierta |
