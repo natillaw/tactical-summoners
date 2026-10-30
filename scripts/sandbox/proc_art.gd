@@ -64,7 +64,7 @@ static func tree(variant: int) -> Image:
         for x in 32:
             if not inside.call(x, y):
                 continue
-            var edge := not (inside.call(x - 1, y) and inside.call(x + 1, y) and inside.call(x, y - 1) and inside.call(x, y + 1))
+            var edge: bool = not (inside.call(x - 1, y) and inside.call(x + 1, y) and inside.call(x, y - 1) and inside.call(x, y + 1))
             var c := LEAF
             var light := float(x) * -0.35 + float(y)       # light from the top-left
             if edge:
