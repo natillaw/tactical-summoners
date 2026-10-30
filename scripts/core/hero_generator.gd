@@ -55,8 +55,9 @@ static func apply_promotion(h: HeroData) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = h.hero_seed ^ (h.stars * 7919)
 	var sd: Dictionary = HeroTables.STAR_DATA[h.stars]
-	if h.hero_class == "class.none" and h.stars >= 3:
-		var pool: Array = HeroTables.PROMOTION_CLASS_POOL
+	var pool: Array = HeroTables.PROMOTION_CLASS_POOL
+	# F-007: the pool is empty until advanced classes are decided (P-07); never divide by zero.
+	if h.hero_class == "class.none" and h.stars >= 3 and not pool.is_empty():
 		h.hero_class = String(pool[rng.randi() % pool.size()])
 	if h.traits.size() < int(sd["traits"]):
 		h.traits = _roll_traits(rng, int(sd["traits"]), h.traits)

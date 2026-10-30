@@ -38,7 +38,9 @@ $suites = @(
   @{ name = "art";           args = @("res://tests/smoke_art.tscn", "--quit-after", "3000");            ok = "ALL PASSED" },
   @{ name = "simulation";    args = @("--script", "res://tests/test_simulation.gd");                    ok = "ALL PASSED" },
   @{ name = "deep systems";  args = @("--script", "res://tests/test_deep_systems.gd");                  ok = "ALL PASSED" },
-  @{ name = "procedural";    args = @("--script", "res://tests/test_procedural.gd");                    ok = "ALL PASSED" }
+  @{ name = "procedural";    args = @("--script", "res://tests/test_procedural.gd");                    ok = "ALL PASSED" },
+  @{ name = "boot";          args = @("res://tests/smoke_boot.tscn", "--quit-after", "3000");           ok = "ALL PASSED" },
+  @{ name = "tower";         args = @("res://tests/smoke_tower.tscn", "--quit-after", "3000");          ok = "ALL PASSED" }
 )
 $bad = 0
 foreach ($s in $suites) {

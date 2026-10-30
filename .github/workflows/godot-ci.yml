@@ -20,7 +20,7 @@ jobs:
           curl -sSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
           unzip -q godot.zip -d "$HOME/godot"
           echo "GODOT=$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" >> "$GITHUB_ENV"
-      - name: Run the 12 suites
+      - name: Run all suites
         id: run
         continue-on-error: true
         run: bash tools/run_tests.sh

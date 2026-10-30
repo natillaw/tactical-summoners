@@ -96,6 +96,13 @@ func _init() -> void:
     h5.promote()
     check(h5.stars == 3 and h5.traits.size() == 2 and h5.passives.size() == 2, "traits/passives grow with stars (%d/%d)" % [h5.traits.size(), h5.passives.size()])
 
+    # 6b. F-007 regression: a classless hero (e.g. a migrated legacy class) can reach 3 stars
+    var legacy := HeroGenerator.generate(777, 2)
+    legacy.hero_class = "class.none"
+    legacy.add_xp(100000)
+    legacy.promote()
+    check(legacy.stars == 3, "classless hero promotes to 3 stars without crashing")
+
     # 7. save round-trip (64-bit seed survives JSON)
     var h6 := HeroGenerator.generate(0x7123456789ABCDEF, 5)
     var txt := JSON.stringify(h6.to_dict())

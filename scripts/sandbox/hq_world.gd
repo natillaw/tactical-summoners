@@ -10,8 +10,8 @@ var _ui_layer: CanvasLayer
 
 
 func _ready() -> void:
-	# Generate a cozy HQ map layout
-	_map = ProceduralMap.new(60, 40, 9999, 1)
+	# HQ layout: floor_num 0 = one open hall, no enemies (ProceduralMap HQ mode)
+	_map = ProceduralMap.new(60, 40, 9999, 0)
 	
 	var bg := ColorRect.new()
 	bg.color = Color(0.12, 0.14, 0.18)
@@ -25,7 +25,6 @@ func _ready() -> void:
 
 func _spawn_heroes() -> void:
 	var spawn_idx := 0
-	var composer := SpriteComposer.new()
 	
 	for id in Game.heroes:
 		var h: HeroData = Game.heroes[id]
@@ -36,11 +35,13 @@ func _spawn_heroes() -> void:
 		var cell := _map.spawn_cells[spawn_idx % _map.spawn_cells.size()]
 		hero_node.position = _map.center_of(cell)
 		
-		# FIX: Tipado explícito de la variable sprite como Node2D (o Sprite2D si corresponde)
-		var sprite: Node2D = composer.compose(h.appearance)
-		if sprite != null:
-			sprite.scale = Vector2(1.5, 1.5)
-			hero_node.add_child(sprite)
+		# F-001: SpriteComposer has no compose(); build the same animated sprite the sandbox uses.
+		var sprite := AnimatedSprite2D.new()
+		sprite.sprite_frames = SpriteComposer.build_frames(h)
+		sprite.offset = Vector2(0, -16)
+		sprite.scale = Vector2(1.5, 1.5)
+		hero_node.add_child(sprite)
+		sprite.play("idle_down")
 		
 		var name_lbl := UIKit.label(h.display_name(), 12, h.star_color())
 		name_lbl.position = Vector2(-40, -45)

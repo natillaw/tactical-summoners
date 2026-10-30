@@ -86,7 +86,7 @@ func is_telegraphing() -> bool:
     return state == State.WINDUP
 
 
-func tick(delta: float, heroes: Array, map: SandboxMap) -> void:
+func tick(delta: float, heroes: Array, map: NavMap) -> void:
     if not alive:
         return
     if _flash > 0.0:
@@ -117,7 +117,7 @@ func tick(delta: float, heroes: Array, map: SandboxMap) -> void:
     queue_redraw()
 
 
-func _step_toward(goal: Vector2, delta: float, map: SandboxMap) -> void:
+func _step_toward(goal: Vector2, delta: float, map: NavMap) -> void:
     var p := map.find_path(position, goal)
     if p.is_empty():
         return

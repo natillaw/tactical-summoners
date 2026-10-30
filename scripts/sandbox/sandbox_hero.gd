@@ -125,7 +125,7 @@ func attack_damage(target_def: int) -> int:
 
 ## Autonomous basic attacks. Idle heroes (no player order) pick the nearest perceived enemy,
 ## walk into range and strike on cooldown. A player move order always wins.
-func combat_tick(enemies: Array, map: SandboxMap) -> void:
+func combat_tick(enemies: Array, map: NavMap) -> void:
 	if not alive:
 		return
 	if not path.is_empty() and not auto_path:

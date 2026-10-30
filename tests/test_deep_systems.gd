@@ -55,7 +55,7 @@ func _init() -> void:
     check(g.memorial.size() == 1, "dead hero recorded in memorial")
     check(not g.heroes.has(h2.id), "dead hero removed from roster")
     check(h1.discovered_secrets.size() == h1_secrets_before, "surviving hero did not inherit dead hero's secret skill")
-    check(str(g.memorial[0]["id"]) == h2.id, "memorial preserves dead hero identity and records")
+    check(str(g.memorial[0]["hero_id"]) == h2.id, "memorial preserves dead hero identity and records")
 
     # Scenario F: Headquarters systems integration & co-worker relationships
     g.assign_hq(h1.id, "kitchen")
