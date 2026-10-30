@@ -17,7 +17,10 @@ ERROR: Condition "status < 0" is true. Returning: ERR_CANT_OPEN
 WARNING: All audio drivers failed, falling back to the dummy driver.
      at: initialize (servers/audio/audio_server.cpp:258)
 
-shot 01_menu -> /home/runner/work/tactical-summoners/tactical-summoners/screenshots/01_menu.png err=0
+shot 01_town -> /home/runner/work/tactical-summoners/tactical-summoners/screenshots/01_town.png err=0
+shot 01b_town_tower_gate -> /home/runner/work/tactical-summoners/tactical-summoners/screenshots/01b_town_tower_gate.png err=0
+shot 01c_town_build_alchemy -> /home/runner/work/tactical-summoners/tactical-summoners/screenshots/01c_town_build_alchemy.png err=0
+shot 02_menu -> /home/runner/work/tactical-summoners/tactical-summoners/screenshots/02_menu.png err=0
 shot 02_summon -> /home/runner/work/tactical-summoners/tactical-summoners/screenshots/02_summon.png err=0
 shot 02_roster -> /home/runner/work/tactical-summoners/tactical-summoners/screenshots/02_roster.png err=0
 shot 02_party -> /home/runner/work/tactical-summoners/tactical-summoners/screenshots/02_party.png err=0
@@ -26,5 +29,5 @@ shot 02_hq -> /home/runner/work/tactical-summoners/tactical-summoners/screenshot
 shot 03_sandbox_start -> /home/runner/work/tactical-summoners/tactical-summoners/screenshots/03_sandbox_start.png err=0
 shot 04_sandbox_after_5s -> /home/runner/work/tactical-summoners/tactical-summoners/screenshots/04_sandbox_after_5s.png err=0
 shot 05_sandbox_focus_hero1 -> /home/runner/work/tactical-summoners/tactical-summoners/screenshots/05_sandbox_focus_hero1.png err=0
-shot 06_hq_world -> /home/runner/work/tactical-summoners/tactical-summoners/screenshots/06_hq_world.png err=0
+shot 06_tower_floor1 -> /home/runner/work/tactical-summoners/tactical-summoners/screenshots/06_tower_floor1.png err=0
 CAPTURE DONE -> /home/runner/work/tactical-summoners/tactical-summoners/screenshots

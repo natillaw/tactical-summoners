@@ -1,14 +1,23 @@
 # Capturas de claude/tactical-summoners-audit-b3sqpo
-Commit `9dc3ea5` — 2026-10-30 19:32 UTC
+Commit `8588892` — 2026-10-30 19:45 UTC
 
-## 01_menu.png
-![](01_menu.png)
+## 01_town.png
+![](01_town.png)
+
+## 01b_town_tower_gate.png
+![](01b_town_tower_gate.png)
+
+## 01c_town_build_alchemy.png
+![](01c_town_build_alchemy.png)
 
 ## 02_hq.png
 ![](02_hq.png)
 
 ## 02_memorial.png
 ![](02_memorial.png)
+
+## 02_menu.png
+![](02_menu.png)
 
 ## 02_party.png
 ![](02_party.png)
@@ -28,5 +37,5 @@ Commit `9dc3ea5` — 2026-10-30 19:32 UTC
 ## 05_sandbox_focus_hero1.png
 ![](05_sandbox_focus_hero1.png)
 
-## 06_hq_world.png
-![](06_hq_world.png)
+## 06_tower_floor1.png
+![](06_tower_floor1.png)
