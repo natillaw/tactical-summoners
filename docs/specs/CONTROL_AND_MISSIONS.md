@@ -1,4 +1,4 @@
-> **Estado (2026-10-30):** Spec CONFIRMADA (D-014, D-015). Movida intacta desde `CONTROL_AND_REALTIME_MISSIONS.md`. Gran parte NO está implementada: ver `docs/IMPLEMENTATION_STATUS.md`. Las referencias a "procedural world deferred" están en revisión (P-01).
+> **Estado (2026-10-30):** Spec CONFIRMADA (D-014, D-015). Movida intacta desde `CONTROL_AND_REALTIME_MISSIONS.md`. Gran parte NO está implementada: ver `docs/IMPLEMENTATION_STATUS.md`. Las referencias a "procedural world deferred" / "fixed map" están sustituidas por D-026 (pisos procedurales).
 
 # Control, Camera & Real-Time Missions — Tactical Summoners
 

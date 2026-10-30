@@ -34,7 +34,7 @@ I = [
  ("D-021 equipment layers, base look no stats", A+"DECISIONS.md", "D-021", "docs/DECISIONS.md", "D-021"),
  ("D-021 default underclothes open", A+"DECISIONS.md", "default underclothes", "docs/DECISIONS.md", "P-14"),
  ("D-022 skill library 4+1, lv 1-70, >=30 per class", A+"DECISIONS.md", "4 actives + 1 ultimate", "docs/DECISIONS.md", "4 activas + 1 definitiva"),
- ("D-022 5 vs 7 stars conflict", A+"DECISIONS.md", "7 stars and 70 levels", "docs/DECISIONS.md", "7★ y 70 niveles"),
+ ("D-022 5 vs 7 stars conflict", A+"DECISIONS.md", "7 stars and 70 levels", "docs/DECISIONS.md", "D-029 — 7 estrellas y 70 niveles"),
  ("Boss design principle", A+"DECISIONS.md", "Boss design", "docs/DECISIONS.md", "Jefes con mecánicas"),
  # --- design gaps
  *[(f"DESIGN_GAPS item {n}", A+"DESIGN_GAPS.md", f"{n}. ", "docs/DECISIONS.md", f"G-{n:02d}") for n in list(range(1,19))+list(range(21,26))],

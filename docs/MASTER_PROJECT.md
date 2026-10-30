@@ -31,8 +31,8 @@ Abrir el refugio/HQ → revisar héroes, personalidades, historias y habilidades
 | Relaciones (vínculos/rivalidades) | CONFIRMADA (D-016) | idem §7-8 |
 | Memoria de eventos | CONFIRMADA | idem §8 |
 | Profesiones de vida pasada | PENDIENTE (P-05) | `specs/HQ_AND_ECONOMY.md` |
-| Clases y promociones | Dirección CONFIRMADA (D-018); clases PENDIENTES (P-06, P-07) | `specs/HEROES_AND_SUMMONING.md` §14 |
-| Rarezas / estrellas / niveles | PENDIENTE (P-08, P-09) | — |
+| Clases y promociones | Dirección CONFIRMADA (D-018); clases base CONFIRMADAS (D-028); avanzadas PENDIENTES (P-07) | `specs/HEROES_AND_SUMMONING.md` §14 |
+| Rarezas / estrellas / niveles | 7★ y 70 niveles CONFIRMADO (D-029); nombres de rareza PENDIENTES (P-09) | — |
 | Síntesis y sacrificio | CONFIRMADA (D-018); números abiertos | idem §14 |
 | Muerte permanente y memorial | CONFIRMADA (D-011) | `specs/COMBAT_AND_STATS.md` |
 | Legado | PENDIENTE (P-16) | — |
@@ -42,8 +42,8 @@ Abrir el refugio/HQ → revisar héroes, personalidades, historias y habilidades
 | Misiones con objetivos variados | CONFIRMADA (D-014) | `specs/CONTROL_AND_MISSIONS.md` §9 |
 | Eventos de misión | PENDIENTE (P-18) | `specs/TOWER_AND_WORLD.md` |
 | Jefes con fases y mecánicas | Principio CONFIRMADO; diseño PENDIENTE (P-25) | `specs/CONTROL_AND_MISSIONS.md` §10 |
-| Torre (100 pisos, 10 iniciales) | PENDIENTE (P-02) | `specs/TOWER_AND_WORLD.md` |
-| Generación procedural de pisos | PENDIENTE (P-01; D-003 en revisión) | `specs/TOWER_AND_WORLD.md` |
+| Torre (100 pisos, 10 iniciales) | CONFIRMADA (D-027); progreso PENDIENTE (P-02b) | `specs/TOWER_AND_WORLD.md` |
+| Generación procedural de pisos | CONFIRMADA (D-026) | `specs/TOWER_AND_WORLD.md` |
 | Biomas | PENDIENTE (P-03) | `specs/TOWER_AND_WORLD.md` |
 | Secretos | PENDIENTE (P-15) | `specs/TOWER_AND_WORLD.md` |
 | Expediciones | PENDIENTE (P-17) | `specs/TOWER_AND_WORLD.md` |
@@ -57,7 +57,7 @@ Abrir el refugio/HQ → revisar héroes, personalidades, historias y habilidades
 | Guardado versionado y atómico | CONFIRMADA (D-004) | `docs/ARCHITECTURE.md` |
 | Progreso offline, multijugador asíncrono, diálogo LLM | DIFERIDA | `docs/DECISIONS.md` §4 |
 
-## 5. Reglas de generación procedural (Bible; vigentes para héroes, y para el mundo si se confirma P-01)
+## 5. Reglas de generación procedural (Bible; vigentes para héroes y para los pisos de la torre, D-026)
 1. Semilla y versión del generador.
 2. Perfil del mundo y paleta temática.
 3. Grafo de biomas/regiones, facciones y tensiones.

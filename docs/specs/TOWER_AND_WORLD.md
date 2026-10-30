@@ -1,8 +1,8 @@
 # Torre, mundo, misiones y eventos — banco de ideas y spec parcial
 
-**Estado:** casi todo está **PENDIENTE** (ver `docs/DECISIONS.md`). Este archivo recoge las ideas para que no se pierdan; **no son requisitos** hasta que se confirmen. Los principios de misión y de jefe ya CONFIRMADOS están en `CONTROL_AND_MISSIONS.md` §9-10.
+**Estado:** torre de 100 pisos (D-027) y generación procedural (D-026) **CONFIRMADAS**; el resto está **PENDIENTE** (ver `docs/DECISIONS.md`). Este archivo recoge las ideas para que no se pierdan; **no son requisitos** hasta que se confirmen. Los principios de misión y de jefe ya CONFIRMADOS están en `CONTROL_AND_MISSIONS.md` §9-10.
 
-## 1. Torre (P-02)
+## 1. Torre (D-027 confirmada; progreso P-02b)
 - Meta indicada por el dueño (2026-10-30): **Torre de 100 pisos**, con los **10 primeros como alcance inicial**.
 - Lo que existe en el código (`scripts/core/tower_expedition.gd`, tema "Stone Crypt & Ancient Depths"):
 
@@ -22,10 +22,10 @@
 - Idea de referencia (CANDIDATA/DIFERIDA): cada 10 pisos se desbloquean mazmorras, instalaciones y un nuevo tope de nivel; pisos ocultos que se desbloquean con subquests.
 - Preguntas abiertas: progreso por piso, si se pueden repetir pisos, recompensas por piso, y si el tamaño de 80-160 celdas es razonable (el rendimiento lo cuestiona: F-014).
 
-## 2. Generación procedural (P-01)
+## 2. Generación procedural (D-026 confirmada)
 - Antes: D-003 (diferida; mapa fijo). Ahora: el dueño pide generación procedural (2026-10-30) y existe `ProceduralMap` (salas con reintentos, pasillos, bucles, celdas de enemigos y tesoros, validación de alcance).
 - Referencia visual: `reference/procedural_map_reference.jpg`. Salas rectangulares y orgánicas, pasillos, puertas, ríos de agua profunda con puentes, praderas, lava, cristal mágico, antorchas, enemigos y objetos repartidos.
-- Reglas obligatorias si se confirma (MASTER_PROJECT §5): semilla + versión del generador, validar la navegación y **persistir el snapshot**.
+- Reglas obligatorias (MASTER_PROJECT §5): semilla + versión del generador, validar la navegación y **persistir el snapshot**.
 
 ## 3. Biomas (P-03)
 Familias temáticas de trabajo: Ashen/cursed kingdom · Verdant/overgrown wilds · Arcane/fractured reality · Umbral/abyssal depths · Storm/sky-isles · Forge/clockwork empire · Tidal/drowned civilization · Crystal/glass desert. Elementos de terreno vistos en la referencia: agua profunda, hierba, lava, cristal mágico, puentes de madera.
