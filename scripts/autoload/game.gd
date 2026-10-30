@@ -5,7 +5,7 @@ extends Node
 signal changed
 
 const DEFAULT_SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 7
+const SAVE_VERSION := 8
 const PARTY_SIZE := 5            # slots 0-2 = front row, slots 3-4 = back row
 const XP_PER_BOOK := 100
 
@@ -26,6 +26,7 @@ var _signatures: Dictionary = {} # appearance signatures already owned -> no dup
 var hq_outputs: Dictionary = {"food": 50, "materials": 50, "medicine": 50}
 var town_buildings: Dictionary = TownTables.start_levels()   # building id -> level (0 = not built), D-030
 var tower_maps: Dictionary = {}
+var skill_books: Dictionary = {}     # skill id -> copies owned (D-046)
 var tower_cleared: Dictionary = {}   # floor (str) -> times completed (D-031: every floor is unlocked) # floor_num (str) -> {"seed": int, "width": int, "height": int, "grid_rows": Array}
 
 
@@ -275,17 +276,92 @@ func get_or_create_tower_floor_map(floor_num: int) -> ProceduralMap:
 
 
 ## Floor completion reward (owner: "sí" to quick progression, 2026-10-30). Placeholder numbers:
-## deeper floors pay more materials (for town buildings), stones (promotion) and gems; even floors give a book.
-func complete_floor(floor_num: int) -> Dictionary:
-    var r := {"gems": 50 * floor_num, "stones": 1 + floor_num / 4, "materials": 20 + floor_num * 10, "books": 1 if floor_num % 2 == 0 else 0}
+## deeper floors pay more materials (for town buildings), stones (promotion) and gems; even floors give a
+## training book. Skill books (D-046): boss floors (every 10th) always drop one, rescue and exploration
+## missions reward one, other floors have a SKILL_BOOK_CHANCE drop.
+const SKILL_BOOK_CHANCE := 0.25
+const BOOK_MISSIONS := ["rescue", "exploration"]
+
+
+func complete_floor(floor_num: int, mission: String = "") -> Dictionary:
+    var r := {"gems": 50 * floor_num, "stones": 1 + floor_num / 4, "materials": 20 + floor_num * 10, "books": 1 if floor_num % 2 == 0 else 0, "skill_books": []}
     var key := str(floor_num)
     tower_cleared[key] = int(tower_cleared.get(key, 0)) + 1
     gems += int(r["gems"])
     stones += int(r["stones"])
     books += int(r["books"])
     hq_outputs["materials"] = int(hq_outputs.get("materials", 0)) + int(r["materials"])
+    var drops := 0
+    if floor_num % 10 == 0:
+        drops += 1
+    if BOOK_MISSIONS.has(mission):
+        drops += 1
+    if drops == 0 and rng.randf() < SKILL_BOOK_CHANCE:
+        drops = 1
+    for i in drops:
+        var b := random_skill_book()
+        if b != "":
+            grant_skill_book(b)
+            (r["skill_books"] as Array).append(b)
     _commit()
     return r
+
+
+# --- skill books (D-046) ----------------------------------------------------------------
+
+## A book for a class someone in the roster has (all classes if the roster is empty).
+func random_skill_book() -> String:
+    var classes: Array = []
+    for id in heroes:
+        var c: String = (heroes[id] as HeroData).hero_class
+        if not classes.has(c):
+            classes.append(c)
+    if classes.is_empty():
+        classes = SkillDefs.KITS.keys()
+    var pool := SkillDefs.book_pool(classes)
+    return "" if pool.is_empty() else String(pool[rng.randi() % pool.size()])
+
+
+## Sources: tower loot, mission rewards, the Library and (hook) secrets.
+func grant_skill_book(skill_id: String, count: int = 1) -> void:
+    if not SkillDefs.SKILLS.has(skill_id) or count <= 0:
+        return
+    skill_books[skill_id] = int(skill_books.get(skill_id, 0)) + count
+
+
+## Reads a book: "" when learned, otherwise the reason it cannot be read (the book is kept).
+func use_skill_book(h: HeroData, skill_id: String) -> String:
+    if h == null or int(skill_books.get(skill_id, 0)) <= 0:
+        return "no such book"
+    if h.skills.has(skill_id):
+        return "already known"
+    if not SkillDefs.usable_by(skill_id, h.hero_class):
+        return "not for a %s" % h.class_title()
+    h.learn_skill(skill_id)
+    skill_books[skill_id] = int(skill_books[skill_id]) - 1
+    if int(skill_books[skill_id]) <= 0:
+        skill_books.erase(skill_id)
+    _commit()
+    return ""
+
+
+## Library (D-046): transcribe a random book for materials; cheaper at higher levels.
+func library_cost() -> int:
+    var lv := building_level("library")
+    return 0 if lv <= 0 else maxi(20, TownTables.LIBRARY_BASE_COST - TownTables.LIBRARY_DISCOUNT * (lv - 1))
+
+
+func library_transcribe() -> String:
+    var cost := library_cost()
+    if cost <= 0 or int(hq_outputs.get("materials", 0)) < cost:
+        return ""
+    var b := random_skill_book()
+    if b == "":
+        return ""
+    hq_outputs["materials"] = int(hq_outputs["materials"]) - cost
+    grant_skill_book(b)
+    _commit()
+    return b
 
 
 func process_headquarters_turn() -> Dictionary:
@@ -346,6 +422,7 @@ func new_game() -> void:
     town_buildings = TownTables.start_levels()
     tower_maps.clear()
     tower_cleared.clear()
+    skill_books.clear()
     SpriteComposer.clear_cache()
     _commit()
 
@@ -378,6 +455,7 @@ func save_game() -> bool:
         "town_buildings": town_buildings,
         "tower_maps": tower_maps,
         "tower_cleared": tower_cleared,
+        "skill_books": skill_books,
     }
     return _write_atomic(JSON.stringify(data))
 
@@ -458,6 +536,10 @@ func apply_save(data: Dictionary) -> void:
     town_buildings = HeroData.intify(data.get("town_buildings", TownTables.start_levels()) as Dictionary)
     tower_maps = HeroData.intify(data.get("tower_maps", {}) as Dictionary)
     tower_cleared = HeroData.intify(data.get("tower_cleared", {}) as Dictionary)
+    skill_books = {}
+    var sb: Dictionary = data.get("skill_books", {})
+    for k in sb:
+        grant_skill_book(String(k), int(sb[k]))
 
 
 ## Old save versions get upgraded here when the format changes.
@@ -488,5 +570,9 @@ func _migrate(data: Dictionary) -> Dictionary:
         data.erase("hq_facilities")
     if v < 7:
         data["tower_cleared"] = {}      # v6 -> v7: tower floor completions
+    if v < 8:
+        # v7 -> v8: skill books appear; each hero gets its starter skill and pending level
+        # choices inside HeroData.from_dict (no stored data is lost or rerolled).
+        data["skill_books"] = {}
     data["version"] = SAVE_VERSION
     return data

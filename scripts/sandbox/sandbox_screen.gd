@@ -62,7 +62,7 @@ var _world: Node2D
 var _info: Label
 var _hint: Label
 var _squad_label: Label
-var _skill_btn: Button
+var _skill_btns: Array[Button] = []    # Q W E R (D-040)
 var _overlay: Control
 var _band: ColorRect
 var _drag_start: Vector2 = Vector2.ZERO
@@ -230,9 +230,13 @@ func _build_ui() -> void:
 	pv.add_child(_info)
 	var row := HBoxContainer.new()
 	pv.add_child(row)
-	_skill_btn = UIKit.button("Skill (Q)", func(): use_skill_selected(), Vector2(150, 34))
-	_skill_btn.focus_mode = Control.FOCUS_NONE
-	row.add_child(_skill_btn)
+	for i in SkillDefs.MAX_SLOTS:
+		var slot_i := i
+		var sb := UIKit.button("QWER"[i], func(): use_skill_selected(slot_i), Vector2(64, 34))
+		sb.focus_mode = Control.FOCUS_NONE
+		sb.add_theme_font_size_override("font_size", 11)
+		row.add_child(sb)
+		_skill_btns.append(sb)
 	var stop_btn := UIKit.button("Stop (S)", func(): stop_selected(), Vector2(110, 34))
 	stop_btn.focus_mode = Control.FOCUS_NONE
 	row.add_child(stop_btn)
@@ -437,13 +441,16 @@ func stop_selected() -> void:
 		h.target = null
 
 
-## Fires the active skill of every selected hero that can use it. Returns how many fired.
-func use_skill_selected() -> int:
+## Fires skill slot `slot_index` (Q=0 .. R=3) of every selected hero. Each refusal shows its reason
+## over the hero (D-016: never random). Returns how many fired.
+func use_skill_selected(slot_index: int = 0) -> int:
 	var fired := 0
 	var foes := living_enemies()
 	for h in selected:
-		if h.use_skill(foes):
+		if h.use_skill_slot(slot_index, foes, heroes):
 			fired += 1
+		elif h.alive:
+			FloatingText.spawn(h, h.last_refusal, Color(0.8, 0.8, 0.8), false)
 	return fired
 
 
@@ -574,7 +581,7 @@ func _end_mission(state: Mission) -> void:
 	if state == Mission.SUCCESS and real_squad and not reward_given:
 		reward_given = true
 		if floor_number > 0:
-			reward = Game.complete_floor(floor_number)
+			reward = Game.complete_floor(floor_number, mission_type)
 		else:
 			Game.grant(REWARD_GEMS, REWARD_STONES, 0)
 	_show_result()
@@ -594,6 +601,8 @@ func result_text() -> String:
 			lines.append("Reward: none (test squad)")
 		elif floor_number > 0:
 			lines.append("Reward: %d gems, %d stones, %d materials, %d books" % [int(reward.get("gems", 0)), int(reward.get("stones", 0)), int(reward.get("materials", 0)), int(reward.get("books", 0))])
+			for b in reward.get("skill_books", []):
+				lines.append("Skill book found: %s" % String(SkillDefs.info(String(b)).get("name", b)))
 		else:
 			lines.append("Reward: %d gems, %d stone (placeholder)" % [REWARD_GEMS, REWARD_STONES])
 	return "\n".join(lines)
@@ -746,10 +755,13 @@ func _input(event: InputEvent) -> void:
 		KEY_G:
 			select_all()
 		KEY_Q:
-			use_skill_selected()
-		KEY_W, KEY_E, KEY_R:
-			for h in selected:
-				FloatingText.spawn(h, "no skill learned", Color(0.8, 0.8, 0.8), false)
+			use_skill_selected(0)
+		KEY_W:
+			use_skill_selected(1)
+		KEY_E:
+			use_skill_selected(2)
+		KEY_R:
+			use_skill_selected(3)
 		KEY_S:
 			stop_selected()
 		KEY_A:
@@ -782,26 +794,41 @@ func _refresh_info() -> void:
 		var sh: SandboxHero = selected[0]
 		var h: HeroData = sh.hero
 		var st := h.get_stats()
-		var sk: Dictionary = sh.skill
-		var sk_state := "READY" if sh.skill_ready() else "%.0fs" % sh.skill_cd
-		_info.text = "%s\n%s\n%s  |  %d-star %s  |  Lv %d\nHP %d/%d  ATK %d  MAG %d  DEF %d  SPD %d\nTrust %d   Obedience %d   Composure %d\nSkill: %s [%s] - %s\nOrder: %s" % [
+		var sk_lines: Array = []
+		for i in sh.slots.size():
+			var sk: Dictionary = sh.slot_skill(i)
+			var sk_state := "READY" if sh.skill_ready(i) else ("%.0fs" % ceilf(sh.skill_cd(i)) if sh.skill_cd(i) > 0.0 else "need %d" % int(sk["cost"]))
+			sk_lines.append("%s %s [%s]" % ["QWER"[i], sk["name"], sk_state])
+		_info.text = "%s\n%s\n%s  |  %d-star %s  |  Lv %d\nHP %d/%d  %s %d/%d  ATK %d  MAG %d  DEF %d\nTrust %d   Obedience %d   Composure %d\nSkills: %s\nOrder: %s%s" % [
 			view, goal, h.display_name(), h.stars, h.class_title(), h.level,
-			sh.hp, sh.max_hp, st["atk"], st["mag"], st["def"], st["spd"], h.trust, h.obedience, h.composure,
-			sk.get("name", "-"), sk_state, sk.get("desc", ""), sh.order_label()]
+			sh.hp, sh.max_hp, SkillDefs.RESOURCES[sh.res_kind]["name"], roundi(sh.res), roundi(sh.res_max), st["atk"], st["mag"], st["def"], h.trust, h.obedience, h.composure,
+			"  ".join(sk_lines) if not sk_lines.is_empty() else "none", sh.order_label(), ("  · casting " + String(SkillDefs.info(sh.casting)["name"])) if sh.casting != "" else ""]
 	else:
 		var names: Array = []
 		for s in selected:
 			names.append(s.hero.hero_name.split(" ")[0])
-		_info.text = "%s\n%s\n%d heroes selected: %s\nOrders: Move (right-click), Stop (S), Skill (Q)" % [view, goal, selected.size(), ", ".join(names)]
-	if _skill_btn != null:
-		var any_ready := selected.any(func(h): return h.skill_ready())
-		_skill_btn.disabled = not any_ready
+		_info.text = "%s\n%s\n%d heroes selected: %s\nOrders: Move (right-click), Stop (S), Skills (Q W E R)" % [view, goal, selected.size(), ", ".join(names)]
+	for i in _skill_btns.size():
+		var slot_i := i
+		var b := _skill_btns[i]
+		b.disabled = not selected.any(func(h): return h.skill_ready(slot_i))
+		if selected.size() == 1 and i < (selected[0] as SandboxHero).slots.size():
+			var nm := String((selected[0] as SandboxHero).slot_skill(i)["name"])
+			b.text = "%s %s" % ["QWER"[i], nm.left(7)]
+			b.tooltip_text = String((selected[0] as SandboxHero).slot_skill(i)["desc"])
+		else:
+			b.text = "QWER"[i]
 	var rows: Array = []
 	for i in heroes.size():
 		var hh := heroes[i]
 		var nm := hh.hero.hero_name.split(" ")[0]
 		if hh.alive:
-			rows.append("%d %s  HP %d/%d  %s · %s%s" % [i + 1, nm, hh.hp, hh.max_hp, hh.order_label(), "skill ready" if hh.skill_ready() else "skill %.0fs" % hh.skill_cd, "  [RELIC]" if hh.carrying else ""])
+			var ready: Array = []
+			for k in hh.slots.size():
+				if hh.skill_ready(k):
+					ready.append("QWER"[k])
+			rows.append("%d %s  HP %d/%d  %s %d  %s · %s%s" % [i + 1, nm, hh.hp, hh.max_hp, String(SkillDefs.RESOURCES[hh.res_kind]["name"]).left(1), roundi(hh.res), hh.order_label(),
+				("ready " + "".join(ready)) if not ready.is_empty() else "no skill ready", "  [RELIC]" if hh.carrying else ""])
 		elif hh.downed:
 			rows.append("%d %s  DOWN %ds — right-click to rescue" % [i + 1, nm, ceili(hh.agony)])
 		else:

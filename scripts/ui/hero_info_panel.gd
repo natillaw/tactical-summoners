@@ -2,7 +2,8 @@ class_name HeroInfoPanel
 extends PanelContainer
 ## Everything about one hero, opened by clicking the hero in the town: portrait, identity, stats,
 ## social state, personality, equipment slots, appearance colours, what they are doing now,
-## relationships and recent memories. Read-only.
+## relationships and recent memories. The Skills section is interactive: level-up choices (D-045),
+## reading skill books (D-046) and the Q/W/E/R loadout.
 
 signal open_barracks
 signal closed
@@ -12,6 +13,7 @@ const LAYER_NAMES := {"body": "Skin", "eyes": "Eyes", "rear_hair": "Hair (back)"
 
 var hero: HeroData
 var activity: String = ""
+var _skills_box: VBoxContainer
 
 
 func _init(h: HeroData = null, current_activity: String = "") -> void:
@@ -73,6 +75,12 @@ func _ready() -> void:
     vb.add_child(UIKit.label("Crit %d%%   Attack every %.2fs   %s basic attacks" % [roundi(float(st["crit"]) * 100.0), float(st["interval"]), String(st["kind"]).capitalize()], 13, UIKit.MUTED))
     for pair in [["Trust", h.trust], ["Obedience", h.obedience], ["Composure", h.composure]]:
         vb.add_child(_bar(String(pair[0]), int(pair[1])))
+
+    vb.add_child(_section("Skills"))
+    _skills_box = VBoxContainer.new()
+    _skills_box.add_theme_constant_override("separation", 4)
+    vb.add_child(_skills_box)
+    _fill_skills()
 
     vb.add_child(_section("Personality"))
     for t in h.traits:
@@ -149,6 +157,63 @@ static func dominant_color(rel: String) -> Color:
             best_n = int(counts[k])
             best = String(k)
     return Color.html(best) if best != "" else Color(0, 0, 0, 0)
+
+
+## Known skills by slot, pending level choices and readable books. Rebuilt after every action.
+func _fill_skills() -> void:
+    for c in _skills_box.get_children():
+        c.queue_free()
+    var h := hero
+    var res := String(SkillDefs.RESOURCES[SkillDefs.resource_of(h.hero_class)]["name"])
+    _skills_box.add_child(UIKit.label("Resource: " + res, 13, UIKit.MUTED))
+    var keys := ["Q", "W", "E", "R"]
+    for sid in h.skills:
+        var sk := SkillDefs.info(sid)
+        var slot_i := h.loadout.find(sid)
+        var row := HBoxContainer.new()
+        row.add_child(_wrap("[%s] %s — %d %s, %.0fs%s. %s" % [keys[slot_i] if slot_i >= 0 else "-", sk["name"], int(sk["cost"]), res.to_lower(),
+            float(sk["cd"]), (", cast %.1fs" % float(sk["cast"])) if float(sk["cast"]) > 0.0 else "", sk["desc"]], 13, UIKit.TEXT if slot_i >= 0 else UIKit.MUTED))
+        if slot_i != 0:
+            var skill_id := String(sid)
+            var to_q := UIKit.button("→Q", _on_equip.bind(skill_id), Vector2(44, 26))
+            to_q.tooltip_text = "Put this skill on Q (swaps)"
+            row.add_child(to_q)
+        _skills_box.add_child(row)
+    for i in h.skill_choices.size():
+        var c: Dictionary = h.skill_choices[i]
+        _skills_box.add_child(UIKit.label("Level %d: choose one" % int(c["level"]), 13, UIKit.ACCENT))
+        var opts := HBoxContainer.new()
+        for sid in c["options"]:
+            var idx := i
+            var skill_id := String(sid)
+            var b := UIKit.button(String(SkillDefs.info(skill_id)["name"]), _on_choose.bind(idx, skill_id), Vector2(110, 28))
+            b.tooltip_text = String(SkillDefs.info(skill_id)["desc"])
+            opts.add_child(b)
+        _skills_box.add_child(opts)
+    for sid in Game.skill_books:
+        if h.skills.has(sid) or not SkillDefs.usable_by(String(sid), h.hero_class):
+            continue
+        var skill_id := String(sid)
+        var rb := UIKit.button("Read book: %s (x%d)" % [SkillDefs.info(skill_id)["name"], int(Game.skill_books[sid])], _on_read.bind(skill_id), Vector2(300, 28))
+        rb.tooltip_text = String(SkillDefs.info(skill_id)["desc"])
+        _skills_box.add_child(rb)
+
+
+func _on_equip(skill_id: String) -> void:
+    hero.equip_skill(0, skill_id)
+    Game._commit()
+    _fill_skills()
+
+
+func _on_choose(idx: int, skill_id: String) -> void:
+    hero.choose_skill(idx, skill_id)
+    Game._commit()
+    _fill_skills()
+
+
+func _on_read(skill_id: String) -> void:
+    Game.use_skill_book(hero, skill_id)
+    _fill_skills()
 
 
 func _section(title: String) -> Label:

@@ -5,7 +5,7 @@ extends RefCounted
 ## more traits/passives and a higher level cap - all of it procedural.
 
 
-const VERSION := 2   # 1 = Drop A. 2 adds Trust/Obedience/Composure (look/class/traits are unchanged)
+const VERSION := 3   # 1 = Drop A. 2 adds Trust/Obedience/Composure. 3 adds the starting active skill (D-044); look/class/traits are unchanged
 
 
 static func generate(hero_seed: int, stars: int) -> HeroData:
@@ -47,6 +47,7 @@ static func generate(hero_seed: int, stars: int) -> HeroData:
 	h.obedience = clampi(obedience, 0, 100)
 	h.composure = 100
 	h.generator_version = VERSION
+	h.ensure_skills()
 	return h
 
 

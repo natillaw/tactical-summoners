@@ -164,6 +164,26 @@ func outgoing_mult() -> float:
     return m
 
 
+func incoming_mult() -> float:
+    var m := 1.0
+    for id in statuses:
+        m *= float(CombatRules.STATUS[id].get("in_dmg", 1.0))
+    return m
+
+
+## Removes every harmful status (poison, stun, slow...). Returns how many were removed.
+func cleanse() -> int:
+    var gone: Array = []
+    for id in statuses:
+        if CombatRules.STATUS[id].get("debuff", false):
+            gone.append(id)
+    for id in gone:
+        statuses.erase(id)
+    if not gone.is_empty():
+        _recalc_max_hp()
+    return gone.size()
+
+
 func _blocked(what: String) -> bool:
     for id in statuses:
         if (CombatRules.STATUS[id].get("blocks", []) as Array).has(what):
@@ -195,6 +215,7 @@ func tick_combat(delta: float) -> void:
         ticks += 1
     var expired: Array = []
     var dots: Array = []                  # applied after the loop: a lethal tick clears `statuses`
+    var hots := 0.0
     for id in statuses:
         var s: Dictionary = statuses[id]
         s["t"] = float(s["t"]) - delta
@@ -202,12 +223,16 @@ func tick_combat(delta: float) -> void:
         if dot != "" and ticks > 0:
             var src: Node2D = s["src"] if is_instance_valid(s["src"]) else null
             dots.append(DamageInfo.make(float(s["mag"]) * float(s["stacks"]) * CombatRules.STATUS_TICK * ticks, dot, src))
+        if CombatRules.STATUS[id].get("hot", false) and ticks > 0:
+            hots += float(s["mag"]) * CombatRules.STATUS_TICK * ticks
         if float(s["t"]) <= 0.0:
             expired.append(id)
     for id in expired:
         statuses.erase(id)
     if not expired.is_empty():
         _recalc_max_hp()
+    if hots > 0.0:
+        heal(roundi(hots))
     for d in dots:
         if alive:
             take_hit(d)
