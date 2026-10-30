@@ -16,14 +16,13 @@ const FOLLOW_ZOOM := 2.5
 enum Mission { ACTIVE, SUCCESS, FAILED }
 
 const MISSION_NAME := "Recover the relic"
-const RELIC_CELL := Vector2i(32, 3)
 const PICKUP_RADIUS := 40.0
 const EXTRACT_RADIUS := 56.0
 const REWARD_GEMS := 100          # placeholder rewards (T-020): real tuning comes with the economy
 const REWARD_STONES := 1
 
 var floor_number: int = 0
-var map = null
+var map: NavMap = null
 var heroes: Array[SandboxHero] = []
 var enemies: Array[SandboxEnemy] = []
 var selected: Array[SandboxHero] = []
@@ -86,7 +85,7 @@ func _ready() -> void:
 	camera.make_current()
 
 	relic = SandboxRelic.new()
-	relic.position = map.center_of(map.goal_cell)
+	relic.position = map.center_of(map.relic_cell)      # never the extraction cell (F-003)
 	_world.add_child(relic)
 	_build_squad()
 	_build_enemies()
@@ -297,7 +296,7 @@ func _update_mission(delta: float) -> void:
 				h.queue_redraw()
 				relic.visible = false
 				break
-	if carrier != null and carrier.position.distance_to(map.center_of(SandboxMap.GOAL_CELL)) <= EXTRACT_RADIUS:
+	if carrier != null and carrier.position.distance_to(map.center_of(map.extract_cell)) <= EXTRACT_RADIUS:
 		_end_mission(Mission.SUCCESS)
 	elif living_heroes().is_empty():
 		_end_mission(Mission.FAILED)

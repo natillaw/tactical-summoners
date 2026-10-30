@@ -3,12 +3,12 @@ extends Node2D
 ## Draws the fixed test map. With the Pixel Crawler tileset installed (T-025) it draws the baked
 ## tile texture; otherwise it falls back to a rich, detailed procedural stone dungeon style.
 
-var map: SandboxMap
+var map: NavMap
 var _baked: Texture2D = null
 var _tried := false
 
 
-func _init(m: SandboxMap = null) -> void:
+func _init(m: NavMap = null) -> void:
 	map = m
 
 
@@ -21,7 +21,7 @@ func _draw() -> void:
 	if _baked != null:
 		draw_texture(_baked, Vector2.ZERO)
 	else:
-		var cell: float = float(SandboxMap.CELL)
+		var cell: float = float(NavMap.CELL)
 		for y in map.height:
 			for x in map.width:
 				var r := Rect2(float(x) * cell, float(y) * cell, cell, cell)
@@ -49,7 +49,7 @@ func _draw() -> void:
 						draw_rect(Rect2(r.position, Vector2(cell, 10)), Color(0, 0, 0, 0.4))
 
 	# Extraction/goal marker with gorgeous glowing portal effect
-	var g: Vector2 = map.center_of(SandboxMap.GOAL_CELL)
+	var g: Vector2 = map.center_of(map.extract_cell)
 	draw_circle(g, 24.0, Color(0.15, 0.75, 0.45, 0.3))
 	draw_arc(g, 24.0, 0.0, TAU, 36, Color(0.45, 0.95, 0.65), 4.0)
 	draw_arc(g, 18.0, 0.0, TAU, 28, Color(0.70, 1.0, 0.85, 0.8), 2.5)

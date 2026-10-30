@@ -1,21 +1,11 @@
 class_name ProceduralMap
-extends RefCounted
+extends NavMap
 ## Robust procedural dungeon generator supporting both tower floors and peaceful Headquarters layouts.
 ## Preserves complete backward compatibility for all public properties and navigation methods.
 
-const CELL := 48
-
-var width: int = 100
-var height: int = 100
 var seed_value: int = 12345
 var floor_number: int = 1
 var grid_rows: Array[String] = []
-var grid: AStarGrid2D
-
-var spawn_cells: Array[Vector2i] = []
-var goal_cell: Vector2i = Vector2i(5, 5)
-var enemy_spawn_cells: Array[Vector2i] = []
-var treasure_cells: Array[Vector2i] = []
 var objective_cells: Array[Vector2i] = []
 
 
@@ -34,9 +24,16 @@ func _generate_with_retry() -> void:
 		rng.seed = seed_value + absi(floor_number) * 997 + attempts * 31
 		if _try_generate(rng):
 			if _validate_map():
+				_set_mission_cells()
 				return
 		attempts += 1
 	_force_fallback_generate(rng)
+
+
+## Relic in the far room (goal), extraction back in the start room (F-003: never the same cell).
+func _set_mission_cells() -> void:
+	relic_cell = goal_cell
+	extract_cell = spawn_cells[0] if not spawn_cells.is_empty() else goal_cell
 
 
 func _try_generate(rng: RandomNumberGenerator) -> bool:
@@ -49,6 +46,7 @@ func _try_generate(rng: RandomNumberGenerator) -> bool:
 
 	# Headquarters (floor_number <= 0) gets a spacious open layout, tower gets multi-room dungeons
 	var is_hq := (floor_number <= 0)
+	objective_cells.clear()
 	var target_rooms := 1 if is_hq else clampi(10 + floor_number * 2, 12, 30)
 	var rooms: Array[Rect2i] = []
 
@@ -192,6 +190,7 @@ func _force_fallback_generate(_rng: RandomNumberGenerator) -> void:
 		for x in width:
 			if grid_rows[y][x] == "#":
 				grid.set_point_solid(Vector2i(x, y), true)
+	_set_mission_cells()
 
 
 func _validate_map() -> bool:
@@ -231,67 +230,3 @@ func _carve_corridor(map_grid: Array, p1: Vector2i, p2: Vector2i) -> void:
 			if in_bounds(Vector2i(cx, cy)):
 				map_grid[cy][cx] = "."
 			cx += 1 if p2.x > cx else -1
-
-
-func world_size() -> Vector2:
-	return Vector2(width, height) * CELL
-
-
-func cell_of(world: Vector2) -> Vector2i:
-	return Vector2i(floori(world.x / CELL), floori(world.y / CELL))
-
-
-func center_of(cell: Vector2i) -> Vector2:
-	return (Vector2(cell) + Vector2(0.5, 0.5)) * CELL
-
-
-func in_bounds(cell: Vector2i) -> bool:
-	return cell.x >= 0 and cell.y >= 0 and cell.x < width and cell.y < height
-
-
-func is_blocked_cell(cell: Vector2i) -> bool:
-	return not in_bounds(cell) or grid.is_point_solid(cell)
-
-
-func is_blocked(world: Vector2) -> bool:
-	return is_blocked_cell(cell_of(world))
-
-
-func nearest_walkable(world: Vector2) -> Vector2:
-	var c := cell_of(world)
-	c = Vector2i(clampi(c.x, 0, width - 1), clampi(c.y, 0, height - 1))
-	if not is_blocked_cell(c):
-		return world if not is_blocked(world) else center_of(c)
-	for r in range(1, maxi(width, height)):
-		var best := Vector2.ZERO
-		var best_d := INF
-		for dy in range(-r, r + 1):
-			for dx in range(-r, r + 1):
-				if maxi(absi(dx), absi(dy)) != r:
-					continue
-				var n := c + Vector2i(dx, dy)
-				if is_blocked_cell(n):
-					continue
-				var d := center_of(n).distance_to(world)
-				if d < best_d:
-					best_d = d
-					best = center_of(n)
-		if best_d < INF:
-			return best
-	return center_of(c)
-
-
-func find_path(a: Vector2, b: Vector2) -> Array[Vector2]:
-	var out: Array[Vector2] = []
-	var start := cell_of(nearest_walkable(a))
-	var goal := cell_of(nearest_walkable(b))
-	if is_blocked_cell(start) or is_blocked_cell(goal):
-		return out
-	var pts := grid.get_point_path(start, goal)
-	for i in pts.size():
-		if i == 0 and pts.size() > 1:
-			continue
-		out.append(pts[i])
-	if not out.is_empty() and not is_blocked(b) and cell_of(b) == goal:
-		out[out.size() - 1] = b
-	return out

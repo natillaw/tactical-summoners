@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Linux/CI twin of tools/Run-Tests.ps1: same 12 suites, same PASS rule.
+# Linux/CI twin of tools/Run-Tests.ps1: same suites, same PASS rule.
 #   GODOT=/path/to/godot tools/run_tests.sh
 # Writes tools/last_test_run.txt and exits with the number of failed suites.
 set -u
@@ -25,6 +25,8 @@ suites=(
   "simulation|--script res://tests/test_simulation.gd|ALL PASSED"
   "deep systems|--script res://tests/test_deep_systems.gd|ALL PASSED"
   "procedural|--script res://tests/test_procedural.gd|ALL PASSED"
+  "boot|res://tests/smoke_boot.tscn --quit-after 3000|ALL PASSED"
+  "tower|res://tests/smoke_tower.tscn --quit-after 3000|ALL PASSED"
 )
 bad=0
 for s in "${suites[@]}"; do

@@ -1,7 +1,7 @@
 class_name MapTiles
 extends RefCounted
 ## T-025: bakes the fixed sandbox map into ONE texture from Pixel Crawler tiles (16 px, native
-## scale). One logic cell (SandboxMap.CELL = 48) = 3x3 tiles, so pathing/collision stay unchanged.
+## scale). One logic cell (NavMap.CELL = 48) = 3x3 tiles, so pathing/collision stay unchanged.
 ## Floor = cobble. Wall = flat top; a wall with floor to its south shows the cliff face instead.
 ## Floor cells under a wall get a soft shadow. Returns null when the art is not installed.
 
@@ -28,19 +28,19 @@ static func _img(file: String) -> Image:
     return img
 
 
-static func _is_wall(map: SandboxMap, x: int, y: int) -> bool:
+static func _is_wall(map: NavMap, x: int, y: int) -> bool:
     var c := Vector2i(x, y)
     return not map.in_bounds(c) or map.is_blocked_cell(c)
 
 
-static func bake(map: SandboxMap) -> Texture2D:
+static func bake(map: NavMap) -> Texture2D:
     if not available():
         return null
     var fl := _img("Floors_Tiles.png")
     var wl := _img("Wall_Tiles.png")
     if fl == null or wl == null:
         return null
-    var cell := SandboxMap.CELL
+    var cell := NavMap.CELL
     var out := Image.create(map.width * cell, map.height * cell, false, Image.FORMAT_RGBA8)
     var shade := Image.create(cell, 12, false, Image.FORMAT_RGBA8)
     shade.fill(Color(0, 0, 0, 0.27))

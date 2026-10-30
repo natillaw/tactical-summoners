@@ -25,7 +25,7 @@ func _ready() -> void:
 
     check(CombatRules.damage(10, 4) == 8 and CombatRules.damage(1, 50) == 1, "damage formula: half DEF, minimum 1")
     check(CombatRules.hero_interval(1) <= 1.6 and CombatRules.hero_interval(99) >= 0.6, "attack interval clamped")
-    check(sb.enemies.size() == SandboxScreen.ENEMY_CELLS.size(), "enemies spawned on the fixed map")
+    check(sb.enemies.size() == sb.map.enemy_spawn_cells.size(), "enemies spawned on the fixed map")
     var on_floor := sb.enemies.all(func(e): return not sb.map.is_blocked(e.position))
     check(on_floor, "enemies spawn on walkable ground")
 
