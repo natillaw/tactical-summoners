@@ -105,6 +105,12 @@ Commoner, Warrior, Rogue, Ranger, Cleric y Mage (más Novice como estado "sin cl
 ### D-030 — El juego empieza en el pueblo; el pueblo se construye (2026-10-30, dueño; resuelve P-04 y parte de P-22)
 Lo primero que ve el jugador es **la base = el pueblo**, no un menú. Desde el pueblo se hace todo lo demás (invocar, héroes, escuadrón, torre, memorial, gestión). El pueblo es un **mapa fijo y persistente** (siempre el mismo). Se **construye y mejora** con edificios: herrería, hospital, alquimia, etc. Implementación inicial (v3): vista cenital como el resto del juego (el estilo isométrico de la imagen de referencia queda como opción futura), edificios definidos en `scripts/data/town_tables.gd`, coste en materiales, niveles 0 (sin construir) a máx. Efectos concretos de herrería y alquimia esperan al equipo/crafting (P-19, P-20); bonus por profesión sigue PENDIENTE (P-05).
 
+### D-031 — Pisos 1-10 desbloqueados y con bioma de bosque (2026-10-30, dueño; resuelve P-03 para 1-10 y P-02b por ahora)
+Todos los pisos 1-10 están desbloqueados (son los que hay por ahora). Bioma: **bosque**, "nada loco". Implementación (v4): claros de hierba con flores, senderos de tierra en los pasillos, muros de árboles; criaturas de bosque del pack Voxel Dungeon por piso (slimes, ratas, murciélagos, arañas, setas, goblins, hobgoblins, orcos, gólems; jefe orco en el piso 10). Tamaños de piso reducidos a 40-60 celdas para que sean jugables y ligeros. Progreso real de la torre (desbloqueo, recompensas por piso) sigue PENDIENTE (P-02b).
+
+### D-032 — Héroes con autonomía total en el pueblo; ficha al hacer clic (2026-10-30, dueño)
+En el pueblo cada héroe decide qué hacer (pasear, visitar edificios, entrenar, trabajar, descansar, charlar), según su personalidad y su trabajo. Es solo visual hasta que existan los sistemas de entrenamiento, etc. Al hacer clic en un héroe se abre su ficha: equipo, colores, stats, personalidad, relaciones, recuerdos y actividad actual.
+
 ---
 
 ## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)
@@ -114,7 +120,7 @@ Lo primero que ve el jugador es **la base = el pueblo**, no un menú. Desde el p
 | P-01 | ~~Generación procedural de pisos/mundo~~ | **RESUELTA → D-026** (2026-10-30) | — |
 | P-02 | ~~Torre de 100 pisos; primeros 10 como alcance inicial~~ | **RESUELTA → D-027** (2026-10-30) | — |
 | P-02b | Progreso de la torre | D-027 | Repetición de pisos, recompensas por piso, desbloqueos cada 10 pisos (mazmorras, instalaciones, tope de nivel: REFERENCE #15) |
-| P-03 | **Biomas** | Imagen de mapa (piedra, agua profunda, hierba, lava, cristal mágico, puentes, puertas); 8 familias temáticas del Bible: Ashen/cursed kingdom, Verdant/overgrown wilds, Arcane/fractured reality, Umbral/abyssal depths, Storm/sky-isles, Forge/clockwork empire, Tidal/drowned civilization, Crystal/glass desert (etiquetas de trabajo) | ¿Qué biomas en los pisos 1-10? |
+| P-03 | **Biomas** (pisos 1-10 → bosque, D-031; resto pendiente) | Imagen de mapa (piedra, agua profunda, hierba, lava, cristal mágico, puentes, puertas); 8 familias temáticas del Bible: Ashen/cursed kingdom, Verdant/overgrown wilds, Arcane/fractured reality, Umbral/abyssal depths, Storm/sky-isles, Forge/clockwork empire, Tidal/drowned civilization, Crystal/glass desert (etiquetas de trabajo) | ¿Qué biomas en los pisos 1-10? |
 | P-04 | ~~HQ in-game explorable, no un menú~~ **RESUELTA → D-030** | Imagen `hq_ingame_reference_THIRD_PARTY.jpg` (sala con zonas etiquetadas, héroes paseando con bocadillos de diálogo); `HQWorld` (Mega Prompt) | ¿Vista isométrica o cenital? ¿Qué zonas? |
 | P-05 | **Profesiones de vida pasada** | 20 profesiones en `HeroTables.PROFESSIONS` (granjero, chef, herrero, leñador, minero, constructor, médico, mercader, guardia, cazador, sastre, ingeniero, explorador, erudito, alquimista, sacerdote, pescador, mozo de cuadra, cantero, artista), cada una con bonus y acción improvisada (Gemini, 2026-10-29) | ¿Afectan a producción, crafting y/o combate? ¿Cómo? |
 | P-06 | ~~Conjunto de clases base~~ | **RESUELTA → D-028** (2026-10-30) | — |

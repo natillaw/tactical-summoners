@@ -24,25 +24,33 @@ func _ready() -> void:
     var scene: PackedScene = load("res://scenes/main.tscn")
     _main = scene.instantiate() as Control
     add_child(_main)
-    await _shot("01_town", 1.5)
+    await _shot("01_town", 4.0)
     var town: Node = _find("TownScreen")
     if town != null:
         town.call("select_building", "tower_gate")
         await _shot("01b_town_tower_gate", 0.5)
-        town.call("select_building", "alchemy")
-        await _shot("01c_town_build_alchemy", 0.5)
-    for screen in ["menu", "summon", "roster", "party", "memorial", "hq"]:
+        town.call("select_building", "")
+        var th_list: Array = town.get("heroes")
+        if not th_list.is_empty():
+            town.call("open_hero", th_list[0])
+            await _shot("01c_town_hero_panel", 0.8)
+            town.call("close_hero")
+        var cam: Camera2D = town.get("camera")
+        cam.zoom = Vector2.ONE * 1.6
+        cam.position = Vector2(17 * 48, 9 * 48)
+        await _shot("01d_town_closeup_plaza", 3.0)
+    for screen in ["summon", "roster", "party"]:
         _main.call("show_screen", screen, 0)
         await _shot("02_" + screen, 0.6)
+    for f in range(1, 6):
+        _main.call("show_screen", "sandbox", f)
+        await _shot("03_floor%d_squad" % f, 2.5)
+        var sb: Node = _find("SandboxScreen")
+        if sb != null:
+            sb.set("overview", true)
+            await _shot("04_floor%d_map" % f, 2.0)
     _main.call("show_screen", "sandbox", 0)
-    await _shot("03_sandbox_start", 1.5)
-    await _shot("04_sandbox_after_5s", 5.0)
-    var sb: Node = _find("SandboxScreen")
-    if sb != null:
-        sb.call("select_slot", 0)
-        await _shot("05_sandbox_focus_hero1", 1.5)
-    _main.call("show_screen", "sandbox", 1)
-    await _shot("06_tower_floor1", 2.0)
+    await _shot("05_training_ground", 4.0)
     print("CAPTURE DONE -> ", _dir)
     get_tree().quit(0)
 

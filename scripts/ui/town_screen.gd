@@ -14,6 +14,8 @@ var view: TownView
 var camera: Camera2D
 var heroes: Array[TownHero] = []
 var selected: String = ""
+var hero_panel: HeroInfoPanel = null
+var selected_hero_id: String = ""
 
 var _viewport: SubViewport
 var _world: Node2D
@@ -64,6 +66,8 @@ func rebuild() -> void:
         _world.add_child(th)
         heroes.append(th)
         i += 1
+    for th in heroes:
+        th.town_heroes = heroes
     if camera.position == Vector2.ZERO:
         # first view: the whole town fits on screen
         var ws := map.world_size()
@@ -103,7 +107,7 @@ func _build_ui() -> void:
     _res = UIKit.label("", 15, UIKit.ACCENT)
     res_panel.add_child(_res)
 
-    var hint := UIKit.label("Click a building to enter, build or upgrade it    Drag to move    Wheel to zoom", 14, UIKit.MUTED)
+    var hint := UIKit.label("Click a building to enter, build or upgrade it    Click a hero to see them    Drag to move    Wheel to zoom", 14, UIKit.MUTED)
     hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
     hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
     hint.position += Vector2(14, -30)
@@ -243,7 +247,43 @@ func _gui_input(event: InputEvent) -> void:
 func click_at(world: Vector2) -> void:
     if map == null:
         return
+    var th := hero_at(world)
+    if th != null:
+        open_hero(th)
+        return
     select_building(map.building_at(map.cell_of(world)))
+
+
+## Visible town hero under a world point (feet at the node origin, body ~30 px above).
+func hero_at(world: Vector2) -> TownHero:
+    var best: TownHero = null
+    var best_d := 22.0
+    for th in heroes:
+        if not th.visible:
+            continue
+        var d := (th.position + Vector2(0, -14)).distance_to(world)
+        if d < best_d:
+            best_d = d
+            best = th
+    return best
+
+
+## Opens the hero panel (equipment, colours, stats, personality, bonds, memories).
+func open_hero(th: TownHero) -> void:
+    close_hero()
+    selected_hero_id = th.hero.id
+    hero_panel = HeroInfoPanel.new(th.hero, th.activity_text())
+    hero_panel.position = Vector2(12, 52)
+    hero_panel.closed.connect(close_hero)
+    hero_panel.open_barracks.connect(func(): navigate.emit("roster", 0))
+    add_child(hero_panel)
+
+
+func close_hero() -> void:
+    if hero_panel != null and is_instance_valid(hero_panel):
+        hero_panel.queue_free()
+    hero_panel = null
+    selected_hero_id = ""
 
 
 func _update_hover(world: Vector2) -> void:

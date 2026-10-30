@@ -14,6 +14,10 @@ const WALL_TOP := Vector2i(9, 3)
 const FACE_COL := 9
 const FACE_ROW := 6
 
+## Facade style per building (ProcArt.house).
+const STYLES := {"town_hall": "stone", "barracks": "stone", "tower_gate": "stone", "memorial": "stone",
+    "blacksmith": "stone", "kitchen": "wood", "workshop": "wood", "common": "wood"}
+
 var map: TownMap
 var hovered: String = ""
 var selected: String = ""
@@ -33,7 +37,6 @@ func _ready() -> void:
     for id in TownTables.ids():
         for p in TownTables.info(id)["props"]:
             _load_prop(String(p))
-    _load_prop("door_wood")
     _load_prop("rubble")
 
 
@@ -87,13 +90,39 @@ func _bake_ground() -> Texture2D:
                     var dst := Vector2i(x * cell + sx * T, y * cell + sy * T)
                     match kind:
                         "#":
-                            out.blend_rect(wl, Rect2i(WALL_TOP * T, sz), dst)
-                        "p", "B":
+                            out.fill_rect(Rect2i(dst, sz), ForestArt.FOREST_FLOOR)
+                        "p", "B", "w":
                             out.blend_rect(fl, Rect2i(COBBLE * T, sz), dst)
                         "d":
                             out.blend_rect(fl, Rect2i(DIRT * T, sz), dst)
                         _:
                             out.blend_rect(fl, Rect2i(GRASS * T, sz), dst)
+    var r := RandomNumberGenerator.new()
+    r.seed = 7331
+    for y in map.height:
+        var row2: String = map.ground[y]
+        for x in map.width:
+            var o := Vector2i(x, y) * cell
+            if row2[x] == ".":
+                ProcArt.stamp_tufts(out, o, r)
+                var roll := r.randf()
+                if roll < 0.30:
+                    ProcArt.stamp_flowers(out, o + Vector2i(r.randi_range(4, 30), r.randi_range(4, 30)), r)
+                elif roll < 0.38:
+                    out.blend_rect(ProcArt.bush(r.randi() % 2), Rect2i(0, 0, 18, 14), o + Vector2i(r.randi_range(4, 26), r.randi_range(10, 30)))
+                elif roll < 0.42:
+                    out.blend_rect(ProcArt.rock(0), Rect2i(0, 0, 14, 10), o + Vector2i(r.randi_range(4, 30), r.randi_range(10, 34)))
+            elif row2[x] == "w":
+                out.blend_rect(ProcArt.well(), Rect2i(0, 0, 24, 26), o + Vector2i(12, 10))
+    # forest around the town: trees on the edge ring, drawn top to bottom
+    for y in range(-1, map.height + 1):
+        for x in range(-1, map.width + 1):
+            var edge := x <= 0 or y <= 0 or x >= map.width - 1 or y >= map.height - 1
+            if not edge:
+                continue
+            for k in 2:
+                var img := ProcArt.tree([0, 0, 1, 2][r.randi() % 4])
+                out.blend_rect(img, Rect2i(Vector2i.ZERO, img.get_size()), Vector2i(x, y) * cell + Vector2i(r.randi_range(-6, 22), r.randi_range(-16, 8) + k * 16))
     return ImageTexture.create_from_image(out)
 
 
@@ -112,16 +141,22 @@ func _draw() -> void:
         var r := Rect2(Vector2(plot.position) * cell, Vector2(plot.size) * cell)
         var level := Game.building_level(id)
         if level > 0:
-            _draw_building(plot, b["roof"])
-            var door := Vector2(TownTables.door_cell(id)) * cell - Vector2(0, cell)
-            _draw_prop("door_wood", 0, Rect2(door + Vector2(4, 0), Vector2(cell - 8, cell)))
+            var img := ProcArt.house(plot.size.x * NavMap.CELL, plot.size.y * NavMap.CELL, b["roof"], String(STYLES.get(id, "plaster")), true)
+            draw_texture(ProcArt.texture(img), r.position)
             var props: Array = b["props"]
+            var front := Vector2(TownTables.door_cell(id)) * cell
             for i in props.size():
                 var side := -1.0 if i % 2 == 0 else 1.0
-                var at := door + Vector2(side * cell * (1 + i / 2), cell * 0.15)
-                _draw_prop(String(props[i]), -1, Rect2(at, Vector2(cell, cell)))
+                var at := front + Vector2(side * cell * (0.75 + i / 2), -cell * 0.35)
+                _draw_prop(String(props[i]), -1, Rect2(at, Vector2(cell, cell) * 0.75))
         else:
-            draw_rect(r, Color(0.0, 0.0, 0.0, 0.18))
+            # construction site: fenced dirt plot with rubble
+            draw_rect(r.grow(-6), Color(0.0, 0.0, 0.0, 0.12))
+            for fx in range(int(r.position.x) + 4, int(r.end.x) - 4, 12):
+                draw_rect(Rect2(fx, r.position.y + 4, 3, 8), Color8(110, 74, 42))
+                draw_rect(Rect2(fx, r.end.y - 12, 3, 8), Color8(110, 74, 42))
+            draw_rect(Rect2(r.position.x + 4, r.position.y + 6, r.size.x - 8, 2), Color8(140, 96, 56))
+            draw_rect(Rect2(r.position.x + 4, r.end.y - 10, r.size.x - 8, 2), Color8(140, 96, 56))
             _draw_prop("rubble", 0, Rect2(r.get_center() - Vector2(cell, cell) * 0.5, Vector2(cell, cell)))
         var ring := Color(1.0, 0.9, 0.5) if id == selected else (Color(1, 1, 1, 0.7) if id == hovered else Color(0, 0, 0, 0))
         if ring.a > 0.0:
@@ -131,25 +166,6 @@ func _draw() -> void:
         var tp := Vector2(r.get_center().x - tw * 0.5, r.position.y - 6)
         draw_rect(Rect2(tp + Vector2(-4, -14), Vector2(tw + 8, 18)), Color(0.08, 0.07, 0.12, 0.75))
         draw_string(font, tp, title, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1, 0.95, 0.8) if level > 0 else Color(0.8, 0.8, 0.8))
-
-
-## Roof of wall-top tiles tinted with the building colour; the bottom row is the stone facade.
-func _draw_building(plot: Rect2i, roof: Color) -> void:
-    var cell := float(NavMap.CELL)
-    for y in range(plot.position.y, plot.end.y):
-        for x in range(plot.position.x, plot.end.x):
-            var face := y == plot.end.y - 1
-            for sy in 3:
-                for sx in 3:
-                    var dst := Rect2(Vector2(x, y) * cell + Vector2(sx, sy) * T, Vector2(T, T))
-                    if _walls == null:
-                        draw_rect(dst, roof.darkened(0.4) if face else roof)
-                    elif face:
-                        draw_texture_rect_region(_walls, dst, Rect2(Vector2(FACE_COL, FACE_ROW + sy) * T, Vector2(T, T)))
-                    else:
-                        draw_texture_rect_region(_walls, dst, Rect2(Vector2(WALL_TOP) * T, Vector2(T, T)), roof)
-    var r := Rect2(Vector2(plot.position) * cell, Vector2(plot.size) * cell)
-    draw_rect(Rect2(r.position, Vector2(r.size.x, r.size.y - cell)), Color(0, 0, 0, 0.35), false, 2.0)
 
 
 ## frame -1 = animate with time.

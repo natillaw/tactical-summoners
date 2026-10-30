@@ -34,9 +34,11 @@ func setup_type(id: String) -> void:
     var f := EnemySprites.build_frames(id)
     if f == null or _sprite != null:
         return
+    enemy_name = id.capitalize() if EnemySprites.is_voxel(id) else enemy_name
     _sprite = AnimatedSprite2D.new()
     _sprite.sprite_frames = f
     _sprite.centered = false
+    _sprite.scale = Vector2.ONE * EnemySprites.scale_for(id)
     add_child(_sprite)
     _sprite.play("idle")
     _fit("idle")
