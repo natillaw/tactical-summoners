@@ -102,6 +102,9 @@ Commoner, Warrior, Rogue, Ranger, Cleric y Mage (más Novice como estado "sin cl
 ### D-029 — 7 estrellas y 70 niveles (2026-10-30, dueño; resuelve P-08)
 7★ con 70 niveles: una estrella por cada 10 niveles (star_gate = ceil(nivel/10), como en la biblioteca de habilidades). Sustituye a la escala del código (5★, topes 10/20/40/60/80). Implementarlo exige cambiar `HeroTables.MAX_STARS`/`STAR_DATA`, las odds de los banners (7 entradas), los colores de estrella, la migración de guardados (subir `SAVE_VERSION`) y las pruebas. Es una tarea de la Fase 5, no antes de la reparación (D-025). Nombres de rareza: siguen PENDIENTES (P-09).
 
+### D-030 — El juego empieza en el pueblo; el pueblo se construye (2026-10-30, dueño; resuelve P-04 y parte de P-22)
+Lo primero que ve el jugador es **la base = el pueblo**, no un menú. Desde el pueblo se hace todo lo demás (invocar, héroes, escuadrón, torre, memorial, gestión). El pueblo es un **mapa fijo y persistente** (siempre el mismo). Se **construye y mejora** con edificios: herrería, hospital, alquimia, etc. Implementación inicial (v3): vista cenital como el resto del juego (el estilo isométrico de la imagen de referencia queda como opción futura), edificios definidos en `scripts/data/town_tables.gd`, coste en materiales, niveles 0 (sin construir) a máx. Efectos concretos de herrería y alquimia esperan al equipo/crafting (P-19, P-20); bonus por profesión sigue PENDIENTE (P-05).
+
 ---
 
 ## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)
@@ -112,7 +115,7 @@ Commoner, Warrior, Rogue, Ranger, Cleric y Mage (más Novice como estado "sin cl
 | P-02 | ~~Torre de 100 pisos; primeros 10 como alcance inicial~~ | **RESUELTA → D-027** (2026-10-30) | — |
 | P-02b | Progreso de la torre | D-027 | Repetición de pisos, recompensas por piso, desbloqueos cada 10 pisos (mazmorras, instalaciones, tope de nivel: REFERENCE #15) |
 | P-03 | **Biomas** | Imagen de mapa (piedra, agua profunda, hierba, lava, cristal mágico, puentes, puertas); 8 familias temáticas del Bible: Ashen/cursed kingdom, Verdant/overgrown wilds, Arcane/fractured reality, Umbral/abyssal depths, Storm/sky-isles, Forge/clockwork empire, Tidal/drowned civilization, Crystal/glass desert (etiquetas de trabajo) | ¿Qué biomas en los pisos 1-10? |
-| P-04 | **HQ in-game explorable, no un menú** | Imagen `hq_ingame_reference_THIRD_PARTY.jpg` (sala con zonas etiquetadas, héroes paseando con bocadillos de diálogo); `HQWorld` (Mega Prompt) | ¿Vista isométrica o cenital? ¿Qué zonas? |
+| P-04 | ~~HQ in-game explorable, no un menú~~ **RESUELTA → D-030** | Imagen `hq_ingame_reference_THIRD_PARTY.jpg` (sala con zonas etiquetadas, héroes paseando con bocadillos de diálogo); `HQWorld` (Mega Prompt) | ¿Vista isométrica o cenital? ¿Qué zonas? |
 | P-05 | **Profesiones de vida pasada** | 20 profesiones en `HeroTables.PROFESSIONS` (granjero, chef, herrero, leñador, minero, constructor, médico, mercader, guardia, cazador, sastre, ingeniero, explorador, erudito, alquimista, sacerdote, pescador, mozo de cuadra, cantero, artista), cada una con bonus y acción improvisada (Gemini, 2026-10-29) | ¿Afectan a producción, crafting y/o combate? ¿Cómo? |
 | P-06 | ~~Conjunto de clases base~~ | **RESUELTA → D-028** (2026-10-30) | — |
 | P-07 | **Clases avanzadas por promoción** | Berserker, Assassin, Sniper, Templar, Sorcerer (HANDOFF 2026-10-28 23:41; no en código) | ¿Confirmadas? ¿Una por clase base? |

@@ -33,45 +33,46 @@ func _ready() -> void:
 
     Game.changed.connect(_refresh_currency)
     _refresh_currency()
-    show_screen("menu")
+    show_screen("town")     # D-030: the town is the first thing the player sees
 
 
 func _refresh_currency() -> void:
     _currency.text = "Gems %d     Stones %d     Books %d" % [Game.gems, Game.stones, Game.books]
 
 
-func show_screen(screen: String) -> void:
+func show_screen(screen: String, arg: int = 0) -> void:
     for c in _content.get_children():
         c.queue_free()
+    var back := show_screen.bind("town", 0)
     var s: Control
     match screen:
         "summon":
             s = SummonScreen.new()
-            s.back_requested.connect(show_screen.bind("menu"))
+            s.back_requested.connect(back)
         "roster":
             s = RosterScreen.new()
-            s.back_requested.connect(show_screen.bind("menu"))
+            s.back_requested.connect(back)
         "party":
             s = PartyScreen.new()
-            s.back_requested.connect(show_screen.bind("menu"))
+            s.back_requested.connect(back)
         "memorial":
             s = MemorialScreen.new()
-            s.back_requested.connect(show_screen.bind("menu"))
+            s.back_requested.connect(back)
         "sandbox":
-            s = SandboxScreen.new()
-            s.back_requested.connect(show_screen.bind("menu"))
+            s = SandboxScreen.new(arg)          # 0 = training ground, 1-10 = tower floors
+            s.back_requested.connect(back)
         "hq":
             var hq_screen := HQScreen.new()
-            hq_screen.back_requested.connect(show_screen.bind("menu"))
-            hq_screen.explore_requested.connect(show_screen.bind("hq_world"))
+            hq_screen.back_requested.connect(back)
+            hq_screen.explore_requested.connect(back)
             s = hq_screen
-        "hq_world":
-            var world := HQWorld.new()
-            world.back_requested.connect(show_screen.bind("hq"))
-            _content.add_child(world)
-            return
+        "menu":
+            var menu := MainMenu.new()
+            menu.navigate.connect(func(to: String): show_screen(to, 0))
+            s = menu
         _:
-            s = MainMenu.new()
-            s.navigate.connect(show_screen)
+            var town := TownScreen.new()
+            town.navigate.connect(show_screen)
+            s = town
     _content.add_child(s)
     UIKit.fill(s)

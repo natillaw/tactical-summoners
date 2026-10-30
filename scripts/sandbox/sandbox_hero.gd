@@ -147,7 +147,10 @@ func combat_tick(enemies: Array, map: NavMap) -> void:
 		if _cooldown <= 0.0:
 			_cooldown = attack_interval()
 			_anim_lock = HeroAnim.play_attack(_sprite, facing, _side, is_ranged())
-			CombatVFX.spawn_effect(get_parent(), target.position, "spritepilot-combat-pack", "16px", "sword-slash-16px_strip7.png", 16, 16, 7, 2.5)
+			if is_ranged():
+				CombatVFX.spawn_strip16(get_parent(), target.position + Vector2(0, -12), "spritepilot-combat-pack", "arrow-16px_strip4.png", 2.0)
+			else:
+				CombatVFX.spawn_strip16(get_parent(), target.position + Vector2(0, -12), "spritepilot-combat-pack", "sword-slash-16px_strip7.png")
 			target.take_damage(attack_damage(target.defense), self)
 	elif path.is_empty() or auto_path:
 		var p := map.find_path(position, target.position)
@@ -186,6 +189,7 @@ func use_skill(enemies: Array) -> bool:
 			return false
 		hp = mini(max_hp, hp + roundi(float(max_hp) * float(skill["heal"])))
 		_fire_fx(position, 0.0)
+		CombatVFX.spawn_strip16(get_parent(), position + Vector2(0, -14), "spritepilot-magic-pack", "healing-aura-16px_strip8.png", 3.0)
 		_anim_lock = HeroAnim.play_cast(_sprite, _side)
 		skill_cd = float(skill["cooldown"])
 		return true
@@ -208,6 +212,7 @@ func use_skill(enemies: Array) -> bool:
 	if kind == "target":
 		tgt.take_damage(CombatRules.skill_damage(power, float(skill["mult"]), tgt.defense), self)
 		_fire_fx(tgt.position, 0.0)
+		CombatVFX.spawn_strip16(get_parent(), tgt.position + Vector2(0, -12), "spritepilot-combat-pack", "critical-hit-16px_strip8.png", 3.0)
 	else:
 		var centre: Vector2 = position if kind == "self_aoe" else tgt.position
 		var radius := float(skill["radius"])
@@ -215,6 +220,10 @@ func use_skill(enemies: Array) -> bool:
 			if e.alive and e.position.distance_to(centre) <= radius:
 				e.take_damage(CombatRules.skill_damage(power, float(skill["mult"]), e.defense), self)
 		_fire_fx(centre, radius)
+		if kind == "self_aoe":
+			CombatVFX.spawn_strip16(get_parent(), centre, "spritepilot-combat-pack", "shockwave-16px_strip8.png", 5.0)
+		else:
+			CombatVFX.spawn_strip16(get_parent(), centre + Vector2(0, -12), "spritepilot-magic-pack", "fireball-16px_strip8.png", 4.0)
 	_face(tgt.position - position)
 	_anim_lock = HeroAnim.play_cast(_sprite, _side)
 	skill_cd = float(skill["cooldown"])

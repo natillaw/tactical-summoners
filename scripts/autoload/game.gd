@@ -5,7 +5,7 @@ extends Node
 signal changed
 
 const DEFAULT_SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 5
+const SAVE_VERSION := 6
 const PARTY_SIZE := 5            # slots 0-2 = front row, slots 3-4 = back row
 const XP_PER_BOOK := 100
 
@@ -23,9 +23,8 @@ var pull_count: int = 0          # total summons ever done (global pull number)
 var summon_log: Array = []       # newest last, capped: lets any pull be reproduced from its seed
 var memorial: Array = []         # fallen heroes, oldest first, NEVER capped or edited (D-011)
 var _signatures: Dictionary = {} # appearance signatures already owned -> no duplicate looks
-var hq_facilities: Dictionary = {"kitchen": 1, "workshop": 1, "infirmary": 1, "common": 1}
 var hq_outputs: Dictionary = {"food": 50, "materials": 50, "medicine": 50}
-var town_buildings: Dictionary = {"town_hall": 1, "dorm_1": 1, "dorm_2": 1, "blacksmith": 1, "kitchen": 1, "infirmary": 1}
+var town_buildings: Dictionary = TownTables.start_levels()   # building id -> level (0 = not built), D-030
 var tower_maps: Dictionary = {} # floor_num (str) -> {"seed": int, "width": int, "height": int, "grid_rows": Array}
 
 
@@ -222,25 +221,36 @@ func unassign_hq(hero_id: String) -> void:
 func max_hero_capacity() -> int:
     var cap := 5 # base town population
     for b_id in town_buildings:
-        if b_id.begins_with("dorm"):
+        if String(b_id).begins_with("dorm"):
             cap += int(town_buildings[b_id]) * 5
     return cap
 
 
-func can_summon(count: int) -> bool:
-    return heroes.size() + count <= max_hero_capacity()
+func building_level(bid: String) -> int:
+    return int(town_buildings.get(bid, 0))
 
 
-func upgrade_building(bid: String, cost: int) -> bool:
-    if hq_outputs.get("materials", 0) < cost:
+## Materials for the next level, or -1 when the building is unknown or already at max level.
+func next_building_cost(bid: String) -> int:
+    var b := TownTables.info(bid)
+    if b.is_empty() or building_level(bid) >= int(b["max"]):
+        return -1
+    return TownTables.upgrade_cost(bid, building_level(bid))
+
+
+## Builds (level 0 -> 1) or upgrades a town building, paying materials. Nothing changes on failure.
+func build_or_upgrade(bid: String) -> bool:
+    var cost := next_building_cost(bid)
+    if cost < 0 or int(hq_outputs.get("materials", 0)) < cost:
         return false
-    hq_outputs["materials"] -= cost
-    if not town_buildings.has(bid):
-        town_buildings[bid] = 1
-    else:
-        town_buildings[bid] = int(town_buildings[bid]) + 1
+    hq_outputs["materials"] = int(hq_outputs.get("materials", 0)) - cost
+    town_buildings[bid] = building_level(bid) + 1
     _commit()
     return true
+
+
+func can_summon(count: int) -> bool:
+    return heroes.size() + count <= max_hero_capacity()
 
 
 func get_or_create_tower_floor_map(floor_num: int) -> ProceduralMap:
@@ -275,25 +285,18 @@ func process_headquarters_turn() -> Dictionary:
     
     for fac in facility_workers:
         var workers: Array = facility_workers[fac]
+        var level := building_level(String(fac))
+        var produces: Dictionary = TownTables.info(String(fac)).get("produces", {})
         for w in workers:
             var worker := w as HeroData
-            match fac:
-                "kitchen":
-                    hq_outputs["food"] += 5
-                    summary["food_produced"] += 5
-                    worker.add_memory("work_kitchen", "Prepared provisions in the kitchen.", "", 1)
-                "workshop":
-                    hq_outputs["materials"] += 4
-                    summary["materials_produced"] += 4
-                    worker.add_memory("work_workshop", "Crafted tools and maintained gear in the workshop.", "", 1)
-                "infirmary":
-                    hq_outputs["medicine"] += 3
-                    summary["medicine_produced"] += 3
-                    worker.add_memory("work_infirmary", "Tended to the wounded in the infirmary.", "", 1)
-                "common", "training":
-                    worker.add_memory("work_common", "Spent time socializing and training in headquarters.", "", 1)
+            if level <= 0:
+                continue                     # assigned to a building that is not built yet
+            for res in produces:
+                var amount: int = int(produces[res]) * level
+                hq_outputs[res] = int(hq_outputs.get(res, 0)) + amount
+                summary[String(res) + "_produced"] = int(summary.get(String(res) + "_produced", 0)) + amount
+            worker.add_memory("work_" + String(fac), "Worked at the %s." % String(TownTables.info(String(fac)).get("name", fac)), "", 1)
             summary["events"] += 1
-            
             for other in workers:
                 var o := other as HeroData
                 if o.id != worker.id:
@@ -323,9 +326,8 @@ func new_game() -> void:
     heroes.clear()
     _signatures.clear()
     party = ["", "", "", "", ""]
-    hq_facilities = {"kitchen": 1, "workshop": 1, "infirmary": 1, "common": 1}
     hq_outputs = {"food": 50, "materials": 50, "medicine": 50}
-    town_buildings = {"town_hall": 1, "dorm_1": 1, "dorm_2": 1, "blacksmith": 1, "kitchen": 1, "infirmary": 1}
+    town_buildings = TownTables.start_levels()
     tower_maps.clear()
     SpriteComposer.clear_cache()
     _commit()
@@ -355,7 +357,6 @@ func save_game() -> bool:
         "memorial": memorial,
         "party": party,
         "heroes": hero_list,
-        "hq_facilities": hq_facilities,
         "hq_outputs": hq_outputs,
         "town_buildings": town_buildings,
         "tower_maps": tower_maps,
@@ -435,9 +436,8 @@ func apply_save(data: Dictionary) -> void:
         var id := str(saved_party[i])
         if heroes.has(id):
             party[i] = id
-    hq_facilities = HeroData.intify(data.get("hq_facilities", {"kitchen": 1, "workshop": 1, "infirmary": 1, "common": 1}) as Dictionary)
     hq_outputs = HeroData.intify(data.get("hq_outputs", {"food": 50, "materials": 50, "medicine": 50}) as Dictionary)
-    town_buildings = HeroData.intify(data.get("town_buildings", {"town_hall": 1, "dorm_1": 1, "dorm_2": 1, "blacksmith": 1, "kitchen": 1, "infirmary": 1}) as Dictionary)
+    town_buildings = HeroData.intify(data.get("town_buildings", TownTables.start_levels()) as Dictionary)
     tower_maps = HeroData.intify(data.get("tower_maps", {}) as Dictionary)
 
 
@@ -457,5 +457,15 @@ func _migrate(data: Dictionary) -> Dictionary:
     if v < 5:
         data["town_buildings"] = {"town_hall": 1, "dorm_1": 1, "dorm_2": 1, "blacksmith": 1, "kitchen": 1, "infirmary": 1}
         data["tower_maps"] = {}
+    if v < 6:
+        # v5 -> v6 (D-030): one building model. Old hq_facilities levels move into town_buildings;
+        # buildings that did not exist yet start at their default level.
+        var tb: Dictionary = (data.get("town_buildings", {}) as Dictionary).duplicate()
+        var old_fac: Dictionary = data.get("hq_facilities", {})
+        for bid in TownTables.ids():
+            if not tb.has(bid):
+                tb[bid] = int(old_fac.get(bid, TownTables.info(bid)["start"]))
+        data["town_buildings"] = tb
+        data.erase("hq_facilities")
     data["version"] = SAVE_VERSION
     return data

@@ -43,11 +43,22 @@ func _ready() -> void:
         sb.queue_free()
         await get_tree().process_frame
 
-    var hq := HQWorld.new()
-    add_child(hq)
+    Game.gems = 100000
+    Game.pull(3)
+    var town := TownScreen.new()
+    add_child(town)
+    town.size = Vector2(1280, 720)
     await get_tree().process_frame
-    check(hq.get_child_count() > 0, "HQWorld builds (F-001)")
-    hq.queue_free()
+    check(town.heroes.size() == Game.heroes.size() and town.view != null, "town shows every hero")
+    town.click_at(town.map.center_of((TownTables.info("barracks")["plot"] as Rect2i).position))
+    check(town.selected == "barracks", "clicking a building selects it")
+    Game.hq_outputs["materials"] = 1000
+    town.select_building("alchemy")
+    var lvl_before := Game.building_level("alchemy")
+    Game.build_or_upgrade("alchemy")
+    await get_tree().process_frame
+    check(Game.building_level("alchemy") == lvl_before + 1 and town.map.is_blocked_cell((TownTables.info("alchemy")["plot"] as Rect2i).position), "building from the town updates the map")
+    town.queue_free()
 
     check(not get_tree().paused and is_equal_approx(Engine.time_scale, 1.0), "no pause and no time-slow")
     print("== %s ==" % ("ALL PASSED" if fails == 0 else "%d FAILED" % fails))

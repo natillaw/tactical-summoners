@@ -18,7 +18,7 @@ func _ready() -> void:
     var title := UIKit.label("TACTICAL SUMMONERS", 52, UIKit.ACCENT)
     title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     vb.add_child(title)
-    var sub := UIKit.label("Drop C  -  Summoning, real-time missions, permanent death", 18, UIKit.MUTED)
+    var sub := UIKit.label("Debug menu  -  the game starts in the town", 18, UIKit.MUTED)
     sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     vb.add_child(sub)
     vb.add_child(Control.new())
@@ -29,6 +29,7 @@ func _ready() -> void:
     vb.add_child(UIKit.button("Memorial  (fallen heroes)", func(): navigate.emit("memorial"), Vector2(360, 56)))
     vb.add_child(UIKit.button("Sandbox  (real-time control test)", func(): navigate.emit("sandbox"), Vector2(360, 56)))
     vb.add_child(UIKit.button("Living Headquarters", func(): navigate.emit("hq"), Vector2(360, 56)))
+    vb.add_child(UIKit.button("Back to the town", func(): navigate.emit("town"), Vector2(360, 56)))
 
     _summary = UIKit.label("", 16, UIKit.MUTED)
     _summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

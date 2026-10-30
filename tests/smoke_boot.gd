@@ -11,10 +11,10 @@ func _ready() -> void:
     var main := (load("res://scenes/main.tscn") as PackedScene).instantiate() as Control
     add_child(main)
     await get_tree().process_frame
-    var ok := main.has_method("show_screen")
-    print("  ", "PASS  " if ok else "FAIL  ", "main.gd loaded")
+    var ok := main.has_method("show_screen") and main.find_children("*", "", true, false).any(func(n): return n is TownScreen)
+    print("  ", "PASS  " if ok else "FAIL  ", "main.gd loaded and the first screen is the town (D-030)")
     if ok:
-        for s in ["summon", "roster", "party", "memorial", "hq", "hq_world", "sandbox", "menu"]:
+        for s in ["summon", "roster", "party", "memorial", "hq", "sandbox", "menu", "town"]:
             main.call("show_screen", s)
             await get_tree().process_frame
             print("  PASS  opened screen ", s)

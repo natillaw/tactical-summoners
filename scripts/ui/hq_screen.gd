@@ -27,7 +27,7 @@ func _ready() -> void:
 	header.add_child(spacer)
 	_res_label = UIKit.label("", 18, UIKit.ACCENT)
 	header.add_child(_res_label)
-	header.add_child(UIKit.button("Explore Base", func(): explore_requested.emit(), Vector2(130, 40)))
+	header.add_child(UIKit.button("To the town", func(): explore_requested.emit(), Vector2(130, 40)))
 	header.add_child(UIKit.button("Process HQ Turn", _on_process_turn, Vector2(170, 40)))
 	root.add_child(header)
 
