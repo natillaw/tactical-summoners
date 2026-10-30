@@ -49,7 +49,7 @@ Personalidad, trasfondo, habilidades y recuerdos persistentes van antes que ampl
 
 ### D-014 — Control RTS híbrido y mapas de misión continuos (2026-10-28)
 Tiempo real **sin pausa ni cámara lenta**. Héroes autónomos (navegan y atacan) + órdenes directas del jugador + activación directa de habilidades. Cámara cenital de grupo por defecto. Exploración, interacción, combate y extracción comparten mapa. Misiones con objetivos distintos de "matar a todos". Jefes con mecánicas legibles y contrajuego, no solo más PV. Las órdenes directas son fiables y nunca se deniegan por una tirada de obediencia.
-> La parte de D-014 que decía "generación de mundo diferida, mapa fijo" está **en revisión**: ver P-01.
+> La cláusula de D-014 "generación de mundo diferida, mapa fijo" queda **sustituida por D-026** (2026-10-30).
 
 ### D-015 — Foco de cámara con 1–5 y panel contextual (2026-10-28)
 1–5 selecciona al héroe desplegado y la cámara lo sigue suavemente; aparecen su retrato, vitales, habilidades y órdenes. La simulación nunca se pausa. `Tab` vuelve a vista de grupo; `G` selecciona el escuadrón. Ranura vacía o muerta = mensaje claro, nunca seleccionar otro héroe en silencio.
@@ -90,20 +90,33 @@ Todo recurso nuevo debe ser gratuito, con su licencia leída y registrada en `do
 ### D-025 — Estabilizar antes de ampliar (2026-10-30, dueño)
 No se añaden sistemas nuevos encima de la base actual hasta reparar los errores de la auditoría (`audit/`) y tener pruebas ejecutadas con evidencia. Orden: memoria del proyecto → reparar el juego → construir lo que falta. Nada de reescrituras completas sin justificación demostrada.
 
+### D-026 — Pisos de la torre generados proceduralmente (2026-10-30, dueño; resuelve P-01)
+Los pisos de la torre se generan proceduralmente. Reglas obligatorias: semilla + versión del generador, validación de navegación y **snapshot persistido** (D-004; nunca regenerar un piso guardado con otro generador). Sustituye a D-003 y a la cláusula "mapa fijo" de D-014. Referencia visual: `docs/specs/reference/procedural_map_reference.jpg`. Biomas: siguen PENDIENTES (P-03).
+
+### D-027 — Torre de 100 pisos; los pisos 1-10 son el primer alcance (2026-10-30, dueño; resuelve P-02)
+La meta es una torre de 100 pisos. El primer alcance jugable son los pisos 1-10, con un jefe en el piso 10. Siguen abiertos: progreso y repetición de pisos, recompensas, desbloqueos cada 10 pisos (P-02b) y el diseño del jefe (P-25).
+
+### D-028 — Clases base: las del código (2026-10-30, dueño; resuelve P-06)
+Commoner, Warrior, Rogue, Ranger, Cleric y Mage (más Novice como estado "sin clase"). La biblioteca de habilidades (P-10) deberá adaptarse a estas clases; Thief, Spearman y Archer quedan como nombres antiguos (sus habilidades se conservan como ideas para reasignar). Clases avanzadas: siguen PENDIENTES (P-07).
+
+### D-029 — 7 estrellas y 70 niveles (2026-10-30, dueño; resuelve P-08)
+7★ con 70 niveles: una estrella por cada 10 niveles (star_gate = ceil(nivel/10), como en la biblioteca de habilidades). Sustituye a la escala del código (5★, topes 10/20/40/60/80). Implementarlo exige cambiar `HeroTables.MAX_STARS`/`STAR_DATA`, las odds de los banners (7 entradas), los colores de estrella, la migración de guardados (subir `SAVE_VERSION`) y las pruebas. Es una tarea de la Fase 5, no antes de la reparación (D-025). Nombres de rareza: siguen PENDIENTES (P-09).
+
 ---
 
 ## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)
 
 | ID | Tema | Lo que existe / origen | Pregunta abierta |
 |---|---|---|---|
-| P-01 | **Generación procedural de pisos/mundo** | D-003 (2026-10-28) la difería; luego el código añadió `ProceduralMap`; el prompt del 2026-10-30 pide generación procedural y biomas; imagen `docs/specs/reference/procedural_map_reference.jpg` | ¿Pasa a CONFIRMADA y sustituye a D-003 y a la cláusula de mapa fijo de D-014? |
-| P-02 | **Torre de 100 pisos; primeros 10 como alcance inicial** | Prompt 2026-10-30; `TowerExpedition` define pisos 1-10 (nombre, dificultad, tipo de misión, tamaño, enemigos; piso 10 jefe); REFERENCE #15 "cada 10 pisos desbloquea mazmorras, instalaciones y tope de nivel" | ¿Confirmado? ¿Progreso por piso, repetición de pisos, desbloqueos cada 10? |
+| P-01 | ~~Generación procedural de pisos/mundo~~ | **RESUELTA → D-026** (2026-10-30) | — |
+| P-02 | ~~Torre de 100 pisos; primeros 10 como alcance inicial~~ | **RESUELTA → D-027** (2026-10-30) | — |
+| P-02b | Progreso de la torre | D-027 | Repetición de pisos, recompensas por piso, desbloqueos cada 10 pisos (mazmorras, instalaciones, tope de nivel: REFERENCE #15) |
 | P-03 | **Biomas** | Imagen de mapa (piedra, agua profunda, hierba, lava, cristal mágico, puentes, puertas); 8 familias temáticas del Bible: Ashen/cursed kingdom, Verdant/overgrown wilds, Arcane/fractured reality, Umbral/abyssal depths, Storm/sky-isles, Forge/clockwork empire, Tidal/drowned civilization, Crystal/glass desert (etiquetas de trabajo) | ¿Qué biomas en los pisos 1-10? |
 | P-04 | **HQ in-game explorable, no un menú** | Imagen `hq_ingame_reference_THIRD_PARTY.jpg` (sala con zonas etiquetadas, héroes paseando con bocadillos de diálogo); `HQWorld` (Mega Prompt) | ¿Vista isométrica o cenital? ¿Qué zonas? |
 | P-05 | **Profesiones de vida pasada** | 20 profesiones en `HeroTables.PROFESSIONS` (granjero, chef, herrero, leñador, minero, constructor, médico, mercader, guardia, cazador, sastre, ingeniero, explorador, erudito, alquimista, sacerdote, pescador, mozo de cuadra, cantero, artista), cada una con bonus y acción improvisada (Gemini, 2026-10-29) | ¿Afectan a producción, crafting y/o combate? ¿Cómo? |
-| P-06 | **Conjunto de clases base** | Código: Commoner + Warrior/Rogue/Ranger/Cleric/Mage (+ Novice sin clase). Biblioteca de skills (D-022): Novice/Warrior/Thief/Spearman/Archer/Mage | ¿Cuál es el definitivo? |
+| P-06 | ~~Conjunto de clases base~~ | **RESUELTA → D-028** (2026-10-30) | — |
 | P-07 | **Clases avanzadas por promoción** | Berserker, Assassin, Sniper, Templar, Sorcerer (HANDOFF 2026-10-28 23:41; no en código) | ¿Confirmadas? ¿Una por clase base? |
-| P-08 | **Estrellas y niveles** | Código: 5★ con topes 10/20/40/60/80. Dueño: 7★ y 70 niveles (1★ por cada 10 niveles); la biblioteca usa star_gate = ceil(nivel/10) | Elegir |
+| P-08 | ~~Estrellas y niveles~~ | **RESUELTA → D-029** (2026-10-30) | — |
 | P-09 | **Rarezas** | Spec: Common/Uncommon/Rare/Epic/Legendary (provisional). Código: 1-5★. Regla vigente: rareza ≠ personalidad ni moralidad | ¿Nombres o estrellas? |
 | P-10 | **Biblioteca de habilidades (D-022)** | 130 habilidades en `docs/specs/SKILLS.md` (7 "implemented", 124 "spec"); regla 4 activas + 1 definitiva; nivel 1-70; ≥30 aprendibles y ≥20 exclusivas por clase de combate; cada skill con qué hace, cómo se juega en tiempo real, sinergia, etiquetas de enemigo; API prevista `SkillLibrary` + generador `tools/gen_skill_library.py` (**no existen en el repo**) | ¿Se mantiene la regla y se regenera para las clases de P-06? |
 | P-11 | **Memoria desbloqueada al promocionar** | D-018 "MAYBE": revelaría un recuerdo ya guardado en la generación, nunca inventaría hechos | Sí/No |
@@ -152,7 +165,9 @@ De `docs/specs/REFERENCE_INSPIRATION.md`: clase exclusiva de invocación / clase
 | "La primera vertical slice puede usar 3 héroes" (changelog v1.4) | D-017 | — |
 | Contador único `loyalty` | D-016 (Trust + Obedience) | Migración v1→v2 en el guardado |
 | "Loyalty" como medidor aparte | Diferido indefinidamente (spec §7) | Solapa con Trust/Obedience |
-| **D-003** "Mundos procedurales diferidos; mazmorra fija" (2026-10-28) | **En revisión por P-01** | Sigue siendo la decisión escrita hasta que el dueño confirme P-01 |
+| **D-003** "Mundos procedurales diferidos; mazmorra fija" (2026-10-28) | **D-026** | Los héroes procedurales siguen siendo núcleo (parte vigente de D-003) |
+| Escala 5★ / niveles 10-20-40-60-80 (código) | D-029 | Pendiente de migrar en la Fase 5 |
+| Clases Thief / Spearman / Archer (biblioteca de skills) | D-028 | Sus habilidades se conservan como ideas en `docs/specs/SKILLS.md` |
 | "El repo/ZIP es solo documentación; no hay proyecto Godot" | Estado real del repo | — |
 | Protocolo multiagente con claims, STATE_HASH, CONTEXT_BUNDLE/LITE | Ramas + PR + evidencia (P-28) | Archivado en `docs/archive/infos/` |
 | Instalación por "drops" ZIP (`Apply-DropD.ps1`, `Update-Project.ps1`) | Git | Archivado |

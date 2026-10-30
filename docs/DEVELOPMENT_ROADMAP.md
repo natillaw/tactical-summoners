@@ -21,7 +21,7 @@ Interfaz común de mapa (F-002) · pisos como snapshot (F-014) · versionado del
 
 ## Fase 5 — Fundamentos incompletos (bloque D)
 Atributos D-012 (F-017) · órdenes completas + feedback (F-018) · misiones por tipo (F-020) · Composure/Trust por eventos, rescate/secretos en juego (F-019) · mensajes de invocación (F-015) · aviso del escuadrón de prueba (F-034).
-Requiere respuestas: P-06, P-08, P-09 (clases, estrellas, rarezas).
+Migración a 7★ / 70 niveles (D-029) y ajuste a las clases de D-028. Requiere respuesta: P-09 (nombres de rareza).
 
 ## Fase 6 — Validación en Godot (bloque E)
 CI headless · pruebas nuevas (`audit/GODOT_TEST_REPORT.md` §4) · capturas automáticas · prueba de rendimiento con mapas grandes.
@@ -29,13 +29,13 @@ CI headless · pruebas nuevas (`audit/GODOT_TEST_REPORT.md` §4) · capturas aut
 ## Fase 7 — Gameplay (bloque F), según se confirmen las PENDIENTES
 | Bloque | Depende de |
 |---|---|
-| Torre: selección de piso, progreso, pisos 1-10, jefe del piso 10 | P-01, P-02, P-25 |
+| Torre: selección de piso, progreso, pisos 1-10, jefe del piso 10 | D-026, D-027; P-02b, P-25 |
 | Biomas y eventos de misión | P-03, P-18 |
 | HQ explorable, construcción, producción por profesión | P-04, P-05, P-22, P-23 |
 | Síntesis / sacrificio / promoción por tiers (antiguas T-014…T-020) | D-018, G-21…G-26, P-11, P-12 |
 | Equipo por capas (antigua T-030), inventario, loot, afijos, sets | D-021, P-14, P-19 |
 | Crafting y economía | P-20, P-21 |
-| Biblioteca de habilidades 4+1 (antigua T-031) | P-10 |
+| Biblioteca de habilidades 4+1 (antigua T-031) | P-10 (adaptada a las clases de D-028) |
 | Personalidad de 8 dimensiones, diálogo por eventos, relaciones con consecuencias | Spec confirmada; P-24 |
 | Secretos, legado, expediciones | P-15, P-16, P-17 |
 
