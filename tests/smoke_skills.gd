@@ -278,11 +278,12 @@ func _ready() -> void:
     Game.grant_skill_book(unknown)
     check(Game.use_skill_book(hd, unknown) == "" and hd.skills.has(unknown) and not Game.skill_books.has(unknown), "reading a book teaches the skill and consumes the book")
     check(Game.use_skill_book(hd, unknown) != "", "a book you no longer have cannot be read")
-    check(Game.library_cost() == 0 and Game.library_transcribe() == "", "no Library, no transcription")
+    check(Game.library_cost() == 0 and Game.library_transcribe("class.warrior") == "", "no Library, no transcription")
     Game.town_buildings["library"] = 1
     Game.hq_outputs["materials"] = 500
-    var book := Game.library_transcribe()
+    var book := Game.library_transcribe("class.mage")
     check(book != "" and int(Game.hq_outputs["materials"]) == 500 - TownTables.LIBRARY_BASE_COST and Game.skill_books.has(book), "the Library transcribes a book for materials")
+    check(SkillDefs.usable_by(book, "class.mage"), "the Library book is of the chosen class (D-046)")
     Game.save_path = "user://smoke_skills.json"
     Game.save_game()
     var books_before := Game.skill_books.duplicate()

@@ -309,15 +309,19 @@ func complete_floor(floor_num: int, mission: String = "") -> Dictionary:
 
 # --- skill books (D-046) ----------------------------------------------------------------
 
-## A book for a class someone in the roster has (all classes if the roster is empty).
-func random_skill_book() -> String:
+## Classes of the living roster, in summon order (all classes if the roster is empty).
+func roster_classes() -> Array:
     var classes: Array = []
     for id in heroes:
         var c: String = (heroes[id] as HeroData).hero_class
         if not classes.has(c):
             classes.append(c)
-    if classes.is_empty():
-        classes = SkillDefs.KITS.keys()
+    return classes if not classes.is_empty() else SkillDefs.KITS.keys()
+
+
+## A random book; for one class when class_id is given, otherwise for any class in the roster.
+func random_skill_book(class_id: String = "") -> String:
+    var classes: Array = [class_id] if class_id != "" else roster_classes()
     var pool := SkillDefs.book_pool(classes)
     return "" if pool.is_empty() else String(pool[rng.randi() % pool.size()])
 
@@ -345,17 +349,17 @@ func use_skill_book(h: HeroData, skill_id: String) -> String:
     return ""
 
 
-## Library (D-046): transcribe a random book for materials; cheaper at higher levels.
+## Library (D-046): transcribe a book of the chosen class for materials; cheaper at higher levels.
 func library_cost() -> int:
     var lv := building_level("library")
     return 0 if lv <= 0 else maxi(20, TownTables.LIBRARY_BASE_COST - TownTables.LIBRARY_DISCOUNT * (lv - 1))
 
 
-func library_transcribe() -> String:
+func library_transcribe(class_id: String) -> String:
     var cost := library_cost()
-    if cost <= 0 or int(hq_outputs.get("materials", 0)) < cost:
+    if cost <= 0 or int(hq_outputs.get("materials", 0)) < cost or not SkillDefs.KITS.has(class_id):
         return ""
-    var b := random_skill_book()
+    var b := random_skill_book(class_id)
     if b == "":
         return ""
     hq_outputs["materials"] = int(hq_outputs["materials"]) - cost
