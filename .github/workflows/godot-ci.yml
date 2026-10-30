@@ -1,0 +1,71 @@
+name: Godot tests and screenshots
+
+on:
+  push:
+    branches: ["main", "claude/**"]
+    tags: ["v*"]
+  workflow_dispatch:
+
+env:
+  GODOT_VERSION: "4.7.1"
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot
+        run: |
+          curl -sSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip -d "$HOME/godot"
+          echo "GODOT=$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" >> "$GITHUB_ENV"
+      - name: Run the 12 suites
+        id: run
+        continue-on-error: true
+        run: bash tools/run_tests.sh
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Godot ${GODOT_VERSION} — resultado de pruebas"
+            echo '```'
+            cat tools/last_test_run.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            tools/last_test_run.txt
+            tools/import_log.txt
+      - name: Fail the job if any suite failed
+        if: steps.run.outcome == 'failure'
+        run: exit 1
+
+  screenshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot and a virtual display
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1-mesa-dri libgl1 > /dev/null
+          curl -sSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip -d "$HOME/godot"
+          echo "GODOT=$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" >> "$GITHUB_ENV"
+      - name: Import
+        run: timeout 300 "$GODOT" --headless --path . --import || true
+      - name: Capture screens
+        continue-on-error: true
+        run: |
+          mkdir -p screenshots
+          CAPTURE_DIR="$PWD/screenshots" timeout 180 xvfb-run -a -s "-screen 0 1280x720x24" \
+            "$GODOT" --path . --rendering-driver opengl3 --resolution 1280x720 res://tests/capture_screens.tscn 2>&1 | tee screenshots/capture_log.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: screenshots/
