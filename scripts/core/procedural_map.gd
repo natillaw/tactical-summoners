@@ -97,6 +97,8 @@ func _try_generate(rng: RandomNumberGenerator) -> bool:
 			if r1 != r2:
 				_carve_corridor(map_grid, r1.get_center(), r2.get_center())
 
+	if not is_hq:
+		_roughen_rooms(map_grid, rooms, rng)
 	var start_room := rooms[0]
 	var end_room := rooms[rooms.size() - 1]
 
@@ -139,7 +141,8 @@ func _try_generate(rng: RandomNumberGenerator) -> bool:
 	for y in height:
 		var row_str := ""
 		for x in width:
-			row_str += String(map_grid[y][x])
+			var ch := String(map_grid[y][x])
+			row_str += "." if ch == "c" else ch
 		grid_rows.append(row_str)
 
 	grid = AStarGrid2D.new()
@@ -208,6 +211,26 @@ func _validate_map() -> bool:
 	return path.size() > 0
 
 
+## Forest look (D-031): clearings get ragged edges and a few tree clumps inside, so rooms stop
+## looking like rectangles. Never touches corridor cells ("c") or the room centre; reachability is
+## re-checked by _validate_map afterwards.
+func _roughen_rooms(map_grid: Array, rooms: Array[Rect2i], rng: RandomNumberGenerator) -> void:
+	for room in rooms:
+		var centre := room.get_center()
+		for y in range(room.position.y, room.end.y):
+			for x in range(room.position.x, room.end.x):
+				if map_grid[y][x] != ".":
+					continue
+				var edge := x == room.position.x or y == room.position.y or x == room.end.x - 1 or y == room.end.y - 1
+				var corner := (x - room.position.x < 2 or room.end.x - 1 - x < 2) and (y - room.position.y < 2 or room.end.y - 1 - y < 2)
+				if Vector2i(x, y).distance_to(centre) < 2.5:
+					continue
+				if (corner and rng.randf() < 0.75) or (edge and rng.randf() < 0.35):
+					map_grid[y][x] = "#"
+				elif not edge and room.size.x > 9 and room.size.y > 9 and rng.randf() < 0.025:
+					map_grid[y][x] = "#"                  # lone tree clump inside a big clearing
+
+
 func _carve_corridor(map_grid: Array, p1: Vector2i, p2: Vector2i) -> void:
 	var cx := p1.x
 	var cy := p1.y
@@ -215,18 +238,18 @@ func _carve_corridor(map_grid: Array, p1: Vector2i, p2: Vector2i) -> void:
 	if horizontal_first:
 		while cx != p2.x:
 			if in_bounds(Vector2i(cx, cy)):
-				map_grid[cy][cx] = "."
+				map_grid[cy][cx] = "c"
 			cx += 1 if p2.x > cx else -1
 		while cy != p2.y:
 			if in_bounds(Vector2i(cx, cy)):
-				map_grid[cy][cx] = "."
+				map_grid[cy][cx] = "c"
 			cy += 1 if p2.y > cy else -1
 	else:
 		while cy != p2.y:
 			if in_bounds(Vector2i(cx, cy)):
-				map_grid[cy][cx] = "."
+				map_grid[cy][cx] = "c"
 			cy += 1 if p2.y > cy else -1
 		while cx != p2.x:
 			if in_bounds(Vector2i(cx, cy)):
-				map_grid[cy][cx] = "."
+				map_grid[cy][cx] = "c"
 			cx += 1 if p2.x > cx else -1

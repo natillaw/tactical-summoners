@@ -42,7 +42,7 @@ func _ready() -> void:
     for screen in ["summon", "roster", "party"]:
         _main.call("show_screen", screen, 0)
         await _shot("02_" + screen, 0.6)
-    for f in range(1, 6):
+    for f in [1, 2, 3, 4, 5, 10]:
         _main.call("show_screen", "sandbox", f)
         await _shot("03_floor%d_squad" % f, 2.5)
         var sb: Node = _find("SandboxScreen")

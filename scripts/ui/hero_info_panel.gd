@@ -51,6 +51,9 @@ func _ready() -> void:
     var prof: Dictionary = HeroTables.PROFESSIONS.get(h.profession, {})
     if not prof.is_empty():
         id_box.add_child(UIKit.label("Past life: " + String(prof["name"]), 13, UIKit.MUTED))
+        var best: Array = TownTables.best_workplaces(h.profession).map(func(b): return String(TownTables.info(b)["name"]))
+        if not best.is_empty():
+            id_box.add_child(UIKit.label("Expert at: " + ", ".join(best), 13, UIKit.ACCENT))
     head.add_child(id_box)
     var close := UIKit.button("x", func(): closed.emit(), Vector2(32, 30))
     close.focus_mode = Control.FOCUS_NONE

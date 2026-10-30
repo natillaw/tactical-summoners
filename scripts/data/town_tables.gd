@@ -3,12 +3,14 @@ extends RefCounted
 ## The town (D-030): every building, where it stands on the fixed town map, what it costs and what
 ## it opens. Levels live in Game.town_buildings (0 = not built yet). Costs are TUNING PLACEHOLDERS.
 
+const EXPERT_MULT := 2
 const MAP_W := 34
 const MAP_H := 22
 
 ## plot = Rect2i(cell x, cell y, w, h) on the town map; the door is the bottom-centre cell.
 ## open = screen opened from the building ("" = info panel only). start = level in a new game.
 ## produces = HQ-turn output per assigned worker per building level (see Game.process_headquarters_turn).
+## experts = past-life professions that produce double there (EXPERT_MULT).
 ## props = drawn in front of the building: "caz:<Tiles path>" (Caz base pack) or "voxel:<id>" (voxel dungeon).
 ## look = house built from Caz pieces: roof "thatch"|"tile", wall "plaster"|"stone"|"timber", tint on the roof.
 const BUILDINGS := {
@@ -37,22 +39,22 @@ const BUILDINGS := {
         "open": "", "roof": Color(0.60, 0.75, 0.95), "props": ["caz:ExteriorFeatures/ExteriorFeatures_6_1"], "look": {"roof": "thatch", "wall": "plaster", "tint": Color(1, 1, 1)},
         "desc": "Beds for heroes: +5 roster capacity per level."},
     "kitchen": {"name": "Kitchen", "plot": Rect2i(21, 11, 3, 2), "start": 1, "max": 5, "cost": 30,
-        "open": "", "roof": Color(0.95, 0.65, 0.35), "props": ["caz:OutsideFeatures/OutsideFeatures_22_2", "caz:ExteriorFeatures/ExteriorFeatures_6_1"], "look": {"roof": "thatch", "wall": "timber", "tint": Color(1, 1, 1)}, "produces": {"food": 5},
+        "open": "", "roof": Color(0.95, 0.65, 0.35), "props": ["caz:OutsideFeatures/OutsideFeatures_22_2", "caz:ExteriorFeatures/ExteriorFeatures_6_1"], "look": {"roof": "thatch", "wall": "timber", "tint": Color(1, 1, 1)}, "produces": {"food": 5}, "experts": ["occupation.chef", "occupation.farmer", "occupation.fisher", "occupation.hunter"],
         "desc": "Workers cook provisions (food)."},
     "infirmary": {"name": "Hospital", "plot": Rect2i(26, 12, 4, 2), "start": 1, "max": 5, "cost": 40,
-        "open": "", "roof": Color(0.92, 0.92, 0.95), "props": ["caz:ExteriorFeatures/ExteriorFeatures_5_1", "caz:OutsideFeatures/OutsideFeatures_12_1"], "look": {"roof": "tile", "wall": "plaster", "tint": Color(1, 0.95, 0.95)}, "produces": {"medicine": 3},
+        "open": "", "roof": Color(0.92, 0.92, 0.95), "props": ["caz:ExteriorFeatures/ExteriorFeatures_5_1", "caz:OutsideFeatures/OutsideFeatures_12_1"], "look": {"roof": "tile", "wall": "plaster", "tint": Color(1, 0.95, 0.95)}, "produces": {"medicine": 3}, "experts": ["occupation.medic", "occupation.priest", "occupation.alchemist"],
         "desc": "Workers tend the wounded and prepare medicine."},
     "blacksmith": {"name": "Blacksmith", "plot": Rect2i(9, 3, 4, 2), "start": 1, "max": 5, "cost": 50,
         "open": "", "roof": Color(0.55, 0.30, 0.25), "props": ["caz:OutsideFeatures/OutsideFeatures_6_1", "voxel:weaponrack"], "look": {"roof": "tile", "wall": "stone", "tint": Color(0.65, 0.6, 0.6)},
         "desc": "Forge for weapons and armor. Crafting arrives with equipment (P-19, P-20)."},
     "workshop": {"name": "Workshop", "plot": Rect2i(21, 3, 3, 2), "start": 1, "max": 5, "cost": 40,
-        "open": "", "roof": Color(0.70, 0.55, 0.35), "props": ["caz:OutsideFeatures/OutsideFeatures_4_1", "caz:OutsideFeatures/OutsideFeatures_6_1"], "look": {"roof": "thatch", "wall": "timber", "tint": Color(0.9, 0.85, 0.75)}, "produces": {"materials": 4},
+        "open": "", "roof": Color(0.70, 0.55, 0.35), "props": ["caz:OutsideFeatures/OutsideFeatures_4_1", "caz:OutsideFeatures/OutsideFeatures_6_1"], "look": {"roof": "thatch", "wall": "timber", "tint": Color(0.9, 0.85, 0.75)}, "produces": {"materials": 4}, "experts": ["occupation.lumberjack", "occupation.miner", "occupation.mason", "occupation.builder", "occupation.engineer", "occupation.blacksmith"],
         "desc": "Workers gather and shape building materials."},
     "alchemy": {"name": "Alchemy Lab", "plot": Rect2i(9, 15, 4, 2), "start": 0, "max": 5, "cost": 60,
         "open": "", "roof": Color(0.45, 0.85, 0.65), "props": ["voxel:crystal_deco", "caz:OutsideFeatures/OutsideFeatures_12_1"], "look": {"roof": "thatch", "wall": "plaster", "tint": Color(0.8, 1.0, 0.8)},
         "desc": "Potions and reagents. Recipes arrive with crafting (P-20)."},
     "common": {"name": "Tavern", "plot": Rect2i(21, 15, 4, 2), "start": 1, "max": 5, "cost": 30,
-        "open": "", "roof": Color(0.85, 0.55, 0.30), "props": ["caz:ExteriorFeatures/ExteriorFeatures_3_2", "caz:ExteriorFeatures/ExteriorFeatures_6_1"], "look": {"roof": "tile", "wall": "timber", "tint": Color(1, 0.9, 0.8)},
+        "open": "", "experts": ["occupation.entertainer", "occupation.merchant"], "roof": Color(0.85, 0.55, 0.30), "props": ["caz:ExteriorFeatures/ExteriorFeatures_3_2", "caz:ExteriorFeatures/ExteriorFeatures_6_1"], "look": {"roof": "tile", "wall": "timber", "tint": Color(1, 0.9, 0.8)},
         "desc": "Heroes who work here socialize and grow closer."},
 }
 
@@ -80,3 +82,12 @@ static func upgrade_cost(id: String, level: int) -> int:
 static func door_cell(id: String) -> Vector2i:
     var p: Rect2i = info(id)["plot"]
     return Vector2i(p.position.x + p.size.x / 2, p.end.y)
+
+
+static func is_expert(building_id: String, profession: String) -> bool:
+    return (info(building_id).get("experts", []) as Array).has(profession)
+
+
+## Buildings where this profession is an expert (for the hero panel).
+static func best_workplaces(profession: String) -> Array:
+    return ids().filter(func(id): return is_expert(id, profession))

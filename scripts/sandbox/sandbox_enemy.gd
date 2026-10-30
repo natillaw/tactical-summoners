@@ -84,6 +84,21 @@ func _do_lunge() -> void:
     t.tween_property(_sprite, "position", Vector2.ZERO, 0.15)
 
 
+## Floor 10 boss (D-014 principles; numbers are tuning placeholders): much tougher, bigger strike,
+## longer and clearer wind-up so the player can read and dodge it.
+func make_boss() -> void:
+    enemy_name = "Orc Chieftain"
+    max_hp *= 8
+    hp = max_hp
+    atk = roundi(float(atk) * 1.6)
+    defense += 4
+    strike_radius *= 1.5
+    strike_range *= 1.3
+    windup_time = 1.1
+    if _sprite != null:
+        _sprite.scale *= 1.5
+
+
 func is_telegraphing() -> bool:
     return state == State.WINDUP
 

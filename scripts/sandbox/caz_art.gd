@@ -9,7 +9,7 @@ const CHAR_ROOT := "res://assets/pixel/caz-base/Characters/"
 
 const GRASS := ["Outside/Outside_1_1", "Outside/Outside_1_1", "Outside/Outside_1_2", "Outside/Outside_1_3", "Outside/Outside_1_4"]
 const DIRT := ["Outside/Outside_3_1", "Outside/Outside_3_2", "Outside/Outside_3_3"]
-const COBBLE := ["CityExterior/CityExterior_1_1", "CityExterior/CityExterior_1_1", "CityExterior/CityExterior_2_1", "CityExterior/CityExterior_2_2"]
+const COBBLE := ["CityExterior/CityExterior_1_1", "CityExterior/CityExterior_1_1", "CityExterior/CityExterior_1_1", "CityExterior/CityExterior_1_1", "CityExterior/CityExterior_1_1", "CityExterior/CityExterior_2_1"]
 const PLAZA := ["Outside/Outside_8_1", "Outside/Outside_8_2", "Outside/Outside_8_3", "Outside/Outside_8_4", "Outside/Outside_8_5"]
 const WATER := "Outside/Outside_5_1"
 const BIG_TREES := ["Outside/Outside_16_5", "Outside/Outside_16_6", "Outside/Outside_16_3", "Outside/Outside_16_4"]

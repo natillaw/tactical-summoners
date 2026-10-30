@@ -61,6 +61,8 @@ func _init() -> void:
     var pulled: Array = g.pull(2)
     var a: HeroData = pulled[0]
     var b: HeroData = pulled[1]
+    a.profession = "occupation.scholar"          # not a kitchen expert
+    b.profession = "occupation.scholar"
     g.assign_hq(a.id, "kitchen")
     var food0: int = int(g.hq_outputs["food"])
     g.process_headquarters_turn()
@@ -75,6 +77,19 @@ func _init() -> void:
     var mat0: int = int(g.hq_outputs["materials"])
     g.process_headquarters_turn()
     check(int(g.hq_outputs["materials"]) == mat0, "a worker in an unbuilt building produces nothing")
+
+    # profession experts produce double (owner "sí", 2026-10-30)
+    g.town_buildings["workshop"] = 1
+    b.profession = "occupation.miner"
+    mat0 = int(g.hq_outputs["materials"])
+    g.process_headquarters_turn()
+    check(int(g.hq_outputs["materials"]) - mat0 == 4 * TownTables.EXPERT_MULT, "a miner in the workshop produces double materials")
+    check(TownTables.best_workplaces("occupation.chef").has("kitchen"), "a chef is an expert at the kitchen")
+
+    # floor rewards and tower progress
+    var gems0: int = g.gems
+    var r: Dictionary = g.complete_floor(4)
+    check(int(r["materials"]) == 60 and g.gems == gems0 + 200 and int(g.tower_cleared["4"]) == 1, "completing floor 4 pays and is recorded")
 
     # save v5 -> v6 migration keeps old facility levels and adds the new buildings
     var v5 := {"version": 5, "gems": 1, "stones": 1, "books": 1, "pity4": 0, "pity5": 0, "pull_count": 0,
