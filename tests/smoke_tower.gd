@@ -67,11 +67,11 @@ func _ready() -> void:
             "exploration":
                 _kill_all(sb)
                 check(sb.clues.size() == 3, "floor %d: three clues to discover" % floor_num)
-                for clue in sb.clues:
-                    sb.heroes[0].position = clue.position
+                for k in sb.clues.size() - 1:
+                    sb.heroes[0].position = sb.clues[k].position
                     sb.tick(0.1)
-                check(sb.mission_state == SandboxScreen.Mission.ACTIVE, "floor %d: clues found, still must return" % floor_num)
-                sb.heroes[0].position = extract
+                check(sb.mission_state == SandboxScreen.Mission.ACTIVE, "floor %d: not done until every clue is found" % floor_num)
+                sb.heroes[0].position = sb.clues[sb.clues.size() - 1].position
                 sb.tick(0.1)
             "survival", "defense":
                 for i in 40:
