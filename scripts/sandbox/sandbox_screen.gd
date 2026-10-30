@@ -35,6 +35,7 @@ var fallen: Array = []                        # display names of heroes lost thi
 var real_squad: bool = false                  # true when the squad is the player's saved party
 var reward_given: bool = false
 var follow_slot: int = -1                     # -1 = group view
+var overview: bool = false                    # M: whole-map view (camera only, never pauses)
 var camera: Camera2D
 var camera_target: Vector2 = Vector2.ZERO
 var camera_zoom_target: float = 1.0
@@ -128,7 +129,7 @@ func _build_enemies() -> void:
 	for i in cells.size():
 		var c: Vector2i = cells[i]
 		var e := SandboxEnemy.new()
-		e.setup_type(ENEMY_TYPES[i % ENEMY_TYPES.size()])
+		e.setup_type(TowerExpedition.foe_for(floor_number, i) if floor_number > 0 else ENEMY_TYPES[i % ENEMY_TYPES.size()])
 		e.position = map.center_of(c)
 		e.died.connect(func(_e): defeated += 1)
 		_world.add_child(e)
@@ -172,7 +173,7 @@ func _build_ui() -> void:
 	_squad_label.custom_minimum_size = Vector2(340, 0)
 	pv.add_child(_squad_label)
 
-	_hint = UIKit.label("LMB select / drag box    RMB move    1-5 focus hero    Tab group view    G select squad    Q skill    S stop", 14, UIKit.MUTED)
+	_hint = UIKit.label("LMB select / drag box    RMB move    1-5 focus hero    Tab group view    G select squad    Q skill    S stop    M map", 14, UIKit.MUTED)
 	_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	_hint.position += Vector2(14, -34)
@@ -199,6 +200,7 @@ func select_only(list: Array) -> void:
 func select_slot(i: int) -> void:
 	if i < 0 or i >= heroes.size() or not heroes[i].alive:
 		return
+	overview = false
 	select_only([heroes[i]])
 	follow_slot = i
 
@@ -214,6 +216,12 @@ func group_view() -> void:
 ## Pure data: where the camera wants to be. update_camera() eases toward it each frame.
 func update_camera_targets() -> void:
 	if heroes.is_empty():
+		return
+	if overview:
+		var ws: Vector2 = map.world_size()
+		var vs := Vector2(_viewport.size) if _viewport != null and _viewport.size.x > 0 else Vector2(1280, 670)
+		camera_target = ws * 0.5
+		camera_zoom_target = minf(vs.x / ws.x, vs.y / ws.y)
 		return
 	if follow_slot >= 0:
 		camera_target = heroes[follow_slot].position
@@ -447,7 +455,10 @@ func _input(event: InputEvent) -> void:
 		KEY_1, KEY_2, KEY_3, KEY_4, KEY_5:
 			select_slot(event.keycode - KEY_1)
 		KEY_TAB:
+			overview = false
 			group_view()
+		KEY_M:
+			overview = not overview
 		KEY_G:
 			select_all()
 		KEY_Q:

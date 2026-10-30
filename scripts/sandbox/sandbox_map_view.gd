@@ -17,7 +17,7 @@ func _draw() -> void:
 		return
 	if not _tried:
 		_tried = true
-		_baked = MapTiles.bake(map)
+		_baked = ForestArt.bake(map, (map as ProceduralMap).seed_value) if map is ProceduralMap else MapTiles.bake(map)
 	if _baked != null:
 		draw_texture(_baked, Vector2.ZERO)
 	else:

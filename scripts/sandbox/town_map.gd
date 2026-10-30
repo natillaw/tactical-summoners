@@ -4,7 +4,8 @@ extends NavMap
 ## TownTables; every built building is solid and its door cell (bottom centre) is walkable.
 ## Unbuilt plots stay walkable (dirt) so heroes can cross them.
 
-## Ground kinds for drawing: "#" town wall, "B" building, "p" cobble path, "d" dirt plot, "." grass.
+## Ground kinds for drawing: "#" forest edge (trees), "B" building, "p" cobble path, "d" dirt plot,
+## "w" well, "." grass.
 var ground: Array[String] = []
 
 
@@ -24,6 +25,11 @@ func _init(levels: Dictionary = {}) -> void:
     for y in range(1, h - 1):
         for x in [7, 8, 19, 20, 25]:
             cells[y][x] = "p"
+    # central plaza (cobble) with a well in the middle (solid)
+    for y in range(9, 12):
+        for x in range(15, 20):
+            cells[y][x] = "p"
+    cells[10][17] = "w"
     for id in TownTables.ids():
         var plot: Rect2i = TownTables.info(id)["plot"]
         var built := int(levels.get(id, TownTables.info(id)["start"])) > 0
@@ -40,17 +46,18 @@ func _init(levels: Dictionary = {}) -> void:
         for x in w:
             var c: String = cells[y][x]
             g += c
-            s += "#" if c == "#" or c == "B" else "."
+            s += "#" if c == "#" or c == "B" or c == "w" else "."
         ground.append(g)
         nav_rows.append(s)
     build_grid(nav_rows)
     var plaza := Vector2i(17, 10)
-    goal_cell = plaza
-    extract_cell = plaza
-    relic_cell = plaza
+    goal_cell = plaza + Vector2i(0, 2)
+    extract_cell = goal_cell
+    relic_cell = goal_cell
     for dy in range(-1, 2):
         for dx in range(-2, 3):
-            spawn_cells.append(plaza + Vector2i(dx, dy))
+            if dx != 0 or dy != 0:
+                spawn_cells.append(plaza + Vector2i(dx, dy))
 
 
 ## Building id whose footprint contains the cell ("" if none).

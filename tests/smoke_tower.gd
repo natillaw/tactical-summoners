@@ -29,6 +29,8 @@ func _ready() -> void:
         sb.set_physics_process(false)
         await get_tree().process_frame
         check(sb.map is ProceduralMap and sb.heroes.size() == 5, "floor %d: procedural map with a 5-hero squad" % floor_num)
+        var foes_ok := sb.enemies.all(func(e): return TowerExpedition.get_floor_config(floor_num)["foes"].has(e.type_id))
+        check(foes_ok and not sb.enemies.is_empty(), "floor %d: forest creatures from the floor table" % floor_num)
         check(sb.map.relic_cell != sb.map.extract_cell, "floor %d: relic is not on the extraction cell" % floor_num)
         check(not sb.map.find_path(sb.map.center_of(sb.map.extract_cell), sb.map.center_of(sb.map.relic_cell)).is_empty(), "floor %d: relic reachable from extraction" % floor_num)
         for i in 300:
@@ -58,6 +60,13 @@ func _ready() -> void:
     Game.build_or_upgrade("alchemy")
     await get_tree().process_frame
     check(Game.building_level("alchemy") == lvl_before + 1 and town.map.is_blocked_cell((TownTables.info("alchemy")["plot"] as Rect2i).position), "building from the town updates the map")
+    var th: TownHero = town.heroes[0]
+    town.click_at(th.position + Vector2(0, -14))
+    check(town.hero_panel != null and town.hero_panel.hero == th.hero, "clicking a hero opens its panel")
+    for i in 10:
+        for x in town.heroes:
+            x._process(0.5)                 # advance town life without waiting real time
+    check(town.heroes.any(func(x): return x.activity != "idle"), "town heroes choose activities on their own")
     town.queue_free()
 
     check(not get_tree().paused and is_equal_approx(Engine.time_scale, 1.0), "no pause and no time-slow")

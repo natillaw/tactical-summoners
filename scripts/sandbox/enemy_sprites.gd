@@ -11,7 +11,29 @@ const IDLE_W := 32
 const RUN_W := 64
 const DEATH_W := {"orc_warrior": 96, "skeleton_base": 96}     # every other mob: 64
 
+## Voxel Dungeon creatures (CC0, Cole Foster): side-view strips of 64 px frames, facing right.
+## Used by the forest floors (TowerExpedition "foes"). Some creatures hop or fly instead of walking.
+const VOXEL_ROOT := "res://assets/packs/voxel-dungeon-pack-full/creatures/sheets/"
+const VOXEL_W := 64
+const VOXEL_SCALE := 0.8
+
 static var _cache: Dictionary = {}
+
+
+static func is_voxel(id: String) -> bool:
+    return not IDS.has(id)
+
+
+static func scale_for(id: String) -> float:
+    return VOXEL_SCALE if is_voxel(id) else 1.0
+
+
+static func _voxel_sheet(id: String, names: Array) -> Texture2D:
+    for n in names:
+        var path := VOXEL_ROOT + "%s_side_%s.png" % [id, n]
+        if ResourceLoader.exists(path):
+            return load(path) as Texture2D
+    return null
 
 
 static func available(id: String) -> bool:
@@ -38,7 +60,17 @@ static func build_frames(id: String) -> SpriteFrames:
     if _cache.has(id):
         return _cache[id]
     var sf: SpriteFrames = null
-    if available(id):
+    if is_voxel(id):
+        var idle := _voxel_sheet(id, ["idle", "fly", "hop"])
+        var run := _voxel_sheet(id, ["walk", "hop", "fly"])
+        var death := _voxel_sheet(id, ["death"])
+        if idle != null and run != null and death != null:
+            sf = SpriteFrames.new()
+            sf.remove_animation("default")
+            _add(sf, "idle", idle, VOXEL_W, 8.0, true)
+            _add(sf, "run", run, VOXEL_W, 10.0, true)
+            _add(sf, "death", death, VOXEL_W, 10.0, false)
+    elif available(id):
         var idle := load(ROOT + id + "/idle.png") as Texture2D
         var run := load(ROOT + id + "/run.png") as Texture2D
         var death := load(ROOT + id + "/death.png") as Texture2D
@@ -66,6 +98,7 @@ static func spawn_death(e: Node2D, sprite: AnimatedSprite2D) -> void:
     s.sprite_frames = sprite.sprite_frames
     s.centered = false
     s.flip_h = sprite.flip_h
+    s.scale = sprite.scale
     var sz := s.sprite_frames.get_frame_texture("death", 0).get_size()
     s.offset = Vector2(-sz.x * 0.5, -sz.y)
     ghost.add_child(s)
