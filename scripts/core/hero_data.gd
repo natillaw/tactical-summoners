@@ -219,18 +219,28 @@ func promote() -> void:
     add_event("promoted", {"stars": stars})
 
 
-func get_stats() -> Dictionary:
-    var base: Dictionary = HeroTables.CLASSES[hero_class]["base"]
-    var mult: float = float(HeroTables.STAR_DATA[stars]["mult"])
-    var growth: float = 1.0 + 0.12 * float(level - 1)
+## D-035: the five attributes, computed from saved data (class, stars, level, personal variance,
+## traits). No new random roll, so existing heroes keep their identity.
+func attributes() -> Dictionary:
+    var prof: Dictionary = HeroTables.CLASS_COMBAT.get(hero_class, HeroTables.CLASS_COMBAT["class.none"])
+    var star_factor := 0.8 + 0.2 * float(stars)
     var out := {}
-    for k in HeroTables.STAT_KEYS:
-        var v: float = float(base[k]) * mult * growth * float(variance.get(k, 1.0))
+    for i in HeroTables.ATTR_KEYS.size():
+        var k: String = HeroTables.ATTR_KEYS[i]
+        var legacy: String = HeroTables.ATTR_LEGACY[k]
+        var v: float = (float(prof["attrs"][i]) + float(prof["growth"][i]) * float(level - 1)) * star_factor
+        v *= float(variance.get(legacy, 1.0))
         for t in traits:
             var mods: Dictionary = HeroTables.TRAITS[t].get("mods", {})
-            v *= float(mods.get(k, 1.0))
+            v *= float(mods.get(legacy, 1.0))
         out[k] = maxi(1, roundi(v))
     return out
+
+
+## Combat stats derived from the attributes (CombatRules.derive). Keeps the legacy keys
+## hp/atk/mag/def/spd used by the UI: atk = physical power, mag = magic power, def = armor, spd = AGI.
+func get_stats() -> Dictionary:
+    return CombatRules.derive(attributes(), hero_class)
 
 
 func power() -> int:

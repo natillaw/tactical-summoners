@@ -134,6 +134,7 @@ func _build_squad() -> void:
 		var sc: Vector2i = map.spawn_cells[i % map.spawn_cells.size()]
 		h.position = map.center_of(sc)
 		h.died.connect(_on_hero_died)
+		h.went_down.connect(_on_hero_down)
 		_world.add_child(h)
 		heroes.append(h)
 
@@ -318,6 +319,40 @@ func order_move_selected(world_point: Vector2) -> void:
 		selected[i].order_move(map.find_path(selected[i].position, world_point + offset))
 
 
+## Right-click: on an enemy = attack it, on a downed ally = rescue (nearest selected hero goes),
+## on the ground = move. Returns the order given ("attack" | "rescue" | "move" | "").
+func order_context(world_point: Vector2) -> String:
+	if selected.is_empty():
+		return ""
+	for e in living_enemies():
+		if (e.position + Vector2(0, -14)).distance_to(world_point) <= 26.0:
+			for h in selected:
+				h.order_attack(e)
+			_mark(e.position, Color(1.0, 0.35, 0.3))
+			return "attack"
+	for ally in heroes:
+		if ally.downed and ally.position.distance_to(world_point) <= 30.0:
+			var best: SandboxHero = null
+			for h in selected:
+				if h.alive and (best == null or h.position.distance_to(ally.position) < best.position.distance_to(ally.position)):
+					best = h
+			if best != null:
+				best.order_rescue(ally)
+				_mark(ally.position, Color(0.5, 1.0, 0.6))
+				return "rescue"
+	order_move_selected(world_point)
+	_mark(world_point, Color(1, 1, 1))
+	return "move"
+
+
+## Small fading ring where an order was given (order feedback).
+func _mark(at: Vector2, color: Color) -> void:
+	var m := OrderMarker.new()
+	m.position = at
+	m.color = color
+	_world.add_child(m)
+
+
 ## Orders available to the panel and the keyboard. Never randomly refused (D-016).
 func stop_selected() -> void:
 	for h in selected:
@@ -348,13 +383,14 @@ func tick(delta: float) -> void:
 	for h in heroes:
 		h.tick(delta)
 		h.combat_tick(foes, map)
-	var friends := living_heroes()
+	var targets := heroes.filter(func(h): return not h.dead)
 	for e in foes:
-		e.tick(delta, friends, map)
+		e.tick(delta, targets, map)
 	for h in heroes:
 		if not h.alive and selected.has(h):
 			selected.erase(h)
 	_separate()
+	_separate_enemies()
 	_update_mission(delta)
 
 
@@ -393,7 +429,7 @@ func _update_mission(delta: float) -> void:
 				return
 	if mission_type != "retrieval" and mission_type != "rescue":
 		if living_heroes().is_empty():
-			_end_mission(Mission.FAILED)
+			_wipe()
 		return
 	if _escort != null:
 		_escort.visible = carrier != null
@@ -416,7 +452,29 @@ func _update_mission(delta: float) -> void:
 	if carrier != null and carrier.position.distance_to(map.center_of(map.extract_cell)) <= EXTRACT_RADIUS:
 		_end_mission(Mission.SUCCESS)
 	elif living_heroes().is_empty():
-		_end_mission(Mission.FAILED)
+		_wipe()
+
+
+## D-036: nobody left standing to carry the fallen out -> every downed hero dies, mission failed.
+func _wipe() -> void:
+	for h in heroes:
+		if h.downed:
+			h.killed_by = "left behind"
+			h.die()
+	_end_mission(Mission.FAILED)
+
+
+## A hero fell (not dead yet): the relic drops where they lie; an escorted villager waits there.
+func _on_hero_down(h: SandboxHero) -> void:
+	if carrier == h:
+		carrier = null
+		h.carrying = false
+		relic.position = h.position
+		relic.visible = true
+	if selected.has(h):
+		selected.erase(h)
+	if h.hero != null:
+		h.say("", 0.0)
 
 
 ## Permanent death (D-011): the saved hero is removed from the roster and written to the
@@ -501,6 +559,34 @@ func _separate() -> void:
 			_nudge(b, dir * corr * wb / (wa + wb))
 
 
+## Enemies keep apart from each other and from heroes (only the enemy is pushed).
+func _separate_enemies() -> void:
+	var live := living_enemies()
+	for i in live.size():
+		var a: SandboxEnemy = live[i]
+		for j in range(i + 1, live.size()):
+			var b: SandboxEnemy = live[j]
+			var d := b.position - a.position
+			var dist := d.length()
+			if dist < SEPARATION * 0.9 and dist > 0.01:
+				var push := d / dist * (SEPARATION * 0.9 - dist) * 0.5
+				_nudge_any(a, -push)
+				_nudge_any(b, push)
+		for h in heroes:
+			if not h.alive:
+				continue
+			var d2 := a.position - h.position
+			var dist2 := d2.length()
+			if dist2 < SEPARATION * 0.8 and dist2 > 0.01:
+				_nudge_any(a, d2 / dist2 * (SEPARATION * 0.8 - dist2))
+
+
+func _nudge_any(n: Node2D, v: Vector2) -> void:
+	var np := n.position + v
+	if not map.is_blocked(np):
+		n.position = np
+
+
 func _nudge(h: SandboxHero, v: Vector2) -> void:
 	var np := h.position + v
 	if not map.is_blocked(np):
@@ -533,7 +619,7 @@ func _gui_input(event: InputEvent) -> void:
 				_band.visible = false
 				_finish_left(event.position, event.shift_pressed)
 		elif event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
-			order_move_selected(screen_to_world(event.position))
+			order_context(screen_to_world(event.position))
 
 
 func _finish_left(end: Vector2, additive: bool) -> void:

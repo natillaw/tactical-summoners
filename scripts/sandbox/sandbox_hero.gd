@@ -1,9 +1,11 @@
 class_name SandboxHero
-extends Node2D
-## One deployed hero in the real-time sandbox: animated sprite, speed from the SPD stat,
-## waypoint following. Orders are always obeyed (D-016: no random refusal).
+extends Combatant
+## One deployed hero in a mission: animated sprite, movement, autonomous basic attacks, skills and
+## direct orders. Health, damage, statuses, downed/agony and death live in Combatant (D-035..D-037).
+## Orders are always obeyed (D-016: no random refusal); the order state decides what autonomy may do.
 
 const ARRIVE_EPS := 1.0
+const REPATH_EVERY := 0.4
 
 var hero: HeroData
 var slot: int = 0                 # 0-4 -> key 1-5
@@ -11,33 +13,35 @@ var selected: bool = false : set = _set_selected
 var path: Array[Vector2] = []
 var facing: String = "down"
 var speed: float = 90.0
+var stats: Dictionary = {}        # derived combat stats (CombatRules.derive)
 var _sprite: AnimatedSprite2D
 var _anim_lock: float = 0.0          # T-023: blocks idle/walk from overriding an attack/cast pose
 var _side: String = "right"          # last horizontal facing (up/down attacks reuse it)
 var chatter_text: String = ""
 var chatter_timer: float = 0.0
 
-func say(text: String, duration: float = 4.0) -> void:
-	chatter_text = text
-	chatter_timer = duration
-	queue_redraw()
-
-# --- combat (T-007). Provisional numbers (D-012): tune in CombatRules only. ---
-var max_hp: int = 1
-var hp: int = 1
-var alive: bool = true
+## Order state (Phase 2 grows this): "auto" | "move" | "attack" | "rescue".
+var order: String = "auto"
 var auto_path: bool = false         # true while walking toward a target on its own
 var target: SandboxEnemy = null
+var rescue_target: SandboxHero = null
+var rescue_progress: float = 0.0
+var _repath: float = 0.0
+var _last_delta: float = 0.0
 var _cooldown: float = 0.0
 var _flash: float = 0.0
-var killed_by: String = ""          # name of whatever dealt the last hit (memorial cause)
 var carrying: bool = false          # holds the mission relic (T-011)
-var skill: Dictionary = {}          # one active skill, from SkillTables (T-009)
+var skill: Dictionary = {}          # one active skill, from SkillTables (T-009; Phase 3 replaces)
 var skill_cd: float = 0.0           # seconds until the skill is ready
 var _fx: float = 0.0                # skill visual timer
 var _fx_to: Vector2 = Vector2.ZERO
 var _fx_radius: float = 0.0
-signal died(h: SandboxHero)
+
+
+func say(text: String, duration: float = 4.0) -> void:
+	chatter_text = text
+	chatter_timer = duration
+	queue_redraw()
 
 
 func _init(h: HeroData = null, slot_index: int = 0) -> void:
@@ -48,9 +52,10 @@ func _init(h: HeroData = null, slot_index: int = 0) -> void:
 func _ready() -> void:
 	if hero == null:
 		return
-	speed = 70.0 + float(hero.get_stats()["spd"]) * 3.0
-	max_hp = int(hero.get_stats()["hp"])
-	hp = max_hp
+	stats = hero.get_stats()
+	speed = float(stats["move"])
+	setup_combat(int(stats["hp"]), int(stats["def"]), int(stats["mres"]), float(stats["crit"]), float(stats["status_resist"]), hero.hero_seed)
+	can_be_downed = true
 	skill = SkillTables.for_class(hero.hero_class)
 	_sprite = AnimatedSprite2D.new()
 	_sprite.sprite_frames = SpriteComposer.build_frames(hero)
@@ -63,39 +68,77 @@ func is_moving() -> bool:
 	return not path.is_empty()
 
 
-## Direct orders are never refused and always cancel autonomous behavior (D-016).
+func power() -> int:
+	return int(stats["mag"]) if String(stats.get("kind", "physical")) == "magical" else int(stats["atk"])
+
+
+# --- orders (never randomly refused, D-016) -----------------------------------------------------
+
 func order_move(waypoints: Array[Vector2]) -> void:
 	path = waypoints.duplicate()
 	auto_path = false
 	target = null
+	rescue_target = null
+	rescue_progress = 0.0
+	order = "move"
+
+
+## Attack a specific enemy until it dies or another order arrives (chases it, no perception limit).
+func order_attack(enemy: SandboxEnemy) -> void:
+	target = enemy
+	rescue_target = null
+	rescue_progress = 0.0
+	path.clear()
+	auto_path = true
+	order = "attack"
+	_repath = 0.0
+
+
+## Go to a downed ally and carry them back to their feet (D-036).
+func order_rescue(ally: SandboxHero) -> void:
+	rescue_target = ally
+	rescue_progress = 0.0
+	target = null
+	path.clear()
+	auto_path = false
+	order = "rescue"
+	_repath = 0.0
 
 
 func stop() -> void:
 	path.clear()
+	order = "auto"
+	rescue_target = null
+	rescue_progress = 0.0
 
+
+# --- simulation --------------------------------------------------------------------------------
 
 func tick(delta: float) -> void:
+	_last_delta = delta
+	tick_combat(delta)
 	if not alive:
+		if downed:
+			queue_redraw()
 		return
 	_cooldown = maxf(0.0, _cooldown - delta)
 	_anim_lock = maxf(0.0, _anim_lock - delta)
 	skill_cd = maxf(0.0, skill_cd - delta)
+	_repath = maxf(0.0, _repath - delta)
 	if chatter_timer > 0.0:
 		chatter_timer = maxf(0.0, chatter_timer - delta)
-		queue_redraw()
 	if _fx > 0.0:
 		_fx = maxf(0.0, _fx - delta)
-		queue_redraw()
 	if _flash > 0.0:
 		_flash = maxf(0.0, _flash - delta)
-		queue_redraw()
-	if path.is_empty():
+	queue_redraw()
+	if path.is_empty() or not can_move():
 		_play("idle_" + facing)
 		return
 	var next_wp: Vector2 = path[0]
 	var to := next_wp - position
 	var dist := to.length()
-	var step := speed * delta
+	var step := speed * move_mult() * delta
 	if dist <= step + ARRIVE_EPS:
 		position = next_wp
 		path.remove_at(0)
@@ -115,23 +158,29 @@ func attack_range() -> float:
 
 
 func attack_interval() -> float:
-	return CombatRules.hero_interval(int(hero.get_stats()["spd"]))
+	return float(stats.get("interval", CombatRules.hero_interval(int(stats.get("spd", 5)))))
 
 
-func attack_damage(target_def: int) -> int:
-	var st := hero.get_stats()
-	return CombatRules.damage(maxi(int(st["atk"]), int(st["mag"])), target_def)
-
-
-## Autonomous basic attacks. Idle heroes (no player order) pick the nearest perceived enemy,
-## walk into range and strike on cooldown. A player move order always wins.
+## Autonomy + order execution for one step. A move order always wins; an attack order sticks to
+## its target; a rescue order walks to the ally and channels; otherwise pick the nearest threat.
 func combat_tick(enemies: Array, map: NavMap) -> void:
 	if not alive:
 		return
-	if not path.is_empty() and not auto_path:
-		return                                   # obeying a direct order
+	match order:
+		"rescue":
+			_rescue_tick(map)
+			return
+		"move":
+			if not path.is_empty():
+				return                               # obeying a direct move
+			order = "auto"
+	if not can_act():
+		return
 	if target != null and (not is_instance_valid(target) or not target.alive):
 		target = null
+		if order == "attack":
+			order = "auto"
+			FloatingText.spawn(self, "target down", Color(0.8, 0.8, 0.8), false)
 	if target == null:
 		target = _nearest(enemies, CombatRules.HERO_PERCEPTION)
 		if target == null:
@@ -146,17 +195,42 @@ func combat_tick(enemies: Array, map: NavMap) -> void:
 		_face(target.position - position)
 		if _cooldown <= 0.0:
 			_cooldown = attack_interval()
-			_anim_lock = HeroAnim.play_attack(_sprite, facing, _side, is_ranged())
-			if is_ranged():
-				CombatVFX.spawn_strip16(get_parent(), target.position + Vector2(0, -12), "spritepilot-combat-pack", "arrow-16px_strip4.png", 2.0)
-			else:
-				CombatVFX.spawn_strip16(get_parent(), target.position + Vector2(0, -12), "spritepilot-combat-pack", "sword-slash-16px_strip7.png")
-			target.take_damage(attack_damage(target.defense), self)
-	elif path.is_empty() or auto_path:
+			_basic_attack(target)
+	elif _repath <= 0.0 or path.is_empty():
+		_repath = REPATH_EVERY
 		var p := map.find_path(position, target.position)
 		if not p.is_empty():
 			path = p
 			auto_path = true
+
+
+func _basic_attack(t: SandboxEnemy) -> void:
+	_anim_lock = HeroAnim.play_attack(_sprite, facing, _side, is_ranged())
+	if is_ranged():
+		CombatVFX.spawn_strip16(get_parent(), t.position + Vector2(0, -12), "spritepilot-combat-pack", "arrow-16px_strip4.png", 2.0)
+	else:
+		CombatVFX.spawn_strip16(get_parent(), t.position + Vector2(0, -12), "spritepilot-combat-pack", "sword-slash-16px_strip7.png")
+	t.take_hit(DamageInfo.make(float(power()), String(stats.get("kind", "physical")), self, crit_chance, combat_rng))
+
+
+func _rescue_tick(map: NavMap) -> void:
+	if rescue_target == null or not is_instance_valid(rescue_target) or not rescue_target.downed:
+		stop()
+		return
+	if position.distance_to(rescue_target.position) <= CombatRules.RESCUE_RANGE:
+		path.clear()
+		_face(rescue_target.position - position)
+		_play("ready_" + _side)
+		rescue_progress += _last_delta
+		if rescue_progress >= CombatRules.RESCUE_TIME:
+			rescue_target.revive(CombatRules.RESCUE_HP)
+			if hero != null and rescue_target.hero != null:
+				hero.rescue_hero(rescue_target.hero)          # memory, bond and Trust (Phase 3 data)
+			FloatingText.spawn(rescue_target, "Rescued!", Color(0.5, 1.0, 0.6), true)
+			stop()
+	elif path.is_empty() or _repath <= 0.0:
+		_repath = REPATH_EVERY
+		path = map.find_path(position, rescue_target.position)
 
 
 func _nearest(enemies: Array, radius: float) -> SandboxEnemy:
@@ -176,18 +250,17 @@ func skill_ready() -> bool:
 	return alive and skill_cd <= 0.0
 
 
-## Direct skill activation (T-009). Returns true if it fired. Refused only on cooldown or when
+## Direct skill activation (T-009). Returns true if it fired. Refused only on cooldown, stun or when
 ## there is no valid target; never by a random roll (D-016). Heals need no target.
 func use_skill(enemies: Array) -> bool:
-	if not skill_ready() or skill.is_empty():
+	if not skill_ready() or skill.is_empty() or not can_act():
 		return false
-	var st := hero.get_stats()
-	var power := maxi(int(st["atk"]), int(st["mag"]))
 	var kind := String(skill["kind"])
+	var dkind := String(stats.get("kind", "physical"))
 	if kind == "self_heal":
 		if hp >= max_hp:
 			return false
-		hp = mini(max_hp, hp + roundi(float(max_hp) * float(skill["heal"])))
+		heal(roundi(float(max_hp) * float(skill["heal"])))
 		_fire_fx(position, 0.0)
 		CombatVFX.spawn_strip16(get_parent(), position + Vector2(0, -14), "spritepilot-magic-pack", "healing-aura-16px_strip8.png", 3.0)
 		_anim_lock = HeroAnim.play_cast(_sprite, _side)
@@ -209,8 +282,9 @@ func use_skill(enemies: Array) -> bool:
 		tgt = target                             # prefer the current target when in reach
 	if tgt == null:
 		return false
+	var amount := float(power()) * float(skill["mult"])
 	if kind == "target":
-		tgt.take_damage(CombatRules.skill_damage(power, float(skill["mult"]), tgt.defense), self)
+		tgt.take_hit(DamageInfo.make(amount, dkind, self, crit_chance, combat_rng))
 		_fire_fx(tgt.position, 0.0)
 		CombatVFX.spawn_strip16(get_parent(), tgt.position + Vector2(0, -12), "spritepilot-combat-pack", "critical-hit-16px_strip8.png", 3.0)
 	else:
@@ -218,7 +292,7 @@ func use_skill(enemies: Array) -> bool:
 		var radius := float(skill["radius"])
 		for e in enemies:
 			if e.alive and e.position.distance_to(centre) <= radius:
-				e.take_damage(CombatRules.skill_damage(power, float(skill["mult"]), e.defense), self)
+				e.take_hit(DamageInfo.make(amount, dkind, self, crit_chance, combat_rng))
 		_fire_fx(centre, radius)
 		if kind == "self_aoe":
 			CombatVFX.spawn_strip16(get_parent(), centre, "spritepilot-combat-pack", "shockwave-16px_strip8.png", 5.0)
@@ -237,23 +311,37 @@ func _fire_fx(at: Vector2, radius: float) -> void:
 	queue_redraw()
 
 
-func take_damage(amount: int, _source: Node2D = null) -> void:
-	if not alive:
-		return
-	if _source != null and _source.get("enemy_name") != null:
-		killed_by = str(_source.get("enemy_name"))
-	hp = maxi(0, hp - amount)
+# --- Combatant hooks ------------------------------------------------------------------------
+
+func _on_hit(info: DamageInfo, _dmg: int) -> void:
 	_flash = 0.15
-	queue_redraw()
-	if hp > 0 and _source != null:
-		HeroAnim.play_hit(_sprite, (position - _source.position).normalized())
-	if hp <= 0:
-		HeroAnim.spawn_death(self, _sprite, facing, _side)
-		alive = false
-		path.clear()
-		# Permanent death (D-011): flagged here; memorial/ledger handled by T-013.
-		died.emit(self)
-		visible = false
+	if order == "rescue" and rescue_progress > 0.0:
+		rescue_progress = 0.0                         # D-036: taking damage interrupts the rescue
+		FloatingText.spawn(self, "interrupted", Color(1.0, 0.6, 0.4), false)
+	if hp > 0 and info.source != null and is_instance_valid(info.source):
+		HeroAnim.play_hit(_sprite, (position - info.source.position).normalized())
+
+
+func _on_down() -> void:
+	path.clear()
+	order = "auto"
+	target = null
+	rescue_target = null
+	if _sprite != null:
+		_sprite.stop()
+		_sprite.play("down_" + _side)
+	_anim_lock = 99999.0
+
+
+func _on_revive() -> void:
+	_anim_lock = 0.0
+	_play("idle_" + facing)
+
+
+func _on_die() -> void:
+	path.clear()
+	HeroAnim.spawn_death(self, _sprite, facing, _side)
+	visible = false
 
 
 func _face(dir: Vector2) -> void:
@@ -278,8 +366,19 @@ func _set_selected(v: bool) -> void:
 
 
 func _draw() -> void:
-	if hero == null or not alive:
+	if hero == null or dead:
 		return
+	if downed:
+		var k := clampf(agony / CombatRules.AGONY_TIME, 0.0, 1.0)
+		draw_arc(Vector2(0, -12), 18.0, -PI / 2.0, -PI / 2.0 + TAU * k, 32, Color(1.0, 0.35, 0.3), 3.0)
+		draw_string(ThemeDB.fallback_font, Vector2(-30, -36), "DOWN %ds" % ceili(agony), HORIZONTAL_ALIGNMENT_CENTER, 60, 12, Color(1.0, 0.5, 0.45))
+		return
+	if rescue_progress > 0.0:
+		draw_rect(Rect2(-15, -52, 30.0 * rescue_progress / CombatRules.RESCUE_TIME, 3), Color(0.5, 1.0, 0.6))
+	var sx := -15.0
+	for id in statuses:
+		draw_rect(Rect2(sx, -41, 4, 4), CombatRules.STATUS[id]["color"])
+		sx += 6.0
 	var w := 30.0
 	draw_rect(Rect2(-w * 0.5, -46, w, 4), Color(0.1, 0.1, 0.1, 0.8))
 	draw_rect(Rect2(-w * 0.5, -46, w * float(hp) / float(maxi(1, max_hp)), 4), Color(0.45, 0.85, 0.50))

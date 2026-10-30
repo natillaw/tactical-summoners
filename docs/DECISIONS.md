@@ -119,6 +119,22 @@ En el pueblo cada héroe decide qué hacer (pasear, visitar edificios, entrenar,
 ### D-034 — Misiones por tipo de piso (2026-10-30)
 Implementados 7 tipos (combate, recuperación, rescate, exploración, supervivencia, defensa, jefe) según `TowerExpedition`. El jefe del piso 10 (Jefe Orco) es la primera versión: más vida, golpe telegrafiado más amplio y lento; fases y mecánicas de arena (P-25) siguen pendientes.
 
+### D-035 — Atributos híbridos (2026-10-30, dueño; resuelve C-2 del combate)
+FUE/AGI/VIT/INT/TEM son la base de cada héroe (perfil por clase + crecimiento por nivel + estrellas + variación personal + rasgos). Los stats de combate se **derivan** de ellos en un solo sitio (`CombatRules.derive`): vida (40 + 10×VIT), poder físico (2×FUE + arma de clase), poder mágico (2×INT + foco de clase), armadura, resistencia mágica (TEM), velocidad y cadencia (AGI), probabilidad de crítico (AGI), energía (3 + TEM/3) y resistencia a estados (TEM). Los héroes existentes se migran automáticamente (los atributos se calculan desde sus datos guardados, sin nueva tirada).
+
+### D-036 — Incapacitación, agonía y rescate (2026-10-30, dueño; resuelve P-13 y matiza D-011)
+A 0 PV un héroe **cae** (no muere): agonía visible de 20 s. Otro héroe con la orden **Rescue** (clic derecho sobre el caído) lo levanta tras 2,5 s de canalización, que se interrumpe si el rescatador recibe daño o se aleja; vuelve con el 25 % de vida y el estado **Herido** (−20 % de vida máxima durante el resto de la misión). Si la agonía expira, muerte permanente (D-011 sigue vigente). Golpes recibidos en el suelo restan 5 s de agonía. Si todo el escuadrón cae, la misión fracasa y los caídos mueren. Rematar caídos: no por ahora (opción descartada).
+
+### D-037 — Azar: solo críticos (2026-10-30, dueño; resuelve C-1)
+Los golpes que alcanzan siempre conectan: sin fallos ni variación de daño. Hay críticos con probabilidad (base 5 % + AGI; luego equipo) y multiplicador ×1,5, mostrados con número grande. La esquiva aleatoria de D-012 queda descartada.
+
+### D-038 — Pushes de la rama autorizados (2026-10-30, dueño)
+Commit + push solo a la rama de trabajo de Claude cada vez que se termina un bloque, para que GitHub ejecute pruebas y capturas. Nunca merge a `main` sin permiso.
+
+### D-039 — Ranuras de equipo y raids (2026-10-30, dueño, prompt de combate)
+- Ranuras: arma principal, arma secundaria o escudo (las armas a dos manos ocupan ambas), casco, pechera, guantes, pantalones, botas, 2 anillos, amuleto y accesorio especial. Al morir, el héroe pierde su equipo con él. Los legendarios y míticos tienen identidad y efectos propios. (Implementación en la fase de progresión; sin valores inventados.)
+- El grupo habitual es de 5 (D-017); habrá encuentros especiales (raids) de hasta 10 héroes. La arquitectura no debe fijar el tamaño del grupo en 5 en más sitios.
+
 ---
 
 ## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)
@@ -138,7 +154,7 @@ Implementados 7 tipos (combate, recuperación, rescate, exploración, superviven
 | P-10 | **Biblioteca de habilidades (D-022)** | 130 habilidades en `docs/specs/SKILLS.md` (7 "implemented", 124 "spec"); regla 4 activas + 1 definitiva; nivel 1-70; ≥30 aprendibles y ≥20 exclusivas por clase de combate; cada skill con qué hace, cómo se juega en tiempo real, sinergia, etiquetas de enemigo; API prevista `SkillLibrary` + generador `tools/gen_skill_library.py` (**no existen en el repo**) | ¿Se mantiene la regla y se regenera para las clases de P-06? |
 | P-11 | **Memoria desbloqueada al promocionar** | D-018 "MAYBE": revelaría un recuerdo ya guardado en la generación, nunca inventaría hechos | Sí/No |
 | P-12 | **Significado de "sacrificio"** | Interpretación del agente: héroe → materiales | Confirmar |
-| P-13 | **Rescate de caídos con temporizador de agonía** | Descrito en `SESSION_SUMMARY` (no existe en código); `rescue_hero()` existe solo como función de datos | ¿Es idea del dueño? ¿Cómo encaja con D-011? |
+| P-13 | ~~Rescate de caídos~~ **RESUELTA → D-036** | Descrito en `SESSION_SUMMARY` (no existe en código); `rescue_hero()` existe solo como función de datos | ¿Es idea del dueño? ¿Cómo encaja con D-011? |
 | P-14 | **Ropa interior por defecto vs cuerpo base** al equipar armaduras | D-021 | Elegir |
 | P-15 | **Secretos y cadenas de descubrimiento** | `discover_secret()` idempotente, no heredable tras la muerte (solo datos + test) | Alcance y fuentes de secretos |
 | P-16 | **Legado tras la muerte** | Prompt 2026-10-30; memorial existente | Definir qué deja un héroe muerto (reliquias, archivo, recuerdos en otros héroes…) |
