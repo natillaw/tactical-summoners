@@ -51,10 +51,17 @@ static func _tex(path: String) -> Texture2D:
     return load(path) as Texture2D
 
 
-func _load_prop(id: String) -> void:
-    if _props.has(id):
+func _load_prop(key: String) -> void:
+    if _props.has(key):
         return
     var frames: Array = []
+    if key.begins_with("caz:"):
+        var ct := CazArt.texture(key.trim_prefix("caz:"))
+        if ct != null:
+            frames.append(ct)
+        _props[key] = frames
+        return
+    var id := key.trim_prefix("voxel:")
     var dir := DirAccess.open(PROP_DIR + id)
     if dir != null:
         var files: Array = []
@@ -67,10 +74,12 @@ func _load_prop(id: String) -> void:
             var t := _tex(PROP_DIR + id + "/" + String(f))
             if t != null:
                 frames.append(t)
-    _props[id] = frames
+    _props[key] = frames
 
 
 func _bake_ground() -> Texture2D:
+    if CazArt.available() and map != null:
+        return _bake_ground_caz()
     var floors := _tex(TILE_DIR + "Floors_Tiles.png")
     if floors == null or _walls == null or map == null:
         return null
@@ -126,6 +135,60 @@ func _bake_ground() -> Texture2D:
     return ImageTexture.create_from_image(out)
 
 
+## Town ground with Caz tiles: grass, cobbled roads, stone plaza with a fountain, dirt plots,
+## flowers/bushes/rocks on the grass, lamp posts at the crossroads and a ring of Caz trees.
+func _bake_ground_caz() -> Texture2D:
+    var cell := NavMap.CELL
+    var out := Image.create(map.width * cell, map.height * cell, false, Image.FORMAT_RGBA8)
+    var r := RandomNumberGenerator.new()
+    r.seed = 7331
+    for y in map.height:
+        var row: String = map.ground[y]
+        for x in map.width:
+            var area := Rect2i(Vector2i(x, y) * cell, Vector2i(cell, cell))
+            var in_plaza := x >= 15 and x <= 19 and y >= 9 and y <= 11
+            match row[x]:
+                "p", "B":
+                    CazArt.fill_tiles(out, area, CazArt.PLAZA if in_plaza else CazArt.COBBLE, r)
+                "w":
+                    CazArt.fill_tiles(out, area, CazArt.PLAZA, r)
+                "d":
+                    CazArt.fill_tiles(out, area, CazArt.DIRT, r)
+                _:
+                    CazArt.fill_tiles(out, area, CazArt.GRASS, r)
+    for y in map.height:
+        var row2: String = map.ground[y]
+        for x in map.width:
+            var o := Vector2i(x, y) * cell
+            if row2[x] == ".":
+                var feet := o + Vector2i(r.randi_range(10, 38), r.randi_range(20, 44))
+                var roll := r.randf()
+                if roll < 0.22:
+                    CazArt.blit_feet(out, CazArt.image(CazArt.FLOWER), feet)
+                elif roll < 0.30:
+                    CazArt.blit_feet(out, CazArt.pick(CazArt.BUSHES, r), feet)
+                elif roll < 0.33:
+                    CazArt.blit_feet(out, CazArt.pick(CazArt.ROCKS, r), feet)
+                elif roll < 0.36:
+                    CazArt.blit_feet(out, CazArt.pick(CazArt.SMALL_TREES, r), feet)
+            elif row2[x] == "w":
+                CazArt.blit_feet(out, CazArt.image("ExteriorFeatures/ExteriorFeatures_7_2"), o + Vector2i(24, 46))
+    # lamp posts where the avenues cross
+    for c in [Vector2i(9, 8), Vector2i(18, 8), Vector2i(24, 8), Vector2i(9, 12), Vector2i(18, 12), Vector2i(24, 12)]:
+        if map.ground[c.y][c.x] == ".":
+            CazArt.blit_feet(out, CazArt.image("ExteriorFeatures/ExteriorFeatures_1_1"), c * cell + Vector2i(24, 30))
+    # forest ring around the town
+    for y in range(-1, map.height + 1):
+        for x in range(-1, map.width + 1):
+            var edge := x <= 0 or y <= 0 or x >= map.width - 1 or y >= map.height - 1
+            if not edge:
+                continue
+            for k in 2:
+                var tree := CazArt.pick(CazArt.BIG_TREES if r.randf() < 0.7 else CazArt.SMALL_TREES, r)
+                CazArt.blit_feet(out, tree, Vector2i(x, y) * cell + Vector2i(r.randi_range(4, 44), r.randi_range(20, 46) - k * 16))
+    return ImageTexture.create_from_image(out)
+
+
 func _draw() -> void:
     if map == null:
         return
@@ -141,14 +204,20 @@ func _draw() -> void:
         var r := Rect2(Vector2(plot.position) * cell, Vector2(plot.size) * cell)
         var level := Game.building_level(id)
         if level > 0:
-            var img := ProcArt.house(plot.size.x * NavMap.CELL, plot.size.y * NavMap.CELL, b["roof"], String(STYLES.get(id, "plaster")), true)
+            var look: Dictionary = b.get("look", {})
+            var img: Image = null
+            if CazArt.available():
+                img = CazArt.house(plot.size.x * NavMap.CELL, plot.size.y * NavMap.CELL, String(look.get("roof", "thatch")), String(look.get("wall", "plaster")), look.get("tint", Color.WHITE))
+            if img == null:
+                img = ProcArt.house(plot.size.x * NavMap.CELL, plot.size.y * NavMap.CELL, b["roof"], String(STYLES.get(id, "plaster")), true)
             draw_texture(ProcArt.texture(img), r.position)
+            if id == "tower_gate" and CazArt.texture(CazArt.ARCH) != null:
+                draw_texture(CazArt.texture(CazArt.ARCH), Vector2(r.get_center().x - 24, r.end.y - 48))
             var props: Array = b["props"]
-            var front := Vector2(TownTables.door_cell(id)) * cell
+            var front := Vector2(TownTables.door_cell(id)) * cell + Vector2(cell * 0.5, cell * 0.85)
             for i in props.size():
                 var side := -1.0 if i % 2 == 0 else 1.0
-                var at := front + Vector2(side * cell * (0.75 + i / 2), -cell * 0.35)
-                _draw_prop(String(props[i]), -1, Rect2(at, Vector2(cell, cell) * 0.75))
+                _draw_prop(String(props[i]), -1, front + Vector2(side * cell * (1.0 + i / 2), 0))
         else:
             # construction site: fenced dirt plot with rubble
             draw_rect(r.grow(-6), Color(0.0, 0.0, 0.0, 0.12))
@@ -157,7 +226,7 @@ func _draw() -> void:
                 draw_rect(Rect2(fx, r.end.y - 12, 3, 8), Color8(110, 74, 42))
             draw_rect(Rect2(r.position.x + 4, r.position.y + 6, r.size.x - 8, 2), Color8(140, 96, 56))
             draw_rect(Rect2(r.position.x + 4, r.end.y - 10, r.size.x - 8, 2), Color8(140, 96, 56))
-            _draw_prop("rubble", 0, Rect2(r.get_center() - Vector2(cell, cell) * 0.5, Vector2(cell, cell)))
+            _draw_prop("rubble", 0, r.get_center() + Vector2(0, cell * 0.4))
         var ring := Color(1.0, 0.9, 0.5) if id == selected else (Color(1, 1, 1, 0.7) if id == hovered else Color(0, 0, 0, 0))
         if ring.a > 0.0:
             draw_rect(r.grow(3), ring, false, 3.0)
@@ -168,10 +237,14 @@ func _draw() -> void:
         draw_string(font, tp, title, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1, 0.95, 0.8) if level > 0 else Color(0.8, 0.8, 0.8))
 
 
+## Draws a prop with its feet at `feet`. Caz props at native size, voxel props (64 px) at 0.75.
 ## frame -1 = animate with time.
-func _draw_prop(id: String, frame: int, rect: Rect2) -> void:
-    var frames: Array = _props.get(id, [])
+func _draw_prop(key: String, frame: int, feet: Vector2) -> void:
+    var frames: Array = _props.get(key, [])
     if frames.is_empty():
         return
     var f := frame if frame >= 0 else int(_time * 8.0) % frames.size()
-    draw_texture_rect(frames[f], rect, false)
+    var tex: Texture2D = frames[f]
+    var s := 1.0 if key.begins_with("caz:") else 0.75
+    var size := tex.get_size() * s
+    draw_texture_rect(tex, Rect2(feet - Vector2(size.x * 0.5, size.y), size), false)
