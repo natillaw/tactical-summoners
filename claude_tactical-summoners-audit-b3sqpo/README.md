@@ -1,5 +1,5 @@
 # Capturas de claude/tactical-summoners-audit-b3sqpo
-Commit `eb825d6` — 2026-10-30 21:18 UTC
+Commit `72c2f04` — 2026-10-30 21:21 UTC
 
 ## 01_town.png
 ![](01_town.png)
