@@ -32,7 +32,11 @@ Fase actual: **reparación** (ver `docs/DEVELOPMENT_ROADMAP.md`). Hay errores co
 ## Pruebas
 - Windows: `powershell -ExecutionPolicy Bypass -File tools\Run-Tests.ps1 [-Godot "C:\ruta\Godot_console.exe"]` → `tools\last_test_run.txt`.
 - Headless genérico: `godot --headless --path . --import` y luego `godot --headless --path . --script res://tests/<suite>.gd` o `godot --headless --path . res://tests/<smoke>.tscn --quit-after 3000`.
-- Si no hay Godot en el entorno, dilo y entrega los comandos; nunca supongas un PASS.
+- **Sin Godot local (sesiones en la nube):** cada push a la rama ejecuta `.github/workflows/godot-ci.yml` en GitHub (todas las suites + capturas de pantalla). Lee el resultado con la skill `godot-test`.
+- Nunca supongas un PASS: cita la salida o el enlace de la ejecución.
+
+## Versiones
+Cada entrega probable se registra en `docs/VERSIONS.md` (commit + ZIP descargable + qué probar). Skills del proyecto: `.claude/skills/` (`godot-test`, `hero-data-change`, `asset-import`); agentes: `.claude/agents/` (`godot-tester`, `doc-keeper`, `reviewer`).
 
 ## Al terminar
 Resume qué cambiaste, qué ejecutaste (con su salida) y qué quedó sin verificar. Actualiza `docs/IMPLEMENTATION_STATUS.md` solo con evidencia. No hagas push a `main` ni merge sin permiso.

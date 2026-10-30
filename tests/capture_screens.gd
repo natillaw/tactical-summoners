@@ -54,4 +54,9 @@ func _shot(shot_name: String, wait: float) -> void:
     var img := get_viewport().get_texture().get_image()
     var path := _dir.path_join(shot_name + ".png")
     var err := img.save_png(path)
+    # half-size copy so a reviewer without artifact access can read it from the job log
+    DirAccess.make_dir_recursive_absolute(_dir.path_join("small"))
+    var small := img.duplicate() as Image
+    small.resize(img.get_width() / 2, img.get_height() / 2, Image.INTERPOLATE_NEAREST)
+    small.save_png(_dir.path_join("small").path_join(shot_name + ".png"))
     print("shot ", shot_name, " -> ", path, " err=", err)
