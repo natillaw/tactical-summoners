@@ -1,5 +1,5 @@
 # Capturas de claude/tactical-summoners-audit-b3sqpo
-Commit `ab0a488` — 2026-10-30 19:48 UTC
+Commit `38efba6` — 2026-10-30 20:03 UTC
 
 ## 01_town.png
 ![](01_town.png)
@@ -7,17 +7,11 @@ Commit `ab0a488` — 2026-10-30 19:48 UTC
 ## 01b_town_tower_gate.png
 ![](01b_town_tower_gate.png)
 
-## 01c_town_build_alchemy.png
-![](01c_town_build_alchemy.png)
+## 01c_town_hero_panel.png
+![](01c_town_hero_panel.png)
 
-## 02_hq.png
-![](02_hq.png)
-
-## 02_memorial.png
-![](02_memorial.png)
-
-## 02_menu.png
-![](02_menu.png)
+## 01d_town_closeup_plaza.png
+![](01d_town_closeup_plaza.png)
 
 ## 02_party.png
 ![](02_party.png)
@@ -28,14 +22,35 @@ Commit `ab0a488` — 2026-10-30 19:48 UTC
 ## 02_summon.png
 ![](02_summon.png)
 
-## 03_sandbox_start.png
-![](03_sandbox_start.png)
+## 03_floor1_squad.png
+![](03_floor1_squad.png)
 
-## 04_sandbox_after_5s.png
-![](04_sandbox_after_5s.png)
+## 03_floor2_squad.png
+![](03_floor2_squad.png)
 
-## 05_sandbox_focus_hero1.png
-![](05_sandbox_focus_hero1.png)
+## 03_floor3_squad.png
+![](03_floor3_squad.png)
 
-## 06_tower_floor1.png
-![](06_tower_floor1.png)
+## 03_floor4_squad.png
+![](03_floor4_squad.png)
+
+## 03_floor5_squad.png
+![](03_floor5_squad.png)
+
+## 04_floor1_map.png
+![](04_floor1_map.png)
+
+## 04_floor2_map.png
+![](04_floor2_map.png)
+
+## 04_floor3_map.png
+![](04_floor3_map.png)
+
+## 04_floor4_map.png
+![](04_floor4_map.png)
+
+## 04_floor5_map.png
+![](04_floor5_map.png)
+
+## 05_training_ground.png
+![](05_training_ground.png)
