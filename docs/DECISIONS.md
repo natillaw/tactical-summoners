@@ -111,6 +111,14 @@ Todos los pisos 1-10 están desbloqueados (son los que hay por ahora). Bioma: **
 ### D-032 — Héroes con autonomía total en el pueblo; ficha al hacer clic (2026-10-30, dueño)
 En el pueblo cada héroe decide qué hacer (pasear, visitar edificios, entrenar, trabajar, descansar, charlar), según su personalidad y su trabajo. Es solo visual hasta que existan los sistemas de entrenamiento, etc. Al hacer clic en un héroe se abre su ficha: equipo, colores, stats, personalidad, relaciones, recuerdos y actividad actual.
 
+### D-033 — Progreso rápido de torre y profesiones expertas (2026-10-30, dueño: "sí")
+- Completar un piso da recompensa (gemas, piedras, materiales, libros; números provisionales en `Game.complete_floor`) y queda registrado (`tower_cleared`). Todos los pisos 1-10 siguen desbloqueados.
+- Profesiones: un experto produce ×2 en su edificio (cocina: chef/granjero/pescador/cazador; taller: leñador/minero/cantero/constructor/ingeniero/herrero; hospital: médico/sacerdote/alquimista; taberna: artista/mercader). Tabla en `TownTables` ("experts").
+- El dueño pide un **sistema de profesiones mucho más sólido**: esta es solo la primera capa; el diseño completo sigue PENDIENTE (P-05).
+
+### D-034 — Misiones por tipo de piso (2026-10-30)
+Implementados 7 tipos (combate, recuperación, rescate, exploración, supervivencia, defensa, jefe) según `TowerExpedition`. El jefe del piso 10 (Jefe Orco) es la primera versión: más vida, golpe telegrafiado más amplio y lento; fases y mecánicas de arena (P-25) siguen pendientes.
+
 ---
 
 ## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)
