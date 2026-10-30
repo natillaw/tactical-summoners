@@ -31,7 +31,7 @@ Leyenda: **I** implementado (sin ejecutar) · **ID** implementado pero defectuos
 | Ataque automático, enemigos con telegrafía | I | `sandbox_hero.gd`, `sandbox_enemy.gd` | — |
 | 1 habilidad activa por clase (Q) | I | `scripts/sandbox/skill_tables.gd` | La biblioteca D-022 no existe (F-010) |
 | Misión "Recover the relic" | I (v2, probado) | `sandbox_screen.gd` | Relicario en `map.relic_cell`, extracción en `map.extract_cell` (F-003/F-013 reparados) |
-| Torre pisos 1-10 + mapa procedural | P (v2, probado por `smoke_tower` en pisos 1/5/10) | `scripts/core/tower_expedition.gd`, `procedural_map.gd` | F-002 reparado. Falta selector de piso en la UI y misiones por tipo (F-020) |
+| Torre pisos 1-10 + mapa procedural (bosque, D-031) | I (v4, probado: `smoke_tower` pisos 1/5/10 + capturas 1-5) | `scripts/core/tower_expedition.gd`, `procedural_map.gd` | F-002 reparado. Falta selector de piso en la UI y misiones por tipo (F-020) |
 | **Pueblo (pantalla inicial, D-030)** | I (v3, probado: `test_town`, `boot`, `tower` + capturas) | `scripts/ui/town_screen.gd`, `scripts/sandbox/town_*.gd`, `scripts/data/town_tables.gd` | 14 edificios con niveles; construir/mejorar con materiales; producción × nivel; save v6. Herrería/alquimia sin efecto hasta P-19/P-20 |
 | HQ (pantalla de asignación, desde el Ayuntamiento) | I | `scripts/ui/hq_screen.gd` | Producción depende del nivel del edificio |
 | HQ explorable | P (v2, probado: se construye sin errores) | `scripts/sandbox/hq_world.gd` | F-001 reparado (en v1 era error en ejecución; el juego sí arrancaba). Sin decorado (P-04) |
