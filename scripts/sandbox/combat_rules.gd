@@ -18,15 +18,18 @@ const WOUNDED_MAX_HP := 0.8
 const STATUS_TICK := 0.5
 
 ## Status effects (data). dot = damage per second (kind); move = movement multiplier;
-## blocks = what the status prevents; out_dmg = outgoing damage multiplier; stacks = max stacks.
+## blocks = what the status prevents; out_dmg = outgoing damage multiplier; in_dmg = damage taken
+## multiplier; hot = heals magnitude per second; debuff = removed by cleanse; stacks = max stacks.
 const STATUS := {
-    "poison": {"name": "Poisoned", "dot": "true", "stacks": 3, "color": Color(0.5, 0.9, 0.3)},
-    "burn": {"name": "Burning", "dot": "magical", "stacks": 1, "color": Color(1.0, 0.5, 0.2)},
-    "bleed": {"name": "Bleeding", "dot": "physical", "stacks": 3, "color": Color(0.9, 0.2, 0.2)},
-    "stun": {"name": "Stunned", "blocks": ["move", "act"], "color": Color(1.0, 0.9, 0.3)},
-    "root": {"name": "Rooted", "blocks": ["move"], "color": Color(0.6, 0.45, 0.25)},
-    "slow": {"name": "Slowed", "move": 0.6, "color": Color(0.5, 0.7, 1.0)},
-    "weaken": {"name": "Weakened", "out_dmg": 0.75, "color": Color(0.7, 0.5, 0.8)},
+    "poison": {"name": "Poisoned", "dot": "true", "stacks": 3, "debuff": true, "color": Color(0.5, 0.9, 0.3)},
+    "burn": {"name": "Burning", "dot": "magical", "stacks": 1, "debuff": true, "color": Color(1.0, 0.5, 0.2)},
+    "bleed": {"name": "Bleeding", "dot": "physical", "stacks": 3, "debuff": true, "color": Color(0.9, 0.2, 0.2)},
+    "stun": {"name": "Stunned", "blocks": ["move", "act"], "debuff": true, "color": Color(1.0, 0.9, 0.3)},
+    "root": {"name": "Rooted", "blocks": ["move"], "debuff": true, "color": Color(0.6, 0.45, 0.25)},
+    "slow": {"name": "Slowed", "move": 0.6, "debuff": true, "color": Color(0.5, 0.7, 1.0)},
+    "weaken": {"name": "Weakened", "out_dmg": 0.75, "debuff": true, "color": Color(0.7, 0.5, 0.8)},
+    "marked": {"name": "Marked", "in_dmg": 1.25, "debuff": true, "color": Color(1.0, 0.4, 0.7)},
+    "regen": {"name": "Regenerating", "hot": true, "no_resist": true, "color": Color(0.4, 1.0, 0.6)},
     "shield": {"name": "Shielded", "absorb": true, "no_resist": true, "color": Color(0.6, 0.85, 1.0)},
     "wounded": {"name": "Wounded", "max_hp": WOUNDED_MAX_HP, "no_resist": true, "color": Color(0.8, 0.3, 0.3)},
 }
@@ -90,5 +93,6 @@ static func resolve(info: DamageInfo, target: Combatant) -> int:
     if info.can_crit and info.rng != null and info.rng.randf() < info.crit_chance:
         info.crit = true
         amount *= CRIT_MULT
+    amount *= target.incoming_mult()
     info.final = mitigate(amount, info.kind, target.armor, target.mres)
     return info.final

@@ -147,6 +147,15 @@ Una carga o canalización (de héroes, enemigos o jefes) solo se corta con aturd
 ### D-043 — Los héroes nacen con 1 habilidad activa (2026-10-30, dueño; matiza D-022)
 Cada héroe empieza con **una** activa de su clase. Las demás (hasta 4 activas en Q/W/E/R, más la definitiva de D-022 en el futuro) se **aprenden**: al subir de nivel, entrenando y con **libros de habilidades**, entre otras vías. Las habilidades aprendidas se guardan en el héroe. (El entrenamiento y los libros de habilidades llegarán con sus sistemas; el aprendizaje por nivel, en la fase 3.)
 
+### D-044 — Habilidad inicial al azar dentro de la clase (2026-10-30, dueño)
+Cada clase tiene un grupo de habilidades "de inicio"; el héroe recibe una elegida con su semilla (RNG aparte, sin alterar el resto de la generación, D-004). Los héroes ya guardados reciben la suya con la misma regla al cargar.
+
+### D-045 — Aprender por nivel = elegir 1 entre 2-3 (2026-10-30, dueño)
+En ciertos niveles (5, 10, 20 y siguientes) el héroe ofrece 2-3 habilidades de su clase y el jugador elige una; las no elegidas se pueden aprender después con libros o entrenamiento. Las elecciones pendientes se guardan.
+
+### D-046 — Fuentes de libros de habilidades (2026-10-30, dueño)
+Botín de la torre (el jefe del piso 10, uno garantizado), un edificio nuevo del pueblo (**Biblioteca**: materiales → libro de la clase elegida), recompensas fijas de algunas misiones (rescate, exploración) y **secretos** (habilidades secretas que solo se aprenden por eventos o descubrimientos).
+
 ---
 
 ## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)

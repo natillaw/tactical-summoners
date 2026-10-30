@@ -1,6 +1,6 @@
 class_name SandboxHero
 extends Combatant
-## One deployed hero in a mission: animated sprite, movement, autonomous basic attacks, skills and
+## One deployed hero in a mission: animated sprite, movement, autonomous basic attacks, skills (SkillDefs) and
 ## direct orders. Health, damage, statuses, downed/agony and death live in Combatant (D-035..D-037).
 ## Orders are always obeyed (D-016: no random refusal); the order state decides what autonomy may do.
 
@@ -39,8 +39,23 @@ var _last_delta: float = 0.0
 var _cooldown: float = 0.0
 var _flash: float = 0.0
 var carrying: bool = false          # holds the mission relic (T-011)
-var skill: Dictionary = {}          # one active skill, from SkillTables (T-009; Phase 3 replaces)
-var skill_cd: float = 0.0           # seconds until the skill is ready
+# Active skills (Phase 3): class resource (D-041), Q/W/E/R slots (D-040), casting (D-042).
+const CAST_BREAK_CD := 2.0          # cooldown left after a cast is broken by control
+const SHIELD_TIME := 10.0
+const REGEN_PER_MAG := 0.4          # Sanctuary heals this much per second per point of magic power
+var res_kind: String = "stamina"
+var res: float = 0.0
+var res_max: float = 100.0
+var slots: Array = []               # skill ids, Q W E R
+var cds: Dictionary = {}            # skill id -> seconds until ready
+var casting: String = ""            # skill being cast ("" = none)
+var cast_left: float = 0.0
+var cast_target: Combatant = null
+var cast_point: Vector2 = Vector2.ZERO
+var last_refusal: String = ""       # why the last skill request was refused (shown to the player)
+var _cast_enemies: Array = []
+var _cast_allies: Array = []
+var _map: NavMap = null
 var _fx: float = 0.0                # skill visual timer
 var _fx_to: Vector2 = Vector2.ZERO
 var _fx_radius: float = 0.0
@@ -64,7 +79,7 @@ func _ready() -> void:
 	speed = float(stats["move"])
 	setup_combat(int(stats["hp"]), int(stats["def"]), int(stats["mres"]), float(stats["crit"]), float(stats["status_resist"]), hero.hero_seed)
 	can_be_downed = true
-	skill = SkillTables.for_class(hero.hero_class)
+	_setup_skills()
 	_sprite = AnimatedSprite2D.new()
 	_sprite.sprite_frames = SpriteComposer.build_frames(hero)
 	_sprite.offset = Vector2(0, -16)            # feet at the node origin
@@ -83,6 +98,8 @@ func power() -> int:
 # --- orders (never randomly refused, D-016) -----------------------------------------------------
 
 func order_move(waypoints: Array[Vector2]) -> void:
+	if casting != "":
+		interrupt_cast("cast cancelled")
 	path = waypoints.duplicate()
 	auto_path = false
 	target = null
@@ -174,7 +191,9 @@ func tick(delta: float) -> void:
 		return
 	_cooldown = maxf(0.0, _cooldown - delta)
 	_anim_lock = maxf(0.0, _anim_lock - delta)
-	skill_cd = maxf(0.0, skill_cd - delta)
+	for sid in cds:
+		cds[sid] = maxf(0.0, float(cds[sid]) - delta)
+	_tick_resource(delta)
 	_repath = maxf(0.0, _repath - delta)
 	_dodge_t = maxf(0.0, _dodge_t - delta)
 	if chatter_timer > 0.0:
@@ -184,6 +203,9 @@ func tick(delta: float) -> void:
 	if _flash > 0.0:
 		_flash = maxf(0.0, _flash - delta)
 	queue_redraw()
+	if casting != "":
+		_tick_cast(delta)
+		return
 	if path.is_empty() or not can_move():
 		_play("idle_" + facing)
 		return
@@ -217,7 +239,8 @@ func attack_interval() -> float:
 ## the hero still fights sensibly: keeps range by role, needs line of sight to shoot, steps out of
 ## telegraphed strikes (bounded autonomy, D-014) and never chases while holding or following.
 func combat_tick(enemies: Array, map: NavMap) -> void:
-	if not alive:
+	_map = map
+	if not alive or casting != "":
 		return
 	if _dodge_t > 0.0 and not path.is_empty():
 		return                                   # finishing a dodge step
@@ -338,6 +361,7 @@ func _basic_attack(t: SandboxEnemy) -> void:
 	else:
 		CombatVFX.spawn_strip16(get_parent(), t.position + Vector2(0, -12), "spritepilot-combat-pack", "sword-slash-16px_strip7.png")
 	t.take_hit(DamageInfo.make(float(power()), String(stats.get("kind", "physical")), self, crit_chance, combat_rng))
+	gain_resource(float(SkillDefs.RESOURCES[res_kind]["on_hit"]))
 
 
 func _rescue_tick(map: NavMap) -> void:
@@ -373,62 +397,314 @@ func _nearest(enemies: Array, radius: float) -> SandboxEnemy:
 	return best
 
 
-func skill_ready() -> bool:
-	return alive and skill_cd <= 0.0
+# --- active skills (combat Phase 3, D-040..D-043) -------------------------------------------------
+
+func _setup_skills() -> void:
+	res_kind = SkillDefs.resource_of(hero.hero_class)
+	var rd: Dictionary = SkillDefs.RESOURCES[res_kind]
+	res_max = float(rd["base"])
+	if rd.has("per_attr"):
+		res_max += float(hero.attributes().get(String(rd["per_attr"]), 0)) * float(rd["per"])
+	res = res_max * float(rd["start"])
+	slots.clear()
+	for sid in hero.loadout:
+		if SkillDefs.SKILLS.has(sid):
+			slots.append(String(sid))
 
 
-## Direct skill activation (T-009). Returns true if it fired. Refused only on cooldown, stun or when
-## there is no valid target; never by a random roll (D-016). Heals need no target.
-func use_skill(enemies: Array) -> bool:
-	if not skill_ready() or skill.is_empty() or not can_act():
-		return false
-	var kind := String(skill["kind"])
-	var dkind := String(stats.get("kind", "physical"))
-	if kind == "self_heal":
-		if hp >= max_hp:
-			return false
-		heal(roundi(float(max_hp) * float(skill["heal"])))
-		_fire_fx(position, 0.0)
-		CombatVFX.spawn_strip16(get_parent(), position + Vector2(0, -14), "spritepilot-magic-pack", "healing-aura-16px_strip8.png", 3.0)
-		_anim_lock = HeroAnim.play_cast(_sprite, _side)
-		skill_cd = float(skill["cooldown"])
-		return true
-	var tgt: SandboxEnemy = null
-	var reach := float(skill.get("range", 0.0))
-	if kind == "self_aoe":
-		reach = float(skill["radius"])
-	var best_d := reach
-	for e in enemies:
-		if not e.alive:
-			continue
-		var d: float = position.distance_to(e.position)
-		if d <= best_d:
-			best_d = d
-			tgt = e
-	if target != null and is_instance_valid(target) and target.alive and position.distance_to(target.position) <= reach:
-		tgt = target                             # prefer the current target when in reach
+func _tick_resource(delta: float) -> void:
+	var rd: Dictionary = SkillDefs.RESOURCES[res_kind]
+	res += float(rd["regen"]) * delta
+	if target == null:
+		res -= float(rd["decay"]) * delta         # Fury cools down out of combat
+	res = clampf(res, 0.0, res_max)
+
+
+func gain_resource(amount: float) -> void:
+	res = clampf(res + amount, 0.0, res_max)
+
+
+func slot_skill(i: int) -> Dictionary:
+	return SkillDefs.info(slots[i]) if i >= 0 and i < slots.size() else {}
+
+
+func skill_cd(i: int) -> float:
+	return float(cds.get(slots[i], 0.0)) if i >= 0 and i < slots.size() else 0.0
+
+
+func skill_ready(i: int = 0) -> bool:
+	var sk := slot_skill(i)
+	return alive and not sk.is_empty() and skill_cd(i) <= 0.0 and res >= float(sk["cost"]) and casting == ""
+
+
+func is_casting() -> bool:
+	return casting != ""
+
+
+## Direct skill activation (D-040: Q W E R = slots 0-3). Returns true if it fired or started its
+## cast. Refused only for a concrete reason, never by a random roll (D-016); the reason is kept in
+## last_refusal for the UI. allies = every hero of the squad (self included).
+func use_skill_slot(i: int, enemies: Array, allies: Array) -> bool:
+	last_refusal = ""
+	var sk := slot_skill(i)
+	if sk.is_empty():
+		return _refuse("no skill learned")
+	if not alive:
+		return _refuse("down")
+	if casting != "":
+		return _refuse("already casting")
+	if not can_act():
+		return _refuse("stunned")
+	if skill_cd(i) > 0.0:
+		return _refuse("cooldown %.0fs" % ceilf(skill_cd(i)))
+	if res < float(sk["cost"]):
+		return _refuse("not enough %s" % String(SkillDefs.RESOURCES[res_kind]["name"]).to_lower())
+	var tgt := _skill_target(sk, enemies, allies)
 	if tgt == null:
-		return false
-	var amount := float(power()) * float(skill["mult"])
-	if kind == "target":
-		tgt.take_hit(DamageInfo.make(amount, dkind, self, crit_chance, combat_rng))
-		_fire_fx(tgt.position, 0.0)
-		CombatVFX.spawn_strip16(get_parent(), tgt.position + Vector2(0, -12), "spritepilot-combat-pack", "critical-hit-16px_strip8.png", 3.0)
-	else:
-		var centre: Vector2 = position if kind == "self_aoe" else tgt.position
-		var radius := float(skill["radius"])
-		for e in enemies:
-			if e.alive and e.position.distance_to(centre) <= radius:
-				e.take_hit(DamageInfo.make(amount, dkind, self, crit_chance, combat_rng))
-		_fire_fx(centre, radius)
-		if kind == "self_aoe":
-			CombatVFX.spawn_strip16(get_parent(), centre, "spritepilot-combat-pack", "shockwave-16px_strip8.png", 5.0)
-		else:
-			CombatVFX.spawn_strip16(get_parent(), centre + Vector2(0, -12), "spritepilot-magic-pack", "fireball-16px_strip8.png", 4.0)
-	_face(tgt.position - position)
-	_anim_lock = HeroAnim.play_cast(_sprite, _side)
-	skill_cd = float(skill["cooldown"])
+		return _refuse(last_refusal if last_refusal != "" else "no target in range")
+	res -= float(sk["cost"])
+	cds[slots[i]] = float(sk["cd"])
+	if tgt != self:
+		_face(tgt.position - position)
+	if float(sk["cast"]) > 0.0:
+		casting = slots[i]
+		cast_left = float(sk["cast"])
+		cast_target = tgt
+		cast_point = tgt.position
+		_cast_enemies = enemies
+		_cast_allies = allies
+		path.clear()
+		_anim_lock = HeroAnim.play_cast(_sprite, _side)
+		return true
+	_fire_skill(sk, tgt, tgt.position, enemies, allies)
 	return true
+
+
+func _refuse(reason: String) -> bool:
+	last_refusal = reason
+	return false
+
+
+## Who the skill is aimed at. Self-centred skills return self; null = nothing valid in range.
+func _skill_target(sk: Dictionary, enemies: Array, allies: Array) -> Combatant:
+	var reach := float(sk["range"])
+	match String(sk["target"]):
+		"self":
+			if _only_heals_self(sk) and hp >= max_hp:
+				last_refusal = "already at full health"
+				return null
+			return self
+		"self_aoe":
+			for e in enemies:
+				if e.alive and position.distance_to(e.position) <= reach:
+					return self
+			return null
+		"ally_low":
+			var best: Combatant = null
+			var best_k := 1.0
+			var needs_hurt := _effects_have(sk, ["heal"]) and not _effects_have(sk, ["cleanse", "shield"])
+			for a in allies:
+				if not is_instance_valid(a) or not a.alive or position.distance_to(a.position) > reach:
+					continue
+				var k := float(a.hp) / float(maxi(1, a.max_hp))
+				if (k < best_k) or (best == null and not needs_hurt):
+					best_k = k
+					best = a
+			if best == null and needs_hurt:
+				last_refusal = "nobody is hurt"
+			return best
+		_:
+			if target != null and is_instance_valid(target) and target.alive and position.distance_to(target.position) <= reach:
+				return target                    # prefer the current target when in reach
+			var best_e: Combatant = null
+			var best_d := reach
+			for e in enemies:
+				if not e.alive:
+					continue
+				var d: float = position.distance_to(e.position)
+				if d <= best_d:
+					best_d = d
+					best_e = e
+			return best_e
+
+
+func _only_heals_self(sk: Dictionary) -> bool:
+	for e in sk["effects"]:
+		if not (String(e["t"]) in ["heal", "heal_pct"]):
+			return false
+	return true
+
+
+func _effects_have(sk: Dictionary, kinds: Array) -> bool:
+	for e in sk["effects"]:
+		if kinds.has(String(e["t"])):
+			return true
+	return false
+
+
+## D-042: a cast is broken only by control (stun). The cost and cooldown are given back.
+func interrupt_cast(reason: String = "interrupted") -> void:
+	if casting == "":
+		return
+	var sk := SkillDefs.info(casting)
+	res = minf(res_max, res + float(sk["cost"]))
+	cds[casting] = minf(float(cds.get(casting, 0.0)), CAST_BREAK_CD)
+	casting = ""
+	cast_target = null
+	_anim_lock = 0.0
+	FloatingText.spawn(self, reason, Color(1.0, 0.6, 0.4), false)
+
+
+func _tick_cast(delta: float) -> void:
+	if not can_act():
+		interrupt_cast()
+		return
+	cast_left -= delta
+	if cast_left > 0.0:
+		return
+	var sk := SkillDefs.info(casting)
+	var tgt := cast_target
+	casting = ""
+	cast_target = null
+	if tgt == null or not is_instance_valid(tgt) or not tgt.alive:
+		if String(sk["target"]) != "target_aoe":
+			FloatingText.spawn(self, "target lost", Color(0.8, 0.8, 0.8), false)
+			return
+		tgt = self                                # area skills still land where they were aimed
+	_fire_skill(sk, tgt, cast_point, _cast_enemies, _cast_allies)
+
+
+func _fire_skill(sk: Dictionary, tgt: Combatant, point: Vector2, enemies: Array, allies: Array) -> void:
+	var tmode := String(sk["target"])
+	var foes: Array = []
+	var friends: Array = []
+	var centre := position
+	match tmode:
+		"enemy":
+			foes.append(tgt)
+			centre = tgt.position
+		"self_aoe":
+			for e in enemies:
+				if e.alive and position.distance_to(e.position) <= float(sk["range"]):
+					foes.append(e)
+		"target_aoe":
+			centre = point if tgt == self else tgt.position
+			for e in enemies:
+				if e.alive and centre.distance_to(e.position) <= float(sk.get("radius", 80.0)):
+					foes.append(e)
+		_:
+			friends.append(tgt)
+	for eff in sk["effects"]:
+		_apply_effect(eff, foes, friends, centre, enemies, allies)
+	_skill_vfx(tmode, centre, float(sk.get("radius", sk["range"])), sk)
+	_anim_lock = HeroAnim.play_cast(_sprite, _side)
+
+
+func _apply_effect(eff: Dictionary, foes: Array, friends: Array, centre: Vector2, enemies: Array, allies: Array) -> void:
+	match String(eff["t"]):
+		"damage":
+			var kind := String(eff["kind"])
+			if kind == "power":
+				kind = String(stats.get("kind", "physical"))
+			var base := float(stats["mag"]) if kind == "magical" else float(stats["atk"])
+			for f in foes:
+				var amount := base * float(eff["mult"])
+				if eff.has("bonus_if_busy") and f.get("focus") != null and f.get("focus") != self:
+					amount *= float(eff["bonus_if_busy"])
+				f.take_hit(DamageInfo.make(amount, kind, self, crit_chance, combat_rng))
+		"status":
+			var mag := float(eff.get("mag", 0.0))
+			if eff.has("mult"):
+				mag = float(power()) * float(eff["mult"])
+			for u in (foes if not foes.is_empty() else friends):
+				u.apply_status(String(eff["id"]), float(eff["dur"]), mag, self)
+		"heal":
+			for u in friends:
+				u.heal(roundi(float(stats["mag"]) * float(eff["mult"])))
+		"heal_pct":
+			for u in friends:
+				u.heal(roundi(float(u.max_hp) * float(eff["pct"])))
+		"shield":
+			for u in friends:
+				u.apply_status("shield", SHIELD_TIME, float(u.max_hp) * float(eff["pct"]), self)
+		"cleanse":
+			for u in friends:
+				u.cleanse()
+		"interrupt":
+			for f in foes:
+				if f.has_method("interrupt"):
+					f.interrupt()
+		"knockback":
+			for f in foes:
+				_push(f, (f.position - position).normalized(), float(eff["dist"]))
+				if f.has_method("interrupt"):
+					f.interrupt()
+		"dash":
+			if not foes.is_empty() and _map != null:
+				var f: Node2D = foes[0]
+				var spot := f.position + (position - f.position).normalized() * 28.0
+				if not _map.is_blocked(spot):
+					position = spot
+					path.clear()
+		"blink":
+			if _map != null:
+				var away := Vector2.DOWN
+				var near := _nearest(enemies, 9999.0)
+				if near != null and near.position.distance_to(position) > 1.0:
+					away = (position - near.position).normalized()
+				var spot := _map.nearest_walkable(position + away * float(eff["dist"]))
+				position = spot
+				path.clear()
+		"taunt":
+			for e in enemies:
+				if e.alive and e.position.distance_to(position) <= float(eff["radius"]) and e.has_method("taunt"):
+					e.taunt(self, float(eff["dur"]))
+		"zone":
+			var mag := 0.0
+			if String(eff["status"]) == "regen":
+				mag = float(stats["mag"]) * REGEN_PER_MAG
+			var units: Array = enemies if bool(eff["foes"]) else allies
+			CombatZone.spawn(get_parent(), centre, float(eff["radius"]), float(eff["dur"]),
+				String(eff["status"]), float(eff["sdur"]), mag, units, self, bool(eff.get("once", false)))
+		"allies":
+			var near_allies: Array = []
+			for a in allies:
+				if is_instance_valid(a) and a.alive and a.position.distance_to(position) <= float(eff["radius"]):
+					near_allies.append(a)
+			for inner in eff["inner"]:
+				_apply_effect(inner, [], near_allies, position, enemies, allies)
+
+
+## Moves a unit along dir up to dist, stopping before walls.
+func _push(u: Node2D, dir: Vector2, dist: float) -> void:
+	if _map == null:
+		return
+	var step := 8.0
+	var moved := 0.0
+	while moved < dist:
+		var np := u.position + dir * step
+		if _map.is_blocked(np):
+			break
+		u.position = np
+		moved += step
+
+
+func _skill_vfx(tmode: String, centre: Vector2, radius: float, sk: Dictionary) -> void:
+	var magic := _effects_have(sk, ["heal", "heal_pct", "shield", "cleanse", "zone"]) or String(stats.get("kind", "")) == "magical"
+	match tmode:
+		"enemy":
+			_fire_fx(centre, 0.0)
+			CombatVFX.spawn_strip16(get_parent(), centre + Vector2(0, -12), "spritepilot-combat-pack", "critical-hit-16px_strip8.png", 3.0)
+		"self_aoe":
+			_fire_fx(position, radius)
+			CombatVFX.spawn_strip16(get_parent(), position, "spritepilot-combat-pack", "shockwave-16px_strip8.png", 5.0)
+		"target_aoe":
+			_fire_fx(centre, radius)
+			CombatVFX.spawn_strip16(get_parent(), centre + Vector2(0, -12), "spritepilot-magic-pack", "fireball-16px_strip8.png", 4.0)
+		_:
+			_fire_fx(position, 0.0)
+			if magic:
+				CombatVFX.spawn_strip16(get_parent(), position + Vector2(0, -14), "spritepilot-magic-pack", "healing-aura-16px_strip8.png", 3.0)
 
 
 func _fire_fx(at: Vector2, radius: float) -> void:
@@ -442,6 +718,7 @@ func _fire_fx(at: Vector2, radius: float) -> void:
 
 func _on_hit(info: DamageInfo, _dmg: int) -> void:
 	_flash = 0.15
+	gain_resource(float(SkillDefs.RESOURCES[res_kind]["on_hurt"]))
 	if order == "rescue" and rescue_progress > 0.0:
 		rescue_progress = 0.0                         # D-036: taking damage interrupts the rescue
 		FloatingText.spawn(self, "interrupted", Color(1.0, 0.6, 0.4), false)
@@ -450,6 +727,8 @@ func _on_hit(info: DamageInfo, _dmg: int) -> void:
 
 
 func _on_down() -> void:
+	casting = ""
+	cast_target = null
 	path.clear()
 	order = "auto"
 	target = null
@@ -504,11 +783,17 @@ func _draw() -> void:
 		draw_rect(Rect2(-15, -52, 30.0 * rescue_progress / CombatRules.RESCUE_TIME, 3), Color(0.5, 1.0, 0.6))
 	var sx := -15.0
 	for id in statuses:
-		draw_rect(Rect2(sx, -41, 4, 4), CombatRules.STATUS[id]["color"])
+		draw_rect(Rect2(sx, -39, 4, 4), CombatRules.STATUS[id]["color"])
 		sx += 6.0
 	var w := 30.0
 	draw_rect(Rect2(-w * 0.5, -46, w, 4), Color(0.1, 0.1, 0.1, 0.8))
 	draw_rect(Rect2(-w * 0.5, -46, w * float(hp) / float(maxi(1, max_hp)), 4), Color(0.45, 0.85, 0.50))
+	draw_rect(Rect2(-w * 0.5, -42, w, 2), Color(0.1, 0.1, 0.1, 0.8))
+	draw_rect(Rect2(-w * 0.5, -42, w * res / maxf(1.0, res_max), 2), SkillDefs.RESOURCES[res_kind]["color"])
+	if casting != "":
+		var total := float(SkillDefs.info(casting)["cast"])
+		draw_rect(Rect2(-18, -58, 36, 4), Color(0.1, 0.1, 0.1, 0.85))
+		draw_rect(Rect2(-18, -58, 36.0 * (1.0 - cast_left / maxf(0.01, total)), 4), Color(0.95, 0.85, 0.4))
 	if carrying:
 		draw_colored_polygon(PackedVector2Array([Vector2(0, -64), Vector2(6, -58), Vector2(0, -52), Vector2(-6, -58)]), Color(1.0, 0.82, 0.25))
 	if _fx > 0.0:

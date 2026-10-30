@@ -182,6 +182,15 @@ func _show_panel(id: String) -> void:
             workers.append(wh.hero_name.split(" ")[0] + (" (expert)" if TownTables.is_expert(id, wh.profession) else ""))
     if not workers.is_empty():
         _panel_box.add_child(UIKit.label("Workers: " + ", ".join(workers), 14, UIKit.TEXT))
+    if level > 0 and id == "library":
+        var books := 0
+        for k in Game.skill_books:
+            books += int(Game.skill_books[k])
+        _panel_box.add_child(UIKit.label("Skill books in the archive: %d (heroes read them from their panel)" % books, 13, UIKit.MUTED))
+        var trans_btn := UIKit.button("Transcribe a skill book (%d materials)" % Game.library_cost(), _on_transcribe.bind(id), Vector2(300, 40))
+        trans_btn.focus_mode = Control.FOCUS_NONE
+        trans_btn.disabled = int(Game.hq_outputs.get("materials", 0)) < Game.library_cost()
+        _panel_box.add_child(trans_btn)
     if level > 0 and String(b["open"]) == "tower":
         _add_tower_buttons()
     elif level > 0 and String(b["open"]) != "":
@@ -197,6 +206,11 @@ func _show_panel(id: String) -> void:
         up.disabled = int(Game.hq_outputs.get("materials", 0)) < cost
         _panel_box.add_child(up)
     _panel.visible = true
+
+
+func _on_transcribe(id: String) -> void:
+    Game.library_transcribe()
+    _show_panel(id)
 
 
 func _add_tower_buttons() -> void:

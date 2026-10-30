@@ -4,6 +4,8 @@ extends RefCounted
 ## it opens. Levels live in Game.town_buildings (0 = not built yet). Costs are TUNING PLACEHOLDERS.
 
 const EXPERT_MULT := 2
+const LIBRARY_BASE_COST := 80     # materials to transcribe a skill book at Library level 1 (D-046)
+const LIBRARY_DISCOUNT := 10      # per extra Library level
 const MAP_W := 34
 const MAP_H := 22
 
@@ -56,6 +58,9 @@ const BUILDINGS := {
     "common": {"name": "Tavern", "plot": Rect2i(21, 15, 4, 2), "start": 1, "max": 5, "cost": 30,
         "open": "", "experts": ["occupation.entertainer", "occupation.merchant"], "roof": Color(0.85, 0.55, 0.30), "props": ["caz:ExteriorFeatures/ExteriorFeatures_3_2", "caz:ExteriorFeatures/ExteriorFeatures_6_1"], "look": {"roof": "tile", "wall": "timber", "tint": Color(1, 0.9, 0.8)},
         "desc": "Heroes who work here socialize and grow closer."},
+    "library": {"name": "Library", "plot": Rect2i(27, 16, 4, 2), "start": 0, "max": 5, "cost": 70,
+        "open": "", "experts": ["occupation.scholar", "occupation.priest"], "roof": Color(0.55, 0.45, 0.80), "props": ["voxel:table", "caz:OutsideFeatures/OutsideFeatures_24_1"], "look": {"roof": "tile", "wall": "stone", "tint": Color(0.85, 0.8, 1.0)},
+        "desc": "Transcribe skill books for materials (cheaper each level). Heroes read them to learn actives."},
 }
 
 

@@ -18,6 +18,14 @@ func _make_screen() -> SandboxScreen:
     return sb
 
 
+## Puts one skill on Q with a full resource bar (test helper).
+func _give(h: SandboxHero, id: String) -> void:
+    h.slots.clear()
+    h.slots.append(id)
+    h.cds.clear()
+    h.res = h.res_max
+
+
 func _clear_enemies(sb: SandboxScreen) -> void:
     for e in sb.enemies:
         e.alive = false
@@ -65,7 +73,7 @@ func _ready() -> void:
     check(not sb.selected.has(sb.heroes[0]) and sb.follow_slot != 0, "a fallen hero cannot be selected with its key")
     sb.select_slot(1)
     sb._refresh_info()
-    check(sb._info.text.contains("Skill:") and sb._squad_label.text.contains("FALLEN") and sb._squad_label.text.contains("[RELIC]"), "panel shows skill, fallen hero and relic carrier")
+    check(sb._info.text.contains("Skills:") and sb._squad_label.text.contains("FALLEN") and sb._squad_label.text.contains("[RELIC]"), "panel shows skill, fallen hero and relic carrier")
 
     var gems_before := Game.gems
     var stones_before := Game.stones
@@ -106,9 +114,9 @@ func _ready() -> void:
     var sb3 := _make_screen()
     await get_tree().process_frame
     await get_tree().process_frame
-    check(sb3.heroes.all(func(x): return not x.skill.is_empty() and float(x.skill["cooldown"]) > 0.0), "every hero has exactly one active skill")
+    check(sb3.heroes.all(func(x): return x.slots.size() >= 1 and SkillDefs.SKILLS.has(x.slots[0])), "every hero starts with an active skill (D-043)")
     for cls in HeroTables.CLASSES:
-        check(SkillTables.SKILLS.has(cls), "skill defined for %s" % cls)
+        check(SkillDefs.KITS.has(cls) and SkillDefs.CLASS_RESOURCE.has(cls), "skill kit and resource defined for %s" % cls)
     _clear_enemies(sb3)
     var h: SandboxHero = sb3.heroes[0]
     var e1: SandboxEnemy = sb3.enemies[0]
@@ -121,44 +129,47 @@ func _ready() -> void:
     h.position = sb3.map.center_of(Vector2i(20, 17))
     h.hp = h.max_hp
     var foes: Array = [e1, e2, e3]
+    var squad: Array = sb3.heroes
 
-    h.skill = SkillTables.for_class("class.warrior")
+    _give(h, "cleave")
     e1.position = h.position + Vector2(50, 0)
     e2.position = h.position + Vector2(-50, 0)
     e3.position = h.position + Vector2(300, 0)
-    check(h.use_skill(foes), "warrior Cleave fires")
+    check(h.use_skill_slot(0, foes, squad), "Cleave fires")
     check(e1.hp < e1.max_hp and e2.hp < e2.max_hp and e3.hp == e3.max_hp, "Cleave hits enemies around the hero, not far ones")
-    check(not h.skill_ready() and not h.use_skill(foes), "skill is refused only because of its cooldown")
-    h.tick(float(h.skill["cooldown"]) + 0.1)
-    check(h.skill_ready(), "skill is ready again after the cooldown")
+    h.res = h.res_max
+    check(not h.skill_ready(0) and not h.use_skill_slot(0, foes, squad) and h.last_refusal.begins_with("cooldown"), "skill is refused because of its cooldown, and says so")
+    h.tick(float(SkillDefs.info("cleave")["cd"]) + 0.1)
+    h.res = h.res_max
+    check(h.skill_cd(0) <= 0.0 and h.skill_ready(0), "skill is ready again after the cooldown")
 
     e1.position = h.position + Vector2(900, 0)
     e2.position = h.position + Vector2(900, 50)
-    check(not h.use_skill(foes) and h.skill_ready(), "no target in reach: refused and cooldown not spent")
+    check(not h.use_skill_slot(0, foes, squad) and h.skill_ready(0) and h.res == h.res_max, "no target in reach: refused, cooldown and resource not spent")
 
-    h.skill = SkillTables.for_class("class.mage")
-    h.skill_cd = 0.0
+    _give(h, "fire_burst")
     e1.hp = e1.max_hp
     e2.hp = e2.max_hp
     e1.position = h.position + Vector2(150, 0)
     e2.position = e1.position + Vector2(40, 0)
     e3.position = e1.position + Vector2(200, 0)
-    check(h.use_skill(foes) and e1.hp < e1.max_hp and e2.hp < e2.max_hp and e3.hp == e3.max_hp, "mage Fire Burst damages the target and its neighbours only")
+    check(h.use_skill_slot(0, foes, squad) and h.is_casting() and e1.hp == e1.max_hp, "Fire Burst starts a cast (no damage yet)")
+    h.tick(float(SkillDefs.info("fire_burst")["cast"]) + 0.05)
+    check(not h.is_casting() and e1.hp < e1.max_hp and e2.hp < e2.max_hp and e3.hp == e3.max_hp, "the cast lands on the target and its neighbours only")
 
-    h.skill = SkillTables.for_class("class.none")
-    h.skill_cd = 0.0
-    check(not h.use_skill(foes), "heal is refused at full HP (cooldown kept)")
+    _give(h, "second_breath")
+    check(not h.use_skill_slot(0, foes, squad) and h.skill_ready(0), "self-heal is refused at full HP (cooldown kept)")
     h.hp = h.max_hp - 10
     var hp_before := h.hp
-    check(h.use_skill(foes) and h.hp > hp_before and h.hp <= h.max_hp, "Second Breath heals")
+    check(h.use_skill_slot(0, foes, squad) and h.hp > hp_before and h.hp <= h.max_hp, "Second Breath heals")
 
     # key / button path through the screen
-    h.skill = SkillTables.for_class("class.rogue")
-    h.skill_cd = 0.0
+    _give(h, "quick_slash")
     e1.hp = e1.max_hp
     e1.position = h.position + Vector2(40, 0)
     sb3.select_slot(0)
-    check(sb3.use_skill_selected() == 1 and e1.hp < e1.max_hp, "use_skill_selected fires for the selected hero")
+    check(sb3.use_skill_selected(0) == 1 and e1.hp < e1.max_hp, "use_skill_selected fires slot Q for the selected hero")
+    check(sb3.use_skill_selected(3) == 0 and h.last_refusal == "no skill learned", "an empty slot is refused with its reason")
     h.path.append(h.position + Vector2(100, 0))
     sb3.stop_selected()
     check(not h.is_moving(), "stop order clears the path")

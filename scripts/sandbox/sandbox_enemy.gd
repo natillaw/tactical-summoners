@@ -26,6 +26,9 @@ var _sprite: AnimatedSprite2D = null
 var _path: Array[Vector2] = []
 var _repath: float = 0.0
 const REPATH_EVERY := 0.4
+var focus: SandboxHero = null       # hero it is currently going for (rogue Backstab reads it)
+var taunted_by: SandboxHero = null  # Warrior War Cry: forced target while taunt_t > 0
+var taunt_t: float = 0.0
 
 
 func _init() -> void:
@@ -121,15 +124,32 @@ func is_telegraphing() -> bool:
     return state == State.WINDUP
 
 
+## D-042: only control effects (stun, knock-back, "interrupt") break a wind-up. Returns true if one broke.
+func interrupt() -> bool:
+    if state != State.WINDUP:
+        return false
+    state = State.RECOVER
+    _timer = recover_time
+    FloatingText.spawn(self, "interrupted", Color(1.0, 0.85, 0.4), false)
+    return true
+
+
+func taunt(by: SandboxHero, duration: float) -> void:
+    taunted_by = by
+    taunt_t = maxf(taunt_t, duration)
+
+
 ## heroes = every hero that is not permanently dead (downed ones can still be hit by a strike).
 func tick(delta: float, heroes: Array, map: NavMap) -> void:
     tick_combat(delta)
     if not alive:
         return
     _repath = maxf(0.0, _repath - delta)
+    taunt_t = maxf(0.0, taunt_t - delta)
     if _flash > 0.0:
         _flash = maxf(0.0, _flash - delta)
     if not can_act():
+        interrupt()                       # a stun breaks the wind-up (D-042)
         _update_sprite()
         queue_redraw()
         return
@@ -146,6 +166,7 @@ func tick(delta: float, heroes: Array, map: NavMap) -> void:
                 state = State.IDLE
         _:
             var t := _nearest_hero(heroes)
+            focus = t
             if t == null:
                 state = State.IDLE
             elif position.distance_to(t.position) <= strike_range:
@@ -179,6 +200,8 @@ func _step_toward(goal: Vector2, delta: float, map: NavMap) -> void:
 
 
 func _nearest_hero(heroes: Array) -> SandboxHero:
+    if taunt_t > 0.0 and taunted_by != null and is_instance_valid(taunted_by) and taunted_by.alive:
+        return taunted_by
     var best: SandboxHero = null
     var best_d := perception
     for h in heroes:

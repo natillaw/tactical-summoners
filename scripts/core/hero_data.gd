@@ -34,6 +34,12 @@ var activity_state: String = "resting" # "resting", "working", "training", "reco
 var discovered_secrets: Array = [] # secret IDs discovered
 var secret_clues: Array = []      # discovered clue strings
 
+# Active skills (combat Phase 3, D-043..D-046): known skills, the Q/W/E/R loadout and the
+# level-up choices still waiting for the player.
+var skills: Array = []            # known skill ids (SkillDefs.SKILLS)
+var loadout: Array = []           # equipped ids, up to SkillDefs.MAX_SLOTS, in Q W E R order
+var skill_choices: Array = []     # [{"level": int, "options": [ids]}], oldest first
+
 # Structured event ledger: [{seq, type, trust, obedience, info}], newest last, capped.
 var events: Array = []
 var event_seq: int = 0
@@ -193,6 +199,7 @@ func add_xp(amount: int) -> int:
     var gained := 0
     if is_max_level():
         return 0
+    var before := level
     xp += amount
     while level < level_cap() and xp >= xp_to_next():
         xp -= xp_to_next()
@@ -200,7 +207,73 @@ func add_xp(amount: int) -> int:
         gained += 1
     if level >= level_cap():
         xp = 0
+    _queue_skill_choices(before, level)
     return gained
+
+
+# --- active skills (D-043..D-046) -----------------------------------------------------------
+
+## Makes sure the hero knows one skill of its current class: new heroes and heroes that just got
+## a class from promotion learn their class starter (D-044, picked with the hero seed).
+func ensure_skills() -> void:
+    var has_class_skill := false
+    for s in skills:
+        if hero_class == "class.none" or String(SkillDefs.info(s).get("class", "")) == hero_class:
+            has_class_skill = true
+    if not has_class_skill:
+        learn_skill(SkillDefs.starter_for(hero_class, hero_seed), false)
+
+
+## Learns a skill (level choice, book, trainer). Fills a free Q/W/E/R slot. False if already known
+## or not for this class.
+func learn_skill(id: String, log_event: bool = true) -> bool:
+    if skills.has(id) or not SkillDefs.usable_by(id, hero_class):
+        return false
+    skills.append(id)
+    if loadout.size() < SkillDefs.MAX_SLOTS:
+        loadout.append(id)
+    if log_event:
+        add_event("learned_skill", {"skill": id})
+    return true
+
+
+## Puts a known skill in a slot (0-3 = Q W E R); swaps if it was in another slot.
+func equip_skill(slot_index: int, id: String) -> bool:
+    if not skills.has(id) or slot_index < 0 or slot_index >= SkillDefs.MAX_SLOTS:
+        return false
+    var old := loadout.find(id)
+    if slot_index >= loadout.size():
+        if old >= 0:
+            return true
+        loadout.append(id)
+        return true
+    if old >= 0:
+        loadout[old] = loadout[slot_index]
+    loadout[slot_index] = id
+    return true
+
+
+## D-045: resolves the oldest pending level choice. False if `id` is not one of its options.
+func choose_skill(choice_index: int, id: String) -> bool:
+    if choice_index < 0 or choice_index >= skill_choices.size():
+        return false
+    var c: Dictionary = skill_choices[choice_index]
+    if not (c["options"] as Array).has(id) or not learn_skill(id):
+        return false
+    skill_choices.remove_at(choice_index)
+    # options learned meanwhile disappear from the other pending choices
+    for other in skill_choices:
+        (other["options"] as Array).erase(id)
+    skill_choices = skill_choices.filter(func(x): return not (x["options"] as Array).is_empty())
+    return true
+
+
+func _queue_skill_choices(from_level: int, to_level: int) -> void:
+    for lv in SkillDefs.LEARN_LEVELS:
+        if lv > from_level and lv <= to_level:
+            var opts := SkillDefs.level_choices(hero_class, skills, lv, hero_seed)
+            if not opts.is_empty():
+                skill_choices.append({"level": lv, "options": opts})
 
 
 func promotion_cost() -> int:
@@ -216,6 +289,7 @@ func promote() -> void:
         return
     stars += 1
     HeroGenerator.apply_promotion(self)
+    ensure_skills()
     add_event("promoted", {"stars": stars})
 
 
@@ -280,6 +354,9 @@ func to_dict() -> Dictionary:
         "activity_state": activity_state,
         "discovered_secrets": discovered_secrets.duplicate(),
         "secret_clues": secret_clues.duplicate(),
+        "skills": skills.duplicate(),
+        "loadout": loadout.duplicate(),
+        "skill_choices": intify(skill_choices.duplicate(true)),
     }
 
 
@@ -323,4 +400,18 @@ static func from_dict(d: Dictionary) -> HeroData:
     h.activity_state = str(d.get("activity_state", "resting"))
     h.discovered_secrets = (d.get("discovered_secrets", []) as Array).duplicate()
     h.secret_clues = (d.get("secret_clues", []) as Array).duplicate()
+    if d.has("skills"):
+        for sid in d["skills"]:
+            if SkillDefs.SKILLS.has(String(sid)) and not h.skills.has(String(sid)):
+                h.skills.append(String(sid))
+        for sid in d.get("loadout", []):
+            if h.skills.has(String(sid)) and not h.loadout.has(String(sid)) and h.loadout.size() < SkillDefs.MAX_SLOTS:
+                h.loadout.append(String(sid))
+        h.skill_choices = intify(d.get("skill_choices", []) as Array)
+        h.ensure_skills()
+    else:
+        # save v7 or older (D-043..D-045): the class starter, plus the choices of every learn
+        # level already reached, so veteran heroes are not left behind.
+        h.ensure_skills()
+        h._queue_skill_choices(0, h.level)
     return h
