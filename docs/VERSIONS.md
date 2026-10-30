@@ -11,11 +11,18 @@ Las pruebas automáticas se ejecutan en GitHub (Godot 4.7.1 Linux) con cada push
 | **v3** | (ver el último commit de la rama) | [ZIP de la rama](https://github.com/natillaw/tactical-summoners/archive/refs/heads/claude/tactical-summoners-audit-b3sqpo.zip) | **El juego empieza en el pueblo** (D-030): 14 edificios, construir/mejorar con materiales, héroes paseando; Puerta de la Torre → entrenamiento o pisos 1-10; VFX de los packs en combate | **15/15 PASS** — [ejecución](https://github.com/natillaw/tactical-summoners/actions/runs/41116908580) |
 | **v4** | `cf32596` | [ZIP](https://github.com/natillaw/tactical-summoners/archive/cf32596.zip) | Pisos 1-10 de **bosque** procedural con criaturas de bosque; pueblo con casas, árboles, flores y pozo; héroes autónomos en el pueblo; ficha del héroe al hacer clic; tecla M = mapa completo | **15/15 PASS** + capturas de los pisos 1-5 |
 | **v5** | `e3f4f3a` | [ZIP](https://github.com/natillaw/tactical-summoners/archive/e3f4f3a.zip) | **Arte de Caz** en pueblo y pisos; 7 tipos de misión (combate, relicario, rescate, exploración, supervivencia, defensa, jefe); jefe orco en el piso 10; recompensas por piso; profesiones expertas ×2; claros irregulares | **15/15 PASS** + capturas pisos 1-5 y 10 |
+| **v6** | `72c2f04` | [ZIP](https://github.com/natillaw/tactical-summoners/archive/72c2f04.zip) | **Combate fase 1**: base común de unidades, atributos FUE/AGI/VIT/INT/TEM con efecto real, daño físico/mágico/verdadero, armadura y resistencia mágica, críticos, estados (veneno, quemadura, sangrado, aturdimiento, raíz, lentitud, debilidad, escudo, herido), caída + agonía 20 s + rescate, clic derecho contextual, números de daño | **16/16 PASS** |
 
 ## Qué probar a mano en cada versión (en Windows, con el editor o F5)
 ### v1 (estado original, como referencia)
 - Al abrir el Sandbox **no aparecen héroes** y sale un error en la consola (F-038, confirmado en GitHub).
 - "Living Headquarters → Explore Base" da error (F-001).
+
+### v6
+1. En un piso, deja que un héroe caiga: queda en el suelo con un anillo rojo y "DOWN 20s". Selecciona otro héroe y haz **clic derecho sobre el caído**: va, canaliza 2,5 s y lo levanta (si le pegan mientras tanto, se interrumpe).
+2. **Clic derecho sobre un enemigo** = atacarlo (lo persigue); sobre el suelo = moverse. Aparece un anillo de confirmación.
+3. Números de daño flotantes; los críticos salen en amarillo con "!".
+4. Ficha del héroe (clic en el pueblo): FUE/AGI/VIT/INT/TEM, ataque físico/mágico, armadura, resistencia, crítico, cadencia.
 
 ### v5
 1. Pueblo con el pack de Caz: casas con tejado de paja/teja, fuente en la plaza, farolas, árboles; muñecos de entrenamiento y diana en el cuartel, tumbas en el memorial.
