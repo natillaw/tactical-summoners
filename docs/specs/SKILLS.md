@@ -1,3 +1,5 @@
+> **Estado (2026-10-30):** **Banco de ideas (P-10, PENDIENTE).** Movido intacto desde `SKILL_LIBRARY.md`. Usa las clases ANTIGUAS (Novice/Warrior/Thief/Spearman/Archer/Mage); el código usa Commoner/Warrior/Rogue/Ranger/Cleric/Mage (P-06). El generador `tools/gen_skill_library.py` y `SkillLibrary` mencionados abajo NO existen en el repo. Las skills en juego hoy están en `scripts/sandbox/skill_tables.gd`.
+
 # Skill Library
 
 Generated from `tools/gen_skill_library.py` (D-022). Edit the table there, not this file.

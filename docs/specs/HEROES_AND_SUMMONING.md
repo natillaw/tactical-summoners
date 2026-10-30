@@ -1,3 +1,5 @@
+> **Estado (2026-10-30):** Spec CONFIRMADA (D-004, D-016, D-018). Movida intacta desde `SUMMONS_AND_HERO_GENERATION.md`. §11 es un esquema ilustrativo, no el código real. Rarezas: P-09. Estado real: `docs/IMPLEMENTATION_STATUS.md`.
+
 # Summoning, Hero Generation & Social Simulation — Tactical Summoners
 
 **Version:** 1.5 design baseline, 2026-10-28  

@@ -1,3 +1,5 @@
+> **Estado (2026-10-30):** Spec CONFIRMADA (D-007, D-008, D-020, D-023). Movida intacta. La mención a "turn/target telegraphs" es un resto del diseño por turnos sustituido (D-010).
+
 # Art Direction — Tactical Summoners
 
 **Status:** Direction selected for the first prototype: **2D pixel art**. Exact resolution, tile size and palette remain to be validated in-engine.
