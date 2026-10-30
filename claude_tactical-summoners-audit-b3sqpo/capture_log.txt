@@ -927,71 +927,7 @@ SCRIPT ERROR: Invalid call. Nonexistent function 'house' in base 'GDScript'.
           at: TownView._draw (res://scripts/sandbox/town_view.gd:144)
           GDScript backtrace (most recent call first):
               [0] _draw (res://scripts/sandbox/town_view.gd:144)
-SCRIPT ERROR: Invalid call. Nonexistent function 'house' in base 'GDScript'.
-          at: TownView._draw (res://scripts/sandbox/town_view.gd:144)
-          GDScript backtrace (most recent call first):
-              [0] _draw (res://scripts/sandbox/town_view.gd:144)
-SCRIPT ERROR: Invalid call. Nonexistent function 'house' in base 'GDScript'.
-          at: TownView._draw (res://scripts/sandbox/town_view.gd:144)
-          GDScript backtrace (most recent call first):
-              [0] _draw (res://scripts/sandbox/town_view.gd:144)
-SCRIPT ERROR: Invalid call. Nonexistent function 'house' in base 'GDScript'.
-          at: TownView._draw (res://scripts/sandbox/town_view.gd:144)
-          GDScript backtrace (most recent call first):
-              [0] _draw (res://scripts/sandbox/town_view.gd:144)
-SCRIPT ERROR: Invalid call. Nonexistent function 'house' in base 'GDScript'.
-          at: TownView._draw (res://scripts/sandbox/town_view.gd:144)
-          GDScript backtrace (most recent call first):
-              [0] _draw (res://scripts/sandbox/town_view.gd:144)
-SCRIPT ERROR: Invalid call. Nonexistent function 'house' in base 'GDScript'.
-          at: TownView._draw (res://scripts/sandbox/town_view.gd:144)
-          GDScript backtrace (most recent call first):
-              [0] _draw (res://scripts/sandbox/town_view.gd:144)
-SCRIPT ERROR: Invalid call. Nonexistent function 'house' in base 'GDScript'.
-          at: TownView._draw (res://scripts/sandbox/town_view.gd:144)
-          GDScript backtrace (most recent call first):
-              [0] _draw (res://scripts/sandbox/town_view.gd:144)
-SCRIPT ERROR: Invalid call. Nonexistent function 'house' in base 'GDScript'.
-          at: TownView._draw (res://scripts/sandbox/town_view.gd:144)
-          GDScript backtrace (most recent call first):
-              [0] _draw (res://scripts/sandbox/town_view.gd:144)
-SCRIPT ERROR: Invalid call. Nonexistent function 'house' in base 'GDScript'.
-          at: TownView._draw (res://scripts/sandbox/town_view.gd:144)
-          GDScript backtrace (most recent call first):
-              [0] _draw (res://scripts/sandbox/town_view.gd:144)
-SCRIPT ERROR: Invalid call. Nonexistent function 'house' in base 'GDScript'.
-          at: TownView._draw (res://scripts/sandbox/town_view.gd:144)
-          GDScript backtrace (most recent call first):
-              [0] _draw (res://scripts/sandbox/town_view.gd:144)
-SCRIPT ERROR: Invalid call. Nonexistent function 'house' in base 'GDScript'.
-          at: TownView._draw (res://scripts/sandbox/town_view.gd:144)
-          GDScript backtrace (most recent call first):
-              [0] _draw (res://scripts/sandbox/town_view.gd:144)
-SCRIPT ERROR: Invalid call. Nonexistent function 'house' in base 'GDScript'.
-          at: TownView._draw (res://scripts/sandbox/town_view.gd:144)
-          GDScript backtrace (most recent call first):
-              [0] _draw (res://scripts/sandbox/town_view.gd:144)
-SCRIPT ERROR: Invalid call. Nonexistent function 'house' in base 'GDScript'.
-          at: TownView._draw (res://scripts/sandbox/town_view.gd:144)
-          GDScript backtrace (most recent call first):
-              [0] _draw (res://scripts/sandbox/town_view.gd:144)
-SCRIPT ERROR: Invalid call. Nonexistent function 'house' in base 'GDScript'.
-          at: TownView._draw (res://scripts/sandbox/town_view.gd:144)
-          GDScript backtrace (most recent call first):
-              [0] _draw (res://scripts/sandbox/town_view.gd:144)
-SCRIPT ERROR: Invalid call. Nonexistent function 'house' in base 'GDScript'.
-          at: TownView._draw (res://scripts/sandbox/town_view.gd:144)
-          GDScript backtrace (most recent call first):
-              [0] _draw (res://scripts/sandbox/town_view.gd:144)
-SCRIPT ERROR: Invalid call. Nonexistent function 'house' in base 'GDScript'.
-          at: TownView._draw (res://scripts/sandbox/town_view.gd:144)
-          GDScript backtrace (most recent call first):
-              [0] _draw (res://scripts/sandbox/town_view.gd:144)
 shot 01_town -> /home/runner/work/tactical-summoners/tactical-summoners/screenshots/01_town.png err=0
-SCRIPT ERROR: Invalid call. Nonexistent function 'house' in base 'GDScript'.
-          at: TownView._draw (res://scripts/sandbox/town_view.gd:144)
-          GDScript backtrace (most recent call first):
-              [0] _draw (res://scripts/sandbox/town_view.gd:144)
 SCRIPT ERROR: Invalid call. Nonexistent function 'house' in base 'GDScript'.
           at: TownView._draw (res://scripts/sandbox/town_view.gd:144)
           GDScript backtrace (most recent call first):
@@ -1245,39 +1181,7 @@ SCRIPT ERROR: Invalid call. Nonexistent function 'house' in base 'GDScript'.
           at: TownView._draw (res://scripts/sandbox/town_view.gd:144)
           GDScript backtrace (most recent call first):
               [0] _draw (res://scripts/sandbox/town_view.gd:144)
-SCRIPT ERROR: Invalid call. Nonexistent function 'house' in base 'GDScript'.
-          at: TownView._draw (res://scripts/sandbox/town_view.gd:144)
-          GDScript backtrace (most recent call first):
-              [0] _draw (res://scripts/sandbox/town_view.gd:144)
 shot 01c_town_hero_panel -> /home/runner/work/tactical-summoners/tactical-summoners/screenshots/01c_town_hero_panel.png err=0
-SCRIPT ERROR: Invalid call. Nonexistent function 'house' in base 'GDScript'.
-          at: TownView._draw (res://scripts/sandbox/town_view.gd:144)
-          GDScript backtrace (most recent call first):
-              [0] _draw (res://scripts/sandbox/town_view.gd:144)
-SCRIPT ERROR: Invalid call. Nonexistent function 'house' in base 'GDScript'.
-          at: TownView._draw (res://scripts/sandbox/town_view.gd:144)
-          GDScript backtrace (most recent call first):
-              [0] _draw (res://scripts/sandbox/town_view.gd:144)
-SCRIPT ERROR: Invalid call. Nonexistent function 'house' in base 'GDScript'.
-          at: TownView._draw (res://scripts/sandbox/town_view.gd:144)
-          GDScript backtrace (most recent call first):
-              [0] _draw (res://scripts/sandbox/town_view.gd:144)
-SCRIPT ERROR: Invalid call. Nonexistent function 'house' in base 'GDScript'.
-          at: TownView._draw (res://scripts/sandbox/town_view.gd:144)
-          GDScript backtrace (most recent call first):
-              [0] _draw (res://scripts/sandbox/town_view.gd:144)
-SCRIPT ERROR: Invalid call. Nonexistent function 'house' in base 'GDScript'.
-          at: TownView._draw (res://scripts/sandbox/town_view.gd:144)
-          GDScript backtrace (most recent call first):
-              [0] _draw (res://scripts/sandbox/town_view.gd:144)
-SCRIPT ERROR: Invalid call. Nonexistent function 'house' in base 'GDScript'.
-          at: TownView._draw (res://scripts/sandbox/town_view.gd:144)
-          GDScript backtrace (most recent call first):
-              [0] _draw (res://scripts/sandbox/town_view.gd:144)
-SCRIPT ERROR: Invalid call. Nonexistent function 'house' in base 'GDScript'.
-          at: TownView._draw (res://scripts/sandbox/town_view.gd:144)
-          GDScript backtrace (most recent call first):
-              [0] _draw (res://scripts/sandbox/town_view.gd:144)
 SCRIPT ERROR: Invalid call. Nonexistent function 'house' in base 'GDScript'.
           at: TownView._draw (res://scripts/sandbox/town_view.gd:144)
           GDScript backtrace (most recent call first):
