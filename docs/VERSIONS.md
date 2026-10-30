@@ -13,11 +13,20 @@ Las pruebas automáticas se ejecutan en GitHub (Godot 4.7.1 Linux) con cada push
 | **v5** | `e3f4f3a` | [ZIP](https://github.com/natillaw/tactical-summoners/archive/e3f4f3a.zip) | **Arte de Caz** en pueblo y pisos; 7 tipos de misión (combate, relicario, rescate, exploración, supervivencia, defensa, jefe); jefe orco en el piso 10; recompensas por piso; profesiones expertas ×2; claros irregulares | **15/15 PASS** + capturas pisos 1-5 y 10 |
 | **v6** | `72c2f04` | [ZIP](https://github.com/natillaw/tactical-summoners/archive/72c2f04.zip) | **Combate fase 1**: base común de unidades, atributos FUE/AGI/VIT/INT/TEM con efecto real, daño físico/mágico/verdadero, armadura y resistencia mágica, críticos, estados (veneno, quemadura, sangrado, aturdimiento, raíz, lentitud, debilidad, escudo, herido), caída + agonía 20 s + rescate, clic derecho contextual, números de daño | **16/16 PASS** |
 | **v7** | `5ab21e7` | [ZIP](https://github.com/natillaw/tactical-summoners/archive/5ab21e7.zip) | **Combate fase 2**: órdenes atacar avanzando (A), mantener (H), seguir (F), reagrupar (C), retirada (X), parar (S) con botones; línea de visión (los árboles bloquean disparos); arqueros/magos retroceden si se les acercan; los héroes esquivan solos los golpes telegrafiados | **17/17 PASS** |
+| **v8** | `304c2f6` | [ZIP](https://github.com/natillaw/tactical-summoners/archive/304c2f6.zip) | **Combate fase 3**: habilidades como datos (≈45), recurso por clase (Furia, Foco, Maná, Aguante), teclas **Q W E R** con botones, tiempos de lanzamiento (solo los rompe un aturdimiento), interrupciones, provocar, empujar, carga, teletransporte, zonas, estados Marcado y Regeneración; nacen con 1 habilidad y eligen 1 de 2-3 en niveles 5/10/20…; libros de habilidad (jefe, rescate, exploración, botín) y **Biblioteca**; guardado v8 | **18/18 PASS** — [ejecución](https://github.com/natillaw/tactical-summoners/actions/runs/41145836098) |
 
 ## Qué probar a mano en cada versión (en Windows, con el editor o F5)
 ### v1 (estado original, como referencia)
 - Al abrir el Sandbox **no aparecen héroes** y sale un error en la consola (F-038, confirmado en GitHub).
 - "Living Headquarters → Explore Base" da error (F-001).
+
+### v8
+1. Selecciona un héroe: el panel muestra sus habilidades en **Q W E R**, con su estado (lista, enfriamiento o recurso insuficiente). Debajo de la vida hay una barra de recurso (roja = Furia, amarilla = Foco, azul = Maná, verde = Aguante).
+2. Pulsa Q (o el botón): las habilidades con lanzamiento muestran una barra amarilla encima del héroe; si lo aturden, se cancela y se le devuelve el coste. Si no puede usarla, aparece el motivo sobre su cabeza.
+3. Un guerrero empieza sin Furia y la gana pegando y recibiendo golpes; los demás regeneran.
+4. Clic en un héroe en el pueblo → sección **Skills**: si ha subido a nivel 5, 10… elige 1 de las opciones; botón "→Q" para cambiar el orden; "Read book" si tienes un libro de su clase.
+5. Construye la **Biblioteca** (abajo a la derecha del pueblo, 70 materiales) y transcribe un libro (80 materiales).
+6. Partidas antiguas: tus héroes conservan todo y reciben su habilidad inicial, más las elecciones de los niveles que ya tenían.
 
 ### v7
 1. Selecciona héroes y prueba **A + clic** (avanzan peleando), **H** (se plantan), **F** (siguen al héroe enfocado con 1-5), **C** (se reagrupan), **X** (corren a EXTRACT sin pelear), **S** (paran). También hay botones en el panel.
