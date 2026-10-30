@@ -1,13 +1,13 @@
 # Estado de implementación (lo que existe de verdad)
 
-**Última revisión:** 2026-10-30 — commit de código auditado `509218b`.
-**Evidencia disponible:** solo análisis estático (`audit/`). **No hay ninguna ejecución de pruebas registrada en el repo.** Las afirmaciones anteriores de "todas las suites PASS" (sesiones de Gemini, 2026-10-28/29) no aportaban salida y el análisis estático las contradice: se consideran **NO VERIFICADAS**.
+**Última revisión:** 2026-10-30 — versión **v2** (`fb3ee7c`), ver `docs/VERSIONS.md`.
+**Evidencia:** GitHub Actions, Godot 4.7.1 Linux headless. v1 (código original): **6/12 PASS** ([run 41113420228](https://github.com/natillaw/tactical-summoners/actions/runs/41113420228)). v2: **14/14 PASS** ([run 41113770886](https://github.com/natillaw/tactical-summoners/actions/runs/41113770886)); capturas sin errores de script. Las afirmaciones de "todas las suites PASS" de sesiones anteriores eran falsas (la v1 falla 6). Nada se ha probado aún a mano en Windows.
 
 Leyenda: **I** implementado (sin ejecutar) · **ID** implementado pero defectuoso · **P** parcial / solo datos · **N** no implementado. "F-0xx" = hallazgo en `audit/AUDIT_FINDINGS.json`.
 
 ## Motor y proyecto
 - `project.godot`: Godot **4.7** (`config/features`), renderer `gl_compatibility`, 1280×720, autoload `Game`. Versión realmente instalada por el dueño: **sin verificar**.
-- Ejecutar pruebas: `powershell -ExecutionPolicy Bypass -File tools\Run-Tests.ps1` (12 suites). Último resultado conocido: **ninguno registrado**.
+- Ejecutar pruebas: CI en cada push (`.github/workflows/godot-ci.yml`), `tools/run_tests.sh` (Linux) o `tools\Run-Tests.ps1` (Windows). **14 suites**, último resultado: 14/14 PASS (v2).
 
 ## Por sistema
 | Sistema | Estado | Archivos | Notas |
@@ -17,7 +17,7 @@ Leyenda: **I** implementado (sin ejecutar) · **ID** implementado pero defectuos
 | HeroData + snapshot en guardado | I | `scripts/core/hero_data.gd` | — |
 | Stats | P | idem | hp/atk/mag/def/spd; FUE/AGI/VIT/INT/TEM **no** (F-017) |
 | Clases | P | `hero_tables.gd` | Commoner + Warrior/Rogue/Ranger/Cleric/Mage; avanzadas: lista vacía |
-| Promoción por estrellas + XP por libros | ID | `Game.promote/train` | Héroes `class.none` → división por cero al llegar a 3★ (F-007) |
+| Promoción por estrellas + XP por libros | I | `Game.promote/train` | F-007 reparado en v2 (prueba en `test_core`). Escala actual 5★; D-029 pide 7★/70 (Fase 5) |
 | Rasgos (16) y pasivas (16) | P | `hero_tables.gd` | Las pasivas no tienen efecto en juego; texto de turnos (F-016) |
 | Trust/Obedience/Composure + ledger | P | `hero_data.gd` | Composure no cambia nunca; Trust solo con `ally_fell` −2 (F-019) |
 | Memorias, relaciones | P | `hero_data.gd`, `game.gd` | Se actualizan en HQ y muertes |
@@ -25,22 +25,23 @@ Leyenda: **I** implementado (sin ejecutar) · **ID** implementado pero defectuos
 | Profesiones | P | `hero_tables.gd` | Se muestran; no tienen efecto (F-009) |
 | Guardado atómico v5 + migraciones v1→v5 + `.bak` | I | `scripts/autoload/game.gd` | Los pisos se guardan como semilla (F-014) |
 | Muerte permanente + memorial | I | `Game.record_death`, `scripts/ui/memorial_screen.gd` | — |
-| Sandbox: mapa fijo 40×24, A*, selección, cámara 1-5/Tab/G, mover, stop | I | `scripts/sandbox/` | Ranura muerta sin mensaje (F-018) |
+| Mapas: base común `NavMap` (fijo `SandboxMap` + procedural `ProceduralMap`) | I (v2, probado) | `scripts/core/nav_map.gd` | En v1 el sandbox no tenía héroes en Godot 4.7 (F-038) |
+| Sandbox: mapa fijo 40×24, A*, selección, cámara 1-5/Tab/G, mover, stop | I (v2, probado) | `scripts/sandbox/` | Ranura muerta sin mensaje (F-018) |
 | Órdenes atacar/attack-move/mantener/seguir/interactuar/retirada | N | — | F-018 |
 | Ataque automático, enemigos con telegrafía | I | `sandbox_hero.gd`, `sandbox_enemy.gd` | — |
 | 1 habilidad activa por clase (Q) | I | `scripts/sandbox/skill_tables.gd` | La biblioteca D-022 no existe (F-010) |
-| Misión "Recover the relic" | ID | `sandbox_screen.gd` | El relicario aparece en la extracción → éxito instantáneo (F-003) |
-| Torre pisos 1-10 + mapa procedural | ID | `scripts/core/tower_expedition.gd`, `procedural_map.gd` | Error de tipos `SandboxMap`; no accesible desde la UI (F-002, F-013, F-020) |
+| Misión "Recover the relic" | I (v2, probado) | `sandbox_screen.gd` | Relicario en `map.relic_cell`, extracción en `map.extract_cell` (F-003/F-013 reparados) |
+| Torre pisos 1-10 + mapa procedural | P (v2, probado por `smoke_tower` en pisos 1/5/10) | `scripts/core/tower_expedition.gd`, `procedural_map.gd` | F-002 reparado. Falta selector de piso en la UI y misiones por tipo (F-020) |
 | HQ (pantalla de asignación + producción fija) | P | `scripts/ui/hq_screen.gd`, `Game.process_headquarters_turn` | Sistemas paralelos `hq_facilities`/`town_buildings` (F-009) |
-| HQ explorable | ID | `scripts/sandbox/hq_world.gd` | No compila (F-001); podría impedir cargar `main.gd` |
+| HQ explorable | P (v2, probado: se construye sin errores) | `scripts/sandbox/hq_world.gd` | F-001 reparado (en v1 era error en ejecución; el juego sí arrancaba). Sin decorado (P-04) |
 | Animaciones en código (D-020) | I | `scripts/sandbox/hero_anim.gd`, `sprite_composer.gd` | No verificadas visualmente |
 | Sprites de enemigos y tiles (Pixel Crawler) | I | `enemy_sprites.gd`, `map_tiles.gd` | — |
 | VFX de combate | ID | `combat_vfx.gd` | Ruta inexistente (F-012) |
 | Diálogo por rasgo al entrar | P | `hero_chatter.gd` | Siempre habla del relicario |
 | Personalidad de 8 dimensiones, síntesis, sacrificio, equipo, inventario, loot, afijos, sets, crafting, biomas, eventos, jefes, audio, fuente pixel | N | — | — |
 
-## Pruebas (12 suites en `tools/Run-Tests.ps1`)
-Previsión por análisis estático (ver `audit/GODOT_TEST_REPORT.md`): **fallarían** `sandbox`, `combat`, `mission` y `deep systems`; `procedural` no es verificable; las otras 7, sin fallo detectado. No hay pruebas de: arranque de `main.tscn`, modo Torre, `HQWorld`, promoción de `class.none`.
+## Pruebas (14 suites)
+core, summons v2, ui smoke, sandbox, memorial v3, combat, mission, animation, art, simulation, deep systems, procedural, **boot** (escena principal + todas las pantallas), **tower** (pisos 1/5/10 + HQWorld). v2: 14/14 PASS. Capturas automáticas: `tests/capture_screens.tscn` (no es pass/fail).
 
 ## Cómo actualizar este archivo
 Solo con evidencia: pega el comando y el resumen de la salida, o escribe "NO VERIFICADO". Cambia la fila del sistema afectado; no añadas historia (va al commit).
