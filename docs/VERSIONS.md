@@ -1,7 +1,8 @@
 # Versiones para probar
 
 Cada versión es un commit concreto de la rama `claude/tactical-summoners-audit-b3sqpo`. Puedes descargar cualquiera en ZIP, sin Git, con el enlace de la tabla, y probarlas cuando estés en casa.
-Las pruebas automáticas se ejecutan en GitHub (Godot 4.7.1 Linux) con cada push. Pestaña **Actions** del repo → la ejecución → **Summary** (resultado) y **Artifacts → screenshots** (capturas).
+Las pruebas automáticas se ejecutan en GitHub (Godot 4.7.1 Linux) con cada push. Pestaña **Actions** del repo → la ejecución → **Summary** (resultado).
+**Capturas de la última versión (se ven en el móvil):** https://github.com/natillaw/tactical-summoners/tree/ci-screenshots/claude_tactical-summoners-audit-b3sqpo (abre `README.md` para verlas todas).
 
 | Versión | Commit | Descargar | Qué contiene | Pruebas automáticas (Godot 4.7.1) |
 |---|---|---|---|---|
@@ -20,3 +21,7 @@ Las pruebas automáticas se ejecutan en GitHub (Godot 4.7.1 Linux) con cada push
 4. Invocar, ver el Roster, montar el Party (5) y volver al Sandbox con tu escuadrón real.
 5. Si algo falla, dime la versión, qué hiciste y qué viste (una foto de la pantalla sirve).
 Aún no hay un botón para jugar los pisos de la torre. Se prueban automáticamente (suite `tower`), pero el selector de piso está en la Fase 7.
+
+## Problemas visuales conocidos (vistos en las capturas de v2; pendientes)
+- **F-039** HQ explorable: los héroes se amontonan en 5 puntos, no hay suelo/paredes dibujados y la cabecera tapa la barra superior. Se arregla junto con el diseño del HQ in-game (P-04).
+- **F-040** Sandbox: con la formación cerrada, los números de ranura y las barras de vida de héroes vecinos se solapan.

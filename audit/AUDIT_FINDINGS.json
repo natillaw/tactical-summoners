@@ -6,11 +6,11 @@
   "method": "static analysis only; Godot not available",
   "counts": {
     "HIGH": 14,
-    "MEDIUM": 15,
-    "LOW": 7,
+    "MEDIUM": 16,
+    "LOW": 8,
     "INFO": 2
   },
-  "total": 38,
+  "total": 40,
   "findings": [
     {
       "id": "F-001",
@@ -491,6 +491,32 @@
       "dependencies": [],
       "recommended_solution": "Use Array.assign() (done in v2 via NavMap)",
       "verification": "CONFIRMED_RUNTIME; FIXED in v2 (fb3ee7c)"
+    },
+    {
+      "id": "F-039",
+      "severity": "MEDIUM",
+      "system": "HQ / Visual",
+      "location": "scripts/sandbox/hq_world.gd",
+      "evidence": "CI screenshots, branch ci-screenshots",
+      "problem": "Heroes stack on 5 spawn cells, no floor/walls drawn, HUD overlaps the top bar (CI screenshot 06_hq_world.png)",
+      "consequence": "Poor readability",
+      "dependencies": [
+        "P-04"
+      ],
+      "recommended_solution": "Design HQ in-game (P-04)",
+      "verification": "CONFIRMED_VISUAL"
+    },
+    {
+      "id": "F-040",
+      "severity": "LOW",
+      "system": "Sandbox / Visual",
+      "location": "scripts/sandbox/sandbox_hero.gd:_draw",
+      "evidence": "CI screenshots, branch ci-screenshots",
+      "problem": "Slot numbers and HP bars of neighbouring heroes overlap in tight formation (CI screenshots 04/05)",
+      "consequence": "Poor readability",
+      "dependencies": [],
+      "recommended_solution": "Offset labels / draw only for selected hero",
+      "verification": "CONFIRMED_VISUAL"
     }
   ]
 }
