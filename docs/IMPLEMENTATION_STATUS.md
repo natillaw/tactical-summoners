@@ -15,7 +15,7 @@ Leyenda: **I** implementado (sin ejecutar) · **ID** implementado pero defectuos
 | Invocación (banners, pity, coste atómico, log 200) | I | `scripts/data/summon_config.gd`, `scripts/core/gacha.gd`, `Game.pull` | Si se supera la capacidad del roster, el mensaje dice "Not enough gems" (F-015) |
 | Generación de héroes | ID | `scripts/core/hero_generator.gd`, `scripts/data/hero_tables.gd` | Misma semilla ≠ mismo héroe que en versiones previas sin subir `VERSION` (F-008) |
 | HeroData + snapshot en guardado | I | `scripts/core/hero_data.gd` | — |
-| Stats | P | idem | hp/atk/mag/def/spd; FUE/AGI/VIT/INT/TEM **no** (F-017) |
+| Atributos y stats (D-035) | I (v6, probado: `combat core`) | `HeroData.attributes()`, `CombatRules.derive()` | FUE/AGI/VIT/INT/TEM → vida, poderes, armadura, M.RES, velocidad, cadencia, crítico, energía, resistencia a estados |
 | Clases | P | `hero_tables.gd` | Commoner + Warrior/Rogue/Ranger/Cleric/Mage; avanzadas: lista vacía |
 | Promoción por estrellas + XP por libros | I | `Game.promote/train` | F-007 reparado en v2 (prueba en `test_core`). Escala actual 5★; D-029 pide 7★/70 (Fase 5) |
 | Rasgos (16) y pasivas (16) | P | `hero_tables.gd` | Las pasivas no tienen efecto en juego; texto de turnos (F-016) |
@@ -28,6 +28,7 @@ Leyenda: **I** implementado (sin ejecutar) · **ID** implementado pero defectuos
 | Mapas: base común `NavMap` (fijo `SandboxMap` + procedural `ProceduralMap`) | I (v2, probado) | `scripts/core/nav_map.gd` | En v1 el sandbox no tenía héroes en Godot 4.7 (F-038) |
 | Sandbox: mapa fijo 40×24, A*, selección, cámara 1-5/Tab/G, mover, stop | I (v2, probado) | `scripts/sandbox/` | Ranura muerta sin mensaje (F-018) |
 | Órdenes atacar/attack-move/mantener/seguir/interactuar/retirada | N | — | F-018 |
+| Núcleo de combate (Combatant, daño, críticos, estados, caída/agonía/rescate, D-036/D-037) | I (v6, probado: `combat core`) | `scripts/combat/` | Fases 2-8 del plan en `audit/COMBAT_AUDIT.md` |
 | Ataque automático, enemigos con telegrafía | I | `sandbox_hero.gd`, `sandbox_enemy.gd` | — |
 | 1 habilidad activa por clase (Q) | I | `scripts/sandbox/skill_tables.gd` | La biblioteca D-022 no existe (F-010) |
 | Misiones: 7 tipos por piso + relicario en entrenamiento (D-034) | I (v5, probado: `smoke_tower` cubre los 7 tipos) | `sandbox_screen.gd` | Relicario en `map.relic_cell`, extracción en `map.extract_cell` (F-003/F-013 reparados) |
