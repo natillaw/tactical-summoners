@@ -8,7 +8,7 @@ const TILE_DIR := "res://assets/pixel/tilesets/pixel-crawler/"
 const T := 16
 const GRASS := [Vector2i(2, 10), Vector2i(3, 10)]
 const DIRT := Vector2i(12, 10)
-const FOREST_FLOOR := Color8(28, 52, 30)
+const FOREST_FLOOR := Color(0.110, 0.204, 0.118)
 
 
 static func _img(path: String) -> Image:

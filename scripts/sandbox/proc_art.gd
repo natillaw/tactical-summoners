@@ -4,13 +4,13 @@ extends RefCounted
 ## Used until owner-supplied town/forest packs arrive (see docs/ASSET_REGISTRY.md). Deterministic:
 ## the same key always gives the same image. Results are cached.
 
-const OUTLINE := Color8(22, 38, 24)
-const LEAF_DARK := Color8(38, 84, 44)
-const LEAF := Color8(58, 118, 56)
-const LEAF_LIGHT := Color8(96, 158, 70)
-const LEAF_TOP := Color8(140, 190, 92)
-const TRUNK := Color8(98, 64, 38)
-const TRUNK_DARK := Color8(62, 40, 26)
+const OUTLINE := Color(0.086, 0.149, 0.094)
+const LEAF_DARK := Color(0.149, 0.329, 0.173)
+const LEAF := Color(0.227, 0.463, 0.220)
+const LEAF_LIGHT := Color(0.376, 0.620, 0.275)
+const LEAF_TOP := Color(0.549, 0.745, 0.361)
+const TRUNK := Color(0.384, 0.251, 0.149)
+const TRUNK_DARK := Color(0.243, 0.157, 0.102)
 
 static var _cache: Dictionary = {}
 
