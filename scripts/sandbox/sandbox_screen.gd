@@ -505,4 +505,6 @@ func _objective_text() -> String:
 			return "failed"
 	if carrier != null:
 		return "carry the relic to EXIT"
-	return "recover the relic (far room, top right)"
+	if map is SandboxMap:
+		return "recover the relic (far room, top right)"
+	return "find the relic in the far room and bring it back to EXTRACT"

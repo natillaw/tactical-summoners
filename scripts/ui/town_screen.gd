@@ -65,7 +65,11 @@ func rebuild() -> void:
         heroes.append(th)
         i += 1
     if camera.position == Vector2.ZERO:
-        camera.position = map.center_of(map.goal_cell) - Vector2(0, 96)
+        # first view: the whole town fits on screen
+        var ws := map.world_size()
+        var vs := Vector2(_viewport.size) if _viewport.size.x > 0 else Vector2(1280, 670)
+        camera.zoom = Vector2.ONE * clampf(minf(vs.x / ws.x, vs.y / ws.y), ZOOM_MIN, ZOOM_MAX)
+        camera.position = ws * 0.5
     _refresh()
 
 
