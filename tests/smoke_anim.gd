@@ -49,7 +49,10 @@ func _ready() -> void:
     h0.take_damage(99999)
     await get_tree().process_frame
     await get_tree().process_frame
-    check(not h0.alive and h0.hp == 0 and hp_before > 0, "death still flags the hero dead (logic unchanged)")
+    check(not h0.alive and h0.downed and h0.hp == 0 and hp_before > 0 and h0._sprite.animation.begins_with("down_"), "at 0 HP the hero falls and lies down (D-036)")
+    h0.die()
+    await get_tree().process_frame
+    await get_tree().process_frame
     var ghosts := parent.get_children().filter(func(c): return c != h0 and c.get_child_count() > 0 and c.get_child(0) is AnimatedSprite2D and (c.get_child(0) as AnimatedSprite2D).animation.begins_with("down_"))
     check(ghosts.size() == 1, "one corpse sprite lies down where the hero fell")
 

@@ -51,7 +51,8 @@ func _ready() -> void:
     var drop_at: Vector2 = sb.heroes[0].position
     sb.heroes[0].take_damage(99999, sb.enemies[0])
     sb.tick(1.0 / 60.0)
-    check(not sb.heroes[0].alive and sb.carrier == null and sb.relic.visible and sb.relic.position.distance_to(drop_at) < 1.0, "carrier dies: relic drops where they fell")
+    check(not sb.heroes[0].alive and sb.carrier == null and sb.relic.visible and sb.relic.position.distance_to(drop_at) < 1.0, "carrier falls: relic drops where they fell")
+    sb.heroes[0].tick(CombatRules.AGONY_TIME + 1.0)          # nobody rescues: the agony runs out
     check(not Game.heroes.has(id0) and Game.memorial.size() == 1, "death is permanent: removed from roster, written to memorial")
     check(Game.memorial[0]["cause"] == "Slain by Grunt" and Game.memorial[0]["mission"] == SandboxScreen.MISSION_NAME, "memorial records cause and mission")
     check(Game.party[0] == "" and sb.fallen.size() == 1, "party slot cleared, fallen list updated")

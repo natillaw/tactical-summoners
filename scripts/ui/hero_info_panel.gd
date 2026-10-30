@@ -67,7 +67,10 @@ func _ready() -> void:
 
     vb.add_child(_section("Stats"))
     var st := h.get_stats()
-    vb.add_child(UIKit.label("HP %d   ATK %d   MAG %d   DEF %d   SPD %d" % [st["hp"], st["atk"], st["mag"], st["def"], st["spd"]], 14, UIKit.TEXT))
+    var at := h.attributes()
+    vb.add_child(UIKit.label("FUE %d   AGI %d   VIT %d   INT %d   TEM %d" % [at["fue"], at["agi"], at["vit"], at["int"], at["tem"]], 14, UIKit.ACCENT))
+    vb.add_child(UIKit.label("HP %d   P.ATK %d   M.ATK %d   ARMOR %d   M.RES %d" % [st["hp"], st["atk"], st["mag"], st["def"], st["mres"]], 14, UIKit.TEXT))
+    vb.add_child(UIKit.label("Crit %d%%   Attack every %.2fs   %s basic attacks" % [roundi(float(st["crit"]) * 100.0), float(st["interval"]), String(st["kind"]).capitalize()], 13, UIKit.MUTED))
     for pair in [["Trust", h.trust], ["Obedience", h.obedience], ["Composure", h.composure]]:
         vb.add_child(_bar(String(pair[0]), int(pair[1])))
 

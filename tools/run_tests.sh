@@ -25,6 +25,7 @@ suites=(
   "simulation|--script res://tests/test_simulation.gd|ALL PASSED"
   "deep systems|--script res://tests/test_deep_systems.gd|ALL PASSED"
   "procedural|--script res://tests/test_procedural.gd|ALL PASSED"
+  "combat core|res://tests/smoke_combat_core.tscn --quit-after 3000|ALL PASSED"
   "town|--script res://tests/test_town.gd|ALL PASSED"
   "boot|res://tests/smoke_boot.tscn --quit-after 3000|ALL PASSED"
   "tower|res://tests/smoke_tower.tscn --quit-after 3000|ALL PASSED"

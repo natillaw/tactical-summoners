@@ -1,5 +1,5 @@
 class_name SandboxEnemy
-extends Node2D
+extends Combatant
 ## Placeholder enemy (T-010): perceives the nearest hero, chases, then winds up a telegraphed
 ## strike. The strike lands only on heroes still inside the marked circle when the wind-up ends,
 ## so the player can dodge by ordering a move.
@@ -7,24 +7,33 @@ extends Node2D
 enum State { IDLE, CHASE, WINDUP, RECOVER }
 
 var enemy_name: String = "Grunt"
-var max_hp: int = 60
-var hp: int = 60
 var atk: int = 12
-var defense: int = 3
+var defense: int:                   # legacy alias of Combatant.armor
+    get:
+        return armor
 var speed: float = 62.0
 var perception: float = 230.0
 var strike_range: float = 40.0
 var strike_radius: float = 44.0
 var windup_time: float = 0.7
 var recover_time: float = 0.8
-var alive: bool = true
 var state: State = State.IDLE
 var _timer: float = 0.0
 var _aim: Vector2 = Vector2.ZERO
 var _flash: float = 0.0
 var type_id: String = ""            # T-024: visual type (EnemySprites.IDS); stats unchanged for now
 var _sprite: AnimatedSprite2D = null
-signal died(e: SandboxEnemy)
+var _path: Array[Vector2] = []
+var _repath: float = 0.0
+const REPATH_EVERY := 0.4
+
+
+func _init() -> void:
+    setup_combat(60, 3, 2, 0.05, 0.0, 1)
+
+
+func _ready() -> void:
+    combat_rng.seed = hash(position) ^ get_instance_id()
 
 
 ## T-024: swaps the placeholder circle for a Pixel Crawler mob. Falls back to the circle when
@@ -88,10 +97,11 @@ func _do_lunge() -> void:
 ## longer and clearer wind-up so the player can read and dodge it.
 func make_boss() -> void:
     enemy_name = "Orc Chieftain"
-    max_hp *= 8
+    base_max_hp *= 8
+    max_hp = base_max_hp
     hp = max_hp
     atk = roundi(float(atk) * 1.6)
-    defense += 4
+    armor += 4
     strike_radius *= 1.5
     strike_range *= 1.3
     windup_time = 1.1
@@ -103,11 +113,18 @@ func is_telegraphing() -> bool:
     return state == State.WINDUP
 
 
+## heroes = every hero that is not permanently dead (downed ones can still be hit by a strike).
 func tick(delta: float, heroes: Array, map: NavMap) -> void:
+    tick_combat(delta)
     if not alive:
         return
+    _repath = maxf(0.0, _repath - delta)
     if _flash > 0.0:
         _flash = maxf(0.0, _flash - delta)
+    if not can_act():
+        _update_sprite()
+        queue_redraw()
+        return
     match state:
         State.WINDUP:
             _timer -= delta
@@ -134,16 +151,23 @@ func tick(delta: float, heroes: Array, map: NavMap) -> void:
     queue_redraw()
 
 
+## Follows a cached path, recomputed every REPATH_EVERY seconds (not every frame: performance).
 func _step_toward(goal: Vector2, delta: float, map: NavMap) -> void:
-    var p := map.find_path(position, goal)
-    if p.is_empty():
+    if not can_move():
         return
-    var to: Vector2 = p[0] - position
-    _look_at_x(p[0].x)
-    if to.length() > 0.5:
-        var np := position + to.normalized() * speed * delta
-        if not map.is_blocked(np):
-            position = np
+    if _repath <= 0.0 or _path.is_empty():
+        _repath = REPATH_EVERY
+        _path = map.find_path(position, goal)
+    if _path.is_empty():
+        return
+    var to: Vector2 = _path[0] - position
+    if to.length() < 4.0:
+        _path.remove_at(0)
+        return
+    _look_at_x(_path[0].x)
+    var np := position + to.normalized() * speed * move_mult() * delta
+    if not map.is_blocked(np):
+        position = np
 
 
 func _nearest_hero(heroes: Array) -> SandboxHero:
@@ -151,7 +175,7 @@ func _nearest_hero(heroes: Array) -> SandboxHero:
     var best_d := perception
     for h in heroes:
         if not h.alive:
-            continue
+            continue                          # downed heroes are not chased (no executions, D-036)
         var d: float = position.distance_to(h.position)
         if d < best_d:
             best_d = d
@@ -163,20 +187,17 @@ func _strike(heroes: Array) -> void:
     _do_lunge()
     CombatVFX.spawn_strip16(get_parent(), _aim + Vector2(0, -12), "spritepilot-combat-pack", "claw-slash-16px_strip8.png")
     for h in heroes:
-        if h.alive and h.position.distance_to(_aim) <= strike_radius:
-            h.take_damage(CombatRules.damage(atk, int(h.hero.get_stats()["def"])), self)
+        if not h.dead and h.position.distance_to(_aim) <= strike_radius:
+            h.take_hit(DamageInfo.make(float(atk), "physical", self, crit_chance, combat_rng))
 
 
-func take_damage(amount: int, _source: Node2D = null) -> void:
-    if not alive:
-        return
-    hp = maxi(0, hp - amount)
+func _on_hit(_info: DamageInfo, _dmg: int) -> void:
     _flash = 0.12
-    if hp <= 0:
-        alive = false
-        EnemySprites.spawn_death(self, _sprite)
-        died.emit(self)
-        visible = false
+
+
+func _on_die() -> void:
+    EnemySprites.spawn_death(self, _sprite)
+    visible = false
 
 
 func _draw() -> void:
