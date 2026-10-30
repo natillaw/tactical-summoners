@@ -48,7 +48,7 @@ static func derive(attrs: Dictionary, class_id: String) -> Dictionary:
         "mres": tem / 2 + int(c["mres"]),
         "spd": agi,
         "move": 70.0 + float(agi) * 3.0,
-        "interval": clampf(1.6 - float(agi) * 0.04, 0.55, 1.6),
+        "interval": clampf(1.6 - float(agi) * 0.04, 0.6, 1.6),
         "crit": clampf(0.05 + float(agi) * 0.005, 0.0, 0.35),
         "energy": 3 + tem / 3,
         "status_resist": clampf(float(tem) * 0.01, 0.0, 0.5),
@@ -74,7 +74,7 @@ static func damage(power: int, target_def: int) -> int:
 
 ## Seconds between basic attacks; faster SPD attacks faster, clamped.
 static func hero_interval(spd: int) -> float:
-    return clampf(1.6 - float(spd) * 0.04, 0.55, 1.6)
+    return clampf(1.6 - float(spd) * 0.04, 0.6, 1.6)
 
 
 static func skill_damage(power: int, mult: float, target_def: int) -> int:
