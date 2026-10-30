@@ -83,6 +83,16 @@ func nearest_walkable(world: Vector2) -> Vector2:
     return center_of(c)
 
 
+## True when no solid cell lies on the straight segment a -> b (ranged attacks need it).
+func has_line_of_sight(a: Vector2, b: Vector2) -> bool:
+    var dist := a.distance_to(b)
+    var steps := maxi(1, ceili(dist / 12.0))
+    for i in range(1, steps):
+        if is_blocked(a.lerp(b, float(i) / float(steps))):
+            return false
+    return true
+
+
 ## Path of world waypoints from a to b (b is snapped to a walkable cell). Empty if unreachable.
 func find_path(a: Vector2, b: Vector2) -> Array[Vector2]:
     var out: Array[Vector2] = []

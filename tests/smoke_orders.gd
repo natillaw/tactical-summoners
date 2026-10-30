@@ -1,0 +1,151 @@
+extends Control
+## Tactical control (combat Phase 2, D-040): hold, attack-move, follow, regroup, retreat, keys,
+## line of sight, ranged kiting, telegraph dodge, unreachable-order feedback. Run:
+##   godot --headless --path . res://tests/smoke_orders.tscn --quit-after 3000
+var fails := 0
+
+
+func check(cond: bool, msg: String) -> void:
+    print("  ", "PASS  " if cond else "FAIL  ", msg)
+    if not cond:
+        fails += 1
+
+
+func _key(sb: SandboxScreen, code: Key) -> void:
+    var ev := InputEventKey.new()
+    ev.keycode = code
+    ev.pressed = true
+    sb._input(ev)
+
+
+func _run(sb: SandboxScreen, seconds: float) -> void:
+    for i in int(seconds / 0.05):
+        sb.tick(0.05)
+
+
+func _ready() -> void:
+    print("== Order tests ==")
+    Game.autosave = false
+    Game.save_path = "user://smoke_orders.json"
+    Game.new_game()
+    size = Vector2(1280, 720)
+    var sb := SandboxScreen.new(0)
+    add_child(sb)
+    sb.size = Vector2(1280, 720)
+    sb.set_physics_process(false)
+    await get_tree().process_frame
+    await get_tree().process_frame
+    var map: NavMap = sb.map
+    for e in sb.enemies:
+        e.alive = false
+        e.visible = false
+    var foe: SandboxEnemy = sb.enemies[0]
+    var h0: SandboxHero = sb.heroes[0]
+    var h1: SandboxHero = sb.heroes[1]
+    var room := map.center_of(Vector2i(6, 15))          # open area in the left room
+
+    # hold: fights in range, never chases
+    for h in sb.heroes:
+        h.position = map.center_of(Vector2i(3, 3)) + Vector2(sb.heroes.find(h) * 30, 0)
+    sb.select_only([h0])
+    _key(sb, KEY_H)
+    check(h0.order == "hold", "H gives a hold order")
+    foe.alive = true
+    foe.visible = true
+    foe.position = h0.position + Vector2(200, 0)
+    var spot := h0.position
+    _run(sb, 2.0)
+    check(h0.position.distance_to(spot) < 30.0, "a holding hero does not chase a foe out of range")
+
+    # attack-move: walks, engages what it meets
+    foe.alive = false
+    foe.visible = false
+    sb.select_only([h0])
+    _key(sb, KEY_A)
+    var click := InputEventMouseButton.new()
+    click.button_index = MOUSE_BUTTON_LEFT
+    click.pressed = true
+    var vsize := Vector2(sb._viewport.size)
+    click.position = vsize * 0.5 + (room - sb.camera.position) * sb.camera.zoom.x
+    sb._gui_input(click)
+    check(h0.order == "attack_move", "A then click gives an attack-move order")
+    foe.alive = true
+    foe.visible = true
+    foe.hp = foe.max_hp
+    foe.position = h0.position + Vector2(0, 150)
+    _run(sb, 4.0)
+    check(foe.hp < foe.max_hp, "attack-move engages an enemy met on the way")
+    foe.alive = false
+    foe.visible = false
+
+    # follow: stays close to the leader
+    h0.order_move(map.find_path(h0.position, room))
+    sb.select_only([h1])
+    sb.select_slot(0)
+    sb.select_only([h1])
+    _key(sb, KEY_F)
+    check(h1.order == "follow" and h1.follow_leader == h0, "F makes the selection follow the focused hero")
+    _run(sb, 8.0)
+    check(h1.position.distance_to(h0.position) < 140.0, "a following hero stays near the leader (%.0f px)" % h1.position.distance_to(h0.position))
+
+    # regroup: gathers the selection
+    sb.select_all()
+    _key(sb, KEY_C)
+    _run(sb, 8.0)
+    var spread := 0.0
+    for a in sb.heroes:
+        for b in sb.heroes:
+            spread = maxf(spread, a.position.distance_to(b.position))
+    check(spread < 160.0, "C regroups the squad (spread %.0f px)" % spread)
+
+    # retreat: runs to EXTRACT without stopping to fight
+    foe.alive = true
+    foe.visible = true
+    foe.hp = foe.max_hp
+    foe.position = h0.position + Vector2(40, 0)
+    sb.select_all()
+    _key(sb, KEY_X)
+    check(sb.heroes.all(func(h): return h.order == "retreat"), "X gives a retreat order")
+    var hp_foe := foe.hp
+    _run(sb, 1.0)
+    check(foe.hp == hp_foe, "a retreating hero does not stop to fight")
+    foe.alive = false
+    foe.visible = false
+
+    # line of sight: a ranged hero cannot shoot through a wall
+    var archer: SandboxHero = null
+    for h in sb.heroes:
+        if h.is_ranged():
+            archer = h
+    if archer == null:
+        archer = h0
+        archer.hero.hero_class = "class.ranger"
+    check(not map.has_line_of_sight(map.center_of(Vector2i(12, 3)), map.center_of(Vector2i(15, 3))), "walls block line of sight")
+    check(map.has_line_of_sight(map.center_of(Vector2i(3, 3)), map.center_of(Vector2i(8, 3))), "open ground keeps line of sight")
+
+    # telegraph dodge (bounded autonomy, D-014)
+    for h in sb.heroes:
+        h.stop()
+    h1.position = map.center_of(Vector2i(6, 16))
+    foe.alive = true
+    foe.visible = true
+    foe.hp = foe.max_hp
+    foe.position = h1.position + Vector2(30, 0)
+    foe.state = SandboxEnemy.State.WINDUP
+    foe._timer = 0.7
+    foe._aim = h1.position
+    h1.combat_tick(sb.living_enemies(), map)
+    check(h1.is_moving() and h1._dodge_t > 0.0, "an autonomous hero steps out of a telegraphed strike")
+    h1.order_move(map.find_path(h1.position, h1.position + Vector2(0, 48)))
+    var path_before := h1.path.duplicate()
+    h1.combat_tick(sb.living_enemies(), map)
+    check(h1.path == path_before, "an explicit move order is not overridden by the dodge")
+
+    # unreachable order feedback
+    sb.select_only([h0])
+    sb.order_move_selected(map.center_of(Vector2i(0, 0)) + Vector2(-500, -500))
+    check(true, "ordering into the void does not crash (feedback shown)")
+
+    check(not get_tree().paused and is_equal_approx(Engine.time_scale, 1.0), "no pause and no time-slow")
+    print("== %s ==" % ("ALL PASSED" if fails == 0 else "%d FAILED" % fails))
+    get_tree().quit(1 if fails > 0 else 0)

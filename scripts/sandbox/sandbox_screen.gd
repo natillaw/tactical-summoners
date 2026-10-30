@@ -236,11 +236,21 @@ func _build_ui() -> void:
 	var stop_btn := UIKit.button("Stop (S)", func(): stop_selected(), Vector2(110, 34))
 	stop_btn.focus_mode = Control.FOCUS_NONE
 	row.add_child(stop_btn)
+	# D-040: every order also has a button
+	var row2 := HBoxContainer.new()
+	pv.add_child(row2)
+	for spec in [["A-move (A)", func(): arm_attack_move()], ["Hold (H)", func(): hold_selected()],
+			["Follow (F)", func(): follow_selected()], ["Regroup (C)", func(): regroup_selected()],
+			["Retreat (X)", func(): retreat_selected()]]:
+		var b := UIKit.button(String(spec[0]), spec[1], Vector2(66, 30))
+		b.focus_mode = Control.FOCUS_NONE
+		b.add_theme_font_size_override("font_size", 11)
+		row2.add_child(b)
 	_squad_label = UIKit.label("", 14, UIKit.MUTED)
 	_squad_label.custom_minimum_size = Vector2(340, 0)
 	pv.add_child(_squad_label)
 
-	_hint = UIKit.label("LMB select / drag box    RMB move    1-5 focus hero    Tab group view    G select squad    Q skill    S stop    M map", 14, UIKit.MUTED)
+	_hint = UIKit.label("LMB select · RMB move/attack/rescue · 1-5 focus · Tab group · G squad · Q-R skills · A attack-move · H hold · F follow · C regroup · X retreat · S stop · M map", 13, UIKit.MUTED)
 	_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	_hint.position += Vector2(14, -34)
@@ -310,13 +320,80 @@ func screen_to_world(p: Vector2) -> Vector2:
 	return camera.position + (p - view * 0.5) / camera.zoom.x
 
 
+var _arming_attack_move: bool = false
+
+
+## A: the next left click is an attack-move destination.
+func arm_attack_move() -> void:
+	_arming_attack_move = not selected.is_empty()
+
+
+func attack_move_selected(world_point: Vector2) -> void:
+	var n := selected.size()
+	for i in n:
+		var offset := Vector2.ZERO if i == 0 else Vector2.RIGHT.rotated(TAU * float(i - 1) / float(maxi(1, n - 1))) * FORMATION_RADIUS
+		if not selected[i].order_attack_move(world_point + offset, map):
+			FloatingText.spawn(selected[i], "can't reach", Color(1.0, 0.6, 0.4), false)
+	_mark(world_point, Color(1.0, 0.6, 0.3))
+
+
+func hold_selected() -> void:
+	for h in selected:
+		h.order_hold()
+		_mark(h.position, Color(0.6, 0.8, 1.0))
+
+
+## F: the selection follows the focused hero (key 1-5), else the first living hero not selected.
+func follow_selected() -> void:
+	var leader: SandboxHero = heroes[follow_slot] if follow_slot >= 0 and follow_slot < heroes.size() else null
+	if leader == null or not leader.alive or selected.size() == 1 and selected[0] == leader:
+		leader = null
+		for h in heroes:
+			if h.alive and not selected.has(h):
+				leader = h
+				break
+	if leader == null:
+		for h in selected:
+			FloatingText.spawn(h, "no one to follow", Color(1.0, 0.6, 0.4), false)
+		return
+	for h in selected:
+		if h != leader:
+			h.order_follow(leader)
+
+
+## C: the selection gathers around its centre, then goes back to Auto.
+func regroup_selected() -> void:
+	var live := selected.filter(func(h): return h.alive)
+	if live.is_empty():
+		return
+	var c := Vector2.ZERO
+	for h in live:
+		c += h.position
+	c /= float(live.size())
+	order_move_selected(map.nearest_walkable(c))
+	_mark(c, Color(0.6, 1.0, 0.6))
+
+
+## X: run to the extraction point, no fighting on the way.
+func retreat_selected() -> void:
+	var exit := map.center_of(map.extract_cell)
+	for i in selected.size():
+		var offset := Vector2.RIGHT.rotated(TAU * float(i) / float(maxi(1, selected.size()))) * 26.0
+		if not selected[i].order_retreat(exit + offset, map):
+			FloatingText.spawn(selected[i], "no way out", Color(1.0, 0.6, 0.4), false)
+	_mark(exit, Color(0.4, 1.0, 0.7))
+
+
 func order_move_selected(world_point: Vector2) -> void:
 	var n := selected.size()
 	for i in n:
 		var offset := Vector2.ZERO
 		if n > 1 and i > 0:
 			offset = Vector2.RIGHT.rotated(TAU * float(i - 1) / float(n - 1)) * FORMATION_RADIUS
-		selected[i].order_move(map.find_path(selected[i].position, world_point + offset))
+		var p := map.find_path(selected[i].position, world_point + offset)
+		if p.is_empty():
+			FloatingText.spawn(selected[i], "can't reach", Color(1.0, 0.6, 0.4), false)
+		selected[i].order_move(p)
 
 
 ## Right-click: on an enemy = attack it, on a downed ally = rescue (nearest selected hero goes),
@@ -611,6 +688,10 @@ func _process(delta: float) -> void:
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT:
+			if event.pressed and _arming_attack_move:
+				_arming_attack_move = false
+				attack_move_selected(screen_to_world(event.position))
+				return
 			if event.pressed:
 				_drag_start = event.position
 				_dragging = true
@@ -666,8 +747,23 @@ func _input(event: InputEvent) -> void:
 			select_all()
 		KEY_Q:
 			use_skill_selected()
+		KEY_W, KEY_E, KEY_R:
+			for h in selected:
+				FloatingText.spawn(h, "no skill learned", Color(0.8, 0.8, 0.8), false)
 		KEY_S:
 			stop_selected()
+		KEY_A:
+			arm_attack_move()
+		KEY_H:
+			hold_selected()
+		KEY_F:
+			follow_selected()
+		KEY_C:
+			regroup_selected()
+		KEY_X:
+			retreat_selected()
+		KEY_ESCAPE:
+			_arming_attack_move = false
 		_:
 			return
 	get_viewport().set_input_as_handled()
@@ -688,10 +784,10 @@ func _refresh_info() -> void:
 		var st := h.get_stats()
 		var sk: Dictionary = sh.skill
 		var sk_state := "READY" if sh.skill_ready() else "%.0fs" % sh.skill_cd
-		_info.text = "%s\n%s\n%s  |  %d-star %s  |  Lv %d\nHP %d/%d  ATK %d  MAG %d  DEF %d  SPD %d\nTrust %d   Obedience %d   Composure %d\nSkill: %s [%s] - %s\nOrders: Move (right-click), Stop (S), Skill (Q)" % [
+		_info.text = "%s\n%s\n%s  |  %d-star %s  |  Lv %d\nHP %d/%d  ATK %d  MAG %d  DEF %d  SPD %d\nTrust %d   Obedience %d   Composure %d\nSkill: %s [%s] - %s\nOrder: %s" % [
 			view, goal, h.display_name(), h.stars, h.class_title(), h.level,
 			sh.hp, sh.max_hp, st["atk"], st["mag"], st["def"], st["spd"], h.trust, h.obedience, h.composure,
-			sk.get("name", "-"), sk_state, sk.get("desc", "")]
+			sk.get("name", "-"), sk_state, sk.get("desc", ""), sh.order_label()]
 	else:
 		var names: Array = []
 		for s in selected:
@@ -705,7 +801,9 @@ func _refresh_info() -> void:
 		var hh := heroes[i]
 		var nm := hh.hero.hero_name.split(" ")[0]
 		if hh.alive:
-			rows.append("%d %s  HP %d/%d  %s%s" % [i + 1, nm, hh.hp, hh.max_hp, "skill ready" if hh.skill_ready() else "skill %.0fs" % hh.skill_cd, "  [RELIC]" if hh.carrying else ""])
+			rows.append("%d %s  HP %d/%d  %s · %s%s" % [i + 1, nm, hh.hp, hh.max_hp, hh.order_label(), "skill ready" if hh.skill_ready() else "skill %.0fs" % hh.skill_cd, "  [RELIC]" if hh.carrying else ""])
+		elif hh.downed:
+			rows.append("%d %s  DOWN %ds — right-click to rescue" % [i + 1, nm, ceili(hh.agony)])
 		else:
 			rows.append("%d %s  FALLEN" % [i + 1, nm])
 	_squad_label.text = "\n".join(rows)
