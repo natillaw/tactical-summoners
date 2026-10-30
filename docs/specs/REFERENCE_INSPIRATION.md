@@ -1,3 +1,5 @@
+> **Estado (2026-10-30):** Referencia (no requisitos). Movida intacta desde `REFERENCE_SYSTEMS.md`. Estados actualizados en `docs/DECISIONS.md` §3-4. Las reglas de nombres prohibidos siguen VIGENTES (D-002).
+
 # Reference Systems (v1.7)
 
 Inspiration notes only. Tactical Summoners is an original game (D-002). Mechanics are ideas; names, characters, dialogue, plot and distinctive terms of the reference work are **not** used.

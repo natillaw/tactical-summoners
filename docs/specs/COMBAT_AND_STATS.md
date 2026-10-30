@@ -1,3 +1,5 @@
+> **Estado (2026-10-30):** Spec CONFIRMADA (D-011, D-012, D-014); números provisionales. Movida intacta. Los atributos FUE/AGI/VIT/INT/TEM aún no están en el código (F-017).
+
 # Combat & Initial Stats — Tactical Summoners
 
 **Version:** 1.5 design baseline, 2026-10-28. Numeric values remain provisional.
