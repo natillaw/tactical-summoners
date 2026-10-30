@@ -15,6 +15,7 @@ Consolidado de `ASSET_MANIFEST.md` (archivado) y de `audit/ASSET_AUDIT.md`.
 | Pack | Ruta | Uso en el código | Licencia | Estado |
 |---|---|---|---|---|
 | Tiny Pixel Fantasy – Character Generator (Caz) | `assets/sprites/` (211 PNG, 576×384, celdas de 48 px; figura de estilo ~16 px) | `SpriteComposer` | ⚠ EULA solo enlazada (`assets/sprites/EULA_READ_ME.txt`); **texto no guardado**. Acreditar a Caz. | En uso; falta guardar la EULA y comprobar si permite modificaciones y repos públicos |
+| **Tiny Pixel Fantasy – Base Pack (Caz)** | `assets/pixel/caz-base/` (Tiles: Outside, OutsideFeatures, RuralTown/City/Castle/Ship/Cave exterior+interior, Furniture; 8 Characters 576×384) | `CazArt` (pueblo y pisos de bosque) | ⚠ EULA del autor (CC BY 4.0 según el autor): acreditar a Caz. Subido por el dueño 2026-10-30 | **En uso (v5)** |
 | Pixel Crawler Free Pack 2.11 (Anokolisa) — tiles | `assets/pixel/tilesets/pixel-crawler/` | `MapTiles` | Términos del autor (`Terms.txt`): crédito opcional, uso comercial sí, no revender | Importado |
 | Pixel Crawler — mobs (8) | `assets/pixel/enemies/pixel-crawler/` | `EnemySprites` | Igual | Importado |
 | SpritePilot (combat, creatures, effects, environment, magic, pickups, ui, weather) | `assets/packs/spritepilot-*/` | Un efecto, con la ruta mal (F-012) | CC0 | Sin prueba de estilo |

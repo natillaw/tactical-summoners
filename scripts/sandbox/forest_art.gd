@@ -30,6 +30,70 @@ static func is_trail(map: NavMap, c: Vector2i) -> bool:
 
 
 static func bake(map: NavMap, art_seed: int) -> Texture2D:
+    if CazArt.available():
+        return bake_caz(map, art_seed)
+    return bake_fallback(map, art_seed)
+
+
+## Forest drawn with Caz's tiles: grass variants, dirt trails, flowers/bushes/rocks/stumps/logs in
+## clearings, and a dense wall of Caz trees (big and small, a few dead ones) on every solid cell.
+static func bake_caz(map: NavMap, art_seed: int) -> Texture2D:
+    var cell := NavMap.CELL
+    var out := Image.create(map.width * cell, map.height * cell, false, Image.FORMAT_RGBA8)
+    var r := RandomNumberGenerator.new()
+    r.seed = art_seed
+    for y in map.height:
+        for x in map.width:
+            var c := Vector2i(x, y)
+            var area := Rect2i(c * cell, Vector2i(cell, cell))
+            if map.is_blocked_cell(c):
+                CazArt.fill_tiles(out, area, CazArt.GRASS, r)
+                out.fill_rect(area, Color(0.05, 0.12, 0.06, 0.55))      # shade under the canopy
+            elif is_trail(map, c):
+                CazArt.fill_tiles(out, area, CazArt.DIRT, r)
+            else:
+                CazArt.fill_tiles(out, area, CazArt.GRASS, r)
+    # clearing decor (never blocks movement)
+    for y in map.height:
+        for x in map.width:
+            var c := Vector2i(x, y)
+            if map.is_blocked_cell(c) or is_trail(map, c):
+                continue
+            var feet := c * cell + Vector2i(r.randi_range(10, 38), r.randi_range(20, 44))
+            var roll := r.randf()
+            if roll < 0.10:
+                CazArt.blit_feet(out, CazArt.image(CazArt.FLOWER), feet)
+            elif roll < 0.15:
+                CazArt.blit_feet(out, CazArt.pick(CazArt.BUSHES, r), feet)
+            elif roll < 0.18:
+                CazArt.blit_feet(out, CazArt.pick(CazArt.ROCKS, r), feet)
+            elif roll < 0.195:
+                CazArt.blit_feet(out, CazArt.pick(CazArt.STUMPS, r), feet)
+            elif roll < 0.205:
+                CazArt.blit_feet(out, CazArt.image(CazArt.LOG), feet)
+    # tree wall, top to bottom so nearer trees overlap farther ones
+    for y in range(-1, map.height + 1):
+        for x in range(-1, map.width + 1):
+            var c := Vector2i(x, y)
+            if map.in_bounds(c) and not map.is_blocked_cell(c):
+                continue
+            var open_south := map.in_bounds(c + Vector2i.DOWN) and not map.is_blocked_cell(c + Vector2i.DOWN)
+            var count := 1 if open_south else 2
+            for k in count:
+                var roll := r.randf()
+                var tree: Image
+                if roll < 0.06:
+                    tree = CazArt.pick(CazArt.DEAD_TREES, r)
+                elif roll < 0.30:
+                    tree = CazArt.pick(CazArt.SMALL_TREES, r)
+                else:
+                    tree = CazArt.pick(CazArt.BIG_TREES, r)
+                var feet := c * cell + Vector2i(r.randi_range(6, 42), (44 if open_south else r.randi_range(14, 46)) - k * 18)
+                CazArt.blit_feet(out, tree, feet)
+    return ImageTexture.create_from_image(out)
+
+
+static func bake_fallback(map: NavMap, art_seed: int) -> Texture2D:
     var fl := _img(TILE_DIR + "Floors_Tiles.png")
     var cell := NavMap.CELL
     var out := Image.create(map.width * cell, map.height * cell, false, Image.FORMAT_RGBA8)
