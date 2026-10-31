@@ -57,7 +57,7 @@ const HERO_MASS := 1.0
 const BOSS_MASS_MULT := 2.5                     # a boss resists knock-back far more than its size alone
 const CREATURE_SIZE := {
     "rat": "small", "bat": "small", "slime_green": "small", "slime_blue": "small", "orc_shaman": "standard",
-    "orc_brute": "large", "orc_chieftain": "large", "golem": "huge", "golem_magma": "huge", "trex": "huge",
+    "orc_brute": "large", "orc_chieftain": "large", "warlord": "large", "golem": "huge", "golem_magma": "huge", "trex": "huge",
 }
 
 
