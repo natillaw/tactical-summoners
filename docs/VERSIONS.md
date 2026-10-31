@@ -16,11 +16,22 @@ Las pruebas automáticas se ejecutan en GitHub (Godot 4.7.1 Linux) con cada push
 | **v8** | `ed3c5a7` | [ZIP](https://github.com/natillaw/tactical-summoners/archive/ed3c5a7.zip) | **Combate fase 3**: habilidades como datos (≈45), recurso por clase (Furia, Foco, Maná, Aguante), teclas **Q W E R** con botones, tiempos de lanzamiento (solo los rompe un aturdimiento), interrupciones, provocar, empujar, carga, teletransporte, zonas, estados Marcado y Regeneración; nacen con 1 habilidad y eligen 1 de 2-3 en niveles 5/10/20…; libros de habilidad (jefe, rescate, exploración, botín) y **Biblioteca**; guardado v8 | **18/18 PASS** — [ejecución](https://github.com/natillaw/tactical-summoners/actions/runs/41147327096) |
 | **v9** | `6558c35` | [ZIP](https://github.com/natillaw/tactical-summoners/archive/6558c35.zip) | **Cuartel general vivo:** reloj del pueblo, profesiones con nivel, trabajo con recetas (granja, tala, mina, cocina, taller, herrería, alquimia), almacén, camas reales, hambre/fatiga/estrés, hospital con médicos y enfermedades, taberna, obras por constructores con techo del Salón, mover edificios; **equipo** con rarezas, afijos, únicos y sets, botín y forja; guardado v9 | **20/20 PASS** — [ejecución](https://github.com/natillaw/tactical-summoners/actions/runs/41150421537) |
 | **v10** | `7bd7712` | [ZIP](https://github.com/natillaw/tactical-summoners/archive/7bd7712.zip) | **Animaciones de combate con los packs:** ataques por arma (tajos, flechas y bolas que vuelan), círculo mágico al lanzar, impactos y áreas propios de cada habilidad, auras de estado, zonas de humo/trampa/santuario, criaturas que atacan y se encogen con sus animaciones reales; arreglo del recorte de criaturas pequeñas y grandes; orcos voxel en los pisos 7-10 | **21/21 PASS** — [ejecución](https://github.com/natillaw/tactical-summoners/actions/runs/41152812930) |
+| **v11** | rama `feat/ui-and-art-unification` | [ZIP de la rama](https://github.com/natillaw/tactical-summoners/archive/refs/heads/feat/ui-and-art-unification.zip) | **UI y arte unificados:** pantalla de título, base 640×360 pixel-perfect, fuentes pixel, paneles y botones del kit, música y sonidos, HUD de expedición con minimapa, menú Esc sin pausa, revelación de invocación, ficha con pestañas, inventario, 8 ranuras de equipo, síntesis y sacrificio, criaturas normalizadas y jefe Grove Warlord (piso 5). Historia de Git nueva (repo v10) | **24/24 PASS** en local (Godot 4.7.2, `tools/last_test_run.txt`) |
 
 ## Qué probar a mano en cada versión (en Windows, con el editor o F5)
 ### v1 (estado original, como referencia)
 - Al abrir el Sandbox **no aparecen héroes** y sale un error en la consola (F-038, confirmado en GitHub).
 - "Living Headquarters → Explore Base" da error (F-001).
+
+### v11
+1. Abre el juego: pantalla de título con el portal. **New game** → bienvenida → la invocación se revela carta a carta (clic salta una, Skip todas) → resumen → Done.
+2. Pueblo: arriba los recursos con iconos; a la derecha los botones rápidos (menú, invocar, héroes, grupo, inventario, construir, torre, memorial, pasar día). Prueba **Build** y coloca un edificio.
+3. Héroes → clic en uno: pestañas Summary, Skills, Equipment (8 ranuras), Progression (ascensión, **síntesis** marcando héroes y **sacrificio** con confirmación), Profession, Relations.
+4. Inventario: pasa el ratón por un objeto (▲▼ contra el héroe elegido); clic = equipar, clic derecho = reciclar.
+5. Entra a un piso: abajo a la izquierda el grupo, en el centro **Q** (ataque) y **W/E/R**, a la derecha las órdenes; arriba a la derecha el minimapa (clic = mirar allí). El piso 5 tiene al Grove Warlord.
+6. **Esc** abre el menú y el juego **sigue corriendo**. En Options cambia volúmenes, temblor, tamaño de ventana ×2/×3/×4 y pantalla completa.
+7. Termina o escapa: pantalla de resultados con MVP.
+8. Escucha la música (título, pueblo, piso, jefe, resultados) y los sonidos de los botones.
 
 ### v10
 1. Entra a un piso. Cada clase golpea a su manera: el guerrero con un tajo, el pícaro con un corte curvo, el explorador lanza flechas que vuelan, el mago bolas arcanas y el clérigo golpes de maza.
