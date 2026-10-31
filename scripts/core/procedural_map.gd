@@ -327,7 +327,7 @@ func _compose(foes: Array, count: int, rng: RandomNumberGenerator, pack: Array =
 			var fit := foes.filter(func(id): return EnemyDefs.role_of(String(id)) == want)
 			by_role.append(String(fit[rng.randi_range(0, fit.size() - 1)]) if not fit.is_empty() else String(foes[rng.randi_range(0, foes.size() - 1)]))
 		return by_role
-	var front := foes.filter(func(id): return EnemyDefs.role_of(String(id)) in ["melee", "brute", "guard", "swarm"])
+	var front := foes.filter(func(id): return EnemyDefs.role_of(String(id)) in ["melee", "brute", "guard", "swarm", "assassin"])
 	var out: Array = []
 	var supports := 0
 	for k in count:

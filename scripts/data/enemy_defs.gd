@@ -8,7 +8,8 @@ extends RefCounted
 ## guard = holds a spot (leash) with armour; ranged = strikes from afar and backs off; support = heals
 ## hurt allies and stays behind them. status = applied to heroes its strike hits ({id, dur, mag}).
 
-const ROLES := ["swarm", "melee", "brute", "guard", "ranged", "support"]
+## assassin (master prompt D/H) = melee that always hunts the backline (healers, casters) and leaps to it.
+const ROLES := ["swarm", "melee", "brute", "guard", "ranged", "support", "assassin"]
 const DEFAULT := {"hp": 60, "atk": 12, "armor": 3, "mres": 2, "speed": 62.0, "role": "melee"}
 
 const TYPES := {
@@ -30,6 +31,16 @@ const TYPES := {
     "golem": {"hp": 320, "atk": 24, "armor": 10, "mres": 6, "speed": 40.0, "role": "brute", "skills": ["slam"]},
     "orc_chieftain": {"hp": 150, "atk": 14, "armor": 6, "mres": 3, "speed": 60.0, "role": "brute", "skills": ["slam", "rally"]},
     "warlord": {"hp": 120, "atk": 13, "armor": 5, "mres": 3, "speed": 58.0, "role": "brute", "skills": ["slam", "rally"]},   # floor 5 boss (make_boss scales it)
+    # master prompt H (2026-10-31): the bandit band, Tiny Pixel Fantasy layers (BanditArt). Same ash-brown
+    # clothes for all, red scarf; told apart by silhouette and weapon.
+    "bandido_maton": {"hp": 85, "atk": 14, "armor": 3, "mres": 1, "speed": 54.0, "role": "melee", "windup": 1.0, "recover": 0.9},
+    "bandido_arquero": {"hp": 45, "atk": 9, "armor": 1, "mres": 1, "speed": 66.0, "role": "ranged", "skills": ["aimed_shot"]},
+    "bandido_degollador": {"hp": 55, "atk": 12, "armor": 1, "mres": 1, "speed": 86.0, "role": "assassin", "windup": 0.55, "skills": ["leap"]},
+    "bandido_bruto": {"hp": 150, "atk": 11, "armor": 8, "mres": 2, "speed": 48.0, "role": "guard", "skills": ["slam"]},
+    "bandido_mago": {"hp": 40, "atk": 8, "armor": 0, "mres": 4, "speed": 56.0, "role": "ranged", "skills": ["fireball"]},
+    "bandido_chaman": {"hp": 50, "atk": 4, "armor": 1, "mres": 4, "speed": 50.0, "role": "support", "skills": ["mend", "ward"]},
+    "capitan_bandido": {"hp": 140, "atk": 15, "armor": 6, "mres": 3, "speed": 60.0, "role": "brute", "skills": ["slam", "rally"]},
+    "jefe_baron_carmesi": {"hp": 220, "atk": 18, "armor": 8, "mres": 5, "speed": 58.0, "role": "brute", "skills": ["slam"]},
     # training ground (Pixel Crawler mobs): the old shared numbers, with roles
     "orc": {"role": "melee"},
     "orc_rogue": {"role": "melee", "speed": 72.0},
@@ -88,7 +99,7 @@ const FOCUS_HEALER := 130.0       # a cleric is worth more: kill the healer
 const FOCUS_ISOLATED := 120.0     # a hero with no ally within ISOLATION_RADIUS
 const FOCUS_LOW_HP := 60.0        # x (1 - hp fraction): finish the hurt
 const ISOLATION_RADIUS := 130.0
-const FOCUS_ROLE_MULT := {"swarm": 1.5, "melee": 0.8, "ranged": 1.2, "support": 0.0, "guard": 0.0, "brute": 0.3}
+const FOCUS_ROLE_MULT := {"assassin": 3.0, "swarm": 1.5, "melee": 0.8, "ranged": 1.2, "support": 0.0, "guard": 0.0, "brute": 0.3}
 const FOCUS_STICKY := 40.0        # the current focus keeps this bonus (no target ping-pong)
 ## A pack's "caller" (job) howls for reinforcements: if it is still alive CALLER_DELAY s after its group
 ## is alerted, CALLER_ADDS creatures of the area join next to it (once). Kill it first.
@@ -122,6 +133,10 @@ const SKILLS := {
         "zone": {"status": "poison", "life": 6.0, "dur": 2.0, "mag": 3.0}, "desc": "Leaves a poison cloud: do not stand in it."},
     "aimed_shot": {"name": "Aimed Shot", "cast": 1.7, "cd": 8.0, "range": 230.0, "target": "hero_area", "radius": 28.0, "min_floor": 3,
         "dmg_mult": 2.4, "desc": "A long aim at one hero: move that hero, or stun the archer."},
+    "fireball": {"name": "Fireball", "cast": 1.3, "cd": 7.0, "range": 230.0, "target": "hero_area", "radius": 60.0, "min_floor": 1,
+        "dmg_mult": 2.0, "element": "fire", "desc": "A ball of fire on a group of heroes: do not bunch up."},
+    "leap": {"name": "Leap", "cast": 0.7, "cd": 9.0, "range": 320.0, "target": "far_hero", "radius": 34.0, "min_floor": 1,
+        "dmg_mult": 1.6, "dash": true, "desc": "Jumps onto the furthest hero (the backline): guard your healer."},
     # --- boss mechanics (2026-10-31, raid style: each one asks the player for a specific answer) -------
     "whirlwind": {"name": "Whirlwind", "cast": 1.8, "cd": 13.0, "range": 125.0, "target": "self_area", "radius": 125.0, "min_floor": 1,
         "dmg_mult": 2.2, "desc": "Spins around itself: every melee hero must run out of the circle."},
@@ -134,6 +149,7 @@ const SKILLS := {
 }
 ## Bosses get these on top of their own skills (make_boss). Each floor boss teaches a few mechanics.
 const BOSS_SKILLS := {"warlord": ["whirlwind", "meteor", "blood_ritual"],
+    "capitan_bandido": ["whirlwind", "blood_ritual"], "jefe_baron_carmesi": ["whirlwind", "meteor", "doom"],
     "orc_chieftain": ["whirlwind", "meteor", "doom", "blood_ritual"]}
 ## A boss lives long enough to cycle its mechanics (whirlwind, meteor, doom, ritual): its health is
 ## BOSS_HP_MULT x its type's (it was 8; a 30 s fight never showed them). The enrage keeps it a DPS check.

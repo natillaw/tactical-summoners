@@ -448,7 +448,7 @@ func _nearest_hero(heroes: Array) -> SandboxHero:
     var best: SandboxHero = null
     var reach := perception * (EnemyDefs.ALERT_PERCEPTION if alerted else 1.0)
     var best_d := INF
-    var k := float(EnemyDefs.FOCUS_ROLE_MULT.get(role, 1.0)) if tactical else 0.0
+    var k := float(EnemyDefs.FOCUS_ROLE_MULT.get(role, 1.0)) if tactical or role == "assassin" else 0.0
     for h in heroes:
         if not h.alive:
             continue                          # downed heroes are not chased (no executions, D-036)
@@ -609,6 +609,8 @@ func _resolve_skill(heroes: Array) -> void:
                 var st: Dictionary = sk["status"]
                 a.apply_status(String(st["id"]), float(st["dur"]), float(st["mag"]), self)
         CombatFeel.shake(self, "small")
+    if bool(sk.get("dash", false)):
+        position = _aim + (position - _aim).normalized() * 18.0   # lands next to its prey
     if sk.has("heal_self_pct"):
         heal(roundi(float(max_hp) * float(sk["heal_self_pct"])))
         CombatVFX.play(parent, position + Vector2(0, -14), "heal_toxic", 1.4)
@@ -619,7 +621,9 @@ func _resolve_skill(heroes: Array) -> void:
             var blob := EnemyDefs.BLOB_MULT if caught.size() >= EnemyDefs.BLOB_COUNT else 1.0
             for h in caught:
                 var own := float(sk.get("target_mult", 1.0)) if h == _skill_hero else 1.0
-                h.take_hit(DamageInfo.make(float(atk) * float(sk["dmg_mult"]) * blob * own, "physical", self, crit_chance, combat_rng))
+                var hit := DamageInfo.make(float(atk) * float(sk["dmg_mult"]) * blob * own, "physical", self, crit_chance, combat_rng)
+                hit.element = String(sk.get("element", ""))
+                h.take_hit(hit)
                 if sk.has("status") and h.alive:
                     var st2: Dictionary = sk["status"]
                     h.apply_status(String(st2["id"]), float(st2["dur"]), float(st2["mag"]), self)
