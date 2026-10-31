@@ -39,7 +39,7 @@ static func generate(rng: RandomNumberGenerator, uid: int, ilvl: int, rarity: St
     if base_id == "":
         var pool: Array = []
         for b in ItemDefs.BASES:
-            if kind == "" or String(ItemDefs.BASES[b]["kind"]) == kind:
+            if (kind == "" or String(ItemDefs.BASES[b]["kind"]) == kind) and ItemDefs.base_open(String(b)):
                 pool.append(b)
         pool.sort()
         base_id = String(pool[rng.randi() % pool.size()])

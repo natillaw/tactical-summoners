@@ -113,16 +113,21 @@ func _init() -> void:
     check(g.equip(h, int(sw["uid"])) == "" and g.equip(h, int(shield["uid"])) == "", "sword and shield are equipped")
     check(g.equip(h, int(axe["uid"])) == "" and h.equipment.has("main_hand") and not h.equipment.has("off_hand") and g.stash_index(int(shield["uid"])) >= 0 and g.stash_index(int(sw["uid"])) >= 0, "a two-handed axe frees the off hand; both old items go back to the stash")
     check(g.equip(h, int(shield["uid"])) == "" and not h.equipment.has("main_hand") and g.stash_index(int(axe["uid"])) >= 0, "a shield takes the off hand back from the two-handed weapon")
-    check(g.equip(h, int(ring_a["uid"])) == "" and g.equip(h, int(ring_b["uid"])) == "" and h.equipment.has("ring1") and h.equipment.has("ring2"), "two rings take both ring slots")
+    # D-060: one ring slot is open for now (ring2 opens later): a second ring swaps with the first
+    check(g.equip(h, int(ring_a["uid"])) == "" and g.equip(h, int(ring_b["uid"])) == "" and h.equipment.has("ring1") and not h.equipment.has("ring2")
+        and g.stash_index(int(ring_a["uid"])) >= 0, "one open ring slot: a second ring swaps the first back to the stash (D-060)")
+    check(not ItemDefs.slot_open("hands") and not ItemDefs.slot_open("ring2") and not ItemDefs.slot_open("special") and ItemDefs.ACTIVE_SLOTS.size() == 8,
+        "8 equipment slots are open now; hands, ring2 and special are locked (D-060)")
     var in_stash: int = g.stash.size()
     var total: int = in_stash + h.equipment.size()
     check(g.unequip(h, "ring1") == "" and g.stash.size() + h.equipment.size() == total, "unequipping moves the item without copying it")
+    g.equip(h, int(ring_b["uid"]))
     var ingot0: int = int(g.hq_outputs["ingot"])
     g.salvage(int(axe["uid"]))
     check(g.stash_index(int(axe["uid"])) < 0 and int(g.hq_outputs["ingot"]) > ingot0, "salvage turns an item into ingots")
     while g.stash.size() < g.stash_cap():
         g.stash.append(ItemGen.generate(rng, g._next_uid(), 1, "common"))
-    check(g.unequip(h, "ring2") != "" and h.equipment.has("ring2"), "a full stash refuses more items (nothing is lost)")
+    check(g.unequip(h, "ring1") != "" and h.equipment.has("ring1"), "a full stash refuses more items (nothing is lost)")
     var r10: Dictionary = g.complete_floor(10, "boss")
     check(int(r10["left_behind"]) > 0 and (r10["items"] as Array).is_empty(), "tower loot that does not fit is reported as left behind")
     g.stash.clear()

@@ -54,6 +54,8 @@ var loadout: Array = []           # equipped ids, up to SkillDefs.MAX_SLOTS, in 
 var skill_choices: Array = []     # [{"level": int, "options": [ids]}], oldest first
 var ascension_fails: int = 0      # failed ascension attempts in a row (pity, ProgressionDefs)
 var trained_skills: int = 0       # skills learned at the Training Grounds
+var synth_bonus: Dictionary = {}  # D-061: permanent attribute points absorbed by synthesis {attr: n}
+var synthesis_history: Array = [] # [{"from": hero id, "name": String, "xp": int, "attr": String}]
 
 # Structured event ledger: [{seq, type, trust, obedience, info}], newest last, capped.
 var events: Array = []
@@ -424,8 +426,26 @@ func attributes() -> Dictionary:
             v *= float(mods.get(legacy, 1.0))
         for d in diseases:
             v *= float((EconomyDefs.DISEASES.get(String(d["id"]), {}).get("mods", {}) as Dictionary).get(k, 1.0))
-        out[k] = maxi(1, roundi(v))
+        out[k] = maxi(1, roundi(v) + int(synth_bonus.get(k, 0)))
     return out
+
+
+## All the experience this hero has gathered since level 1 (for synthesis).
+func total_xp() -> int:
+    var t := xp
+    for lv in range(1, level):
+        t += 40 + lv * lv * 6                    # same curve as xp_to_next()
+    return t
+
+
+## The attribute this hero is strongest in (what a synthesis passes on).
+func best_attribute() -> String:
+    var a := attributes()
+    var best := ""
+    for k in a:
+        if best == "" or int(a[k]) > int(a[best]):
+            best = String(k)
+    return best
 
 
 ## Combat stats derived from the attributes (CombatRules.derive). Keeps the legacy keys
@@ -483,6 +503,8 @@ func to_dict() -> Dictionary:
         "bag": bag.duplicate(),
         "ascension_fails": ascension_fails,
         "trained_skills": trained_skills,
+        "synth_bonus": synth_bonus.duplicate(),
+        "synthesis_history": synthesis_history.duplicate(true),
     }
 
 
@@ -538,6 +560,8 @@ static func from_dict(d: Dictionary) -> HeroData:
         h.skill_choices = intify(d.get("skill_choices", []) as Array)
         h.ascension_fails = int(d.get("ascension_fails", 0))
         h.trained_skills = int(d.get("trained_skills", 0))
+        h.synth_bonus = intify(d.get("synth_bonus", {}) as Dictionary)
+        h.synthesis_history = (d.get("synthesis_history", []) as Array).duplicate(true)
         h.ensure_skills()
     else:
         # save v7 or older (D-043..D-045): the class starter, plus the choices of every learn

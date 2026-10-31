@@ -991,11 +991,30 @@ func _show_result() -> void:
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 5)  # px
 	panel.add_child(vb)
-	var title := UIKit.label(result_text(), 16, UIKit.TEXT)
-	title.custom_minimum_size = Vector2(280, 0)  # px
-	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	vb.add_child(title)
-	vb.add_child(UIKit.button("Back to town", func(): back_requested.emit(), Vector2(560, 44)))
+	# D-063 results: headline, then a scrollable report; the MVP stands out in gold with its reason
+	if _hud != null:
+		_hud.visible = false
+	UIKit.music("results")
+	var lines := result_text().split("
+")
+	var head := UIKit.label(lines[0], 28, UIKit.ACCENT if mission_state != Mission.FAILED else UIKit.BAD)
+	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vb.add_child(head)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(360, 230)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	vb.add_child(scroll)
+	var body := VBoxContainer.new()
+	body.add_theme_constant_override("separation", 1)
+	scroll.add_child(body)
+	for i in range(1, lines.size()):
+		var ln := String(lines[i])
+		var mvp := ln.begins_with("MVP OF THE EXPEDITION")
+		var l := UIKit.label(ln, 20 if mvp else 14, ArtPalette.GOLD[3] if mvp else (UIKit.ACCENT if ln.begins_with("  *") else UIKit.TEXT))
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.custom_minimum_size = Vector2(345, 0)
+		body.add_child(l)
+	vb.add_child(UIKit.button("Back to town", func(): back_requested.emit(), Vector2(720, 40)))
 	_overlay = center
 
 

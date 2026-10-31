@@ -94,10 +94,25 @@ static func rarity_color(r: String) -> Color:
     return RARITIES.get(r, RARITIES["common"])["color"]
 
 
-## Which equipment slots a base can go in.
+## D-060: 8 slots are open now (they match the Dragon Regalia frames); hands, ring2 and special exist
+## in the data and saves but stay locked until opened (nothing is generated or equipped for them).
+const ACTIVE_SLOTS := ["main_hand", "off_hand", "head", "chest", "legs", "feet", "ring1", "amulet"]
+
+
+static func slot_open(slot: String) -> bool:
+    return ACTIVE_SLOTS.has(slot)
+
+
+## True when a base goes into an open slot (loot and crafting only make these for now).
+static func base_open(base_id: String) -> bool:
+    return not slots_for(base_id).is_empty()
+
+
+## Which open equipment slots a base can go in.
 static func slots_for(base_id: String) -> Array:
     var s := String(BASES[base_id]["slot"])
-    return ["ring1", "ring2"] if s == "ring" else [s]
+    var all: Array = ["ring1", "ring2"] if s == "ring" else [s]
+    return all.filter(func(x): return ACTIVE_SLOTS.has(x))
 
 
 static func item_label(item: Dictionary) -> String:

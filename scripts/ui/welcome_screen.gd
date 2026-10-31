@@ -70,3 +70,4 @@ func summon() -> void:
         grid.add_child(UIKit.label(line, 15, UIKit.ACCENT if hd.knows_prof("builder") else UIKit.TEXT))
     _box.add_child(UIKit.label("Beds: %d / %d. The highlighted builder already works on your village." % [Game.heroes.size(), Game.max_hero_capacity()], 14, UIKit.MUTED))
     _box.add_child(UIKit.button("Enter the village", func(): finished.emit(), Vector2(640, 48)))
+    add_child(SummonReveal.new(got))              # D-063: the ten arrive through the kit reveal, then this list

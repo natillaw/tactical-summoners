@@ -266,6 +266,94 @@ func attempt_promotion(h: HeroData) -> Dictionary:
     return {"ok": ok, "chance": chance, "reason": "" if ok else "the ascension failed"}
 
 
+# --- synthesis and sacrifice (D-061, spec HEROES_AND_SUMMONING §14) -----------------------------------
+
+## "" when `h` can be consumed now, else why not (dead, in the party = on an expedition, unknown).
+func consumable_block(h: HeroData) -> String:
+    if h == null or not heroes.has(h.id):
+        return "not in the roster"
+    if party.has(h.id):
+        return "%s is in the party: take them out first" % h.display_name()
+    return ""
+
+
+## What a synthesis would do, without doing it (the confirmation screen shows exactly this).
+func synthesis_preview(target: HeroData, sources: Array) -> Dictionary:
+    var p := {"ok": true, "reason": "", "xp": 0, "levels": 0, "attrs": {}, "lost": [], "warning": ""}
+    if target == null or not heroes.has(target.id):
+        return {"ok": false, "reason": "no target"}
+    if sources.is_empty() or sources.size() > ProgressionDefs.SYNTH_MAX_SOURCES:
+        return {"ok": false, "reason": "choose 1 to %d heroes to absorb" % ProgressionDefs.SYNTH_MAX_SOURCES}
+    var gain := 0
+    for s in sources:
+        var src := s as HeroData
+        if src == target:
+            return {"ok": false, "reason": "a hero cannot absorb itself"}
+        var why := consumable_block(src)
+        if why != "":
+            return {"ok": false, "reason": why}
+        var same := src.hero_class == target.hero_class
+        gain += roundi(float(src.total_xp()) * (ProgressionDefs.SYNTH_SAME_CLASS if same else ProgressionDefs.SYNTH_EFFICIENCY))
+        if same:
+            var a := src.best_attribute()
+            p["attrs"][a] = int(p["attrs"].get(a, 0)) + ProgressionDefs.SYNTH_ATTR_BONUS
+        p["lost"].append(src.display_name())
+    var copy := HeroData.from_dict(target.to_dict())
+    p["levels"] = copy.add_xp(gain)
+    p["xp"] = gain
+    p["capped"] = copy.is_max_level()
+    if heroes.size() - sources.size() < PARTY_SIZE:
+        p["warning"] = "fewer than %d heroes would be left" % PARTY_SIZE
+    return p
+
+
+## Synthesis: the target absorbs the sources (lossy, irreversible). Saves first; sources go to the
+## memorial with cause "sacrificed" and keep their identity. Returns the preview that was applied.
+func synthesize(target: HeroData, sources: Array) -> Dictionary:
+    var p := synthesis_preview(target, sources)
+    if not bool(p.get("ok", false)):
+        last_reason = String(p.get("reason", ""))
+        return p
+    save_game()                                     # checkpoint before an irreversible operation
+    for k in p["attrs"]:
+        target.synth_bonus[k] = int(target.synth_bonus.get(k, 0)) + int(p["attrs"][k])
+    target.add_xp(int(p["xp"]))
+    for s in sources:
+        var src := s as HeroData
+        target.synthesis_history.append({"from": src.id, "name": src.display_name(), "xp": int(p["xp"]), "attr": src.best_attribute()})
+        src.add_event("synthesized", {"into": target.id})
+        record_death(src, "sacrificed", "synthesis into %s" % target.display_name())
+    target.add_event("received_synthesis", {"sources": sources.size(), "xp": int(p["xp"])})
+    target.add_memory("synthesis", "Took in the strength of %s." % ", ".join(p["lost"]), "", 3)
+    _commit()
+    return p
+
+
+func sacrifice_preview(h: HeroData) -> Dictionary:
+    var why := consumable_block(h)
+    if why != "":
+        return {"ok": false, "reason": why}
+    var gain: Dictionary = (ProgressionDefs.SACRIFICE.get(h.stars, ProgressionDefs.SACRIFICE[1]) as Dictionary).duplicate()
+    for k in ProgressionDefs.SACRIFICE_CLASS.get(h.hero_class, {}):
+        gain[k] = int(gain.get(k, 0)) + int(ProgressionDefs.SACRIFICE_CLASS[h.hero_class][k])
+    return {"ok": true, "gain": gain, "warning": "fewer than %d heroes would be left" % PARTY_SIZE if heroes.size() - 1 < PARTY_SIZE else ""}
+
+
+## Sacrifice: the hero becomes tower materials (irreversible; memorial cause "sacrificed").
+func sacrifice(h: HeroData) -> Dictionary:
+    var p := sacrifice_preview(h)
+    if not bool(p.get("ok", false)):
+        last_reason = String(p.get("reason", ""))
+        return p
+    save_game()
+    for k in p["gain"]:
+        hq_outputs[k] = mini(storage_cap(), int(hq_outputs.get(k, 0)) + int(p["gain"][k]))
+    h.add_event("sacrificed", {"gain": p["gain"]})
+    record_death(h, "sacrificed", "sacrifice")
+    _commit()
+    return p
+
+
 ## Class skills a hero could learn at the Training Grounds now (deterministic choice of up to 3).
 func training_options(h: HeroData) -> Array:
     var pool: Array = []
@@ -376,7 +464,7 @@ func record_death(h: HeroData, cause: String = "", mission: String = "") -> bool
     for i in PARTY_SIZE:
         if party[i] == h.id:
             party[i] = ""
-    for other in party_heroes():
+    for other in (party_heroes() if cause != "sacrificed" else []):     # D-061: witnessing a sacrifice changes nothing (default)
         var oh := other as HeroData
         oh.add_event("ally_fell", {"name": h.display_name()}, -2, 0)
         oh.add_memory("witnessed_death", "Witnessed the fall of %s in combat." % h.display_name(), h.id, 3)
@@ -926,6 +1014,8 @@ func equip(h: HeroData, uid: int, slot: String = "") -> String:
         return "item not in the stash"
     var it: Dictionary = stash[i]
     var allowed := ItemDefs.slots_for(String(it["base"]))
+    if allowed.is_empty():
+        return "that slot opens later (D-060)"
     if slot == "":
         slot = String(allowed[0])
         for s in allowed:

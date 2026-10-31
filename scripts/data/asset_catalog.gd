@@ -53,9 +53,10 @@ const CREATURES := {
     "mushroom_purple": {"src": NINJA_ENEMIES + "Mushroom2/mushroom2.png", "layout": "grid4", "frame": 16, "scale": 2, "recolor": 70.0},
     "spider": {"src": NINJA_ENEMIES + "SpiderRed/SpriteSheet.png", "layout": "grid4", "frame": 16, "scale": 2},
     "goblin": {"src": NINJA_ENEMIES + "DemonGreen/", "layout": "char", "frame": 16, "scale": 2},
-    "hobgoblin": {"src": NINJA_ENEMIES + "DemonRed/", "layout": "char", "frame": 16, "scale": 3},
-    "orc_brute": {"src": NINJA_ENEMIES + "Bear/SpriteSheet.png", "layout": "grid4", "frame": 16, "scale": 3},
-    "golem": {"src": NINJA_ENEMIES + "Grey_Trex/SpriteSheet.png", "layout": "grid4", "frame": 16, "scale": 4},
+    # big creatures stay at x2-x3: at x4 the 16 px art turned into blocks next to Caz's x1 heroes (review)
+    "hobgoblin": {"src": NINJA_ENEMIES + "DemonRed/", "layout": "char", "frame": 16, "scale": 2},
+    "orc_brute": {"src": NINJA_ENEMIES + "Bear/SpriteSheet.png", "layout": "grid4", "frame": 16, "scale": 2},
+    "golem": {"src": NINJA_ENEMIES + "Grey_Trex/SpriteSheet.png", "layout": "grid4", "frame": 16, "scale": 3},
     # bosses (floors 5 and 10): strips facing the viewer; idle / walk (run) / hit (hurt) / attack
     "orc_chieftain": {"src": NINJA_BOSSES + "DemonCyclop/", "layout": "strips", "frame": 50, "scale": 2,
         "files": {"idle": "Idle.png", "run": "Walk.png", "hurt": "Hit.png"}},

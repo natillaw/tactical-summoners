@@ -28,11 +28,28 @@ var _cam_from: Vector2 = Vector2.ZERO
 var _dragging: bool = false
 var _moved: bool = false
 var moving: String = ""            # D-050: building being placed ("" = not in move mode)
-var placing_new: bool = false      # the building being placed is a NEW construction (free placement)
+var placing_new: bool = false
+var _res_row: HBoxContainer = null
+var _menu: GameMenu = null
+const RES_ICONS := [["res_food", "food", "Meals: everyone eats every day"], ["res_wood", "wood", "Wood: construction and the workshop"],
+    ["res_stone", "stone", "Stone: construction"], ["res_gem", "@gems", "Gems: summoning"],
+    ["res_promotion_stone", "@stones", "Promotion stones"], ["res_skill_book", "@books", "Training books"]]
+
+
+static func _res_value(key: String) -> int:
+    match key:
+        "@gems":
+            return Game.gems
+        "@stones":
+            return Game.stones
+        "@books":
+            return Game.books
+    return int(Game.hq_outputs.get(key, 0))      # the building being placed is a NEW construction (free placement)
 var _move_msg: Label
 
 
 func _ready() -> void:
+    UIKit.music("town")
     clip_contents = true
     var container := SubViewportContainer.new()
     container.stretch = true
@@ -122,25 +139,31 @@ func _process(delta: float) -> void:
 
 
 func _build_ui() -> void:
-    var top := HBoxContainer.new()
-    top.position = Vector2(6, 4)  # px
-    top.add_theme_constant_override("separation", 5)  # px
+    # D-063 top bar: the village's resources with the kit icons (tooltip = what it is and how it moves)
+    var top := VBoxContainer.new()
+    top.position = Vector2(4, 4)
+    top.add_theme_constant_override("separation", 2)
     add_child(top)
-    var menu_btn := UIKit.button("Menu", func(): navigate.emit("menu", 0), Vector2(90, 34))
-    menu_btn.focus_mode = Control.FOCUS_NONE
-    top.add_child(menu_btn)
     var res_panel := PanelContainer.new()
     top.add_child(res_panel)
-    _res = UIKit.label("", 14, UIKit.ACCENT)
-    res_panel.add_child(_res)
-    var build_btn := UIKit.button("Build", show_build_menu, Vector2(90, 34))
-    build_btn.focus_mode = Control.FOCUS_NONE
-    build_btn.tooltip_text = "Choose a new building and place it anywhere near the town"
-    top.add_child(build_btn)
-    var day_btn := UIKit.button("Pass a day", func(): Game.pass_time(24), Vector2(110, 34))
-    day_btn.focus_mode = Control.FOCUS_NONE
-    day_btn.tooltip_text = "Let the town work, eat, sleep and heal for 24 hours"
-    top.add_child(day_btn)
+    _res_row = HBoxContainer.new()
+    _res_row.add_theme_constant_override("separation", 6)
+    res_panel.add_child(_res_row)
+    _res = UIKit.label("", 12, UIKit.MUTED)          # the clock and the other resources in text
+    # quick access: every main screen one click away (icons with their name in the tooltip)
+    var quick := HBoxContainer.new()
+    quick.add_theme_constant_override("separation", 2)
+    top.add_child(quick)
+    for q in [["order_retreat", "Menu (Esc)", func(): open_menu()],
+            ["rarity_gem_epic", "Summon heroes", func(): navigate.emit("summon", 0)],
+            ["social_bond", "Heroes (roster, training, ascension)", func(): navigate.emit("roster", 0)],
+            ["order_follow", "Party: the five who go up", func(): navigate.emit("party", 0)],
+            ["res_skill_book", "Inventory and equipment stash", func(): navigate.emit("inventory", 0)],
+            ["order_interact", "Build (place it anywhere near the village)", show_build_menu],
+            ["order_explore", "Tower gate: choose a floor", func(): select_building("tower_gate")],
+            ["status_downed", "Memorial of the fallen", func(): navigate.emit("memorial", 0)],
+            ["star_full", "Pass a day: the village works, eats, sleeps and heals for 24 hours", func(): Game.pass_time(24)]]:
+        quick.add_child(UIKit.icon_button(AssetCatalog.icon(String(q[0])), String(q[1]), q[2]))
     _move_msg = UIKit.label("", 15, UIKit.ACCENT)
     _move_msg.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
     _move_msg.position += Vector2(-100, 26)  # px
@@ -171,10 +194,22 @@ func _build_ui() -> void:
 
 func _refresh() -> void:
     var st := Game.hq_outputs
-    _res.text = "%s   Mat %d  Food %d  Grain %d  Wood %d  Stone %d  Ore %d  Iron %d  Herb %d  Med %d   Beds %d/%d" % [
-        Game.town_time_text(), int(st.get("materials", 0)), int(st.get("food", 0)), int(st.get("grain", 0)), int(st.get("wood", 0)),
-        int(st.get("stone", 0)), int(st.get("ore", 0)), int(st.get("ingot", 0)), int(st.get("herb", 0)), int(st.get("medicine", 0)),
-        Game.heroes.size(), Game.max_hero_capacity()]
+    if _res_row != null:
+        for c in _res_row.get_children():
+            c.queue_free()
+        _res_row.add_child(UIKit.label(Game.town_time_text(), 14, UIKit.ACCENT))
+        for r in RES_ICONS:
+            var v := _res_value(String(r[1]))
+            _res_row.add_child(UIKit.icon(AssetCatalog.icon(String(r[0])), "%s: %d" % [String(r[2]), v]))
+            _res_row.add_child(UIKit.label(str(v), 14, UIKit.TEXT))
+        var beds := UIKit.label("Beds %d/%d" % [Game.heroes.size(), Game.max_hero_capacity()], 14, UIKit.TEXT)
+        beds.tooltip_text = "Heroes / beds. More beds: build or upgrade dormitories."
+        beds.mouse_filter = Control.MOUSE_FILTER_PASS
+        _res_row.add_child(beds)
+        var others := "Mat %d · Ore %d · Herb %d · Iron %d · Potions %d" % [int(st.get("materials", 0)), int(st.get("ore", 0)), int(st.get("herb", 0)), int(st.get("ingot", 0)), int(st.get("potion", 0))]
+        var o := UIKit.label(others, 12, UIKit.MUTED)
+        _res_row.add_child(o)
+    _res.text = Game.town_time_text()
     if selected != "":
         _show_panel(selected)
 
@@ -627,6 +662,20 @@ func _clamp_cam(p: Vector2) -> Vector2:
     return Vector2(clampf(p.x, 0.0, ws.x), clampf(p.y, 0.0, ws.y))
 
 
+## Esc menu over the village (D-062: the town clock keeps running).
+func open_menu() -> void:
+    if _menu != null and is_instance_valid(_menu):
+        _menu.close()
+        return
+    _menu = GameMenu.new()
+    _menu.leave_label = "Title screen"
+    _menu.leave_requested.connect(func(_to): navigate.emit("title", 0))
+    add_child(_menu)
+
+
 func _unhandled_key_input(event: InputEvent) -> void:
+    if event is InputEventKey and event.pressed and (event as InputEventKey).keycode == KEY_ESCAPE and moving == "":
+        open_menu()
+        return
     if moving != "" and event is InputEventKey and event.pressed and (event as InputEventKey).keycode == KEY_ESCAPE:
         cancel_move()
