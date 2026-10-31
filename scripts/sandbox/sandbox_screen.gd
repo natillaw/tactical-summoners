@@ -347,6 +347,7 @@ func _setup_mission() -> void:
 				boss = enemies[0]
 			if boss != null:
 				boss.make_boss(String(TowerExpedition.get_floor_config(floor_number).get("boss_name", "Orc Chieftain")))
+				boss.boss_phase.connect(_on_boss_phase)
 		"exploration":
 			var spread := _clue_rooms()
 			if spread.size() >= 3:
@@ -402,6 +403,23 @@ func _clue_rooms() -> Array[Vector2i]:
 		out.append(cands[best])
 		cands.remove_at(best)
 	return out
+
+
+## #8: the boss calls its warband: creatures around it wake and come, and new ones join beside it.
+func _on_boss_phase(b: SandboxEnemy, phase: int) -> void:
+	var ph: Dictionary = EnemyDefs.BOSS_PHASES[phase]
+	for e in living_enemies():
+		if e != b and e.position.distance_to(b.position) <= float(ph["call_radius"]):
+			e.alert()
+			e.home = b.position                     # guards leave their posts to defend the boss
+	var foes: Array = TowerExpedition.get_floor_config(floor_number)["foes"]
+	var pool: Array = foes.slice(1) if foes.size() > 1 else foes
+	for i in int(ph["adds"]):
+		var spot := map.nearest_walkable(b.position + Vector2.RIGHT.rotated(TAU * float(i) / float(ph["adds"]) + 0.4) * 70.0)
+		var e := _spawn_enemy(map.cell_of(spot), String(pool[(phase * 3 + i) % pool.size()]))
+		e.alert()
+		e.visible = fog == null or fog.is_visible(map.cell_of(e.position))
+	CombatFeel.shake(b, "medium")
 
 
 func mission_title() -> String:
@@ -701,13 +719,32 @@ func regroup_selected() -> void:
 	_mark(c, Color(0.6, 1.0, 0.6))
 
 
-## X: run to the extraction point, no fighting on the way.
+## X: run to the extraction point, no fighting on the way. #14 of the playtest: escaping used to leave
+## every downed ally behind (they die, D-036). Now each retreating hero first picks up the nearest fallen
+## ally within RETREAT_PICKUP (not one another hero is already helping), then both run for the exit.
+const RETREAT_PICKUP := 260.0
+
+
 func retreat_selected() -> void:
 	var exit := map.center_of(map.extract_cell)
+	var taken: Array = heroes.filter(func(x): return x.rescue_target != null).map(func(x): return x.rescue_target)
 	for i in selected.size():
+		var h: SandboxHero = selected[i]
 		var offset := Vector2.RIGHT.rotated(TAU * float(i) / float(maxi(1, selected.size()))) * 26.0
-		if not selected[i].order_retreat(exit + offset, map):
-			FloatingText.spawn(selected[i], "no way out", Color(1.0, 0.6, 0.4), false)
+		if h.rescue_target != null and h.then_retreat != Vector2.INF:
+			continue                              # already picking someone up on the way out (X pressed again)
+		var fallen_ally: SandboxHero = null
+		for d in heroes:
+			if d.downed and not d.dead and not taken.has(d) and d.position.distance_to(h.position) <= RETREAT_PICKUP \
+					and (fallen_ally == null or d.position.distance_to(h.position) < fallen_ally.position.distance_to(h.position)):
+				fallen_ally = d
+		if fallen_ally != null:
+			taken.append(fallen_ally)
+			h.order_rescue(fallen_ally)
+			h.then_retreat = exit + offset
+			continue
+		if not h.order_retreat(exit + offset, map):
+			FloatingText.spawn(h, "no way out", Color(1.0, 0.6, 0.4), false)
 	_mark(exit, Color(0.4, 1.0, 0.7))
 
 

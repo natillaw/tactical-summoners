@@ -81,11 +81,13 @@ func _init() -> void:
     chef.init_professions()
     check(chef.prof_level("cook") == ProfessionDefs.PAST_LIFE_LEVEL and chef.passion == "cook", "a former chef starts as a level-2 cook with passion")
     check(TownTables.best_workplaces("occupation.chef").has("kitchen"), "a chef is an expert at the kitchen")
+    check(TownTables.best_workplaces("cook").has("kitchen") and TownTables.best_workplaces("carpenter").has("workshop")
+        and TownTables.best_workplaces("occupation.tailor").has("workshop"), "workplaces also answer for profession ids (#16)")
 
     # floor rewards and tower progress
     var gems0: int = g.gems
     var r: Dictionary = g.complete_floor(4)
-    check(int(r["materials"]) == 60 and g.gems == gems0 + 200 and int(g.tower_cleared["4"]) == 1, "completing floor 4 pays and is recorded")
+    check(int(r["materials"]) == ProgressionDefs.FLOOR_MATERIALS_BASE + 4 * ProgressionDefs.FLOOR_MATERIALS_PER_FLOOR and g.gems == gems0 + 200 and int(g.tower_cleared["4"]) == 1, "completing floor 4 pays and is recorded")
 
     # save v5 -> v6 migration keeps old facility levels and adds the new buildings
     var v5 := {"version": 5, "gems": 1, "stones": 1, "books": 1, "pity4": 0, "pity5": 0, "pull_count": 0,

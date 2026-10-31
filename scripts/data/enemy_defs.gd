@@ -72,6 +72,26 @@ const AMBUSH_WAKE := 90.0         # an ambusher stays hidden and still until a h
 const ALERT_PERCEPTION := 1.6     # an alerted group sees further (one of them was attacked or spotted you)
 const FLOOR_SCALE := 0.08         # +8% health and damage per floor above the first
 
+## #8 of the playtest: a boss used to be a big bag of health; a squad could run straight to it and win
+## in a minute. Now it fights in phases: at each health threshold it calls its warband (every creature
+## within CALL_RADIUS is alerted and `adds` new ones of the floor join next to it); the last phase also
+## enrages it (faster wind-up and harder blows).
+const BOSS_PHASES := [
+    {"at": 0.6, "adds": 2, "call_radius": 650.0},
+    {"at": 0.3, "adds": 3, "call_radius": 900.0, "enrage_atk": 1.25, "enrage_windup": 0.8},
+]
+
+
+## Health and damage multiplier of a floor's creatures: the floor's "scale" (TowerExpedition) or, when it
+## has none, 1 + FLOOR_SCALE per floor above the first. #7 of the playtest: with +8% per floor floors 2-4
+## never downed a hero (lowest HP 70-100%); they now ramp faster while floor 5 keeps its old strength
+## (its boss phases already make it the hardest fight).
+static func floor_scale(floor_num: int) -> float:
+    if floor_num <= 0:
+        return 1.0
+    var cfg := TowerExpedition.get_floor_config(floor_num)
+    return float(cfg.get("scale", 1.0 + FLOOR_SCALE * float(maxi(0, floor_num - 1))))
+
 
 static func info(id: String) -> Dictionary:
     var d := DEFAULT.duplicate()

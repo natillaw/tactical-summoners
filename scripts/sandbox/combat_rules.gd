@@ -5,7 +5,7 @@ extends RefCounted
 ## All values are tuning placeholders.
 
 const HERO_MELEE_RANGE := 52.0
-const HERO_RANGED_RANGE := 190.0
+const HERO_RANGED_RANGE := 165.0   # #13 playtest: 190 out-ranged every creature by 40 px (ranged foes strike at 150) and won alone
 const HERO_PERCEPTION := 260.0
 const ARMOR_K := 5.0              # mitigation = 100 / (100 + ARMOR_K * armor)
 const CRIT_MULT := 1.5

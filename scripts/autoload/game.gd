@@ -9,7 +9,7 @@ const SAVE_VERSION := 10
 const PARTY_SIZE := 5            # slots 0-2 = front row, slots 3-4 = back row
 const XP_PER_BOOK := 100
 
-var gems: int = 2000
+var gems: int = SummonConfig.START_GEMS
 var stones: int = 5              # promotion stones
 var books: int = 5               # training books
 var pity4: int = 0
@@ -645,7 +645,7 @@ const BOOK_MISSIONS := ["rescue", "exploration"]
 
 
 func complete_floor(floor_num: int, mission: String = "") -> Dictionary:
-    var r := {"gems": 50 * floor_num, "stones": 1 + floor_num / 4, "materials": 20 + floor_num * 10, "books": 1 if floor_num % 2 == 0 else 0, "skill_books": [],
+    var r := {"gems": 50 * floor_num, "stones": 1 + floor_num / 4, "materials": ProgressionDefs.FLOOR_MATERIALS_BASE + floor_num * ProgressionDefs.FLOOR_MATERIALS_PER_FLOOR, "books": 1 if floor_num % 2 == 0 else 0, "skill_books": [],
         "food": 20 + 10 * floor_num}
     var key := str(floor_num)
     tower_cleared[key] = int(tower_cleared.get(key, 0)) + 1
@@ -1176,7 +1176,7 @@ func grant(add_gems: int, add_stones: int, add_books: int) -> void:
 
 func new_game() -> void:
     onboarded = false
-    gems = 2000
+    gems = SummonConfig.START_GEMS
     stones = 5
     books = 5
     pity4 = 0

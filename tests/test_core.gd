@@ -113,8 +113,10 @@ func _init() -> void:
     var g: Node = load("res://scripts/autoload/game.gd").new()
     g.autosave = false
     g.rng.seed = 777
+    g.gems = 2000
+    var multi_cost := SummonConfig.cost_for(SummonConfig.default_banner(), 10)
     var got: Array = g.pull(10)
-    check(got.size() == 10 and g.gems == 1900 and g.heroes.size() == 10, "x10 pull costs 100 gems and adds 10 heroes")
+    check(got.size() == 10 and g.gems == 2000 - multi_cost and g.heroes.size() == 10, "x10 pull costs %d gems and adds 10 heroes" % multi_cost)
     var ids := {}
     for hh in got:
         ids[hh.id] = true
@@ -126,7 +128,7 @@ func _init() -> void:
     var g2: Node = load("res://scripts/autoload/game.gd").new()
     g2.autosave = false
     g2.apply_save(JSON.parse_string(JSON.stringify(snapshot)))
-    check(g2.heroes.size() == 10 and g2.party[3] == got[0].id and g2.gems == 1900, "full save state restores")
+    check(g2.heroes.size() == 10 and g2.party[3] == got[0].id and g2.gems == 2000 - multi_cost, "full save state restores")
     var broke: Node = load("res://scripts/autoload/game.gd").new()
     broke.autosave = false
     broke.gems = 5

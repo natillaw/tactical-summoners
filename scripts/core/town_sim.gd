@@ -58,6 +58,8 @@ static func _hour(g: Object, deployed: Array, report: Dictionary) -> void:
     _socialize(g, social, at_work.get("common", []), rng, report)
     if hour == 0:
         _contagion(g, deployed, rng, report)
+    if hour == 8:
+        _hints(g, report)
     g.town_clock = clock + 1
 
 
@@ -338,3 +340,16 @@ static func _socialize(g: Object, social: Array, staff: Array, rng: RandomNumber
                 a.add_memory("bond", "Grew closer to %s over a meal at the tavern." % b.hero_name, b.id, 2)
                 b.add_memory("bond", "Grew closer to %s over a meal at the tavern." % a.hero_name, a.id, 2)
                 (report["events"] as Array).append("%s and %s are now %s." % [a.hero_name, b.hero_name, a.get_relationship(b.id)["status"]])
+
+
+## #12 of the playtest: what the tower brings home must have a visible use. Once a morning, if raw wood
+## and stone pile up and nothing turns them into building materials, the town log says what would.
+const RAW_PILE := 40
+
+
+static func _hints(g: Object, report: Dictionary) -> void:
+    var raw := int(g.hq_outputs.get("wood", 0)) + int(g.hq_outputs.get("stone", 0))
+    if raw >= RAW_PILE and int(g.building_level("workshop")) == 0:
+        (report["events"] as Array).append("Wood and stone are piling up (%d): a Workshop turns them into building materials." % raw)
+    elif raw >= RAW_PILE and (g.workers_at("workshop") as Array).is_empty():
+        (report["events"] as Array).append("Wood and stone are piling up (%d): put someone to work at the Workshop." % raw)

@@ -7,6 +7,7 @@ func _ready() -> void:
     Game.autosave = false
     Game.save_path = "user://smoke_save.json"
     Game.new_game()
+    Game.gems = 100000                       # a x10 summon costs more than the starting gems now (#10)
     var screen := SummonScreen.new()
     add_child(screen)
     await get_tree().process_frame

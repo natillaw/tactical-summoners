@@ -356,7 +356,7 @@ func _play_floor(floor_num: int, attempt: int) -> Dictionary:
                         skill_refusals[h.last_refusal] = int(skill_refusals.get(h.last_refusal, 0)) + 1
         # rescue downed allies
         for d in sb.heroes:
-            if d.downed and d.alive:
+            if d.downed and not d.dead:
                 var busy: bool = sb.heroes.any(func(x): return x.rescue_target == d)
                 if not busy:
                     var best = null

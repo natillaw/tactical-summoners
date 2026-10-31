@@ -18,6 +18,7 @@ func _new_game(seed_value: int, path: String) -> Node:
     g.autosave = false
     g.save_path = path
     g.rng.seed = seed_value
+    g.gems = 100000                          # enough for the many summons below (start gems: SummonConfig.START_GEMS)
     return g
 
 

@@ -22,7 +22,7 @@ const ROUGH_SLEEP_STRESS := 2
 const STARVING_STRESS := 3
 
 # --- storage -------------------------------------------------------------------------------------
-const STORAGE_BASE := 150              # per resource, + STORAGE_PER_LEVEL per warehouse level
+const STORAGE_BASE := 300              # per resource, + STORAGE_PER_LEVEL per warehouse level (#15: 150 was full by day 5)
 const STORAGE_PER_LEVEL := 150
 const STASH_BASE := 12                 # equipment slots in the stash, + per warehouse level
 const STASH_PER_LEVEL := 8
