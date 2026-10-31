@@ -39,4 +39,7 @@ shot 04_floor5_map -> /home/runner/work/tactical-summoners/tactical-summoners/sc
 shot 03_floor10_squad -> /home/runner/work/tactical-summoners/tactical-summoners/screenshots/03_floor10_squad.png err=0
 shot 04_floor10_map -> /home/runner/work/tactical-summoners/tactical-summoners/screenshots/04_floor10_map.png err=0
 shot 05_training_ground -> /home/runner/work/tactical-summoners/tactical-summoners/screenshots/05_training_ground.png err=0
+shot 06_combat_fx_a -> /home/runner/work/tactical-summoners/tactical-summoners/screenshots/06_combat_fx_a.png err=0
+shot 06_combat_fx_b -> /home/runner/work/tactical-summoners/tactical-summoners/screenshots/06_combat_fx_b.png err=0
+shot 06_combat_fx_c -> /home/runner/work/tactical-summoners/tactical-summoners/screenshots/06_combat_fx_c.png err=0
 CAPTURE DONE -> /home/runner/work/tactical-summoners/tactical-summoners/screenshots
