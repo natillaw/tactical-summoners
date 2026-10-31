@@ -34,9 +34,10 @@ func build_grid(rows: Array) -> void:
                 grid.set_point_solid(Vector2i(x, y), true)
 
 
-## True when a unit at `from` may be placed at `to` by a push or a nudge (not by a path): `to` is not a
-## wall, and a move into a diagonal cell does not squeeze through a corner the pathfinder refuses
-## (DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES), so nobody is ever pushed somewhere it cannot walk out of.
+## True when a unit at `from` may be placed at `to` by a push, a nudge or a steering step: `to` is not a
+## wall, and a move into a diagonal cell does not slip through a gap between two diagonal walls (both
+## side cells solid: a closed corner, the only way into a pocket). Rounding an ordinary corner (one side
+## cell solid) stays allowed, or creatures chasing along smoothed paths would stall at every bend.
 func can_step(from: Vector2, to: Vector2) -> bool:
     if is_blocked(to):
         return false
@@ -46,7 +47,7 @@ func can_step(from: Vector2, to: Vector2) -> bool:
     if absi(d.x) > 1 or absi(d.y) > 1:
         return has_line_of_sight(from, to)
     if d.x != 0 and d.y != 0:
-        return not is_blocked_cell(Vector2i(b.x, a.y)) and not is_blocked_cell(Vector2i(a.x, b.y))
+        return not (is_blocked_cell(Vector2i(b.x, a.y)) and is_blocked_cell(Vector2i(a.x, b.y)))
     return true
 
 
