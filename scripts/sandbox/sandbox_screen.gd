@@ -348,6 +348,14 @@ func _setup_mission() -> void:
 			if boss != null:
 				boss.make_boss(String(TowerExpedition.get_floor_config(floor_number).get("boss_name", "Orc Chieftain")))
 		"exploration":
+			var spread := _clue_rooms()
+			if spread.size() >= 3:
+				for c in spread:
+					var clue := SandboxRelic.new("clue")
+					clue.position = map.nearest_walkable(map.center_of(c))
+					_world.add_child(clue)
+					clues.append(clue)
+				return
 			var spots: Array[Vector2i] = []
 			for c in map.treasure_cells + map.enemy_spawn_cells:
 				if not spots.has(c) and Vector2(c).distance_to(Vector2(map.extract_cell)) > 8.0:
@@ -364,6 +372,38 @@ func _setup_mission() -> void:
 			_world.add_child(shrine)
 
 
+## Exploration (playtest D4): the three markers lie in three different rooms of the explore, danger and
+## objective bands, each as far as possible from the entrance and from the others, so finding them
+## means crossing the floor instead of one trip to the goal. Deterministic per floor (no RNG).
+func _clue_rooms() -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	if not (map is ProceduralMap):
+		return out
+	var start := Vector2(map.spawn_cells[0]) if not map.spawn_cells.is_empty() else Vector2.ZERO
+	var cands: Array[Vector2i] = []
+	for z in (map as ProceduralMap).room_zones:
+		if String(z["zone"]) != "entrance":
+			cands.append((z["rect"] as Rect2i).get_center())
+	cands = cands.filter(func(c): return not map.is_blocked_cell(c) and Vector2(c).distance_to(start) > 20.0)
+	while out.size() < 3 and not cands.is_empty():
+		var best := 0
+		var best_score := -INF
+		for i in cands.size():
+			var p := Vector2(cands[i])
+			var score := p.distance_to(start) * (0.5 if out.is_empty() else 0.0)
+			var nearest := INF
+			for o in out:
+				nearest = minf(nearest, p.distance_to(Vector2(o)))
+			if not out.is_empty():
+				score += nearest
+			if score > best_score:
+				best_score = score
+				best = i
+		out.append(cands[best])
+		cands.remove_at(best)
+	return out
+
+
 func mission_title() -> String:
 	return String(MISSION_TITLES.get(mission_type, MISSION_NAME))
 
@@ -374,6 +414,19 @@ func _spawn_wave() -> void:
 	for i in 2:
 		var c: Vector2i = map.enemy_spawn_cells[_rng.randi() % map.enemy_spawn_cells.size()]
 		_spawn_enemy(c, TowerExpedition.foe_for(floor_number, _rng.randi()))
+
+
+## "Clear the floor" (playtest B6): the last creatures can be ambushers, hidden until a hero walks next
+## to them, even in rooms already explored, so a first-time player could not find them. When only
+## REVEAL_LAST are left they are marked on the minimap (their position, not their sight).
+const REVEAL_LAST := 3
+
+
+func revealed_enemies() -> Array:
+	if mission_type != "combat" or mission_state != Mission.ACTIVE:
+		return []
+	var live := living_enemies()
+	return live if live.size() <= REVEAL_LAST else []
 
 
 func living_heroes() -> Array:
@@ -1325,9 +1378,10 @@ func _objective_text() -> String:
 func _mission_objective() -> String:
 	match mission_type:
 		"combat":
-			return "defeat every enemy (%d left)" % living_enemies().size()
+			var n := living_enemies().size()
+			return "defeat every enemy (%d left%s)" % [n, ", marked on the map" if not revealed_enemies().is_empty() else ""]
 		"boss":
-			return "defeat the Orc Chieftain"
+			return "defeat %s" % (boss.enemy_name if boss != null else "the boss")
 		"exploration":
 			var left := clues.filter(func(c): return c.visible).size()
 			return "discover the clues (%d left)" % left

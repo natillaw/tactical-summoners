@@ -16,6 +16,8 @@ var height: int = 0
 var state: PackedByteArray = PackedByteArray()
 var _lit: PackedInt32Array = PackedInt32Array()    # cell indexes VISIBLE after the last update
 var changed: bool = true
+var dirty: PackedInt32Array = PackedInt32Array()   # cells whose state changed since the view last drew
+var full_redraw: bool = true                        # the view must redraw every cell (new / unpacked)
 
 
 func _init(w: int = 0, h: int = 0) -> void:
@@ -48,6 +50,7 @@ func is_explored(c: Vector2i) -> bool:
 func update(viewers: Array, map: NavMap) -> Array:
     for i in _lit:
         state[i] = SEEN
+        dirty.append(i)
     _lit.clear()
     var found: Array = []
     for v in viewers:
@@ -69,6 +72,7 @@ func update(viewers: Array, map: NavMap) -> Array:
                         found[found.size() - 1] = int(found[found.size() - 1]) + 1
                     state[i] = VISIBLE
                     _lit.append(i)
+                    dirty.append(i)
     changed = true
     return found
 
@@ -111,3 +115,4 @@ func unpack(text: String) -> void:
         if bytes[i / 8] & (1 << (i % 8)):
             state[i] = SEEN
     changed = true
+    full_redraw = true

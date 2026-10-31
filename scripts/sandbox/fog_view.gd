@@ -24,16 +24,26 @@ func refresh() -> void:
         return
     if _img == null:
         _img = Image.create(fog.width, fog.height, false, Image.FORMAT_RGBA8)
-    for y in fog.height:
-        for x in fog.width:
-            var s := fog.state[y * fog.width + x]
-            _img.set_pixel(x, y, NEVER_COLOR if s == FogMap.NEVER else (SEEN_COLOR if s == FogMap.SEEN else Color(0, 0, 0, 0)))
+        fog.full_redraw = true
+    if fog.full_redraw:
+        for y in fog.height:
+            for x in fog.width:
+                _img.set_pixel(x, y, _color(fog.state[y * fog.width + x]))
+        fog.full_redraw = false
+    else:
+        for i in fog.dirty:                  # only the cells that changed since the last update
+            _img.set_pixel(i % fog.width, i / fog.width, _color(fog.state[i]))
+    fog.dirty.clear()
     if _tex == null:
         _tex = ImageTexture.create_from_image(_img)
     else:
         _tex.update(_img)
     fog.changed = false
     queue_redraw()
+
+
+static func _color(s: int) -> Color:
+    return NEVER_COLOR if s == FogMap.NEVER else (SEEN_COLOR if s == FogMap.SEEN else Color(0, 0, 0, 0))
 
 
 func _draw() -> void:

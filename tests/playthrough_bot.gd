@@ -9,6 +9,7 @@ const MAX_SIM := 30.0 * 60.0          # seconds of game time per attempt
 var ATTEMPTS := int(OS.get_environment("PT_ATTEMPTS")) if OS.get_environment("PT_ATTEMPTS") != "" else 3
 
 var log_lines: Array = []
+var BLIND := OS.get_environment("PT_BLIND") != ""      # first-time player: knows only what the fog revealed
 
 
 func say(s: String) -> void:
@@ -18,7 +19,7 @@ func say(s: String) -> void:
 
 func _ready() -> void:
     Game.autosave = false
-    Game.save_path = "user://playthrough.json"
+    Game.save_path = "user://playthrough_%d.json" % OS.get_process_id()
     Game.new_game()
     var first: Array = Game.starter_summons()
     say("== NEW ACCOUNT: %d starter heroes, gems %d, capacity %d" % [first.size(), Game.gems, Game.max_hero_capacity()])
@@ -194,6 +195,84 @@ func _centre(list: Array) -> Vector2:
     return c / float(maxi(1, list.size()))
 
 
+## Objective with full knowledge of the map (a replay: the player already knows the floor).
+func _goal(sb: SandboxScreen, c: Vector2, skip_targets: Array) -> Vector2:
+    var goal := Vector2.INF
+    match sb.mission_type:
+        "combat":
+            var best_d := INF
+            for e in sb.living_enemies():
+                if skip_targets.has(e):
+                    continue
+                var d: float = e.position.distance_to(c)
+                if d < best_d:
+                    best_d = d
+                    goal = e.position
+        "exploration":
+            var best_d := INF
+            for cl in sb.clues:
+                if cl.visible and cl.position.distance_to(c) < best_d:
+                    best_d = cl.position.distance_to(c)
+                    goal = cl.position
+        "retrieval", "rescue":
+            goal = sb.relic.position if sb.carrier == null else sb.map.center_of(sb.map.extract_cell)
+        "boss":
+            if sb.boss != null:
+                goal = sb.boss.position
+    return goal
+
+
+## Objective as a first-time player knows it: only what the squad has seen (fog of war).
+func _known_goal(sb: SandboxScreen, c: Vector2, skip_targets: Array, seen: Dictionary) -> Vector2:
+    var known := func(p: Vector2) -> bool: return sb.fog.is_explored(sb.map.cell_of(p))
+    var goal := Vector2.INF
+    match sb.mission_type:
+        "combat":
+            var best_d := INF
+            for e in sb.living_enemies():
+                if skip_targets.has(e) or not (seen.has(e) or sb.revealed_enemies().has(e)):
+                    continue
+                var d: float = e.position.distance_to(c)
+                if d < best_d:
+                    best_d = d
+                    goal = e.position
+        "exploration":
+            var best_d := INF
+            for cl in sb.clues:
+                if cl.visible and known.call(cl.position) and cl.position.distance_to(c) < best_d:
+                    best_d = cl.position.distance_to(c)
+                    goal = cl.position
+        "retrieval", "rescue":
+            if sb.carrier != null:
+                goal = sb.map.center_of(sb.map.extract_cell)
+            elif known.call(sb.relic.position):
+                goal = sb.relic.position
+        "boss":
+            if sb.boss != null and (seen.has(sb.boss) or known.call(sb.boss.position)):
+                goal = sb.boss.position
+    return goal
+
+
+## Nearest explored walkable cell next to never-seen fog (breadth-first from the squad).
+func _frontier(sb: SandboxScreen, from: Vector2i) -> Vector2:
+    var m := sb.map
+    var seen_c := {from: true}
+    var queue: Array[Vector2i] = [from]
+    var head := 0
+    while head < queue.size():
+        var cc: Vector2i = queue[head]
+        head += 1
+        for d in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+            var n: Vector2i = cc + d
+            if seen_c.has(n) or m.is_blocked_cell(n):
+                continue
+            seen_c[n] = true
+            if not sb.fog.is_explored(n):
+                return m.center_of(cc)
+            queue.append(n)
+    return Vector2.INF
+
+
 func _play_floor(floor_num: int, attempt: int) -> Dictionary:
     var cfg := TowerExpedition.get_floor_config(floor_num)
     var sb := SandboxScreen.new(floor_num)
@@ -220,6 +299,9 @@ func _play_floor(floor_num: int, attempt: int) -> Dictionary:
     var skip_targets: Array = []
     var first_contact := -1.0
     var hp_seen := {}
+    var seen := {}
+    var skip_nodes: Array = []
+    var first_full_explore := -1.0
     var hurt_by := {}
     while sb.mission_state == SandboxScreen.Mission.ACTIVE and t < MAX_SIM:
         sb.tick(DT)
@@ -259,6 +341,8 @@ func _play_floor(floor_num: int, attempt: int) -> Dictionary:
             continue
         var c := _centre(standing)
         var foes: Array = sb.visible_enemies()
+        for e in foes:
+            seen[e] = true
         var near_foes: Array = foes.filter(func(e): return e.position.distance_to(c) < 380.0)
         if not near_foes.is_empty() and first_contact < 0.0:
             first_contact = t
@@ -306,39 +390,34 @@ func _play_floor(floor_num: int, attempt: int) -> Dictionary:
                 sb.attack_move_selected(tgt.position)
             continue
         # objective
-        var goal := Vector2.INF
-        match sb.mission_type:
-            "combat":
-                var best_d := INF
-                for e in sb.living_enemies():
-                    if skip_targets.has(e):
-                        continue
-                    var d: float = e.position.distance_to(c)
-                    if d < best_d:
-                        best_d = d
-                        goal = e.position
-            "exploration":
-                var best_d := INF
-                for cl in sb.clues:
-                    if cl.visible and cl.position.distance_to(c) < best_d:
-                        best_d = cl.position.distance_to(c)
-                        goal = cl.position
-            "retrieval", "rescue":
-                goal = sb.relic.position if sb.carrier == null else sb.map.center_of(sb.map.extract_cell)
-            "boss":
-                if sb.boss != null:
-                    goal = sb.boss.position
-        # a gathering spot close by first
+        var goal := _known_goal(sb, c, skip_targets, seen) if BLIND else _goal(sb, c, skip_targets)
+        # a gathering spot close by first (only one the squad can see and walk to)
         for g in sb.nodes:
-            if not g.taken and is_instance_valid(g) and g.position.distance_to(c) < 260.0 and (sb.carrier == null or sb.mission_type == "combat"):
+            if is_instance_valid(g) and not g.taken and g.visible and not skip_nodes.has(g) and g.position.distance_to(c) < 260.0 \
+                    and (sb.carrier == null or sb.mission_type == "combat"):
+                if sb.map.find_path(c, g.position).is_empty():
+                    skip_nodes.append(g)
+                    continue
                 goal = g.position
                 break
+        if goal == Vector2.INF and BLIND:
+            goal = _frontier(sb, sb.map.cell_of(c))
+            if goal == Vector2.INF and first_full_explore < 0.0:
+                first_full_explore = t
         if t > 90.0 and t < 90.0 + THINK and sb.defeated == 0:
             say("  !! no kill after 90 s: centre %s goal %s path %d boss %s at %s blocked=%s heroes %s" % [str(sb.map.cell_of(c)),
                 str(sb.map.cell_of(goal)) if goal != Vector2.INF else "INF", sb.map.find_path(c, goal).size() if goal != Vector2.INF else -1,
                 sb.boss.type_id if sb.boss != null else "null", str(sb.map.cell_of(sb.boss.position)) if sb.boss != null else "-",
                 str(sb.map.is_blocked_cell(sb.map.cell_of(sb.boss.position))) if sb.boss != null else "-",
                 str(sb.heroes.map(func(h): return "%s:%s:%d" % [str(sb.map.cell_of(h.position)), h.order, h.path.size()]))])
+            for h in sb.heroes:
+                say("    hero %s pos %s can_move %s can_act %s path0 %s d0 %.0f dodge %.2f casting '%s' target %s carrying %s vel %.1f" % [h.hero.hero_name,
+                    str(h.position.round()), str(h.can_move()), str(h.can_act()), str(h.path[0].round()) if not h.path.is_empty() else "-",
+                    h.position.distance_to(h.path[0]) if not h.path.is_empty() else -1.0, h._dodge_t, h.casting, h.target.type_id if h.target != null else "-",
+                    str(h.carrying), h.velocity.length()])
+            say("    goal is node: %s ; save user://stuck_floor%d_%d.json" % [str(sb.nodes.any(func(g): return is_instance_valid(g) and g.position == goal)), floor_num, OS.get_process_id()])
+            Game.save_game()
+            DirAccess.copy_absolute(ProjectSettings.globalize_path(Game.save_path), ProjectSettings.globalize_path("user://stuck_floor%d_%d.json" % [floor_num, OS.get_process_id()]))
         if goal == Vector2.INF:
             continue
         if c.distance_to(stuck_ref) < 24.0:
@@ -368,7 +447,7 @@ func _play_floor(floor_num: int, attempt: int) -> Dictionary:
         var cc := _centre(sb.heroes.filter(func(h): return h.alive))
         say("    squad centre %s" % str(sb.map.cell_of(cc)))
         Game.save_game()
-        DirAccess.copy_absolute(ProjectSettings.globalize_path(Game.save_path), ProjectSettings.globalize_path("user://stuck_floor%d.json" % floor_num))
+        DirAccess.copy_absolute(ProjectSettings.globalize_path(Game.save_path), ProjectSettings.globalize_path("user://stuck_floor%d_%d.json" % [floor_num, OS.get_process_id()]))
         for e in sb.living_enemies():
             var p := sb.map.find_path(cc, e.position)
             say("    stuck foe %s at %s home %s path_len %d last_pt %s blocked=%s state=%s" % [e.type_id, str(sb.map.cell_of(e.position)),
@@ -376,6 +455,8 @@ func _play_floor(floor_num: int, attempt: int) -> Dictionary:
                 str(sb.map.is_blocked_cell(sb.map.cell_of(e.position))), str(e.get("state"))])
         for e in sb.living_enemies().slice(0, 6):
             say("    left: %s at %s dormant=%s visible=%s" % [e.type_id, str(sb.map.cell_of(e.position)), str(e.dormant), str(e.visible)])
+    if BLIND:
+        say("  explored %.0f%% of the floor" % (sb.fog.explored_fraction() * 100.0))
     say("  RESULT %s in %d:%02d (first contact %.0fs), killed %d/%d, downs %d, fallen %s, min hp %.0f%%, skills used %d" % [outcome,
         int(t) / 60, int(t) % 60, first_contact, sb.defeated, sb.enemies.size(), downs, str(sb.fallen), min_hp_frac * 100.0, skills_used])
     say("  damage taken by nearest source: %s" % str(hurt_by))
