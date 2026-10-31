@@ -1,0 +1,14 @@
+Sprite Kitchen - Combat Essentials
+Asset License
+
+You may use these assets in personal and commercial game projects.
+You may modify the assets, adapt their colours, and use them in multiple projects.
+Credit to Sprite Kitchen is appreciated but not required.
+
+You may not sell, upload or redistribute these assets as a standalone asset pack,
+including modified versions. Do not claim the original asset pack as your own work.
+Do not use these assets to train AI models.
+
+Creation process: AI-assisted effect design and documentation; procedural rendering
+through PixelLab's VFX Workbench. PixelLab image-generation models were not used
+to create the effect frames.

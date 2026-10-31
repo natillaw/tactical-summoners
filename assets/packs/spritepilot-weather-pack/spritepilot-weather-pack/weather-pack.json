@@ -1,0 +1,192 @@
+{
+  "name": "SpritePilot Weather & Ambient Pack",
+  "license": "CC0-1.0",
+  "source": "https://spritepilot.com/free-game-assets",
+  "layout": "Each PNG is one row of square frames, left to right. The file name gives the frame size and count: explosion-32px_strip10.png is 10 frames of 32 × 32.",
+  "effects": [
+    {
+      "id": "rain",
+      "name": "Rain",
+      "frames": 16,
+      "fps": 16,
+      "loop": true,
+      "tile": true,
+      "sheets": [
+        {
+          "file": "16px/rain-16px_strip16.png",
+          "frameWidth": 16,
+          "frameHeight": 16
+        },
+        {
+          "file": "32px/rain-32px_strip16.png",
+          "frameWidth": 32,
+          "frameHeight": 32
+        }
+      ],
+      "preview": "previews/rain-preview.gif"
+    },
+    {
+      "id": "rain-splash",
+      "name": "Rain splash",
+      "frames": 8,
+      "fps": 14,
+      "loop": false,
+      "sheets": [
+        {
+          "file": "16px/rain-splash-16px_strip8.png",
+          "frameWidth": 16,
+          "frameHeight": 16
+        },
+        {
+          "file": "32px/rain-splash-32px_strip8.png",
+          "frameWidth": 32,
+          "frameHeight": 32
+        }
+      ],
+      "preview": "previews/rain-splash-preview.gif"
+    },
+    {
+      "id": "lightning",
+      "name": "Lightning strike",
+      "frames": 9,
+      "fps": 15,
+      "loop": false,
+      "sheets": [
+        {
+          "file": "16px/lightning-16px_strip9.png",
+          "frameWidth": 16,
+          "frameHeight": 16
+        },
+        {
+          "file": "32px/lightning-32px_strip9.png",
+          "frameWidth": 32,
+          "frameHeight": 32
+        }
+      ],
+      "preview": "previews/lightning-preview.gif"
+    },
+    {
+      "id": "snow",
+      "name": "Snow",
+      "frames": 16,
+      "fps": 10,
+      "loop": true,
+      "tile": true,
+      "sheets": [
+        {
+          "file": "16px/snow-16px_strip16.png",
+          "frameWidth": 16,
+          "frameHeight": 16
+        },
+        {
+          "file": "32px/snow-32px_strip16.png",
+          "frameWidth": 32,
+          "frameHeight": 32
+        }
+      ],
+      "preview": "previews/snow-preview.gif"
+    },
+    {
+      "id": "falling-leaves",
+      "name": "Falling leaves",
+      "frames": 16,
+      "fps": 10,
+      "loop": true,
+      "tile": true,
+      "sheets": [
+        {
+          "file": "16px/falling-leaves-16px_strip16.png",
+          "frameWidth": 16,
+          "frameHeight": 16
+        },
+        {
+          "file": "32px/falling-leaves-32px_strip16.png",
+          "frameWidth": 32,
+          "frameHeight": 32
+        }
+      ],
+      "preview": "previews/falling-leaves-preview.gif"
+    },
+    {
+      "id": "cloud",
+      "name": "Drifting cloud",
+      "frames": 12,
+      "fps": 6,
+      "loop": true,
+      "sheets": [
+        {
+          "file": "16px/cloud-16px_strip12.png",
+          "frameWidth": 16,
+          "frameHeight": 16
+        },
+        {
+          "file": "32px/cloud-32px_strip12.png",
+          "frameWidth": 32,
+          "frameHeight": 32
+        }
+      ],
+      "preview": "previews/cloud-preview.gif"
+    },
+    {
+      "id": "wind-gust",
+      "name": "Wind gust",
+      "frames": 12,
+      "fps": 12,
+      "loop": true,
+      "sheets": [
+        {
+          "file": "16px/wind-gust-16px_strip12.png",
+          "frameWidth": 16,
+          "frameHeight": 16
+        },
+        {
+          "file": "32px/wind-gust-32px_strip12.png",
+          "frameWidth": 32,
+          "frameHeight": 32
+        }
+      ],
+      "preview": "previews/wind-gust-preview.gif"
+    },
+    {
+      "id": "fireflies",
+      "name": "Fireflies",
+      "frames": 16,
+      "fps": 10,
+      "loop": true,
+      "sheets": [
+        {
+          "file": "16px/fireflies-16px_strip16.png",
+          "frameWidth": 16,
+          "frameHeight": 16
+        },
+        {
+          "file": "32px/fireflies-32px_strip16.png",
+          "frameWidth": 32,
+          "frameHeight": 32
+        }
+      ],
+      "preview": "previews/fireflies-preview.gif"
+    },
+    {
+      "id": "bubbles",
+      "name": "Bubbles",
+      "frames": 16,
+      "fps": 10,
+      "loop": true,
+      "tile": true,
+      "sheets": [
+        {
+          "file": "16px/bubbles-16px_strip16.png",
+          "frameWidth": 16,
+          "frameHeight": 16
+        },
+        {
+          "file": "32px/bubbles-32px_strip16.png",
+          "frameWidth": 32,
+          "frameHeight": 32
+        }
+      ],
+      "preview": "previews/bubbles-preview.gif"
+    }
+  ]
+}
