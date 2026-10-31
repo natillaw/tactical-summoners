@@ -57,7 +57,7 @@ static func art_height(id: String) -> int:
 
 
 static func is_voxel(id: String) -> bool:
-    return not IDS.has(id) and not has_processed(id)
+    return not IDS.has(id) and not has_processed(id) and not BanditArt.has(id)
 
 
 ## D-063: creature drawn from the normalised strips of the new packs (tools/art_cohesion.gd --creatures).
@@ -104,7 +104,9 @@ static func build_frames(id: String) -> SpriteFrames:
     if _cache.has(id):
         return _cache[id]
     var sf: SpriteFrames = null
-    if has_processed(id):
+    if BanditArt.has(id):
+        sf = BanditArt.build_frames(id)
+    elif has_processed(id):
         sf = SpriteFrames.new()
         sf.remove_animation("default")
         var fps := {"idle": 4.0, "run": 8.0, "attack": 10.0, "hurt": 10.0, "death": 8.0}

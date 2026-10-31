@@ -12,7 +12,9 @@ const SHEET_W := 576
 const SHEET_H := 384
 
 ## Bottom to top. Keys match HeroData.appearance.
-const LAYER_ORDER := ["rear_hair", "body", "bottom", "shoes", "top", "eyes", "facial_hair", "front_hair", "hat", "held"]
+## Master prompt H: "accessory" (belt with dagger and pouch) after the top and "mask" (scarf, eye patch)
+## after the facial hair. The other layers keep their old order so existing heroes look the same.
+const LAYER_ORDER := ["rear_hair", "body", "bottom", "shoes", "top", "accessory", "eyes", "facial_hair", "mask", "front_hair", "hat", "held"]
 
 ## Named animations = row + list of columns inside the sheet.
 ## NOTE: only "idle" is used in this drop. The others are a first reading of the sheet
@@ -45,7 +47,7 @@ static var _tex_cache: Dictionary = {}
 static func _layer_image(rel: String) -> Image:
     if _img_cache.has(rel):
         return _img_cache[rel]
-    var path := ROOT + rel + ".png"
+    var path := rel if rel.begins_with("res://") else ROOT + rel + ".png"   # bandit layers: full path
     var img: Image = null
     var tex := load(path) as Texture2D
     if tex != null:
