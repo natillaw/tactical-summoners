@@ -55,6 +55,31 @@ func _ready() -> void:
             await _shot("04_floor%d_map" % f, 2.0)
     _main.call("show_screen", "sandbox", 0)
     await _shot("05_training_ground", 4.0)
+    # staged fight on floor 4: every hero fires a showy skill next to a foe; auras on some units
+    _main.call("show_screen", "sandbox", 4)
+    await get_tree().create_timer(1.0).timeout
+    var fight: Node = _find("SandboxScreen")
+    if fight != null:
+        var hs: Array = fight.get("heroes")
+        var es: Array = fight.get("enemies")
+        for i in es.size():
+            es[i].position = hs[i % hs.size()].position + Vector2(45 + (i / hs.size()) * 30, -10)
+        var looks := ["fire_burst", "cleave", "smite", "rapid_shot", "frost_nova"]
+        for i in hs.size():
+            var h = hs[i]
+            h.slots.clear()
+            h.slots.append(looks[i % looks.size()])
+            h.res = h.res_max
+            h.cds.clear()
+            h.use_skill_slot(0, es, hs)
+        if es.size() >= 3:
+            es[0].apply_status("burn", 6.0, 1.0)
+            es[1].apply_status("poison", 6.0, 1.0)
+            es[2].apply_status("stun", 3.0)
+        hs[1].apply_status("shield", 6.0, 40.0)
+        await _shot("06_combat_fx_a", 0.15)
+        await _shot("06_combat_fx_b", 0.3)
+        await _shot("06_combat_fx_c", 0.5)
     print("CAPTURE DONE -> ", _dir)
     get_tree().quit(0)
 

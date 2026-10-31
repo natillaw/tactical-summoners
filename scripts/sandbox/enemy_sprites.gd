@@ -11,8 +11,10 @@ const IDLE_W := 32
 const RUN_W := 64
 const DEATH_W := {"orc_warrior": 96, "skeleton_base": 96}     # every other mob: 64
 
-## Voxel Dungeon creatures (CC0, Cole Foster): side-view strips of 64 px frames, facing right.
-## Used by the forest floors (TowerExpedition "foes"). Some creatures hop or fly instead of walking.
+## Voxel Dungeon creatures (CC0, Cole Foster): side-view strips of SQUARE frames (48 px for bats, rats,
+## slimes, mushrooms and eyes; 64 px for most; 96-144 px for the trex and golems), facing right.
+## Used by the tower floors (TowerExpedition "foes"). Some creatures hop or fly instead of walking.
+## Besides idle/run/death they bring "attack" (attack, bite, cast, slam or roar) and "hurt".
 const VOXEL_ROOT := "res://assets/packs/voxel-dungeon-pack-full/creatures/sheets/"
 const VOXEL_W := 64
 const VOXEL_SCALE := 1.0
@@ -67,9 +69,15 @@ static func build_frames(id: String) -> SpriteFrames:
         if idle != null and run != null and death != null:
             sf = SpriteFrames.new()
             sf.remove_animation("default")
-            _add(sf, "idle", idle, VOXEL_W, 8.0, true)
-            _add(sf, "run", run, VOXEL_W, 10.0, true)
-            _add(sf, "death", death, VOXEL_W, 10.0, false)
+            _add(sf, "idle", idle, idle.get_height(), 8.0, true)
+            _add(sf, "run", run, run.get_height(), 10.0, true)
+            _add(sf, "death", death, death.get_height(), 10.0, false)
+            var attack := _voxel_sheet(id, ["attack", "bite", "cast", "slam", "roar"])
+            if attack != null:
+                _add(sf, "attack", attack, attack.get_height(), 12.0, false)
+            var hurt := _voxel_sheet(id, ["hurt"])
+            if hurt != null:
+                _add(sf, "hurt", hurt, hurt.get_height(), 14.0, false)
     elif available(id):
         var idle := load(ROOT + id + "/idle.png") as Texture2D
         var run := load(ROOT + id + "/run.png") as Texture2D

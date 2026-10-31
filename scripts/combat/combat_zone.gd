@@ -36,6 +36,13 @@ static func spawn(parent: Node, at: Vector2, p_radius: float, p_duration: float,
     z.z_index = -1
     if parent != null:
         parent.add_child(z)
+    var look: Array = CombatVFX.ZONE_FX.get(p_status, [])
+    if not look.is_empty():
+        CombatVFX.attach(z, String(look[0]), Vector2.ZERO, p_radius / float(look[1]), true)
+        if p_status == "weaken":                          # a smoke screen is several puffs
+            for k in 4:
+                var off := Vector2(cos(k * TAU / 4.0), sin(k * TAU / 4.0) * 0.55) * p_radius * 0.55
+                CombatVFX.attach(z, "smoke", off, p_radius / 50.0)
     return z
 
 
