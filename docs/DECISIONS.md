@@ -203,6 +203,32 @@ Los edificios nuevos se colocan donde el jugador quiera (estilo Clash of Clans):
 ### D-059 — El héroe controlado ataca solo con Q, apuntando con el ratón (2026-10-31, dueño; matiza D-040 y D-053)
 El héroe que controla el jugador **nunca ataca automáticamente**. Su ataque básico es **Q** hacia el cursor (mantener Q repite al ritmo de su velocidad de ataque): a distancia, el proyectil vuela hacia el cursor hasta su alcance y golpea al primer enemigo visible de su línea (los árboles lo paran); cuerpo a cuerpo, un golpe en abanico hacia el cursor (puede fallar). Mismo arma, alcance, daño e intervalo que la IA. El clic derecho del héroe controlado solo mueve. Las habilidades pasan a **W/E/R** y solo hay **3 ranuras** de habilidad activa (antes 4 en Q/W/E/R; matiza D-043). Una cuarta habilidad ya aprendida sigue conocida y puede equiparse en lugar de otra. Los héroes autónomos siguen atacando solos.
 
+### D-060 — 8 ranuras de equipo activas ahora, 11 en el futuro (2026-10-31, dueño; matiza D-039)
+Activas: arma principal, mano secundaria/escudo, cabeza, pecho, manos, pies, anillo y amuleto (`ItemDefs.ACTIVE_SLOTS`). Piernas, segundo anillo y accesorio especial existen en los datos y el guardado, pero están bloqueados ("próximamente"): no se equipan ni salen en botín o forja hasta abrirlos.
+
+### D-061 — Síntesis y sacrificio (2026-10-31, dueño: "implementa"; resuelve P-12 y fija G-21/G-22 con números provisionales)
+- **Síntesis:** un héroe objetivo absorbe de 1 a 3 héroes fuente. Recibe el 30 % de la experiencia total que acumularon (40 % si son de su misma clase), sin superar su tope de nivel, y **+1 permanente** al atributo más alto de cada fuente de su misma clase. No se transfieren habilidades.
+- **Sacrificio:** un héroe se convierte en materiales según sus estrellas y su clase (`ProgressionDefs.SACRIFICE`). Se pueden sacrificar todas las estrellas.
+- **Reglas comunes (spec §14):**
+  - Pantalla de confirmación con lo que se gana y se pierde.
+  - Guardado previo.
+  - Transaccional.
+  - Las fuentes van al memorial con causa "sacrificed" y conservan su identidad.
+  - No se puede usar a un héroe muerto ni a uno en una expedición.
+  - Avisa si quedarían menos de 5 héroes desplegables.
+  - Los testigos no cambian su Trust (por defecto, sin efecto).
+  - Eventos `synthesized`, `received_synthesis` y `sacrificed`.
+- P-11 (memoria al promocionar) sigue PENDIENTE.
+
+### D-062 — Esc abre un menú sin pausar; 5★ por ahora (2026-10-31, dueño)
+Esc abre el menú del juego (opciones, volver al pueblo o al título) y la simulación sigue corriendo (D-014). El techo de estrellas se queda en 5★; la migración a 7★ (D-029) se aplaza.
+
+### D-063 — Interfaz y arte unificados (2026-10-31, dueño; prompt de UI y arte)
+- Resolución base **640×360** con escalado entero: ×2 a 1280×720, ×3 a 1920×1080, ×4 a 2560×1440.
+- Las licencias de Raven Fantasy Icons, Enemy_Animations_Set, 2D Pixel Dungeon y m6x11 **las tiene el dueño**: se usan y se registran así.
+- Cute_Fantasy (no comercial) e items.zip (de origen desconocido) no se usan.
+- Teclas según D-059.
+
 ## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)
 
 | ID | Tema | Lo que existe / origen | Pregunta abierta |
@@ -219,7 +245,7 @@ El héroe que controla el jugador **nunca ataca automáticamente**. Su ataque b�
 | P-09 | **Rarezas** | Spec: Common/Uncommon/Rare/Epic/Legendary (provisional). Código: 1-5★. Regla vigente: rareza ≠ personalidad ni moralidad | ¿Nombres o estrellas? |
 | P-10 | **Biblioteca de habilidades (D-022)** | 130 habilidades en `docs/specs/SKILLS.md` (7 "implemented", 124 "spec"); regla 4 activas + 1 definitiva; nivel 1-70; ≥30 aprendibles y ≥20 exclusivas por clase de combate; cada skill con qué hace, cómo se juega en tiempo real, sinergia, etiquetas de enemigo; API prevista `SkillLibrary` + generador `tools/gen_skill_library.py` (**no existen en el repo**) | ¿Se mantiene la regla y se regenera para las clases de P-06? |
 | P-11 | **Memoria desbloqueada al promocionar** | D-018 "MAYBE": revelaría un recuerdo ya guardado en la generación, nunca inventaría hechos | Sí/No |
-| P-12 | **Significado de "sacrificio"** | Interpretación del agente: héroe → materiales | Confirmar |
+| P-12 | ~~Significado de "sacrificio"~~ **Resuelta por D-061** (héroe → materiales) | — | — |
 | P-13 | ~~Rescate de caídos~~ **RESUELTA → D-036** | Descrito en `SESSION_SUMMARY` (no existe en código); `rescue_hero()` existe solo como función de datos | ¿Es idea del dueño? ¿Cómo encaja con D-011? |
 | P-14 | **Ropa interior por defecto vs cuerpo base** al equipar armaduras | D-021 | Elegir |
 | P-15 | **Secretos y cadenas de descubrimiento** | `discover_secret()` idempotente, no heredable tras la muerte (solo datos + test) | Alcance y fuentes de secretos |
