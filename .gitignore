@@ -12,6 +12,7 @@ export_presets.cfg
 *.bak
 *.swp
 tools/last_test_run.txt
+tools/import_log.txt
 
 # Backup folders
 _backup_dropD/
