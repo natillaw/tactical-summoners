@@ -67,4 +67,18 @@ Rama: `ccr-cb2bbfa2-cg889y` (contenido de `feat/ui-and-art-unification`). Godot 
 | D4 | Las 3 pistas de exploración van a 3 salas distintas, lo más lejos posible de la entrada y entre sí. | `36c76c5` | `map safety`: 81 celdas de separación mínima en el piso de prueba. |
 | D1 | Pisos 1-10 un ~30 % más grandes por lado (~1,7× el área), con criaturas y puntos de recolección en la misma proporción. | `36c76c5` | Modo a ciegas del bot (`PT_BLIND=1`: solo sabe lo que reveló la niebla), 4 cuentas. Antes: P1 4,5-7 min, P2 6-7, P3 6-7, P4 7-8, P5 3,5-5,5. Después: P1 10-11,5, P2 8-13, P3 9-14, P4 9,5-15, P5 3,5-7. Una persona tardará algo más que el bot. Ir directo en una repetición sigue siendo corto (2-4 min). |
 
-Sin cambiar (decisiones de balance pendientes del dueño): D2, D3, D5-D12.
+## Balance y lógica (2026-10-31, D-064)
+| # | Cambio | Medido (bot con conocimiento del mapa, 4 cuentas nuevas) |
+|---|---|---|
+| D2 | Fuerza de las criaturas por piso: 1,0 / 1,25 / 1,45 / 1,65 / 1,35. | Vida mínima del piso 4: antes 70-100 %, ahora 35-85 %. Piso 5: 1-12 %, 1 muerte en 4 cuentas. Pisos 1-3 siguen siendo de entrada. |
+| D3 | Jefe con fases: llama a su banda al 60 % y al 30 %, y se enfurece al 30 %. | Ir directo al jefe sigue siendo posible, pero cuesta casi toda la vida de la escuadra. `map safety` comprueba las fases. |
+| D5 | 300 gemas iniciales y 100 por invocación (×10: 900). | El bucle de invocar y sacrificar ya no compensa: 100 gemas dan unos 36 materiales de media. |
+| D6 | Los pisos pagan 40 + 20 × piso en materiales; el santuario pide Salón 1 y cuesta 60. | Tras el piso 4 el bot tenía 96-126 materiales libres (antes 0-26). |
+| D7 | Taller a 30 con 2 puestos y aviso en el registro del pueblo cuando se acumulan madera y piedra. | — |
+| D8 | Alcance a distancia de 190 a 165; la furia empieza en 30, se enfría a 3/s y sube 10 por golpe. | `skills`, `orders` y `combat core` PASS. |
+| D9 | X recoge al caído más cercano (≤ 260 px) antes de huir. | `orders`: recoge, no se cancela con un segundo X y luego los dos huyen. |
+| D10 | Almacén base de 300. | — |
+| D11 | `best_workplaces` acepta los ids de profesión. | `town` PASS. |
+| D12 | Se borró el zip duplicado de la raíz (sigue en el historial: `7c2c8a9`). | Los 311 PNG estaban en `assets/pixel/caz-base/`. |
+
+Pruebas locales tras el balance: **25/25 PASS**.

@@ -12,7 +12,7 @@ Leyenda: **I** implementado (sin ejecutar) · **ID** implementado pero defectuos
 ## Por sistema
 | Sistema | Estado | Archivos | Notas |
 |---|---|---|---|
-| Invocación (banners, pity, coste atómico, log 200) | I | `scripts/data/summon_config.gd`, `scripts/core/gacha.gd`, `Game.pull` | Si se supera la capacidad del roster, el mensaje dice "Not enough gems" (F-015) |
+| Invocación (banners, pity, coste atómico, log 200) | I (2026-10-31: 300 gemas iniciales, 100 por invocación, D-064; probado: `summons v2`, `core`) | `scripts/data/summon_config.gd`, `scripts/core/gacha.gd`, `Game.pull` | Si se supera la capacidad del roster, el mensaje dice "Not enough gems" (F-015) |
 | Generación de héroes | ID | `scripts/core/hero_generator.gd`, `scripts/data/hero_tables.gd` | Misma semilla ≠ mismo héroe que en versiones previas sin subir `VERSION` (F-008) |
 | HeroData + snapshot en guardado | I | `scripts/core/hero_data.gd` | — |
 | Atributos y stats (D-035) | I (v6, probado: `combat core`) | `HeroData.attributes()`, `CombatRules.derive()` | FUE/AGI/VIT/INT/TEM → vida, poderes, armadura, M.RES, velocidad, cadencia, crítico, energía, resistencia a estados |

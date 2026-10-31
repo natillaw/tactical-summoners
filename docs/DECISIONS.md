@@ -229,6 +229,24 @@ Esc abre el menú del juego (opciones, volver al pueblo o al título) y la simul
 - Cute_Fantasy (no comercial) e items.zip (de origen desconocido) no se usan.
 - Teclas según D-059.
 
+### D-064 — Balance y lógica tras el playtest de 5 pisos (2026-10-31, dueño: "arregla también el balance del juego y cosas ilógicas 6 a 16")
+Números provisionales, en datos, medidos con `tests/playthrough_bot` (informe `docs/reports/PLAYTEST_5_FLOORS_REPORT.md`):
+- **Pisos para una primera partida a ciegas de 10-15 min** (D-056): ~1,7× el área, con la misma densidad de criaturas y recursos. Las pistas de exploración van a 3 salas distintas.
+- **Fuerza por piso** (`scale`): 1,0 / 1,25 / 1,45 / 1,65 / 1,35 (piso de jefe) y de 1,8 a 2,4 en los pisos 6-10.
+- **Jefe con fases** (resuelve en parte P-25, para todos los jefes): al 60 % llama a su banda (despierta a los cercanos y se unen 2), y al 30 % llama a 3 más y se enfurece (+25 % de daño, preparación ×0,8).
+- **Invocar**: 300 gemas iniciales y 100 por invocación (×10: 900).
+- **Economía**:
+  - Los pisos pagan 40 + 20 × piso en materiales.
+  - Santuario de Ascensión con Salón 1 y coste 60.
+  - Taller: coste 30 y 2 puestos.
+  - Almacén base de 300 por recurso.
+  - Aviso en el registro del pueblo cuando se acumulan madera y piedra sin un taller que las use.
+- **Combate**:
+  - Alcance a distancia 165.
+  - Furia: empieza en 30, se enfría a 3/s y sube 10 por golpe.
+- **Retirada (X)**: cada héroe recoge primero al caído más cercano a ≤ 260 px y luego los dos van a la salida. D-036 se mantiene: quien quede en el suelo lejos de la salida muere.
+- **Limpiar el piso**: con ≤ 3 criaturas, o si todas las que quedan están dormidas, se marcan en el minimapa.
+
 ## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)
 
 | ID | Tema | Lo que existe / origen | Pregunta abierta |
@@ -258,7 +276,7 @@ Esc abre el menú del juego (opciones, volver al pueblo o al título) y la simul
 | P-22 | **Construcción e instalaciones** | Código: cocina/taller/enfermería/sala común con niveles; edificios de pueblo (ayuntamiento, 2 dormitorios, herrería, cocina, enfermería) donde cada dormitorio da +5 de capacidad; REFERENCE #8 (estación de promoción, casa de conversión, archivo de reliquias de caídos) | ¿Un único modelo? ¿Qué instalaciones? |
 | P-23 | **Producción** | Código: cantidades fijas por trabajador; se pretendía bonificar por profesión | Reglas |
 | P-24 | **Diálogo de personalidad ("chatter")** | `HeroChatter` (frases por rasgo al entrar al piso); Roadmap: plantillas deterministas por evento; LLM solo opcional para verbalizar (Bible) | ¿Plantillas por evento? |
-| P-25 | **Jefe del piso 10** | Principios confirmados en D-014; nada diseñado | Diseño concreto |
+| P-25 | **Jefe del piso 10** | Principios confirmados en D-014; fases genéricas de llamada y furia en D-064 | Mecánicas propias del jefe del piso 10 y de la arena |
 | P-26 | **Política de duplicados, renombrar y liberar héroes** | Spec §9: recomendado = cada tirada es un héroe distinto, nombres repetidos con callsign (implementado) | Decidir si hay conversión en fragmentos, renombrado o liberación |
 | P-27 | **Pasivas en tiempo real** | 16 pasivas con texto heredado de turnos/filas | Reescribir para tiempo real |
 | P-28 | **Protocolo de agentes** | Antes: claims + STATE_HASH + `ts_sync.py` (archivado 2026-10-30). Ahora: ramas + PRs + evidencia | Confirmar el nuevo flujo |
