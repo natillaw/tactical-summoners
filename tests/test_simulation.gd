@@ -52,12 +52,12 @@ func _init() -> void:
     # 4. Headquarters assignment and turn processing
     g.assign_hq(h1.id, "kitchen")
     g.assign_hq(h2.id, "workshop")
-    check(h1.hq_assignment == "kitchen" and h1.activity_state == "working", "hero assigned to kitchen and working")
+    check(h1.hq_assignment == "kitchen" and h1.knows_prof("cook"), "hero assigned to the kitchen (learns Cook)")
     
     var initial_food: int = g.hq_outputs["food"]
     var initial_mat: int = g.hq_outputs["materials"]
     var turn_res: Dictionary = g.process_headquarters_turn()
-    check(g.hq_outputs["food"] > initial_food and g.hq_outputs["materials"] > initial_mat, "hq turn processing produces food and materials from assigned workers")
+    check(int(turn_res.get("food_produced", 0)) > 0 and int(turn_res.get("materials_produced", 0)) > 0, "a town day produces food and materials from assigned workers (%d food, %d materials now)" % [int(g.hq_outputs["food"]), int(g.hq_outputs["materials"])])
 
     # 5. Death witness memory & relationship impact
     g.assign_party(0, h1.id)

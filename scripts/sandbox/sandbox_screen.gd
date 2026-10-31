@@ -36,6 +36,8 @@ var enemies: Array[SandboxEnemy] = []
 var selected: Array[SandboxHero] = []
 var mission_state: Mission = Mission.ACTIVE
 var relic: SandboxRelic
+var expedition_applied: bool = false
+var town_report: Dictionary = {}
 var mission_type: String = "retrieval"      # from TowerExpedition (floor 0 = training ground relic)
 var mission_timer: float = 0.0
 var clues: Array[SandboxRelic] = []
@@ -584,6 +586,14 @@ func _end_mission(state: Mission) -> void:
 			reward = Game.complete_floor(floor_number, mission_type)
 		else:
 			Game.grant(REWARD_GEMS, REWARD_STONES, 0)
+	if real_squad and not expedition_applied:
+		# the town lives on while the squad was away; survivors come home tired, maybe sick (HQ Phase 1)
+		expedition_applied = true
+		var results: Array = []
+		for h in heroes:
+			if not h.dead:
+				results.append({"hero": h.hero, "downed": h.was_downed, "poisoned": h.was_poisoned})
+		town_report = Game.after_expedition(results, floor_number, fallen.size())
 	_show_result()
 
 
@@ -603,8 +613,17 @@ func result_text() -> String:
 			lines.append("Reward: %d gems, %d stones, %d materials, %d books" % [int(reward.get("gems", 0)), int(reward.get("stones", 0)), int(reward.get("materials", 0)), int(reward.get("books", 0))])
 			for b in reward.get("skill_books", []):
 				lines.append("Skill book found: %s" % String(SkillDefs.info(String(b)).get("name", b)))
+			for it in reward.get("items", []):
+				lines.append("Loot: %s" % String(it))
+			if int(reward.get("left_behind", 0)) > 0:
+				lines.append("%d item(s) left behind: the stash is full (upgrade the warehouse)" % int(reward["left_behind"]))
 		else:
 			lines.append("Reward: %d gems, %d stone (placeholder)" % [REWARD_GEMS, REWARD_STONES])
+	if not town_report.is_empty():
+		lines.append("Back in town: a day passed.")
+		var evs: Array = town_report.get("events", [])
+		for i in mini(4, evs.size()):
+			lines.append("  " + String(evs[i]))
 	return "\n".join(lines)
 
 

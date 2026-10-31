@@ -1,5 +1,5 @@
 extends SceneTree
-## Town buildings (D-030): build/upgrade costs, capacity, production by level, save v5 -> v6.
+## Town buildings (D-030, D-048): construction, Summoner's Hall caps, beds, rewards, save migration.
 ##   godot --headless --path . --script res://tests/test_town.gd
 
 var fails := 0
@@ -41,49 +41,45 @@ func _init() -> void:
             doors_ok = false
     check(doors_ok, "every building door is reachable from the plaza")
 
-    # build an unbuilt building
+    # building is construction work now (D-048): materials up front, then builders' hours
     check(g.building_level("alchemy") == 0, "alchemy lab starts unbuilt")
-    var cost: int = g.next_building_cost("alchemy")
+    check(not g.build_or_upgrade("alchemy") and g.last_reason.contains("Summoner's Hall level 2"), "the alchemy lab needs a level-2 Summoner's Hall")
+    var cost: int = g.next_building_cost("town_hall")
     g.hq_outputs["materials"] = cost - 1
-    check(not g.build_or_upgrade("alchemy") and g.building_level("alchemy") == 0, "cannot build without enough materials (nothing changes)")
+    check(not g.build_or_upgrade("town_hall") and g.building_level("town_hall") == 1 and g.last_reason.contains("materials"), "cannot start without enough materials (nothing changes)")
     g.hq_outputs["materials"] = cost + 5
-    check(g.build_or_upgrade("alchemy") and g.building_level("alchemy") == 1 and int(g.hq_outputs["materials"]) == 5, "building spends exactly its cost")
-    check(TownMap.new(g.town_buildings).is_blocked_cell((TownTables.info("alchemy")["plot"] as Rect2i).position), "a built building becomes solid on the town map")
-
-    # upgrade: dorms raise capacity, max level is respected
-    var cap_before: int = g.max_hero_capacity()
-    g.hq_outputs["materials"] = 100000
-    check(g.build_or_upgrade("dorm_1") and g.max_hero_capacity() == cap_before + 5, "dormitory upgrade adds 5 roster capacity")
-    check(g.next_building_cost("summon_circle") == -1 and not g.build_or_upgrade("summon_circle"), "a max-level building cannot be upgraded")
-
-    # production scales with level; unbuilt buildings produce nothing
+    check(g.build_or_upgrade("town_hall") and g.building_level("town_hall") == 1 and int(g.hq_outputs["materials"]) == 5 and g.construction.size() == 1, "starting construction spends exactly its cost; the level waits for the work")
+    check(not g.build_or_upgrade("town_hall") and g.last_reason.contains("already"), "one project per building")
+    g.pass_time(48)
+    check(g.building_level("town_hall") == 1, "without a builder nothing gets built")
     g.gems = 100000
     var pulled: Array = g.pull(2)
     var a: HeroData = pulled[0]
     var b: HeroData = pulled[1]
-    a.profession = "occupation.scholar"          # not a kitchen expert
-    b.profession = "occupation.scholar"
-    g.assign_hq(a.id, "kitchen")
-    var food0: int = int(g.hq_outputs["food"])
-    g.process_headquarters_turn()
-    var gain1: int = int(g.hq_outputs["food"]) - food0
-    g.build_or_upgrade("kitchen")
-    food0 = int(g.hq_outputs["food"])
-    g.process_headquarters_turn()
-    var gain2: int = int(g.hq_outputs["food"]) - food0
-    check(gain1 == 5 and gain2 == 10, "kitchen food doubles at level 2 (%d -> %d)" % [gain1, gain2])
-    g.town_buildings["workshop"] = 0
-    g.assign_hq(b.id, "workshop")
-    var mat0: int = int(g.hq_outputs["materials"])
-    g.process_headquarters_turn()
-    check(int(g.hq_outputs["materials"]) == mat0, "a worker in an unbuilt building produces nothing")
+    a.professions.clear()
+    check(g.assign_work(a, "construction") == "" and a.prof_level("builder") == 0, "a hero joins the construction crew and learns Builder as an apprentice")
+    g.pass_time(120)
+    check(g.building_level("town_hall") == 2 and g.construction.is_empty(), "the builder finishes the Summoner's Hall")
+    g.hq_outputs["materials"] = 100000
+    check(g.build_or_upgrade("alchemy"), "a level-2 Hall unlocks the alchemy lab")
+    g.pass_time(96)
+    check(g.building_level("alchemy") == 1, "the alchemy lab gets built")
+    check(TownMap.new(g.town_buildings).is_blocked_cell((TownTables.info("alchemy")["plot"] as Rect2i).position), "a built building becomes solid on the town map")
+    g.town_buildings["kitchen"] = 2
+    check(not g.build_or_upgrade("kitchen") and g.last_reason.contains("Summoner's Hall"), "no building can outgrow the Summoner's Hall")
 
-    # profession experts produce double (owner "sí", 2026-10-30)
-    g.town_buildings["workshop"] = 1
-    b.profession = "occupation.miner"
-    mat0 = int(g.hq_outputs["materials"])
-    g.process_headquarters_turn()
-    check(int(g.hq_outputs["materials"]) - mat0 == 4 * TownTables.EXPERT_MULT, "a miner in the workshop produces double materials")
+    # beds: dorm upgrades add beds, max level is respected
+    var cap_before: int = g.max_hero_capacity()
+    g.town_buildings["dorm_1"] = 2
+    check(g.max_hero_capacity() == cap_before + TownTables.beds_at("dorm_1", 2) - TownTables.beds_at("dorm_1", 1), "a dormitory level adds beds")
+    check(g.next_building_cost("summon_circle") == -1 and not g.build_or_upgrade("summon_circle"), "a max-level building cannot be upgraded")
+
+    # the past life gives the first profession (D-049)
+    var chef := HeroGenerator.generate(777, 1)
+    chef.profession = "occupation.chef"
+    chef.professions.clear()
+    chef.init_professions()
+    check(chef.prof_level("cook") == ProfessionDefs.PAST_LIFE_LEVEL and chef.passion == "cook", "a former chef starts as a level-2 cook with passion")
     check(TownTables.best_workplaces("occupation.chef").has("kitchen"), "a chef is an expert at the kitchen")
 
     # floor rewards and tower progress

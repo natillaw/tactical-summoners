@@ -97,8 +97,13 @@ func _ready() -> void:
     town.click_at(town.map.center_of((TownTables.info("barracks")["plot"] as Rect2i).position))
     check(town.selected == "barracks", "clicking a building selects it")
     Game.hq_outputs["materials"] = 1000
+    Game.town_buildings["town_hall"] = 2          # the alchemy lab needs a level-2 Summoner's Hall
     var lvl_before := Game.building_level("alchemy")
-    Game.build_or_upgrade("alchemy")
+    var crew: HeroData = Game.heroes.values()[0]
+    crew.professions.clear()
+    Game.assign_work(crew, "construction")       # D-048: a builder does the work
+    check(Game.build_or_upgrade("alchemy") and Game.building_level("alchemy") == lvl_before, "construction starts (not instant)")
+    Game.pass_time(96)
     await get_tree().process_frame
     check(Game.building_level("alchemy") == lvl_before + 1 and town.map.is_blocked_cell((TownTables.info("alchemy")["plot"] as Rect2i).position), "building from the town updates the map")
     var th: TownHero = town.heroes[0]

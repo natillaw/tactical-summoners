@@ -14,6 +14,8 @@ const LAYER_NAMES := {"body": "Skin", "eyes": "Eyes", "rear_hair": "Hair (back)"
 var hero: HeroData
 var activity: String = ""
 var _skills_box: VBoxContainer
+var _life_box: VBoxContainer
+var _gear_box: VBoxContainer
 
 
 func _init(h: HeroData = null, current_activity: String = "") -> void:
@@ -92,12 +94,15 @@ func _ready() -> void:
     if h.background_text != "":
         vb.add_child(_wrap(h.background_text, 12, UIKit.MUTED))
 
+    vb.add_child(_section("Town life"))
+    _life_box = VBoxContainer.new()
+    vb.add_child(_life_box)
     vb.add_child(_section("Equipment"))
-    var held := String(h.appearance.get("held", ""))
-    vb.add_child(UIKit.label("Weapon: " + ("held item #%s (cosmetic)" % held.get_slice("/", 1) if held != "" else "—"), 13, UIKit.TEXT))
-    for slot in ["Armor", "Helmet", "Accessory"]:
-        vb.add_child(UIKit.label("%s: —" % slot, 13, UIKit.TEXT))
-    vb.add_child(_wrap("Gear with stats arrives with the equipment system (D-021, P-19).", 12, UIKit.MUTED))
+    _gear_box = VBoxContainer.new()
+    _gear_box.add_theme_constant_override("separation", 3)
+    vb.add_child(_gear_box)
+    _fill_life()
+    _fill_gear()
 
     vb.add_child(_section("Appearance & colours"))
     for key in SpriteComposer.LAYER_ORDER:
@@ -197,6 +202,115 @@ func _fill_skills() -> void:
         var rb := UIKit.button("Read book: %s (x%d)" % [SkillDefs.info(skill_id)["name"], int(Game.skill_books[sid])], _on_read.bind(skill_id), Vector2(300, 28))
         rb.tooltip_text = String(SkillDefs.info(skill_id)["desc"])
         _skills_box.add_child(rb)
+
+
+## Professions (D-049), needs, illness, bed, workplace: the real simulation state.
+func _fill_life() -> void:
+    for c in _life_box.get_children():
+        c.queue_free()
+    var h := hero
+    var profs: Array = []
+    for p in h.professions:
+        var pd: Dictionary = h.professions[p]
+        profs.append("%s Lv %d (%d/%d xp)%s" % [ProfessionDefs.info(p)["name"], int(pd["lvl"]), int(pd["xp"]), ProfessionDefs.xp_to_next(int(pd["lvl"])), " (passion)" if p == h.passion else ""])
+    _life_box.add_child(_wrap("Professions (%d/%d): %s" % [h.professions.size(), ProfessionDefs.MAX_KNOWN, ", ".join(profs) if not profs.is_empty() else "none yet"], 13, UIKit.TEXT))
+    for p in h.professions.keys():
+        if h.hq_assignment == "" or Game.workplace_prof(h.hq_assignment) != p:
+            var prof_id := String(p)
+            var fb := UIKit.button("Forget %s" % ProfessionDefs.info(prof_id)["name"], _on_forget.bind(prof_id), Vector2(200, 26))
+            fb.tooltip_text = "Frees a profession slot (the experience is lost)"
+            _life_box.add_child(fb)
+    var work := "nowhere"
+    if h.hq_assignment == "construction":
+        work = "construction crew"
+    elif h.hq_assignment != "":
+        work = String(TownTables.info(h.hq_assignment).get("name", h.hq_assignment))
+    _life_box.add_child(_wrap("Now: %s · works at: %s · bed: %s" % [h.activity_state, work, TownTables.info(h.bed).get("name", "none (sleeps rough)") if h.bed != "" else "none (sleeps rough)"], 13, UIKit.TEXT))
+    _life_box.add_child(_wrap("Hunger %d · Fatigue %d · Stress %d · Mood %d" % [h.hunger, h.fatigue, h.stress, h.mood()], 13, UIKit.ACCENT))
+    for d in h.diseases:
+        var dd: Dictionary = EconomyDefs.DISEASES[String(d["id"])]
+        _life_box.add_child(_wrap("Ill: %s (~%.0f h, %s). %s" % [dd["name"], float(d["hours"]), d["cause"], dd["desc"]], 13, Color(1.0, 0.6, 0.5)))
+
+
+## Worn items with unequip, the stash items that fit, and the consumable bag.
+func _fill_gear() -> void:
+    for c in _gear_box.get_children():
+        c.queue_free()
+    var h := hero
+    for slot in ItemDefs.SLOTS:
+        if not h.equipment.has(slot):
+            continue
+        var it: Dictionary = h.equipment[slot]
+        var row := HBoxContainer.new()
+        var l := _wrap("%s: %s — %s" % [ItemDefs.SLOT_NAMES[slot], it["name"], ItemGen.describe(it)], 12, ItemDefs.rarity_color(String(it["rarity"])))
+        l.custom_minimum_size = Vector2(270, 0)
+        row.add_child(l)
+        row.add_child(UIKit.button("Off", _on_unequip.bind(String(slot)), Vector2(44, 24)))
+        _gear_box.add_child(row)
+    if h.equipment.is_empty():
+        _gear_box.add_child(UIKit.label("Nothing equipped.", 13, UIKit.MUTED))
+    var shown := 0
+    for it in Game.stash:
+        if shown >= 8:
+            _gear_box.add_child(UIKit.label("… more in the warehouse stash", 12, UIKit.MUTED))
+            break
+        shown += 1
+        var trained: Array = ItemDefs.BASES[String(it["base"])].get("classes", [])
+        var note := "" if trained.is_empty() or trained.has(h.hero_class) else " (untrained: 75%)"
+        var row := HBoxContainer.new()
+        var l := _wrap("%s — %s%s" % [ItemDefs.item_label(it), ItemGen.describe(it), note], 12, ItemDefs.rarity_color(String(it["rarity"])))
+        l.custom_minimum_size = Vector2(230, 0)
+        row.add_child(l)
+        row.add_child(UIKit.button("Equip", _on_equip_item.bind(int(it["uid"])), Vector2(54, 24)))
+        row.add_child(UIKit.button("Scrap", _on_salvage.bind(int(it["uid"])), Vector2(50, 24)))
+        _gear_box.add_child(row)
+    var bag: Array = []
+    for k in h.bag:
+        bag.append("%s x%d" % [EconomyDefs.RESOURCES[k]["name"], int(h.bag[k])])
+    _gear_box.add_child(_wrap("Bag (used on their own in the tower): " + (", ".join(bag) if not bag.is_empty() else "empty"), 13, UIKit.TEXT))
+    var brow := HBoxContainer.new()
+    for res in ["potion", "antidote"]:
+        brow.add_child(UIKit.button("+%s (%d)" % [res, int(Game.hq_outputs.get(res, 0))], _on_pack.bind(res), Vector2(110, 26)))
+        brow.add_child(UIKit.button("-", _on_unpack.bind(res), Vector2(28, 26)))
+    _gear_box.add_child(brow)
+    _gear_msg = UIKit.label("", 12, Color(1.0, 0.6, 0.5))
+    _gear_box.add_child(_gear_msg)
+
+
+var _gear_msg: Label
+
+
+func _after_gear(why: String) -> void:
+    _fill_gear()
+    if why != "" and _gear_msg != null:
+        _gear_msg.text = why
+
+
+func _on_equip_item(uid: int) -> void:
+    _after_gear(Game.equip(hero, uid))
+
+
+func _on_unequip(slot: String) -> void:
+    _after_gear(Game.unequip(hero, slot))
+
+
+func _on_salvage(uid: int) -> void:
+    Game.salvage(uid)
+    _after_gear("")
+
+
+func _on_pack(res: String) -> void:
+    _after_gear(Game.pack_consumable(hero, res))
+
+
+func _on_unpack(res: String) -> void:
+    _after_gear(Game.unpack_consumable(hero, res))
+
+
+func _on_forget(prof: String) -> void:
+    hero.forget_prof(prof)
+    Game._commit()
+    _fill_life()
 
 
 func _on_equip(skill_id: String) -> void:

@@ -56,6 +56,14 @@ var last_refusal: String = ""       # why the last skill request was refused (sh
 var _cast_enemies: Array = []
 var _cast_allies: Array = []
 var _map: NavMap = null
+# Equipment powers (ItemDefs.apply_equipment "mods") and carried consumables (HeroData.bag).
+var item_mods: Dictionary = {}
+var was_downed: bool = false        # for the expedition's after-effects (Game.after_expedition)
+var was_poisoned: bool = false
+var _potion_cd: float = 0.0
+const POTION_AT := 0.35             # drinks a potion below this HP fraction (bounded autonomy)
+const POTION_HEAL := 0.4
+const POTION_CD := 8.0
 var _fx: float = 0.0                # skill visual timer
 var _fx_to: Vector2 = Vector2.ZERO
 var _fx_radius: float = 0.0
@@ -79,6 +87,7 @@ func _ready() -> void:
 	speed = float(stats["move"])
 	setup_combat(int(stats["hp"]), int(stats["def"]), int(stats["mres"]), float(stats["crit"]), float(stats["status_resist"]), hero.hero_seed)
 	can_be_downed = true
+	item_mods = stats.get("mods", {})
 	_setup_skills()
 	_sprite = AnimatedSprite2D.new()
 	_sprite.sprite_frames = SpriteComposer.build_frames(hero)
@@ -194,6 +203,7 @@ func tick(delta: float) -> void:
 	for sid in cds:
 		cds[sid] = maxf(0.0, float(cds[sid]) - delta)
 	_tick_resource(delta)
+	_use_consumables(delta)
 	_repath = maxf(0.0, _repath - delta)
 	_dodge_t = maxf(0.0, _dodge_t - delta)
 	if chatter_timer > 0.0:
@@ -354,14 +364,66 @@ func _kite(foe: SandboxEnemy, map: NavMap) -> bool:
 	return true
 
 
+## Carried potions and antidotes are used on their own (bounded autonomy, never instead of an order).
+func _use_consumables(delta: float) -> void:
+	if has_status("poison"):
+		was_poisoned = true
+	if hero == null:
+		return
+	_potion_cd = maxf(0.0, _potion_cd - delta)
+	if _potion_cd > 0.0:
+		return
+	if float(hp) < float(max_hp) * POTION_AT and int(hero.bag.get("potion", 0)) > 0:
+		_spend("potion")
+		heal(roundi(float(max_hp) * POTION_HEAL))
+		FloatingText.spawn(self, "potion", Color(0.5, 1.0, 0.6), false)
+	elif has_status("poison") and int(hero.bag.get("antidote", 0)) > 0:
+		_spend("antidote")
+		statuses.erase("poison")
+		FloatingText.spawn(self, "antidote", Color(0.6, 1.0, 0.5), false)
+
+
+func _spend(res: String) -> void:
+	hero.bag[res] = int(hero.bag[res]) - 1
+	if int(hero.bag[res]) <= 0:
+		hero.bag.erase(res)
+	_potion_cd = POTION_CD
+
+
+func move_mult() -> float:
+	var m := super.move_mult()
+	if item_mods.has("slow_immune") and has_status("slow"):
+		m /= float(CombatRules.STATUS["slow"]["move"])
+	return m
+
+
+## Damage bonus from equipment against a foe busy fighting someone else (Nightstalker set).
+func _busy_mult(t: Node) -> float:
+	if item_mods.has("busy_bonus") and t.get("focus") != null and t.get("focus") != self:
+		return 1.0 + float(item_mods["busy_bonus"])
+	return 1.0
+
+
 func _basic_attack(t: SandboxEnemy) -> void:
 	_anim_lock = HeroAnim.play_attack(_sprite, facing, _side, is_ranged())
 	if is_ranged():
 		CombatVFX.spawn_strip16(get_parent(), t.position + Vector2(0, -12), "spritepilot-combat-pack", "arrow-16px_strip4.png", 2.0)
 	else:
 		CombatVFX.spawn_strip16(get_parent(), t.position + Vector2(0, -12), "spritepilot-combat-pack", "sword-slash-16px_strip7.png")
-	t.take_hit(DamageInfo.make(float(power()), String(stats.get("kind", "physical")), self, crit_chance, combat_rng))
+	var dealt := t.take_hit(DamageInfo.make(float(power()) * _busy_mult(t), String(stats.get("kind", "physical")), self, crit_chance, combat_rng))
 	gain_resource(float(SkillDefs.RESOURCES[res_kind]["on_hit"]))
+	_on_dealt(t, dealt)
+
+
+## Equipment powers after a hit: lifesteal, on-hit statuses (uniques), heal on kill.
+func _on_dealt(t: Combatant, dealt: int) -> void:
+	if dealt > 0 and item_mods.has("lifesteal"):
+		heal(roundi(float(dealt) * float(item_mods["lifesteal"])))
+	for p in item_mods.get("procs", []):
+		if t.alive and combat_rng.randf() < float(p["chance"]):
+			t.apply_status(String(p["on_hit_status"]), float(p["dur"]), float(power()) * float(p["mult"]), self)
+	if not t.alive and item_mods.has("kill_heal"):
+		heal(roundi(float(max_hp) * float(item_mods["kill_heal"])))
 
 
 func _rescue_tick(map: NavMap) -> void:
@@ -608,10 +670,10 @@ func _apply_effect(eff: Dictionary, foes: Array, friends: Array, centre: Vector2
 				kind = String(stats.get("kind", "physical"))
 			var base := float(stats["mag"]) if kind == "magical" else float(stats["atk"])
 			for f in foes:
-				var amount := base * float(eff["mult"])
+				var amount := base * float(eff["mult"]) * _busy_mult(f)
 				if eff.has("bonus_if_busy") and f.get("focus") != null and f.get("focus") != self:
 					amount *= float(eff["bonus_if_busy"])
-				f.take_hit(DamageInfo.make(amount, kind, self, crit_chance, combat_rng))
+				_on_dealt(f, f.take_hit(DamageInfo.make(amount, kind, self, crit_chance, combat_rng)))
 		"status":
 			var mag := float(eff.get("mag", 0.0))
 			if eff.has("mult"):
@@ -626,7 +688,10 @@ func _apply_effect(eff: Dictionary, foes: Array, friends: Array, centre: Vector2
 				u.heal(roundi(float(u.max_hp) * float(eff["pct"])))
 		"shield":
 			for u in friends:
-				u.apply_status("shield", SHIELD_TIME, float(u.max_hp) * float(eff["pct"]), self)
+				var sm := float(item_mods.get("shield_mult", 1.0))      # Warden set: shields given...
+				if u != self and u.get("item_mods") != null:
+					sm *= float((u.get("item_mods") as Dictionary).get("shield_mult", 1.0))   # ...and received
+				u.apply_status("shield", SHIELD_TIME, float(u.max_hp) * float(eff["pct"]) * sm, self)
 		"cleanse":
 			for u in friends:
 				u.cleanse()
@@ -716,8 +781,10 @@ func _fire_fx(at: Vector2, radius: float) -> void:
 
 # --- Combatant hooks ------------------------------------------------------------------------
 
-func _on_hit(info: DamageInfo, _dmg: int) -> void:
+func _on_hit(info: DamageInfo, dmg: int) -> void:
 	_flash = 0.15
+	if dmg > 0 and item_mods.has("thorns") and info.source is SandboxEnemy and info.kind == "physical" and is_instance_valid(info.source):
+		(info.source as Combatant).take_hit(DamageInfo.make(float(dmg) * float(item_mods["thorns"]), "true", self))
 	gain_resource(float(SkillDefs.RESOURCES[res_kind]["on_hurt"]))
 	if order == "rescue" and rescue_progress > 0.0:
 		rescue_progress = 0.0                         # D-036: taking damage interrupts the rescue
@@ -727,6 +794,7 @@ func _on_hit(info: DamageInfo, _dmg: int) -> void:
 
 
 func _on_down() -> void:
+	was_downed = true
 	casting = ""
 	cast_target = null
 	path.clear()

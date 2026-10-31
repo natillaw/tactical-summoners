@@ -5,7 +5,7 @@ extends Node
 signal changed
 
 const DEFAULT_SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 8
+const SAVE_VERSION := 9
 const PARTY_SIZE := 5            # slots 0-2 = front row, slots 3-4 = back row
 const XP_PER_BOOK := 100
 
@@ -23,11 +23,28 @@ var pull_count: int = 0          # total summons ever done (global pull number)
 var summon_log: Array = []       # newest last, capped: lets any pull be reproduced from its seed
 var memorial: Array = []         # fallen heroes, oldest first, NEVER capped or edited (D-011)
 var _signatures: Dictionary = {} # appearance signatures already owned -> no duplicate looks
-var hq_outputs: Dictionary = {"food": 50, "materials": 50, "medicine": 50}
+var hq_outputs: Dictionary = START_STOCK.duplicate()   # THE town storage (warehouse): resource id -> amount
 var town_buildings: Dictionary = TownTables.start_levels()   # building id -> level (0 = not built), D-030
 var tower_maps: Dictionary = {}
 var skill_books: Dictionary = {}     # skill id -> copies owned (D-046)
 var tower_cleared: Dictionary = {}   # floor (str) -> times completed (D-031: every floor is unlocked) # floor_num (str) -> {"seed": int, "width": int, "height": int, "grid_rows": Array}
+# Town simulation state (HQ Phase 1, save v9). Rules live in TownSim / EconomyDefs.
+const START_STOCK := {"materials": 60, "food": 40, "grain": 20, "herb": 6, "wood": 20, "stone": 20, "ore": 6, "ingot": 0,
+    "medicine": 4, "potion": 2, "antidote": 1}
+var town_clock: int = 8              # town hours since the first day (starts at 08:00)
+var town_seed: int = 1
+var town_jobs: Dictionary = {}       # building id -> recipe id it runs
+var town_batches: Dictionary = {}    # building id -> {"recipe", "progress"}: inputs already taken
+var construction: Array = []         # [{"bid", "to", "work_left"}] (D-048), materials already paid
+var patients: Array = []             # hero ids in hospital beds
+var town_layout: Dictionary = {}     # building id -> Vector2i plot position when moved (D-050)
+var town_log: Array = []             # newest last, capped: notable town events
+var town_problems: Dictionary = {}   # building id -> why it is not producing (recomputed every hour)
+var stash: Array = []                # equipment items not worn (one inventory model: item dicts)
+var item_seq: int = 0                # next item uid
+var last_reason: String = ""         # why the last town action was refused (shown by the UI)
+var _clock_acc: float = 0.0
+const TOWN_LOG_CAP := 60
 
 
 func _ready() -> void:
@@ -68,6 +85,7 @@ func pull(count: int, banner_id: String = SummonConfig.DEFAULT_BANNER) -> Array:
         _signatures[h.signature()] = true
         _log_pull(h, banner_id, int(banner["version"]), before4, before5)
         out.append(h)
+    assign_beds()
     _commit()
     return out
 
@@ -192,6 +210,8 @@ func record_death(h: HeroData, cause: String = "", mission: String = "") -> bool
         "snapshot": h.to_dict(),
     })
     heroes.erase(h.id)            # the appearance signature stays taken: no look is ever reused
+    patients.erase(h.id)          # its equipment is lost with it (kept in the memorial snapshot)
+    assign_beds()
     for i in PARTY_SIZE:
         if party[i] == h.id:
             party[i] = ""
@@ -207,25 +227,52 @@ func record_death(h: HeroData, cause: String = "", mission: String = "") -> bool
 # --- headquarters & simulation (Phase 2 & Mega Prompt Town & Persistent Maps) --------
 
 func assign_hq(hero_id: String, facility: String) -> void:
-    if not heroes.has(hero_id):
-        return
-    var h: HeroData = heroes[hero_id]
-    h.hq_assignment = facility
-    h.activity_state = "working" if facility != "" else "resting"
-    h.add_memory("hq_assign", "Assigned to %s" % (facility if facility != "" else "Quarters"), "", 1)
-    _commit()
+    if heroes.has(hero_id):
+        assign_work(heroes[hero_id], facility)
 
 
 func unassign_hq(hero_id: String) -> void:
     assign_hq(hero_id, "")
 
 
+## Total beds of the built dormitories: the town can house this many heroes (no beds, no summons).
 func max_hero_capacity() -> int:
-    var cap := 5 # base town population
-    for b_id in town_buildings:
-        if String(b_id).begins_with("dorm"):
-            cap += int(town_buildings[b_id]) * 5
+    var cap := 0
+    for bid in TownTables.ids():
+        if TownTables.is_dorm(bid):
+            cap += TownTables.beds_at(bid, building_level(bid))
     return cap
+
+
+func beds_used(bid: String) -> int:
+    var n := 0
+    for id in heroes:
+        if (heroes[id] as HeroData).bed == bid:
+            n += 1
+    return n
+
+
+## Keeps each hero's bed if it still exists; gives free beds to the rest (summon order). Heroes over
+## capacity (old saves) sleep rough; nobody is ever removed for lack of beds.
+func assign_beds() -> void:
+    var free := {}
+    for bid in TownTables.ids():
+        if TownTables.is_dorm(bid):
+            free[bid] = TownTables.beds_at(bid, building_level(bid))
+    var homeless: Array = []
+    for id in heroes:
+        var h: HeroData = heroes[id]
+        if h.bed != "" and int(free.get(h.bed, 0)) > 0:
+            free[h.bed] = int(free[h.bed]) - 1
+        else:
+            h.bed = ""
+            homeless.append(h)
+    for h in homeless:
+        for bid in free:
+            if int(free[bid]) > 0:
+                h.bed = String(bid)
+                free[bid] = int(free[bid]) - 1
+                break
 
 
 func building_level(bid: String) -> int:
@@ -240,19 +287,68 @@ func next_building_cost(bid: String) -> int:
     return TownTables.upgrade_cost(bid, building_level(bid))
 
 
-## Builds (level 0 -> 1) or upgrades a town building, paying materials. Nothing changes on failure.
+## Starts building (0 -> 1) or upgrading a town building (D-048): pays the materials now and queues
+## the work for builders. Refused (nothing changes, last_reason says why) when maxed, capped by the
+## Summoner's Hall, not unlocked, already under construction or short of materials.
 func build_or_upgrade(bid: String) -> bool:
-    var cost := next_building_cost(bid)
-    if cost < 0 or int(hq_outputs.get("materials", 0)) < cost:
+    last_reason = construction_block(bid)
+    if last_reason != "":
         return false
+    var cost := next_building_cost(bid)
     hq_outputs["materials"] = int(hq_outputs.get("materials", 0)) - cost
-    town_buildings[bid] = building_level(bid) + 1
+    var to := building_level(bid) + 1
+    construction.append({"bid": bid, "to": to, "work_left": EconomyDefs.BUILD_HOURS_PER_LEVEL * float(to)})
+    log_town("Construction started: %s level %d." % [TownTables.info(bid)["name"], to])
     _commit()
     return true
 
 
+## "" if bid can start construction now, otherwise the reason.
+func construction_block(bid: String) -> String:
+    var b := TownTables.info(bid)
+    if b.is_empty():
+        return "unknown building"
+    var cost := next_building_cost(bid)
+    if cost < 0:
+        return "already at max level"
+    var hall := building_level("town_hall")
+    if bid != "town_hall" and building_level(bid) == 0 and hall < int(b.get("hall", 0)):
+        return "needs Summoner's Hall level %d" % int(b.get("hall", 0))
+    if bid != "town_hall" and building_level(bid) + 1 > hall:
+        return "upgrade the Summoner's Hall first (level cap %d)" % hall
+    if construction.any(func(p): return String(p["bid"]) == bid):
+        return "already under construction"
+    if int(hq_outputs.get("materials", 0)) < cost:
+        return "needs %d materials" % cost
+    return ""
+
+
+func under_construction(bid: String) -> Dictionary:
+    for p in construction:
+        if String(p["bid"]) == bid:
+            return p
+    return {}
+
+
+func complete_construction(bid: String, to: int) -> void:
+    town_buildings[bid] = maxi(building_level(bid), to)
+    log_town("%s reached level %d." % [TownTables.info(bid)["name"], to])
+    if TownTables.is_dorm(bid):
+        assign_beds()
+
+
+func builders() -> Array:
+    return heroes.values().filter(func(h): return (h as HeroData).hq_assignment == "construction")
+
+
 func can_summon(count: int) -> bool:
     return heroes.size() + count <= max_hero_capacity()
+
+
+## Why a summon of `count` is blocked by housing ("" = it is not).
+func housing_block(count: int) -> String:
+    var free := max_hero_capacity() - heroes.size()
+    return "" if free >= count else "not enough beds (%d free): build or upgrade a dormitory" % maxi(0, free)
 
 
 func get_or_create_tower_floor_map(floor_num: int) -> ProceduralMap:
@@ -303,6 +399,18 @@ func complete_floor(floor_num: int, mission: String = "") -> Dictionary:
         if b != "":
             grant_skill_book(b)
             (r["skill_books"] as Array).append(b)
+    r["items"] = []
+    r["left_behind"] = 0
+    var boss := floor_num % 10 == 0
+    var n_items := 1 + floor_num / 4 + (2 if boss else 0)
+    for i in n_items:
+        var rarity := ItemGen.roll_rarity(rng, floor_num, 3.0 if boss else 0.0, "rare" if boss and i == 0 else "common")
+        if stash.size() >= stash_cap():
+            r["left_behind"] = int(r["left_behind"]) + 1     # no room: left in the tower (shown in the result)
+            continue
+        var it := ItemGen.generate(rng, _next_uid(), floor_num, rarity)
+        stash.append(it)
+        (r["items"] as Array).append(ItemDefs.item_label(it))
     _commit()
     return r
 
@@ -352,7 +460,12 @@ func use_skill_book(h: HeroData, skill_id: String) -> String:
 ## Library (D-046): transcribe a book of the chosen class for materials; cheaper at higher levels.
 func library_cost() -> int:
     var lv := building_level("library")
-    return 0 if lv <= 0 else maxi(20, TownTables.LIBRARY_BASE_COST - TownTables.LIBRARY_DISCOUNT * (lv - 1))
+    if lv <= 0:
+        return 0
+    var cost := maxi(20, TownTables.LIBRARY_BASE_COST - TownTables.LIBRARY_DISCOUNT * (lv - 1))
+    if workers_at("library").any(func(h): return (h as HeroData).knows_prof("scholar")):
+        cost = roundi(float(cost) * 0.75)                      # a scholar at work: 25% cheaper
+    return cost
 
 
 func library_transcribe(class_id: String) -> String:
@@ -368,37 +481,358 @@ func library_transcribe(class_id: String) -> String:
     return b
 
 
+## One town day (the HQ screen button). Kept for older callers: summary keys "<res>_produced".
 func process_headquarters_turn() -> Dictionary:
-    var summary := {"food_produced": 0, "materials_produced": 0, "medicine_produced": 0, "events": 0}
-    var facility_workers := {}
-    for id in heroes:
-        var h: HeroData = heroes[id]
-        if h.hq_assignment != "":
-            if not facility_workers.has(h.hq_assignment):
-                facility_workers[h.hq_assignment] = []
-            (facility_workers[h.hq_assignment] as Array).append(h)
-    
-    for fac in facility_workers:
-        var workers: Array = facility_workers[fac]
-        var level := building_level(String(fac))
-        var produces: Dictionary = TownTables.info(String(fac)).get("produces", {})
-        for w in workers:
-            var worker := w as HeroData
-            if level <= 0:
-                continue                     # assigned to a building that is not built yet
-            var mult := TownTables.EXPERT_MULT if TownTables.is_expert(String(fac), worker.profession) else 1
-            for res in produces:
-                var amount: int = int(produces[res]) * level * mult
-                hq_outputs[res] = int(hq_outputs.get(res, 0)) + amount
-                summary[String(res) + "_produced"] = int(summary.get(String(res) + "_produced", 0)) + amount
-            worker.add_memory("work_" + String(fac), "Worked at the %s." % String(TownTables.info(String(fac)).get("name", fac)), "", 1)
-            summary["events"] += 1
-            for other in workers:
-                var o := other as HeroData
-                if o.id != worker.id:
-                    worker.update_relationship(o.id, 1, "hq_work")
-    _commit()
+    var rep := pass_time(24)
+    var summary := {"events": (rep["events"] as Array).size()}
+    for res in rep["produced"]:
+        summary[String(res) + "_produced"] = int(rep["produced"][res])
     return summary
+
+
+# --- town simulation (HQ Phase 1, D-047..D-050) ---------------------------------------------
+
+## Advances the town and saves. deployed = hero ids in the tower during that time.
+func pass_time(hours: int, deployed: Array = []) -> Dictionary:
+    var rep := TownSim.advance(self, hours, deployed)
+    for ev in rep["events"]:
+        log_town(String(ev))
+    _commit()
+    return rep
+
+
+## D-047: while the player is in the town the clock runs slowly (REAL_SECONDS_PER_HOUR).
+func town_tick(delta: float) -> void:
+    _clock_acc += delta
+    if _clock_acc >= EconomyDefs.REAL_SECONDS_PER_HOUR:
+        _clock_acc -= EconomyDefs.REAL_SECONDS_PER_HOUR
+        pass_time(1)
+
+
+func town_day() -> int:
+    return town_clock / 24 + 1
+
+
+func town_time_text() -> String:
+    return "Day %d, %02d:00" % [town_day(), town_clock % 24]
+
+
+func log_town(text: String) -> void:
+    town_log.append("[%s] %s" % [town_time_text(), text])
+    while town_log.size() > TOWN_LOG_CAP:
+        town_log.pop_front()
+
+
+func storage_cap() -> int:
+    return EconomyDefs.STORAGE_BASE + EconomyDefs.STORAGE_PER_LEVEL * building_level("warehouse")
+
+
+func stash_cap() -> int:
+    return EconomyDefs.STASH_BASE + EconomyDefs.STASH_PER_LEVEL * building_level("warehouse")
+
+
+func has_resources(cost: Dictionary) -> bool:
+    for k in cost:
+        if int(hq_outputs.get(k, 0)) < int(cost[k]):
+            return false
+    return true
+
+
+## Recipe the building runs (its chosen job, else its first one; "" if it has none).
+func job_of(bid: String) -> String:
+    var jobs: Array = TownTables.info(bid).get("jobs", [])
+    if jobs.is_empty():
+        return ""
+    var j := String(town_jobs.get(bid, ""))
+    return j if jobs.has(j) else String(jobs[0])
+
+
+func set_job(bid: String, recipe: String) -> bool:
+    if not (TownTables.info(bid).get("jobs", []) as Array).has(recipe):
+        return false
+    town_jobs[bid] = recipe
+    _commit()
+    return true
+
+
+## Profession a workplace needs ("" if none).
+func workplace_prof(bid: String) -> String:
+    if bid == "construction":
+        return "builder"
+    if bid == "library":
+        return "scholar"
+    var rid := job_of(bid)
+    return "" if rid == "" else String(EconomyDefs.RECIPES[rid]["prof"])
+
+
+func workers_at(bid: String) -> Array:
+    return heroes.values().filter(func(h): return (h as HeroData).hq_assignment == bid)
+
+
+## Puts a hero to work (D-049): the workplace's profession is learned as an apprentice if the hero
+## has a free profession slot. "" on success, else the reason (nothing changes).
+func assign_work(h: HeroData, bid: String) -> String:
+    last_reason = ""
+    if h == null or not heroes.has(h.id):
+        last_reason = "unknown hero"
+    elif bid == "":
+        h.hq_assignment = ""
+    elif bid != "construction" and building_level(bid) <= 0:
+        last_reason = "not built yet"
+    elif bid != "construction" and workers_at(bid).size() >= TownTables.worker_slots(bid, building_level(bid)) and h.hq_assignment != bid:
+        last_reason = "no free work place (%d)" % TownTables.worker_slots(bid, building_level(bid))
+    else:
+        var prof := workplace_prof(bid)
+        if prof == "":
+            last_reason = "nobody works here"
+        else:
+            last_reason = h.learn_prof(prof)
+            if last_reason == "":
+                h.hq_assignment = bid
+                h.add_memory("hq_assign", "Started working at the %s." % (TownTables.info(bid).get("name", "construction site")), "", 1)
+    if last_reason == "":
+        _commit()
+    return last_reason
+
+
+## True if the hero can do its job this hour (building built, job possible, project to build).
+func can_work_now(h: HeroData) -> bool:
+    if h.hq_assignment == "":
+        return false
+    if h.hq_assignment == "construction":
+        return not construction.is_empty() and h.knows_prof("builder")
+    return building_level(h.hq_assignment) > 0 and h.knows_prof(workplace_prof(h.hq_assignment))
+
+
+## Takes a recipe's inputs and opens a batch. "" on success, else why it cannot start.
+func start_batch(bid: String, rid: String) -> String:
+    var r: Dictionary = EconomyDefs.RECIPES[rid]
+    if r.get("service", false):
+        return ""
+    if not has_resources(r["in"]):
+        var missing: Array = []
+        for k in r["in"]:
+            if int(hq_outputs.get(k, 0)) < int(r["in"][k]):
+                missing.append(EconomyDefs.RESOURCES[k]["name"].to_lower())
+        return "missing " + ", ".join(missing)
+    for k in r["out"]:
+        if int(hq_outputs.get(k, 0)) + int(r["out"][k]) > storage_cap():
+            return "storage full (%s): upgrade the warehouse" % EconomyDefs.RESOURCES[k]["name"].to_lower()
+    if r.has("item") and stash.size() >= stash_cap():
+        return "equipment stash full"
+    for k in r["in"]:
+        hq_outputs[k] = int(hq_outputs[k]) - int(r["in"][k])
+    town_batches[bid] = {"recipe": rid, "progress": 0.0}
+    return ""
+
+
+func finish_batch(bid: String, best_level: int, rr: RandomNumberGenerator, report: Dictionary) -> void:
+    var b: Dictionary = town_batches.get(bid, {})
+    town_batches.erase(bid)
+    if b.is_empty():
+        return
+    var r: Dictionary = EconomyDefs.RECIPES[String(b["recipe"])]
+    for k in r["out"]:
+        hq_outputs[k] = int(hq_outputs.get(k, 0)) + int(r["out"][k])
+        report["produced"][k] = int(report["produced"].get(k, 0)) + int(r["out"][k])
+    if r.has("item"):
+        var rarity := ItemGen.craft_rarity(rr, best_level, building_level(bid))
+        var kinds: Array = ItemDefs.CRAFTABLE[String(r["item"])]
+        var it := ItemGen.generate(rr, _next_uid(), 1 + best_level + building_level(bid), rarity, String(kinds[rr.randi() % kinds.size()]))
+        stash.append(it)
+        (report["events"] as Array).append("The %s forged %s." % [TownTables.info(bid)["name"], ItemDefs.item_label(it)])
+
+
+# --- building placement (D-050) ----------------------------------------------------------------
+
+func plot_of(bid: String) -> Rect2i:
+    return TownTables.plot_at(bid, town_layout)
+
+
+## "" if `bid` can stand with its top-left corner at `cell`, else the reason: inside the town, off the
+## plaza, not over another building, its door free, and every built building still reachable.
+func placement_block(bid: String, cell: Vector2i) -> String:
+    if not TownTables.BUILDINGS.has(bid):
+        return "unknown building"
+    var p := plot_of(bid)
+    p.position = cell
+    if p.position.x < 1 or p.position.y < 1 or p.end.x > TownTables.MAP_W - 1 or p.end.y > TownTables.MAP_H - 2:
+        return "outside the town"
+    if p.intersects(TownTables.PLAZA):
+        return "the plaza must stay free"
+    var door := Vector2i(p.position.x + p.size.x / 2, p.end.y)
+    for other in TownTables.ids():
+        if other == bid:
+            continue
+        var q := plot_of(other)
+        if q.intersects(p):
+            return "overlaps the %s" % TownTables.info(other)["name"]
+        if q.has_point(door):
+            return "its door would face a wall"
+    var trial := town_layout.duplicate()
+    trial[bid] = cell
+    var m := TownMap.new(town_buildings, trial)
+    var start := m.center_of(m.goal_cell)
+    for other in TownTables.ids():
+        if building_level(other) > 0 and m.find_path(start, m.center_of(m.door_of(other))).is_empty():
+            return "it would cut off the %s" % TownTables.info(other)["name"]
+    return ""
+
+
+func move_building(bid: String, cell: Vector2i) -> String:
+    last_reason = placement_block(bid, cell)
+    if last_reason == "":
+        town_layout[bid] = cell
+        log_town("%s moved." % TownTables.info(bid)["name"])
+        _commit()
+    return last_reason
+
+
+func _layout_to_json() -> Dictionary:
+    var out := {}
+    for bid in town_layout:
+        out[bid] = [town_layout[bid].x, town_layout[bid].y]
+    return out
+
+
+# --- equipment and consumables (D-039) -------------------------------------------------------
+
+func _next_uid() -> int:
+    item_seq += 1
+    return item_seq
+
+
+func stash_index(uid: int) -> int:
+    for i in stash.size():
+        if int(stash[i]["uid"]) == uid:
+            return i
+    return -1
+
+
+## Equips a stash item. Two-handed weapons free the off hand; rings take a free ring slot. Replaced
+## items go back to the stash. "" on success, else the reason.
+func equip(h: HeroData, uid: int, slot: String = "") -> String:
+    var i := stash_index(uid)
+    if h == null or i < 0:
+        return "item not in the stash"
+    var it: Dictionary = stash[i]
+    var allowed := ItemDefs.slots_for(String(it["base"]))
+    if slot == "":
+        slot = String(allowed[0])
+        for s in allowed:
+            if not h.equipment.has(s):
+                slot = String(s)
+                break
+    if not allowed.has(slot):
+        return "does not fit there"
+    var two := bool(ItemDefs.BASES[String(it["base"])].get("two_handed", false))
+    var back: Array = []
+    if h.equipment.has(slot):
+        back.append(h.equipment[slot])
+    if two and h.equipment.has("off_hand"):
+        back.append(h.equipment["off_hand"])
+    if slot == "off_hand" and h.equipment.has("main_hand") and bool(ItemDefs.BASES[String(h.equipment["main_hand"]["base"])].get("two_handed", false)):
+        back.append(h.equipment["main_hand"])
+    if stash.size() - 1 + back.size() > stash_cap():
+        return "no room in the stash for the replaced items"
+    stash.remove_at(i)
+    for b in back:
+        for s in h.equipment.keys():
+            if h.equipment[s] == b:
+                h.equipment.erase(s)
+        stash.append(b)
+    h.equipment[slot] = it
+    _commit()
+    return ""
+
+
+func unequip(h: HeroData, slot: String) -> String:
+    if h == null or not h.equipment.has(slot):
+        return "nothing there"
+    if stash.size() >= stash_cap():
+        return "equipment stash full"
+    stash.append(h.equipment[slot])
+    h.equipment.erase(slot)
+    _commit()
+    return ""
+
+
+## Breaks an unwanted stash item into resources (ingots for metal gear, materials otherwise).
+func salvage(uid: int) -> Dictionary:
+    var i := stash_index(uid)
+    if i < 0:
+        return {}
+    var it: Dictionary = stash[i]
+    stash.remove_at(i)
+    var n := 1 + ItemDefs.RARITY_ORDER.find(String(it["rarity"]))
+    var res := "ingot" if String(ItemDefs.BASES[String(it["base"])]["kind"]) != "jewel" else "materials"
+    hq_outputs[res] = mini(storage_cap(), int(hq_outputs.get(res, 0)) + n)
+    _commit()
+    return {res: n}
+
+
+const BAG_SLOTS := 3                 # different consumables a hero can carry
+const BAG_STACK := 3                 # of each
+
+
+## Moves one consumable from town storage into the hero's bag (carried into the tower).
+func pack_consumable(h: HeroData, res: String) -> String:
+    if not (res in ["potion", "antidote"]):
+        return "cannot be carried"
+    if int(hq_outputs.get(res, 0)) <= 0:
+        return "none in storage"
+    if not h.bag.has(res) and h.bag.size() >= BAG_SLOTS:
+        return "bag full"
+    if int(h.bag.get(res, 0)) >= BAG_STACK:
+        return "can carry only %d" % BAG_STACK
+    hq_outputs[res] = int(hq_outputs[res]) - 1
+    h.bag[res] = int(h.bag.get(res, 0)) + 1
+    _commit()
+    return ""
+
+
+func unpack_consumable(h: HeroData, res: String) -> String:
+    if int(h.bag.get(res, 0)) <= 0:
+        return "not carried"
+    h.bag[res] = int(h.bag[res]) - 1
+    if int(h.bag[res]) <= 0:
+        h.bag.erase(res)
+    hq_outputs[res] = int(hq_outputs.get(res, 0)) + 1
+    _commit()
+    return ""
+
+
+# --- expeditions ----------------------------------------------------------------------------
+
+## Called when a squad comes back from a floor (won or lost). results = [{"hero": HeroData,
+## "downed": bool, "poisoned": bool}] for the survivors; died = how many fell. The expedition day
+## passes in the town with the squad away (D-047), then the squad comes home with its scars.
+func after_expedition(results: Array, floor_num: int, died: int) -> Dictionary:
+    var ids: Array = []
+    for r in results:
+        ids.append((r["hero"] as HeroData).id)
+    var rep := TownSim.advance(self, EconomyDefs.HOURS_PER_EXPEDITION, ids)
+    for r in results:
+        var h: HeroData = r["hero"]
+        if not heroes.has(h.id):
+            continue
+        h.activity_state = "idle"
+        h.hunger = clampi(h.hunger + int(EconomyDefs.AFTER_MISSION["hunger"]), 0, 100)
+        h.fatigue = clampi(h.fatigue + int(EconomyDefs.AFTER_MISSION["fatigue"]), 0, 100)
+        h.stress = clampi(h.stress + int(EconomyDefs.AFTER_MISSION["stress"]) + died * int(EconomyDefs.AFTER_MISSION["stress_death"]), 0, 100)
+        var ch: Dictionary = EconomyDefs.DISEASE_CHANCE
+        if bool(r.get("downed", false)) and rng.randf() < float(ch["downed"]) and h.catch_disease("infected_wound", "downed on floor %d" % floor_num):
+            (rep["events"] as Array).append("%s's wound got infected." % h.hero_name)
+        if bool(r.get("poisoned", false)) and rng.randf() < float(ch["poisoned"]) and h.catch_disease("toxin", "poisoned on floor %d" % floor_num):
+            (rep["events"] as Array).append("%s still has poison in the blood." % h.hero_name)
+        if floor_num > 0 and floor_num < 10 and rng.randf() < float(ch["forest"]) and h.catch_disease("marsh_fever", "the wet forest of floor %d" % floor_num):
+            (rep["events"] as Array).append("%s came back with marsh fever." % h.hero_name)
+        if floor_num >= 5 and rng.randf() < float(ch["deep"]) and h.catch_disease("cave_cough", "the damp air of floor %d" % floor_num):
+            (rep["events"] as Array).append("%s has a cough." % h.hero_name)
+    for ev in rep["events"]:
+        log_town(String(ev))
+    _commit()
+    return rep
 
 
 # --- debug / reset ----------------------------------------------------------------
@@ -422,13 +856,28 @@ func new_game() -> void:
     heroes.clear()
     _signatures.clear()
     party = ["", "", "", "", ""]
-    hq_outputs = {"food": 50, "materials": 50, "medicine": 50}
+    hq_outputs = START_STOCK.duplicate()
     town_buildings = TownTables.start_levels()
     tower_maps.clear()
     tower_cleared.clear()
     skill_books.clear()
+    _reset_town()
     SpriteComposer.clear_cache()
     _commit()
+
+
+func _reset_town() -> void:
+    town_clock = 8
+    town_seed = rng.randi()
+    town_jobs = {}
+    town_batches = {}
+    construction = []
+    patients = []
+    town_layout = {}
+    town_log = []
+    town_problems = {}
+    stash = []
+    item_seq = 0
 
 
 # --- save / load ------------------------------------------------------------------
@@ -460,6 +909,10 @@ func save_game() -> bool:
         "tower_maps": tower_maps,
         "tower_cleared": tower_cleared,
         "skill_books": skill_books,
+        "town": {"clock": town_clock, "seed": "%x" % town_seed, "jobs": town_jobs, "batches": town_batches,
+            "construction": construction, "patients": patients, "log": town_log, "item_seq": item_seq,
+            "layout": _layout_to_json()},
+        "stash": stash,
     }
     return _write_atomic(JSON.stringify(data))
 
@@ -544,6 +997,39 @@ func apply_save(data: Dictionary) -> void:
     var sb: Dictionary = data.get("skill_books", {})
     for k in sb:
         grant_skill_book(String(k), int(sb[k]))
+    _reset_town()
+    var t: Dictionary = data.get("town", {})
+    town_clock = int(t.get("clock", 8))
+    town_seed = String(t.get("seed", "1")).hex_to_int()
+    town_jobs = (t.get("jobs", {}) as Dictionary).duplicate()
+    for bid in HeroData.intify(t.get("batches", {}) as Dictionary):
+        var bt: Dictionary = t["batches"][bid]
+        if EconomyDefs.RECIPES.has(String(bt.get("recipe", ""))):
+            town_batches[String(bid)] = {"recipe": String(bt["recipe"]), "progress": float(bt.get("progress", 0.0))}
+    for p in t.get("construction", []):
+        if TownTables.BUILDINGS.has(String(p.get("bid", ""))):
+            construction.append({"bid": String(p["bid"]), "to": int(p["to"]), "work_left": float(p["work_left"])})
+    for id in t.get("patients", []):
+        if heroes.has(String(id)) and not patients.has(String(id)):
+            patients.append(String(id))
+    town_log = (t.get("log", []) as Array).duplicate()
+    item_seq = int(t.get("item_seq", 0))
+    var lay: Dictionary = t.get("layout", {})
+    for bid in lay:
+        var xy: Array = lay[bid]
+        if TownTables.BUILDINGS.has(String(bid)) and xy.size() == 2:
+            town_layout[String(bid)] = Vector2i(int(xy[0]), int(xy[1]))
+    for it in data.get("stash", []):
+        if typeof(it) == TYPE_DICTIONARY and ItemDefs.BASES.has(String(it.get("base", ""))):
+            stash.append(HeroData.intify(it))
+            item_seq = maxi(item_seq, int(it.get("uid", 0)))
+    for id in heroes:
+        for slot in (heroes[id] as HeroData).equipment:
+            item_seq = maxi(item_seq, int((heroes[id] as HeroData).equipment[slot].get("uid", 0)))
+    for res in START_STOCK:
+        if not hq_outputs.has(res):
+            hq_outputs[res] = 0
+    assign_beds()
 
 
 ## Old save versions get upgraded here when the format changes.
@@ -578,5 +1064,19 @@ func _migrate(data: Dictionary) -> Dictionary:
         # v7 -> v8: skill books appear; each hero gets its starter skill and pending level
         # choices inside HeroData.from_dict (no stored data is lost or rerolled).
         data["skill_books"] = {}
+    if v < 9:
+        # v8 -> v9 (HQ Phase 1): new production buildings start at their default level, old storage
+        # keeps its numbers (missing resources start at the default stock). Heroes get professions,
+        # needs and beds inside HeroData.from_dict / assign_beds. Nothing is rerolled or removed.
+        var tb9: Dictionary = (data.get("town_buildings", {}) as Dictionary).duplicate()
+        for bid in TownTables.ids():
+            if not tb9.has(bid):
+                tb9[bid] = int(TownTables.info(bid)["start"])
+        data["town_buildings"] = tb9
+        var st9: Dictionary = (data.get("hq_outputs", {}) as Dictionary).duplicate()
+        for res in START_STOCK:
+            if not st9.has(res):
+                st9[res] = int(START_STOCK[res])
+        data["hq_outputs"] = st9
     data["version"] = SAVE_VERSION
     return data

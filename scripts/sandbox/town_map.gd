@@ -7,9 +7,11 @@ extends NavMap
 ## Ground kinds for drawing: "#" forest edge (trees), "B" building, "p" cobble path, "d" dirt plot,
 ## "w" well, "." grass.
 var ground: Array[String] = []
+var layout: Dictionary = {}       # building id -> moved plot position (D-050)
 
 
-func _init(levels: Dictionary = {}) -> void:
+func _init(levels: Dictionary = {}, p_layout: Dictionary = {}) -> void:
+    layout = p_layout
     var w := TownTables.MAP_W
     var h := TownTables.MAP_H
     var cells := []
@@ -31,12 +33,12 @@ func _init(levels: Dictionary = {}) -> void:
             cells[y][x] = "p"
     cells[10][17] = "w"
     for id in TownTables.ids():
-        var plot: Rect2i = TownTables.info(id)["plot"]
+        var plot := plot_of(id)
         var built := int(levels.get(id, TownTables.info(id)["start"])) > 0
         for y in range(plot.position.y, plot.end.y):
             for x in range(plot.position.x, plot.end.x):
                 cells[y][x] = "B" if built else "d"
-        var door := TownTables.door_cell(id)
+        var door := door_of(id)
         if door.y < h - 1:
             cells[door.y][door.x] = "p"
     var nav_rows: Array = []
@@ -61,9 +63,17 @@ func _init(levels: Dictionary = {}) -> void:
 
 
 ## Building id whose footprint contains the cell ("" if none).
+func plot_of(id: String) -> Rect2i:
+    return TownTables.plot_at(id, layout)
+
+
+func door_of(id: String) -> Vector2i:
+    return TownTables.door_at(id, layout)
+
+
 func building_at(cell: Vector2i) -> String:
     for id in TownTables.ids():
-        var plot: Rect2i = TownTables.info(id)["plot"]
+        var plot := plot_of(id)
         if plot.has_point(cell):
             return id
     return ""

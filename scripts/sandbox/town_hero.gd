@@ -1,12 +1,18 @@
 class_name TownHero
 extends Node2D
-## A hero living in the town with full autonomy (visual only, never changes hero data):
-## each hero picks its own next activity, walks there and does it, then picks again.
-## Activities: wander, visit a building (goes inside for a while), train at the barracks yard,
-## work at its assigned building, rest at the plaza, chat with a nearby hero.
+## A hero living in the town. What it does comes from the simulation (HeroData.activity_state, set
+## by TownSim): it walks (A* on the town map) to its workplace, bed, kitchen, tavern or hospital and
+## acts it out. Only when the simulation says "idle" does it pick a free-time pastime of its own
+## (wander, visit, train, rest, chat), weighted by personality. Never changes hero data.
 
 const SPEED := 55.0
 const ACTIVITIES := ["wander", "visit", "train", "work", "rest", "chat"]
+const SYNC_EVERY := 0.5
+## Jobs done indoors (the hero goes inside) vs. outdoors (swings a tool at the door).
+const INDOOR := ["alchemy", "library", "infirmary", "kitchen", "common", "warehouse", "town_hall"]
+var sim_state: String = ""          # last HeroData.activity_state acted out
+var _inside_goal: bool = false
+var _sync_t: float = 0.0
 
 var hero: HeroData
 var map: TownMap
@@ -45,6 +51,18 @@ func _ready() -> void:
 ## Human-readable current activity (shown in the hero panel).
 func activity_text() -> String:
     match activity:
+        "sim_work":
+            return "Working at the %s" % TownTables.info(activity_target).get("name", "construction site")
+        "sim_build":
+            return "Building the %s" % TownTables.info(activity_target).get("name", "town")
+        "sim_sleep":
+            return "Sleeping" + ("" if hero.bed != "" else " rough (no bed)")
+        "sim_eat":
+            return "Eating a meal"
+        "sim_social":
+            return "Unwinding at the tavern"
+        "sim_treat":
+            return "Being treated at the hospital"
         "visit":
             return "Visiting the %s" % TownTables.info(activity_target).get("name", "town")
         "train":
@@ -63,8 +81,6 @@ func activity_text() -> String:
 ## Weighted by personality and job: workers work more, brave/hot-headed train more, cheerful chat more.
 func _choose() -> String:
     var w := {"wander": 3.0, "visit": 2.0, "train": 1.0, "work": 0.0, "rest": 1.5, "chat": 1.5}
-    if hero.hq_assignment != "" and Game.building_level(hero.hq_assignment) > 0:
-        w["work"] = 4.0
     for t in hero.traits:
         match String(t):
             "trait.brave", "trait.hot_headed", "trait.reckless":
@@ -90,7 +106,58 @@ func _built_buildings() -> Array:
     return TownTables.ids().filter(func(id): return Game.building_level(id) > 0)
 
 
+## Acts out the simulation state; returns false when the hero is free (idle) to pick a pastime.
+func _start_sim() -> bool:
+    sim_state = hero.activity_state
+    var target := ""
+    var inside := true
+    match sim_state:
+        "working":
+            if hero.hq_assignment == "construction":
+                activity = "sim_build"
+                target = String(Game.construction[0]["bid"]) if not Game.construction.is_empty() else "town_hall"
+                inside = false
+            else:
+                activity = "sim_work"
+                target = hero.hq_assignment
+                inside = INDOOR.has(target)
+        "sleeping":
+            activity = "sim_sleep"
+            target = hero.bed
+            inside = hero.bed != ""
+        "eating":
+            activity = "sim_eat"
+            target = "common" if Game.building_level("common") > 0 else "kitchen"
+        "socializing":
+            activity = "sim_social"
+            target = "common"
+            inside = false
+        "in_treatment":
+            activity = "sim_treat"
+            target = "infirmary"
+        "deployed":
+            activity = "away"
+            visible = false
+            _path.clear()
+            _doing = true
+            return true
+        _:
+            return false
+    activity_target = target
+    _doing = false
+    visible = true
+    var goal := map.center_of(Vector2i(17, 10)) + Vector2(_rng.randf_range(-60, 60), 40)
+    if target != "" and TownTables.BUILDINGS.has(target):
+        goal = map.center_of(map.door_of(target)) + (Vector2.ZERO if inside else Vector2(_rng.randf_range(-40, 40), 14))
+    _inside_goal = inside and target != ""
+    _path = map.find_path(position, goal)
+    return true
+
+
+
 func _start_next() -> void:
+    if _start_sim():
+        return
     activity = _choose()
     activity_target = ""
     _doing = false
@@ -99,13 +166,13 @@ func _start_next() -> void:
         "visit":
             var b: Array = _built_buildings()
             activity_target = String(b[_rng.randi() % b.size()])
-            goal = map.center_of(TownTables.door_cell(activity_target))
+            goal = map.center_of(map.door_of(activity_target))
         "work":
             activity_target = hero.hq_assignment
-            goal = map.center_of(TownTables.door_cell(activity_target))
+            goal = map.center_of(map.door_of(activity_target))
         "train":
             activity_target = "barracks"
-            goal = map.center_of(TownTables.door_cell("barracks")) + Vector2(_rng.randf_range(-60, 60), 20)
+            goal = map.center_of(map.door_of("barracks")) + Vector2(_rng.randf_range(-60, 60), 20)
         "rest":
             goal = map.center_of(Vector2i(17, 10)) + Vector2(_rng.randf_range(-70, 70), _rng.randf_range(30, 50))
         "chat":
@@ -124,13 +191,18 @@ func _process(delta: float) -> void:
         return
     if _bubble_t > 0.0:
         _bubble_t -= delta
+    _sync_t -= delta
+    if _sync_t <= 0.0:
+        _sync_t = SYNC_EVERY
+        if hero.activity_state != sim_state:
+            _start_next()                     # the simulation moved this hero on
     if not _path.is_empty():
         _walk(delta)
     else:
         _timer -= delta
         if not _doing:
             _arrive()
-        elif activity == "train":
+        elif activity == "train" or (activity in ["sim_work", "sim_build"] and not _inside_goal):
             _swing -= delta
             if _swing <= 0.0:
                 _swing = 0.6
@@ -138,7 +210,7 @@ func _process(delta: float) -> void:
                 _sprite.play("attack_" + ("left" if _rng.randf() < 0.5 else "right"))
         elif not _sprite.animation.begins_with("attack"):
             _play("idle_" + _facing)
-        if _timer <= 0.0:
+        if _timer <= 0.0 and not activity.begins_with("sim_") and activity != "away":
             visible = true
             _start_next()
     queue_redraw()
@@ -146,6 +218,12 @@ func _process(delta: float) -> void:
 
 func _arrive() -> void:
     _doing = true
+    if activity.begins_with("sim_"):
+        if _inside_goal:
+            visible = false                    # inside the building while the state lasts
+        elif activity == "sim_social":
+            _say(HeroChatter.town_line(hero, _rng))
+        return
     _timer = _rng.randf_range(3.0, 7.0)
     match activity:
         "visit", "work":
@@ -166,7 +244,7 @@ func _say(text: String) -> void:
 
 func _walk(delta: float) -> void:
     var to := _path[0] - position
-    var step := SPEED * delta
+    var step := SPEED * delta * (0.5 if activity == "sim_treat" else 1.0)   # the sick walk slowly
     if to.length() <= step:
         position = _path[0]
         _path.remove_at(0)
