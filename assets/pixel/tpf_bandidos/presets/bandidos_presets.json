@@ -1,0 +1,110 @@
+{
+ "orden_capas": [
+  "Rear_Hair",
+  "Body",
+  "Eyes",
+  "Shoes",
+  "Bottom",
+  "Top",
+  "Accesorio",
+  "Facial_Hair",
+  "Mascara",
+  "Front_Hair",
+  "Hat",
+  "Held_Item"
+ ],
+ "nota": "orig: = archivo del pack original en Sprite/; new: = capa nueva en tpf_bandidos/Sprite/",
+ "presets": {
+  "bandido_maton": {
+   "Rear_Hair": "orig:Rear_Hair/4_4.png",
+   "Body": "orig:Body/2.png",
+   "Eyes": "orig:Eyes/1.png",
+   "Shoes": "orig:Bottom/Shoes_Layer.png",
+   "Bottom": "new:Bottom/b_pantalon.png",
+   "Top": "new:Top/b_harapos.png",
+   "Accesorio": "new:Accesorio/b_cinturon.png",
+   "Facial_Hair": "orig:Facial_Hair/2_4.png",
+   "Mascara": "new:Mascara/panuelo_rojo_sangre.png",
+   "Front_Hair": "orig:Front_Hair/4_4.png",
+   "Held_Item": "new:Held_Item/garrote.png"
+  },
+  "bandido_arquero": {
+   "Body": "orig:Body/1.png",
+   "Eyes": "orig:Eyes/2.png",
+   "Shoes": "orig:Bottom/Shoes_Layer.png",
+   "Bottom": "new:Bottom/b_pantalon.png",
+   "Top": "new:Top/b_tunica.png",
+   "Accesorio": "new:Accesorio/b_cinturon.png",
+   "Mascara": "new:Mascara/panuelo_rojo_sangre.png",
+   "Hat": "new:Hat/b_capucha.png",
+   "Held_Item": "orig:Held_Item/4.png"
+  },
+  "bandido_degollador": {
+   "Body": "orig:Body/2.png",
+   "Eyes": "orig:Eyes/3.png",
+   "Shoes": "orig:Bottom/Shoes_Layer.png",
+   "Bottom": "new:Bottom/b_pantalon.png",
+   "Top": "new:Top/b_tunica_cinturon.png",
+   "Mascara": "new:Mascara/panuelo_rojo_sangre.png",
+   "Hat": "new:Hat/b_capucha_sombra.png",
+   "Held_Item": "new:Held_Item/daga.png"
+  },
+  "bandido_bruto": {
+   "Body": "orig:Body/4.png",
+   "Eyes": "orig:Eyes/1.png",
+   "Shoes": "orig:Bottom/Shoes_Layer.png",
+   "Bottom": "new:Bottom/b_pantalon.png",
+   "Top": "new:Top/b_cuero_malla.png",
+   "Facial_Hair": "orig:Facial_Hair/3_5.png",
+   "Mascara": "new:Mascara/panuelo_rojo_sangre.png",
+   "Hat": "new:Hat/b_casco.png",
+   "Held_Item": "orig:Held_Item/6.png"
+  },
+  "bandido_mago": {
+   "Body": "orig:Body/1.png",
+   "Eyes": "orig:Eyes/4.png",
+   "Shoes": "orig:Bottom/Shoes_Layer.png",
+   "Bottom": "new:Bottom/b_pantalon.png",
+   "Top": "new:Top/b_tunica_mago.png",
+   "Mascara": "new:Mascara/panuelo_rojo_sangre.png",
+   "Hat": "new:Hat/b_capucha.png",
+   "Held_Item": "new:Held_Item/baston_fuego.png"
+  },
+  "bandido_chaman": {
+   "Rear_Hair": "orig:Rear_Hair/4_1.png",
+   "Body": "orig:Body/5.png",
+   "Eyes": "orig:Eyes/3.png",
+   "Shoes": "orig:Bottom/Shoes_Layer.png",
+   "Bottom": "new:Bottom/b_pantalon.png",
+   "Top": "new:Top/b_tunica_chaman.png",
+   "Facial_Hair": "orig:Facial_Hair/4_1.png",
+   "Mascara": "new:Mascara/panuelo_rojo_sangre.png",
+   "Front_Hair": "orig:Front_Hair/4_1.png",
+   "Held_Item": "new:Held_Item/baston_vida.png"
+  },
+  "capitan_bandido": {
+   "Rear_Hair": "orig:Rear_Hair/3_5.png",
+   "Body": "orig:Body/2.png",
+   "Eyes": "orig:Eyes/2.png",
+   "Shoes": "orig:Bottom/Shoes_Layer.png",
+   "Bottom": "new:Bottom/b_pantalon.png",
+   "Top": "new:Top/b_capa.png",
+   "Accesorio": "new:Accesorio/b_cinturon.png",
+   "Facial_Hair": "orig:Facial_Hair/2_5.png",
+   "Mascara": "new:Mascara/parche_ojo.png",
+   "Front_Hair": "orig:Front_Hair/3_5.png",
+   "Held_Item": "new:Held_Item/espada_oxidada.png"
+  },
+  "jefe_baron_carmesi": {
+   "Rear_Hair": "orig:Rear_Hair/3_5.png",
+   "Body": "orig:Body/4.png",
+   "Eyes": "new:Eyes/jefe_ojos_rojos.png",
+   "Shoes": "orig:Bottom/Shoes_Layer.png",
+   "Bottom": "new:Bottom/b_pantalon.png",
+   "Top": "new:Top/jefe_armadura_carmesi.png",
+   "Facial_Hair": "orig:Facial_Hair/3_5.png",
+   "Hat": "new:Hat/jefe_casco_cuernos.png",
+   "Held_Item": "new:Held_Item/jefe_mandoble.png"
+  }
+ }
+}
