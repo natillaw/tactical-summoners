@@ -7,6 +7,8 @@ var _currency: Label
 
 func _ready() -> void:
     theme = UIKit.make_theme()
+    ThemeDB.fallback_font = UIKit.body_font()          # world text (bars, names, floating numbers) in m5x7 too
+    ThemeDB.fallback_font_size = UIKit.BODY
 
     var bg := ColorRect.new()
     bg.color = UIKit.BG
@@ -14,22 +16,22 @@ func _ready() -> void:
     UIKit.fill(bg)
 
     var bar := PanelContainer.new()
-    bar.custom_minimum_size = Vector2(0, 46)
+    bar.custom_minimum_size = Vector2(0, 20)       # 640x360 base (D-063)
     add_child(bar)
     bar.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
     var hb := HBoxContainer.new()
     bar.add_child(hb)
-    hb.add_child(UIKit.label("Tactical Summoners", 18, UIKit.MUTED))
+    hb.add_child(UIKit.label("Tactical Summoners", 14, UIKit.MUTED))
     var spacer := Control.new()
     spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     hb.add_child(spacer)
-    _currency = UIKit.label("", 18, UIKit.ACCENT)
+    _currency = UIKit.label("", 14, UIKit.ACCENT)
     hb.add_child(_currency)
 
     _content = Control.new()
     add_child(_content)
     _content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    _content.offset_top = 50
+    _content.offset_top = 22
 
     Game.changed.connect(_refresh_currency)
     _refresh_currency()

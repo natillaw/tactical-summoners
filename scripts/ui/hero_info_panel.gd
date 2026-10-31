@@ -24,14 +24,14 @@ func _init(h: HeroData = null, current_activity: String = "") -> void:
 
 
 func _ready() -> void:
-    custom_minimum_size = Vector2(380, 0)
+    custom_minimum_size = Vector2(190, 0)  # px
     var scroll := ScrollContainer.new()
-    scroll.custom_minimum_size = Vector2(370, 560)
+    scroll.custom_minimum_size = Vector2(185, 280)  # px
     scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
     add_child(scroll)
     var vb := VBoxContainer.new()
     vb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    vb.add_theme_constant_override("separation", 6)
+    vb.add_theme_constant_override("separation", 3)  # px
     scroll.add_child(vb)
     if hero == null:
         return
@@ -40,7 +40,7 @@ func _ready() -> void:
     var head := HBoxContainer.new()
     var portrait := TextureRect.new()
     portrait.texture = SpriteComposer.pose_texture(h)
-    portrait.custom_minimum_size = Vector2(96, 96)
+    portrait.custom_minimum_size = Vector2(48, 48)  # px
     portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
     portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -80,7 +80,7 @@ func _ready() -> void:
 
     vb.add_child(_section("Skills"))
     _skills_box = VBoxContainer.new()
-    _skills_box.add_theme_constant_override("separation", 4)
+    _skills_box.add_theme_constant_override("separation", 2)  # px
     vb.add_child(_skills_box)
     _fill_skills()
 
@@ -99,7 +99,7 @@ func _ready() -> void:
     vb.add_child(_life_box)
     vb.add_child(_section("Equipment"))
     _gear_box = VBoxContainer.new()
-    _gear_box.add_theme_constant_override("separation", 3)
+    _gear_box.add_theme_constant_override("separation", 2)  # px
     vb.add_child(_gear_box)
     _fill_life()
     _fill_gear()
@@ -112,7 +112,7 @@ func _ready() -> void:
         var row := HBoxContainer.new()
         var sw := ColorRect.new()
         sw.color = dominant_color(rel)
-        sw.custom_minimum_size = Vector2(18, 18)
+        sw.custom_minimum_size = Vector2(9, 9)  # px
         row.add_child(sw)
         row.add_child(UIKit.label("  %s  (%s)" % [LAYER_NAMES.get(key, key), rel.get_file()], 13, UIKit.TEXT))
         vb.add_child(row)
@@ -243,7 +243,7 @@ func _fill_gear() -> void:
         var it: Dictionary = h.equipment[slot]
         var row := HBoxContainer.new()
         var l := _wrap("%s: %s — %s" % [ItemDefs.SLOT_NAMES[slot], it["name"], ItemGen.describe(it)], 12, ItemDefs.rarity_color(String(it["rarity"])))
-        l.custom_minimum_size = Vector2(270, 0)
+        l.custom_minimum_size = Vector2(135, 0)  # px
         row.add_child(l)
         row.add_child(UIKit.button("Off", _on_unequip.bind(String(slot)), Vector2(44, 24)))
         _gear_box.add_child(row)
@@ -259,7 +259,7 @@ func _fill_gear() -> void:
         var note := "" if trained.is_empty() or trained.has(h.hero_class) else " (untrained: 75%)"
         var row := HBoxContainer.new()
         var l := _wrap("%s — %s%s" % [ItemDefs.item_label(it), ItemGen.describe(it), note], 12, ItemDefs.rarity_color(String(it["rarity"])))
-        l.custom_minimum_size = Vector2(230, 0)
+        l.custom_minimum_size = Vector2(115, 0)  # px
         row.add_child(l)
         row.add_child(UIKit.button("Equip", _on_equip_item.bind(int(it["uid"])), Vector2(54, 24)))
         row.add_child(UIKit.button("Scrap", _on_salvage.bind(int(it["uid"])), Vector2(50, 24)))
@@ -338,20 +338,20 @@ func _section(title: String) -> Label:
 func _wrap(text: String, size_px: int, color: Color) -> Label:
     var l := UIKit.label(text, size_px, color)
     l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    l.custom_minimum_size = Vector2(340, 0)
+    l.custom_minimum_size = Vector2(170, 0)  # px
     return l
 
 
 func _bar(label_text: String, value: int) -> HBoxContainer:
     var row := HBoxContainer.new()
     var l := UIKit.label(label_text, 13, UIKit.TEXT)
-    l.custom_minimum_size = Vector2(90, 0)
+    l.custom_minimum_size = Vector2(45, 0)  # px
     row.add_child(l)
     var pb := ProgressBar.new()
     pb.min_value = 0
     pb.max_value = 100
     pb.value = value
-    pb.custom_minimum_size = Vector2(200, 14)
+    pb.custom_minimum_size = Vector2(100, 7)  # px
     pb.show_percentage = false
     row.add_child(pb)
     row.add_child(UIKit.label(" %d" % value, 13, UIKit.TEXT))

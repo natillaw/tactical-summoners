@@ -6,8 +6,9 @@ extends Control
 
 signal navigate(screen: String, arg: int)
 
-const ZOOM_MIN := 0.6
+const ZOOM_MIN := 0.5
 const ZOOM_MAX := 2.0
+const ZOOM_STEPS := [0.5, 1.0, 2.0]       # D-063: whole pixel steps only (the first fit view may be in between)
 
 var map: TownMap
 var view: TownView
@@ -75,8 +76,8 @@ func rebuild() -> void:
         # first view: the whole town fits on screen
         var ws := map.world_size()
         var vs := Vector2(_viewport.size) if _viewport.size.x > 0 else Vector2(1280, 670)
-        camera.zoom = Vector2.ONE * clampf(minf(vs.x / ws.x, vs.y / ws.y), ZOOM_MIN, ZOOM_MAX)
-        camera.position = ws * 0.5
+        camera.zoom = Vector2.ONE                 # D-063: start at x1 (crisp, readable); wheel = 0.5 / 1 / 2
+        camera.position = _clamp_cam(map.center_of(Vector2i(17, 10)))
     _refresh()
 
 
@@ -122,8 +123,8 @@ func _process(delta: float) -> void:
 
 func _build_ui() -> void:
     var top := HBoxContainer.new()
-    top.position = Vector2(12, 8)
-    top.add_theme_constant_override("separation", 10)
+    top.position = Vector2(6, 4)  # px
+    top.add_theme_constant_override("separation", 5)  # px
     add_child(top)
     var menu_btn := UIKit.button("Menu", func(): navigate.emit("menu", 0), Vector2(90, 34))
     menu_btn.focus_mode = Control.FOCUS_NONE
@@ -142,28 +143,28 @@ func _build_ui() -> void:
     top.add_child(day_btn)
     _move_msg = UIKit.label("", 15, UIKit.ACCENT)
     _move_msg.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-    _move_msg.position += Vector2(-200, 52)
+    _move_msg.position += Vector2(-100, 26)  # px
     _move_msg.mouse_filter = Control.MOUSE_FILTER_IGNORE
     add_child(_move_msg)
 
     var hint := UIKit.label("Click a building to manage it    Click a hero to see them    Drag to move    Wheel to zoom    Red ! = a building has a problem", 14, UIKit.MUTED)
     hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
     hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
-    hint.position += Vector2(14, -30)
+    hint.position += Vector2(7, -15)  # px
     add_child(hint)
 
     _panel = PanelContainer.new()
-    _panel.custom_minimum_size = Vector2(350, 0)
+    _panel.custom_minimum_size = Vector2(175, 0)  # px
     _panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-    _panel.position = Vector2(-362, 52)
+    _panel.position = Vector2(-181, 26)  # px
     _panel.visible = false
     add_child(_panel)
     var scroll := ScrollContainer.new()
-    scroll.custom_minimum_size = Vector2(340, 590)
+    scroll.custom_minimum_size = Vector2(170, 295)  # px
     scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
     _panel.add_child(scroll)
     _panel_box = VBoxContainer.new()
-    _panel_box.add_theme_constant_override("separation", 6)
+    _panel_box.add_theme_constant_override("separation", 3)  # px
     _panel_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     scroll.add_child(_panel_box)
 
@@ -207,7 +208,7 @@ func _show_panel(id: String) -> void:
     _panel_box.add_child(UIKit.label("Level %d / %d" % [level, int(b["max"])] if level > 0 else "Not built yet", 15, UIKit.TEXT))
     var desc := UIKit.label(String(b["desc"]), 14, UIKit.MUTED)
     desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    desc.custom_minimum_size = Vector2(300, 0)
+    desc.custom_minimum_size = Vector2(150, 0)  # px
     _panel_box.add_child(desc)
     _panel_construction(id, level)
     if TownTables.is_dorm(id) and level > 0:
@@ -264,14 +265,14 @@ func _show_panel(id: String) -> void:
 func _wrap(text: String, size_px: int, color: Color) -> Label:
     var l := UIKit.label(text, size_px, color)
     l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    l.custom_minimum_size = Vector2(320, 0)
+    l.custom_minimum_size = Vector2(160, 0)  # px
     return l
 
 
 func _small_btn(text: String, cb: Callable, w: float = 70.0) -> Button:
     var b := UIKit.button(text, cb, Vector2(w, 26))
     b.focus_mode = Control.FOCUS_NONE
-    b.add_theme_font_size_override("font_size", 12)
+    b.add_theme_font_size_override("font_size", UIKit.fpx(12))  # px
     return b
 
 
@@ -376,7 +377,7 @@ func _panel_workers(id: String, slots: int) -> void:
         var hd := h as HeroData
         var row := HBoxContainer.new()
         row.add_child(_wrap("%s — %s Lv %d · %s" % [hd.hero_name.split(" ")[0], ProfessionDefs.info(prof).get("name", prof), hd.prof_level(prof), hd.activity_state], 13, UIKit.TEXT))
-        (row.get_child(0) as Label).custom_minimum_size = Vector2(250, 0)
+        (row.get_child(0) as Label).custom_minimum_size = Vector2(125, 0)  # px
         row.add_child(_small_btn("Remove", func(): Game.assign_work(hd, "")))
         _panel_box.add_child(row)
     if here.size() >= slots:
@@ -389,7 +390,7 @@ func _panel_workers(id: String, slots: int) -> void:
         var note := ("%s Lv %d" % [ProfessionDefs.info(prof).get("name", prof), lvl]) if lvl >= 0 else ("can learn it" if hd.professions.size() < ProfessionDefs.MAX_KNOWN else "knows 2 professions")
         var row := HBoxContainer.new()
         row.add_child(_wrap("%s (%s)%s" % [hd.hero_name.split(" ")[0], note, " · now: " + hd.hq_assignment if hd.hq_assignment != "" else ""], 13, UIKit.MUTED))
-        (row.get_child(0) as Label).custom_minimum_size = Vector2(250, 0)
+        (row.get_child(0) as Label).custom_minimum_size = Vector2(125, 0)  # px
         var b := _small_btn("Assign", func(): Game.assign_work(hd, id))
         b.disabled = lvl < 0 and hd.professions.size() >= ProfessionDefs.MAX_KNOWN
         row.add_child(b)
@@ -507,7 +508,7 @@ Recommended: %d heroes. Explored: %s" % [String(cfg.get("intro", "")), TowerExpe
     if Game.party_heroes().size() < Game.PARTY_SIZE:
         var warn := UIKit.label("Party not full: a test squad will go instead and nothing is kept (Menu -> Party, or the War Room).", 13, Color(1.0, 0.7, 0.5))
         warn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-        warn.custom_minimum_size = Vector2(300, 0)
+        warn.custom_minimum_size = Vector2(150, 0)  # px
         _panel_box.add_child(warn)
 
 
@@ -580,7 +581,7 @@ func open_hero(th: TownHero) -> void:
     close_hero()
     selected_hero_id = th.hero.id
     hero_panel = HeroInfoPanel.new(th.hero, th.activity_text())
-    hero_panel.position = Vector2(12, 52)
+    hero_panel.position = Vector2(6, 26)  # px
     hero_panel.closed.connect(close_hero)
     hero_panel.open_barracks.connect(func(): navigate.emit("roster", 0))
     add_child(hero_panel)
@@ -603,7 +604,19 @@ func _update_hover(world: Vector2) -> void:
 
 
 func _zoom(f: float) -> void:
-    camera.zoom = Vector2.ONE * clampf(camera.zoom.x * f, ZOOM_MIN, ZOOM_MAX)
+    var z := camera.zoom.x
+    var next := z
+    if f > 1.0:
+        for s in ZOOM_STEPS:
+            if float(s) > z + 0.01:
+                next = float(s)
+                break
+    else:
+        for i in range(ZOOM_STEPS.size() - 1, -1, -1):
+            if float(ZOOM_STEPS[i]) < z - 0.01:
+                next = float(ZOOM_STEPS[i])
+                break
+    camera.zoom = Vector2.ONE * clampf(next, ZOOM_MIN, ZOOM_MAX)
     camera.position = _clamp_cam(camera.position)
 
 

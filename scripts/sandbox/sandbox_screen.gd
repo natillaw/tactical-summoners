@@ -9,9 +9,11 @@ signal back_requested
 const TEST_SQUAD := [[101, 3], [202, 2], [303, 4], [404, 1], [505, 5]]   # [seed, stars] used if the party is not full
 const SEPARATION := 26.0
 const FORMATION_RADIUS := 44.0
-const GROUP_ZOOM_MIN := 0.75
-const GROUP_ZOOM_MAX := 2.0
-const FOLLOW_ZOOM := 2.5
+# D-063: the world is drawn at the 640x360 base with whole-number zoom only (crisp pixel art): x1 normally,
+# x0.5 when the squad is too spread out to fit. The whole-map overview (M) fits the map instead.
+const GROUP_ZOOM_MIN := 0.5
+const GROUP_ZOOM_MAX := 1.0
+const FOLLOW_ZOOM := 1.0
 # Camera feel (game feel report): look-ahead along the followed hero's motion, and a group zoom that
 # only re-targets when the needed zoom moved by more than ZOOM_HYSTERESIS (no "breathing" while the
 # squad walks). Easing itself lives in FeelCamera.
@@ -82,6 +84,12 @@ const SKILL_KEYS := "WER"
 var _q_held: bool = false                 # holding Q keeps firing at the cursor whenever ready
 var _overlay: Control
 var _band: ColorRect
+var _hud: ExpeditionHud = null
+var _menu: GameMenu = null
+var _preview_slot: int = -1
+var _look_at: Vector2 = Vector2.INF
+var _look_t: float = 0.0
+const LOOK_HOLD := 3.0
 var _drag_start: Vector2 = Vector2.ZERO
 var aiming_slot: int = -1                 # W/E/R held on the driven hero: indicator shown, cast on release
 var _rmb_held: bool = false
@@ -444,64 +452,48 @@ func update_fog() -> void:
 
 
 func _build_ui() -> void:
-	var back := UIKit.button("< Back", func(): back_requested.emit(), Vector2(100, 36))
-	back.focus_mode = Control.FOCUS_NONE
-	back.position = Vector2(12, 10)
-	add_child(back)
-
-	var panel := PanelContainer.new()
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.modulate = Color(1, 1, 1, 0.88)
-	add_child(panel)
-	# bottom-left so the map and the heroes' speech stay visible
-	panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
-	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	panel.offset_left = 12
-	panel.offset_bottom = -44
-	var pv := VBoxContainer.new()
-	pv.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.add_child(pv)
-	_info = UIKit.label("", 15, UIKit.TEXT)
-	_info.custom_minimum_size = Vector2(340, 0)
+	# D-063: the expedition HUD (party, skills, orders, objective, minimap, boss). The old text panel lives
+	# on as the Details panel (I): _info and _squad_label are refreshed as before.
+	_info = UIKit.label("", 14, UIKit.TEXT)
+	_info.custom_minimum_size = Vector2(240, 0)
 	_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	pv.add_child(_info)
-	var row := HBoxContainer.new()
-	pv.add_child(row)
-	for i in SkillDefs.MAX_SLOTS:
-		var slot_i := i
-		var sb := UIKit.button(SKILL_KEYS[i], func(): use_skill_selected(slot_i), Vector2(64, 34))
-		sb.focus_mode = Control.FOCUS_NONE
-		sb.add_theme_font_size_override("font_size", 11)
-		row.add_child(sb)
-		_skill_btns.append(sb)
-	var stop_btn := UIKit.button("Stop (S)", func(): stop_selected(), Vector2(110, 34))
-	stop_btn.focus_mode = Control.FOCUS_NONE
-	row.add_child(stop_btn)
-	# D-040: every order also has a button
-	var row2 := HBoxContainer.new()
-	pv.add_child(row2)
-	for spec in [["A-move (A)", func(): arm_attack_move()], ["Hold (H)", func(): hold_selected()],
-			["Follow (F)", func(): follow_selected()], ["Regroup (C)", func(): regroup_selected()],
-			["Retreat (X)", func(): retreat_selected()], ["Extract", func(): extract()]]:
-		var b := UIKit.button(String(spec[0]), spec[1], Vector2(66, 30))
-		b.focus_mode = Control.FOCUS_NONE
-		b.add_theme_font_size_override("font_size", 11)
-		row2.add_child(b)
-	_squad_label = UIKit.label("", 14, UIKit.MUTED)
-	_squad_label.custom_minimum_size = Vector2(340, 0)
-	pv.add_child(_squad_label)
-
-	_hint = UIKit.label("LMB select · RMB move/attack/rescue · 1-5 drive a hero (RMB move, Q attack at the mouse) · Tab group · G squad · W E R skills · A attack-move · H hold · F follow · C regroup · X retreat · S stop · M map", 13, UIKit.MUTED)
-	_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
-	_hint.position += Vector2(14, -34)
-	add_child(_hint)
+	_squad_label = UIKit.label("", 12, UIKit.MUTED)
+	_squad_label.custom_minimum_size = Vector2(240, 0)
+	_hud = ExpeditionHud.new(self)
+	add_child(_hud)
 
 	_band = ColorRect.new()
-	_band.color = Color(0.45, 0.85, 0.50, 0.22)
+	_band.color = Color(ArtPalette.GREEN[3], 0.22)
 	_band.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_band.visible = false
 	add_child(_band)
+	UIKit.music("boss" if mission_type == "boss" else ("explore" if floor_number > 0 else "battle"))
+
+
+## Esc / the menu button: options and a way out, the expedition keeps running (D-062, D-014).
+func open_menu() -> void:
+	if _menu != null and is_instance_valid(_menu):
+		_menu.close()
+		return
+	_menu = GameMenu.new()
+	_menu.leave_label = "Leave (the squad abandons the floor)" if mission_state == Mission.ACTIVE and floor_number > 0 else "Back to the town"
+	_menu.leave_requested.connect(func(_to): back_requested.emit())
+	add_child(_menu)
+
+
+## Hovering a skill in the HUD shows its reach (and area at the mouse) for the hero in focus.
+func preview_skill(slot: int) -> void:
+	_preview_slot = slot
+	if slot >= 0 and _aim_view == null:
+		_aim_view = SkillAimView.new()
+		_world.add_child(_aim_view)
+
+
+## Minimap click: look at a point for a few seconds (camera only; orders and focus unchanged).
+func look_at_world(p: Vector2) -> void:
+	overview = false
+	_look_at = p
+	_look_t = LOOK_HOLD
 
 
 # --- selection / camera commands (public so tests and a future HUD can call them) ----------
@@ -569,6 +561,9 @@ func group_view() -> void:
 func update_camera_targets() -> void:
 	if heroes.is_empty():
 		return
+	if _look_t > 0.0 and _look_at != Vector2.INF:
+		camera_target = _look_at
+		return
 	if overview:
 		var ws: Vector2 = map.world_size()
 		var vs := Vector2(_viewport.size) if _viewport != null and _viewport.size.x > 0 else Vector2(1280, 670)
@@ -586,8 +581,9 @@ func update_camera_targets() -> void:
 		hi = hi.max(h.position)
 	camera_target = (lo + hi) * 0.5
 	var view := _viewport.size if _viewport != null and _viewport.size.x > 0 else Vector2i(1280, 670)
-	var need := (hi - lo) + Vector2(360, 300)
+	var need := (hi - lo) + Vector2(180, 150)
 	var z := clampf(minf(view.x / need.x, view.y / need.y), GROUP_ZOOM_MIN, GROUP_ZOOM_MAX)
+	z = GROUP_ZOOM_MAX if z >= 0.9 else GROUP_ZOOM_MIN          # whole steps only (D-063)
 	if absf(z - camera_zoom_target) > camera_zoom_target * ZOOM_HYSTERESIS or z >= GROUP_ZOOM_MAX or z <= GROUP_ZOOM_MIN:
 		camera_zoom_target = z
 
@@ -746,6 +742,7 @@ func _physics_process(delta: float) -> void:
 
 ## Camera easing runs in the physics tick, after the units moved, so both are interpolated together.
 func _step_camera(delta: float) -> void:
+	_look_t = maxf(0.0, _look_t - delta)
 	update_camera_targets()
 	var lead := Vector2.ZERO
 	if follow_slot >= 0 and follow_slot < heroes.size() and not overview:
@@ -992,10 +989,10 @@ func _show_result() -> void:
 	var panel := PanelContainer.new()
 	center.add_child(panel)
 	var vb := VBoxContainer.new()
-	vb.add_theme_constant_override("separation", 10)
+	vb.add_theme_constant_override("separation", 5)  # px
 	panel.add_child(vb)
 	var title := UIKit.label(result_text(), 16, UIKit.TEXT)
-	title.custom_minimum_size = Vector2(560, 0)
+	title.custom_minimum_size = Vector2(280, 0)  # px
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	vb.add_child(title)
 	vb.add_child(UIKit.button("Back to town", func(): back_requested.emit(), Vector2(560, 44)))
@@ -1076,8 +1073,9 @@ func _process(delta: float) -> void:
 			if driven.order == "move" and not driven.path.is_empty() and driven.path[driven.path.size() - 1].distance_to(p) > 16.0:
 				order_move_selected(p)
 	if _aim_view != null:
-		_aim_view.hero = driven
-		_aim_view.slot = aiming_slot
+		var focus: SandboxHero = driven if driven != null else (selected[0] if selected.size() == 1 else null)
+		_aim_view.hero = focus
+		_aim_view.slot = aiming_slot if aiming_slot >= 0 else _preview_slot
 		_aim_view.cursor = screen_to_world(get_local_mouse_position())
 		_aim_view.queue_redraw()
 	if _dragging:
@@ -1227,7 +1225,13 @@ func _input(event: InputEvent) -> void:
 		KEY_X:
 			retreat_selected()
 		KEY_ESCAPE:
-			_arming_attack_move = false
+			if _arming_attack_move:
+				_arming_attack_move = false
+			else:
+				open_menu()
+		KEY_I:
+			if _hud != null:
+				_hud.toggle_details()
 		_:
 			return
 	get_viewport().set_input_as_handled()

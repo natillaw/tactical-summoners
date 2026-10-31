@@ -40,8 +40,8 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
-    var font := ThemeDB.fallback_font
-    var size := 18 if big else 13
+    var font := UIKit.title_font() if big else UIKit.body_font()     # pixel fonts at native size (D-063)
+    var size := UIKit.BODY
     var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
-    draw_string_outline(font, Vector2(-w * 0.5, 0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, 3, Color(0, 0, 0, 0.8))
+    draw_string_outline(font, Vector2(-w * 0.5, 0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, 2, ArtPalette.OUTLINE)
     draw_string(font, Vector2(-w * 0.5, 0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, color)

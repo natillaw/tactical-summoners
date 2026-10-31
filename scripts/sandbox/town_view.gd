@@ -249,19 +249,19 @@ func _draw() -> void:
         var problem := String(Game.town_problems.get(id, ""))
         if problem != "" and level > 0:
             draw_circle(Vector2(r.end.x - 8, r.position.y + 8), 8.0, Color(0.9, 0.25, 0.2))
-            draw_string(font, Vector2(r.end.x - 11, r.position.y + 13), "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
+            draw_string(font, Vector2(r.end.x - 11, r.position.y + 13), "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
         var title := String(b["name"]) + ("  Lv %d" % level if level > 0 else "  (build)")
         var tw := font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
         var tp := Vector2(r.get_center().x - tw * 0.5, r.position.y - 6)
         draw_rect(Rect2(tp + Vector2(-4, -14), Vector2(tw + 8, 18)), Color(0.08, 0.07, 0.12, 0.75))
-        draw_string(font, tp, title, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1, 0.95, 0.8) if level > 0 else Color(0.8, 0.8, 0.8))
+        draw_string(font, tp, title, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(1, 0.95, 0.8) if level > 0 else Color(0.8, 0.8, 0.8))
     _draw_ghost(cell)
     _draw_occupancy(cell)
     if empty_hint != "":
         var f := ThemeDB.fallback_font
         var ws := map.world_size()
-        draw_string_outline(f, Vector2(0, ws.y * 0.5), empty_hint, HORIZONTAL_ALIGNMENT_CENTER, ws.x, 28, 6, Color(0, 0, 0, 0.85))
-        draw_string(f, Vector2(0, ws.y * 0.5), empty_hint, HORIZONTAL_ALIGNMENT_CENTER, ws.x, 28, Color(1.0, 0.92, 0.7))
+        draw_string_outline(f, Vector2(0, ws.y * 0.5), empty_hint, HORIZONTAL_ALIGNMENT_CENTER, ws.x, 32, 6, Color(0, 0, 0, 0.85))
+        draw_string(f, Vector2(0, ws.y * 0.5), empty_hint, HORIZONTAL_ALIGNMENT_CENTER, ws.x, 32, Color(1.0, 0.92, 0.7))
 
 
 ## Small tag over each building with how many heroes are inside (sleeping / busy).
@@ -283,7 +283,7 @@ func _draw_occupancy(cell: float) -> void:
         var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x + 10
         var at := Vector2(plot.position.x + plot.size.x * 0.5, plot.position.y) * cell + Vector2(-w * 0.5, -4)
         draw_rect(Rect2(at, Vector2(w, 17)), Color(0.08, 0.08, 0.12, 0.8))
-        draw_string(font, at + Vector2(5, 13), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.95, 0.92, 0.75))
+        draw_string(font, at + Vector2(5, 13), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.95, 0.92, 0.75))
 
 
 ## D-050 placement preview (green = valid, red = invalid).

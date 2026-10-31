@@ -54,4 +54,4 @@ func _draw() -> void:
 	draw_arc(g, 24.0, 0.0, TAU, 36, Color(0.45, 0.95, 0.65), 4.0)
 	draw_arc(g, 18.0, 0.0, TAU, 28, Color(0.70, 1.0, 0.85, 0.8), 2.5)
 	draw_circle(g, 6.0, Color(0.85, 1.0, 0.90, 0.9))
-	draw_string(ThemeDB.fallback_font, g + Vector2(-32, -32), "EXTRACT", HORIZONTAL_ALIGNMENT_CENTER, 64, 13, Color(0.80, 1.0, 0.85))
+	draw_string(ThemeDB.fallback_font, g + Vector2(-32, -32), "EXTRACT", HORIZONTAL_ALIGNMENT_CENTER, 64, 16, Color(0.80, 1.0, 0.85))
