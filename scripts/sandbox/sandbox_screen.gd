@@ -1068,13 +1068,13 @@ func _separate_enemies() -> void:
 
 func _nudge_any(n: Node2D, v: Vector2) -> void:
 	var np := n.position + v
-	if not map.is_blocked(np):
+	if map.can_step(n.position, np):
 		n.position = np
 
 
 func _nudge(h: SandboxHero, v: Vector2) -> void:
 	var np := h.position + v
-	if not map.is_blocked(np):
+	if map.can_step(h.position, np):
 		h.position = np
 
 

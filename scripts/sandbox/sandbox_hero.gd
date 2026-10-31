@@ -540,9 +540,9 @@ func _try_dodge(enemies: Array, map: NavMap) -> bool:
 		if away.length() < 1.0:
 			away = Vector2.RIGHT.rotated(float(slot))
 		var spot := aim + away.normalized() * (r + 22.0)
-		if map.is_blocked(spot):
+		if not map.can_step(position, spot):
 			spot = aim - away.normalized().orthogonal() * (r + 22.0)
-		if map.is_blocked(spot):
+		if not map.can_step(position, spot):
 			return false
 		path.clear()
 		path.append(spot)
@@ -1089,7 +1089,7 @@ func _apply_effect(eff: Dictionary, foes: Array, friends: Array, centre: Vector2
 			if not foes.is_empty() and _map != null:
 				var f: Node2D = foes[0]
 				var spot := f.position + (position - f.position).normalized() * 28.0
-				if not _map.is_blocked(spot):
+				if _map.can_step(position, spot):
 					CombatVFX.play(get_parent(), position, "dust", 0.9, spot.x < position.x)
 					var was := position
 					position = spot
@@ -1139,7 +1139,7 @@ func _push(u: Node2D, dir: Vector2, dist: float) -> void:
 	var moved := 0.0
 	while moved < dist:
 		var np := u.position + dir * minf(step, dist - moved)
-		if _map.is_blocked(np):
+		if not _map.can_step(u.position, np):
 			break
 		u.position = np
 		moved += step
@@ -1205,16 +1205,19 @@ func _skill_weight(sk: Dictionary, radius: float) -> String:
 
 
 ## The real radius of the area, drawn on the ground when it lands (the art is decoration around it).
+## Runs `f` after `delay` seconds on a tween owned by this hero: if the hero (or the mission screen
+## around it) is freed first, the tween dies with it and `f` never runs on freed nodes (B4).
+func _after(delay: float, f: Callable) -> void:
+	create_tween().tween_callback(f).set_delay(delay)
+
+
 func _area_flash_later(centre: Vector2, radius: float, delay: float) -> void:
 	var parent := get_parent()
 	var col := Color(1.0, 0.7, 0.25)
 	if delay <= 0.02 or not is_inside_tree():
 		CombatFeel.area_flash(parent, centre, radius, col)
 		return
-	get_tree().create_timer(delay).timeout.connect(func():
-		if is_instance_valid(parent):
-			CombatFeel.area_flash(parent, centre, radius, col)
-	)
+	_after(delay, func(): CombatFeel.area_flash(parent, centre, radius, col))
 
 
 func _feel_later(kind: String, delay: float, at: Vector2) -> void:
@@ -1223,10 +1226,7 @@ func _feel_later(kind: String, delay: float, at: Vector2) -> void:
 	if delay <= 0.02:
 		CombatFeel.shake(self, kind, at - position)
 		return
-	get_tree().create_timer(delay).timeout.connect(func():
-		if is_instance_valid(self):
-			CombatFeel.shake(self, kind, at - position)
-	)
+	_after(delay, func(): CombatFeel.shake(self, kind, at - position))
 
 
 func _fx_later(key: String, pos: Vector2, sc: float, delay: float, flip: bool) -> void:
@@ -1234,10 +1234,7 @@ func _fx_later(key: String, pos: Vector2, sc: float, delay: float, flip: bool) -
 	if delay <= 0.02 or not is_inside_tree():
 		CombatVFX.play(parent, pos, key, sc, flip)
 		return
-	get_tree().create_timer(delay).timeout.connect(func():
-		if is_instance_valid(parent):
-			CombatVFX.play(parent, pos, key, sc, flip)
-	)
+	_after(delay, func(): CombatVFX.play(parent, pos, key, sc, flip))
 
 
 func _start_cast_fx(id: String) -> void:

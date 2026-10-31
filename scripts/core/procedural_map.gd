@@ -173,8 +173,32 @@ func _try_generate(rng: RandomNumberGenerator) -> bool:
 		for x in width:
 			if grid_rows[y][x] == "#":
 				grid.set_point_solid(Vector2i(x, y), true)
-
+	if not is_hq:
+		_seal_pockets()
 	return true
+
+
+## B1: no walkable cell the pathfinder cannot reach from the entrance (a unit pushed into such a
+## pocket could never walk out). Content that landed in a sealed cell is dropped (nobody could reach
+## it anyway). Also run on every snapshot load, so floors saved before the fix are safe too; the
+## reachable layout never changes (D-026).
+func _seal_pockets() -> void:
+	if spawn_cells.is_empty() or seal_unreachable(spawn_cells[0], grid_rows) == 0:
+		return
+	var open := func(c: Vector2i) -> bool: return not is_blocked_cell(c)
+	enemy_spawn_cells.assign(enemy_spawn_cells.filter(open))
+	treasure_cells.assign(treasure_cells.filter(open))
+	resource_nodes = resource_nodes.filter(func(n): return open.call(n["cell"]))
+	for e in encounters:
+		var keep: Array = []
+		var members: Array = []
+		for i in (e["cells"] as Array).size():
+			if open.call(e["cells"][i]):
+				keep.append(e["cells"][i])
+				members.append(e["members"][i])
+		e["cells"] = keep
+		e["members"] = members
+	encounters = encounters.filter(func(e): return not (e["cells"] as Array).is_empty())
 
 
 ## v2 content (D-056). Rooms are chained from the entrance (rooms[0]) to the goal (last), so the
@@ -362,6 +386,7 @@ static func from_snapshot(d: Dictionary, floor_num: int) -> ProceduralMap:
 		for x in m.width:
 			if m.grid_rows[y][x] == "#":
 				m.grid.set_point_solid(Vector2i(x, y), true)
+	m._seal_pockets()
 	return m
 
 

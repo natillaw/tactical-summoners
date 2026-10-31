@@ -34,6 +34,55 @@ func build_grid(rows: Array) -> void:
                 grid.set_point_solid(Vector2i(x, y), true)
 
 
+## True when a unit at `from` may be placed at `to` by a push or a nudge (not by a path): `to` is not a
+## wall, and a move into a diagonal cell does not squeeze through a corner the pathfinder refuses
+## (DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES), so nobody is ever pushed somewhere it cannot walk out of.
+func can_step(from: Vector2, to: Vector2) -> bool:
+    if is_blocked(to):
+        return false
+    var a := cell_of(from)
+    var b := cell_of(to)
+    var d := b - a
+    if absi(d.x) > 1 or absi(d.y) > 1:
+        return has_line_of_sight(from, to)
+    if d.x != 0 and d.y != 0:
+        return not is_blocked_cell(Vector2i(b.x, a.y)) and not is_blocked_cell(Vector2i(a.x, b.y))
+    return true
+
+
+## Walkable cells the pathfinder cannot reach from `from_cell` become solid ("#"). Map generation
+## leaves a few such pockets (tree clumps closing a corner); a unit pushed into one could never walk
+## out (B1 of the playtest report). Returns how many cells were sealed. `rows` (optional) is updated too.
+func seal_unreachable(from_cell: Vector2i, rows: Array = []) -> int:
+    if grid == null or is_blocked_cell(from_cell):
+        return 0
+    var reach := {from_cell: true}
+    var queue: Array[Vector2i] = [from_cell]
+    var head := 0
+    while head < queue.size():
+        var c: Vector2i = queue[head]
+        head += 1
+        for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1), Vector2i(1, 1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(-1, -1)]:
+            var n: Vector2i = c + d
+            if reach.has(n) or is_blocked_cell(n):
+                continue
+            if d.x != 0 and d.y != 0 and (is_blocked_cell(c + Vector2i(d.x, 0)) or is_blocked_cell(c + Vector2i(0, d.y))):
+                continue
+            reach[n] = true
+            queue.append(n)
+    var sealed := 0
+    for y in height:
+        for x in width:
+            var c := Vector2i(x, y)
+            if not reach.has(c) and not grid.is_point_solid(c):
+                grid.set_point_solid(c, true)
+                sealed += 1
+                if y < rows.size():
+                    var row := String(rows[y])
+                    rows[y] = row.substr(0, x) + "#" + row.substr(x + 1)
+    return sealed
+
+
 func world_size() -> Vector2:
     return Vector2(width, height) * CELL
 
