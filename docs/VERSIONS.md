@@ -15,11 +15,18 @@ Las pruebas automáticas se ejecutan en GitHub (Godot 4.7.1 Linux) con cada push
 | **v7** | `5ab21e7` | [ZIP](https://github.com/natillaw/tactical-summoners/archive/5ab21e7.zip) | **Combate fase 2**: órdenes atacar avanzando (A), mantener (H), seguir (F), reagrupar (C), retirada (X), parar (S) con botones; línea de visión (los árboles bloquean disparos); arqueros/magos retroceden si se les acercan; los héroes esquivan solos los golpes telegrafiados | **17/17 PASS** |
 | **v8** | `ed3c5a7` | [ZIP](https://github.com/natillaw/tactical-summoners/archive/ed3c5a7.zip) | **Combate fase 3**: habilidades como datos (≈45), recurso por clase (Furia, Foco, Maná, Aguante), teclas **Q W E R** con botones, tiempos de lanzamiento (solo los rompe un aturdimiento), interrupciones, provocar, empujar, carga, teletransporte, zonas, estados Marcado y Regeneración; nacen con 1 habilidad y eligen 1 de 2-3 en niveles 5/10/20…; libros de habilidad (jefe, rescate, exploración, botín) y **Biblioteca**; guardado v8 | **18/18 PASS** — [ejecución](https://github.com/natillaw/tactical-summoners/actions/runs/41147327096) |
 | **v9** | `6558c35` | [ZIP](https://github.com/natillaw/tactical-summoners/archive/6558c35.zip) | **Cuartel general vivo:** reloj del pueblo, profesiones con nivel, trabajo con recetas (granja, tala, mina, cocina, taller, herrería, alquimia), almacén, camas reales, hambre/fatiga/estrés, hospital con médicos y enfermedades, taberna, obras por constructores con techo del Salón, mover edificios; **equipo** con rarezas, afijos, únicos y sets, botín y forja; guardado v9 | **20/20 PASS** — [ejecución](https://github.com/natillaw/tactical-summoners/actions/runs/41150421537) |
+| **v10** | `27ae9f5` | [ZIP](https://github.com/natillaw/tactical-summoners/archive/27ae9f5.zip) | **Animaciones de combate con los packs:** ataques por arma (tajos, flechas y bolas que vuelan), círculo mágico al lanzar, impactos y áreas propios de cada habilidad, auras de estado, zonas de humo/trampa/santuario, criaturas que atacan y se encogen con sus animaciones reales; arreglo del recorte de criaturas pequeñas y grandes; orcos voxel en los pisos 7-10 | **21/21 PASS** — [ejecución](https://github.com/natillaw/tactical-summoners/actions/runs/41152812930) |
 
 ## Qué probar a mano en cada versión (en Windows, con el editor o F5)
 ### v1 (estado original, como referencia)
 - Al abrir el Sandbox **no aparecen héroes** y sale un error en la consola (F-038, confirmado en GitHub).
 - "Living Headquarters → Explore Base" da error (F-001).
+
+### v10
+1. Entra a un piso. Cada clase golpea a su manera: el guerrero con un tajo, el pícaro con un corte curvo, el explorador lanza flechas que vuelan, el mago bolas arcanas y el clérigo golpes de maza.
+2. Usa las habilidades (Q): las que tardan en lanzarse muestran un círculo mágico bajo el héroe; la bola de fuego vuela y explota, el rayo sagrado cae del cielo, la lluvia de flechas cae sobre la zona…
+3. Los enemigos levantan el arma (o muerden o embisten) justo antes de golpear y se encogen al recibir daño. Las ratas, murciélagos y slimes ya no se ven cortados.
+4. Quemado = llamas, envenenado = burbujas verdes, aturdido = estrellas, escudo = burbuja azul.
 
 ### v9
 1. En el pueblo, arriba aparecen el **día y la hora** y los recursos. El tiempo corre (1 hora cada 30 s) o pulsa **Pass a day**.
