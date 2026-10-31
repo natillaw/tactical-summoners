@@ -36,12 +36,12 @@ func _ready() -> void:
 
 	var body := HBoxContainer.new()
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	body.add_theme_constant_override("separation", 20)
+	body.add_theme_constant_override("separation", 10)  # px
 	root.add_child(body)
 
 	# Left: Facilities
 	var left_panel := PanelContainer.new()
-	left_panel.custom_minimum_size = Vector2(500, 0)
+	left_panel.custom_minimum_size = Vector2(250, 0)  # px
 	left_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	body.add_child(left_panel)
 	var lscroll := ScrollContainer.new()
@@ -49,7 +49,7 @@ func _ready() -> void:
 	left_panel.add_child(lscroll)
 	_facility_container = VBoxContainer.new()
 	_facility_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_facility_container.add_theme_constant_override("separation", 15)
+	_facility_container.add_theme_constant_override("separation", 8)  # px
 	lscroll.add_child(_facility_container)
 
 	# Right: Unassigned / All Roster
@@ -62,7 +62,7 @@ func _ready() -> void:
 	right_panel.add_child(rscroll)
 	_roster_container = VBoxContainer.new()
 	_roster_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_roster_container.add_theme_constant_override("separation", 10)
+	_roster_container.add_theme_constant_override("separation", 5)  # px
 	rscroll.add_child(_roster_container)
 
 	Game.changed.connect(_rebuild)

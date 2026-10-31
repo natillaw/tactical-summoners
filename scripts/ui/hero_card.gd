@@ -11,7 +11,7 @@ var _style: StyleBoxFlat
 
 func _init(h: HeroData = null) -> void:
     hero = h
-    custom_minimum_size = Vector2(150, 208)
+    custom_minimum_size = Vector2(75, 104)  # px
     mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 
 
@@ -24,7 +24,7 @@ func _ready() -> void:
 
     var vb := VBoxContainer.new()
     vb.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    vb.add_theme_constant_override("separation", 2)
+    vb.add_theme_constant_override("separation", 1)  # px
     add_child(vb)
 
     var portrait := HeroPortrait.new(hero, 2.5)

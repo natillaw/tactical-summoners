@@ -26,10 +26,10 @@ func _ready() -> void:
     var panel := PanelContainer.new()
     center.add_child(panel)
     _box = VBoxContainer.new()
-    _box.add_theme_constant_override("separation", 16)
+    _box.add_theme_constant_override("separation", 8)  # px
     panel.add_child(_box)
     _text = UIKit.label("", 22, UIKit.TEXT)
-    _text.custom_minimum_size = Vector2(640, 160)
+    _text.custom_minimum_size = Vector2(320, 80)  # px
     _text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     _box.add_child(_text)
     _next = UIKit.button("Continue", next_page, Vector2(640, 48))
@@ -58,7 +58,7 @@ func summon() -> void:
     _box.add_child(UIKit.label("Ten souls answered the circle", 22, UIKit.ACCENT))
     var grid := GridContainer.new()
     grid.columns = 2
-    grid.add_theme_constant_override("h_separation", 18)
+    grid.add_theme_constant_override("h_separation", 9)  # px
     _box.add_child(grid)
     for h in got:
         var hd := h as HeroData

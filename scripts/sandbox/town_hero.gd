@@ -276,9 +276,9 @@ func _draw() -> void:
         draw_rect(box, Color(0.98, 0.97, 0.92, 0.95))
         draw_rect(box, Color(0.2, 0.18, 0.15), false, 1.0)
         draw_colored_polygon(PackedVector2Array([Vector2(-3, -49), Vector2(3, -49), Vector2(0, -44)]), Color(0.98, 0.97, 0.92))
-        draw_string(font, Vector2(-bw * 0.5, -53), _bubble, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.15, 0.12, 0.1))
+        draw_string(font, Vector2(-bw * 0.5, -53), _bubble, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.15, 0.12, 0.1))
     elif hovered:
         var txt := hero.display_name()
         var w := font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
         draw_rect(Rect2(-w * 0.5 - 4, -58, w + 8, 16), Color(0.08, 0.07, 0.12, 0.85))
-        draw_string(font, Vector2(-w * 0.5, -46), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, hero.star_color())
+        draw_string(font, Vector2(-w * 0.5, -46), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, hero.star_color())

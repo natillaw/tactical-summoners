@@ -12,7 +12,7 @@ func _ready() -> void:
     add_child(center)
     UIKit.fill(center)
     var vb := VBoxContainer.new()
-    vb.add_theme_constant_override("separation", 12)
+    vb.add_theme_constant_override("separation", 6)  # px
     center.add_child(vb)
 
     var title := UIKit.label("TACTICAL SUMMONERS", 52, UIKit.ACCENT)

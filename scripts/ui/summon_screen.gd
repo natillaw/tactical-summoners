@@ -52,14 +52,14 @@ func _ready() -> void:
     vb.add_child(center)
     _grid = GridContainer.new()
     _grid.columns = 5
-    _grid.add_theme_constant_override("h_separation", 12)
-    _grid.add_theme_constant_override("v_separation", 12)
+    _grid.add_theme_constant_override("h_separation", 6)  # px
+    _grid.add_theme_constant_override("v_separation", 6)  # px
     center.add_child(_grid)
 
     _result = UIKit.label("", 15, UIKit.TEXT)
     _result.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     _result.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    _result.custom_minimum_size = Vector2(900, 0)
+    _result.custom_minimum_size = Vector2(450, 0)  # px
     vb.add_child(_result)
 
     _flash = ColorRect.new()

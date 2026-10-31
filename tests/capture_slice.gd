@@ -57,6 +57,7 @@ func _ready() -> void:
                 e.take_hit(DamageInfo.make(99999.0, "true", sb.heroes[0]))
             sb.tick(0.05)
             await _shot("slice_07_results", 0.5)
+            break
     print("CAPTURE DONE -> ", _dir)
     get_tree().quit(0)
 

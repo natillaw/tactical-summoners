@@ -14,7 +14,7 @@ func _init(i: int = 0, h: HeroData = null, row: String = "") -> void:
     hero = h
     row_name = row
     toggle_mode = true
-    custom_minimum_size = Vector2(170, 150)
+    custom_minimum_size = Vector2(85, 75)  # px
 
 
 func _ready() -> void:
@@ -22,7 +22,7 @@ func _ready() -> void:
     var vb := VBoxContainer.new()
     vb.mouse_filter = Control.MOUSE_FILTER_IGNORE
     vb.alignment = BoxContainer.ALIGNMENT_CENTER
-    vb.add_theme_constant_override("separation", 2)
+    vb.add_theme_constant_override("separation", 1)  # px
     add_child(vb)
     UIKit.fill(vb)
     if hero == null:

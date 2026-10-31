@@ -37,7 +37,7 @@ func _draw() -> void:
             draw_circle(h.path[h.path.size() - 1], 3.0, Color(1, 1, 1, 0.8))
         if h.target != null and is_instance_valid(h.target):
             draw_line(h.position + Vector2(0, -16), h.target.position + Vector2(0, -12), Color(1.0, 0.8, 0.2, 0.7), 1.0)
-        draw_string(font, h.position + Vector2(-30, 14), "%s %.0f" % [h.order, h.velocity.length()], HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color(0.8, 1.0, 0.8))
+        draw_string(font, h.position + Vector2(-30, 14), "%s %.0f" % [h.order, h.velocity.length()], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.8, 1.0, 0.8))
     for e in screen.living_enemies():
         _ellipse(e.position, e.body_radius, Color(1.0, 0.4, 0.3), 1.5)
         _ellipse(e.position, e.strike_range, Color(1.0, 0.6, 0.2, 0.5))

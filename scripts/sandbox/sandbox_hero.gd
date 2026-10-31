@@ -1341,7 +1341,7 @@ func _draw() -> void:
 	if downed:
 		var k := clampf(agony / CombatRules.AGONY_TIME, 0.0, 1.0)
 		draw_arc(Vector2(0, -12), 18.0, -PI / 2.0, -PI / 2.0 + TAU * k, 32, Color(1.0, 0.35, 0.3), 3.0)
-		draw_string(ThemeDB.fallback_font, Vector2(-30, -36), "DOWN %ds" % ceili(agony), HORIZONTAL_ALIGNMENT_CENTER, 60, 12, Color(1.0, 0.5, 0.45))
+		draw_string(ThemeDB.fallback_font, Vector2(-30, -36), "DOWN %ds" % ceili(agony), HORIZONTAL_ALIGNMENT_CENTER, 60, 16, Color(1.0, 0.5, 0.45))
 		return
 	if rescue_progress > 0.0:
 		draw_rect(Rect2(-15, -52, 30.0 * rescue_progress / CombatRules.RESCUE_TIME, 3), Color(0.5, 1.0, 0.6))
@@ -1375,7 +1375,7 @@ func _draw() -> void:
 	draw_arc(Vector2.ZERO, 15.0, 0.0, TAU, 28, Color.WHITE if selected else Color(col, 0.55), 3.0 if selected else 2.0)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	var font := ThemeDB.fallback_font
-	draw_string(font, Vector2(-4, -52), str(slot + 1), HORIZONTAL_ALIGNMENT_CENTER, -1, 14, col)
+	draw_string(font, Vector2(-4, -52), str(slot + 1), HORIZONTAL_ALIGNMENT_CENTER, -1, 16, col)
 	if chatter_timer > 0.0 and chatter_text != "":
 		var lines := _wrap_words(chatter_text, 28)
 		var widest := 0.0
@@ -1386,7 +1386,7 @@ func _draw() -> void:
 		draw_rect(box, Color(0.2, 0.18, 0.15), false, 1.0)
 		draw_colored_polygon(PackedVector2Array([Vector2(-4, -56), Vector2(4, -56), Vector2(0, -51)]), Color(0.98, 0.97, 0.92))
 		for k in lines.size():
-			draw_string(font, Vector2(-widest * 0.5, box.position.y + 13 + k * 14), lines[k], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.15, 0.12, 0.1))
+			draw_string(font, Vector2(-widest * 0.5, box.position.y + 13 + k * 14), lines[k], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.15, 0.12, 0.1))
 
 
 static func _wrap_words(text: String, width: int) -> Array:

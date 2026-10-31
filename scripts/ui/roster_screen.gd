@@ -45,12 +45,12 @@ func _ready() -> void:
 	body.add_child(left)
 	_grid = GridContainer.new()
 	_grid.columns = 4
-	_grid.add_theme_constant_override("h_separation", 10)
-	_grid.add_theme_constant_override("v_separation", 10)
+	_grid.add_theme_constant_override("h_separation", 5)  # px
+	_grid.add_theme_constant_override("v_separation", 5)  # px
 	left.add_child(_grid)
 
 	var right := PanelContainer.new()
-	right.custom_minimum_size = Vector2(450, 0)
+	right.custom_minimum_size = Vector2(225, 0)  # px
 	body.add_child(right)
 	var rscroll := ScrollContainer.new()
 	rscroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -113,7 +113,7 @@ func _show_detail() -> void:
 	top.add_child(info)
 	var nm := UIKit.label(h.hero_name, 24, col)
 	nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	nm.custom_minimum_size = Vector2(190, 0)
+	nm.custom_minimum_size = Vector2(95, 0)  # px
 	info.add_child(nm)
 	if h.epithet != "":
 		info.add_child(UIKit.label(h.epithet, 16, UIKit.MUTED))
@@ -132,7 +132,7 @@ func _show_detail() -> void:
 		var bar := ProgressBar.new()
 		bar.max_value = h.xp_to_next()
 		bar.value = h.xp
-		bar.custom_minimum_size = Vector2(0, 18)
+		bar.custom_minimum_size = Vector2(0, 9)  # px
 		bar.show_percentage = false
 		_detail.add_child(bar)
 		_detail.add_child(UIKit.label("XP %d / %d" % [h.xp, h.xp_to_next()], 14, UIKit.MUTED))
@@ -176,7 +176,7 @@ func _show_detail() -> void:
 	var stats := h.get_stats()
 	var sg := GridContainer.new()
 	sg.columns = 5
-	sg.add_theme_constant_override("h_separation", 16)
+	sg.add_theme_constant_override("h_separation", 8)  # px
 	_detail.add_child(sg)
 	for k in HeroTables.STAT_KEYS:
 		sg.add_child(UIKit.label(HeroTables.STAT_NAMES[k], 13, UIKit.MUTED))
@@ -223,7 +223,7 @@ func _show_detail() -> void:
 func _wrapped(text: String, p_size: int, color: Color) -> Label:
 	var l := UIKit.label(text, p_size, color)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.custom_minimum_size = Vector2(380, 0)
+	l.custom_minimum_size = Vector2(190, 0)  # px
 	return l
 
 
