@@ -310,7 +310,7 @@ static func _socialize(g: Object, social: Array, staff: Array, rng: RandomNumber
     for k in staff:
         if (k as HeroData).knows_prof("tavernkeeper"):
             (k as HeroData).add_prof_xp("tavernkeeper", 1.0)
-    var relax := 2 * g.building_level("common") + (5 if keeper else 0)
+    var relax: int = 2 * int(g.building_level("common")) + (5 if keeper else 0)
     for h in social:
         (h as HeroData).stress = clampi((h as HeroData).stress - relax, 0, 100)
     var i := 0
