@@ -1,6 +1,7 @@
 extends Control
 ## Map safety (playtest B1): no walkable cell of a tower floor is out of the pathfinder's reach, floors
-## saved before the fix are sealed when loaded, and a push never squeezes a unit through a corner.
+## saved before the fix are sealed when loaded, a push never squeezes a unit through a corner, and the
+## floor objectives can be finished by a player who does not know the map (B6, D4).
 ##   godot --headless --path . res://tests/smoke_map_safety.tscn --quit-after 3000
 var fails := 0
 
@@ -94,6 +95,52 @@ func _ready() -> void:
         var into := raw.center_of(pocket) + Vector2(18, 18)
         check(not raw.is_blocked(into) and not raw.can_step(from, into), "a nudge across a closed corner is refused")
         check(raw.can_step(from, from + Vector2(6, 0)), "an ordinary small nudge is allowed")
+
+    # --- objectives a first-time player can finish (playtest B6, D4) ------------------------------
+    Game.new_game()
+    var sb := SandboxScreen.new(1)                   # combat: "clear the floor"
+    add_child(sb)
+    await get_tree().process_frame
+    sb.set_physics_process(false)
+    var live: Array = sb.living_enemies()
+    for i in live.size() - 4:
+        live[i].take_hit(DamageInfo.make(99999.0, "true", sb.heroes[0]))
+    var rest: Array = sb.living_enemies()
+    for e in rest:
+        e.dormant = false
+    check(rest.size() == 4 and sb.revealed_enemies().is_empty(), "with 4 awake creatures left nothing is marked yet")
+    for e in rest:
+        e.dormant = true
+    check(sb.revealed_enemies().size() == 4 and sb._mission_objective().contains("marked"), "when only sleeping ambushers are left they are marked on the map")
+    rest[0].dormant = false
+    rest[0].take_hit(DamageInfo.make(99999.0, "true", sb.heroes[0]))
+    check(sb.revealed_enemies().size() == 3, "with 3 left they are always marked")
+    sb.queue_free()
+    await get_tree().process_frame
+
+    var sb2 := SandboxScreen.new(2)                  # exploration: three markers
+    add_child(sb2)
+    await get_tree().process_frame
+    sb2.set_physics_process(false)
+    var rooms := {}
+    var min_gap := INF
+    for i in sb2.clues.size():
+        for z in (sb2.map as ProceduralMap).room_zones:
+            if (z["rect"] as Rect2i).has_point(sb2.map.cell_of(sb2.clues[i].position)):
+                rooms[z["rect"]] = true
+        for j in range(i + 1, sb2.clues.size()):
+            min_gap = minf(min_gap, sb2.clues[i].position.distance_to(sb2.clues[j].position))
+    check(sb2.clues.size() == 3 and rooms.size() == 3 and min_gap > 15.0 * NavMap.CELL, "the 3 markers are in 3 different rooms, at least 15 cells apart (%.0f cells)" % (min_gap / NavMap.CELL))
+    sb2.queue_free()
+    await get_tree().process_frame
+
+    var sb5 := SandboxScreen.new(5)
+    add_child(sb5)
+    await get_tree().process_frame
+    sb5.set_physics_process(false)
+    check(sb5._mission_objective() == "defeat Grove Warlord", "the boss objective names the floor's boss (%s)" % sb5._mission_objective())
+    sb5.queue_free()
+    await get_tree().process_frame
 
     print("== ALL PASSED ==" if fails == 0 else "== %d FAILED ==" % fails)
     get_tree().quit(0 if fails == 0 else 1)
