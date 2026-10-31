@@ -221,7 +221,10 @@ func _process(_delta: float) -> void:
     if sb == null or not is_instance_valid(sb):
         return
     _place()
-    _floor.text = sb.mission_title() if sb.floor_number <= 0 else "Floor %d · %s" % [sb.floor_number, sb.mission_title()]
+    if sb.floor_number < 0:
+        _floor.text = String(TowerExpedition.get_floor_config(sb.floor_number)["name"])
+    else:
+        _floor.text = sb.mission_title() if sb.floor_number <= 0 else "Floor %d · %s" % [sb.floor_number, sb.mission_title()]
     _objective.text = sb._objective_text()
     var focus: SandboxHero = sb.controlled()
     if focus == null and not sb.selected.is_empty():

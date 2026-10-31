@@ -132,7 +132,8 @@ func _init() -> void:
     check(int(r10["left_behind"]) > 0 and (r10["items"] as Array).is_empty(), "tower loot that does not fit is reported as left behind")
     g.stash.clear()
     var r10b: Dictionary = g.complete_floor(10, "boss")
-    check((r10b["items"] as Array).size() >= 3, "the floor-10 boss drops several items")
+    check(int(r10["left_behind"]) >= 3, "the first clear of the floor-10 boss drops several items (%d)" % int(r10["left_behind"]))
+    check((r10b["items"] as Array).size() == 1 and int(r10b["starsteel"]) == 0, "D-066: a replay of a cleared floor pays one item and no rarities")
     var best := ""
     for it in g.stash:
         if ItemDefs.RARITY_ORDER.find(String(it["rarity"])) >= 2:

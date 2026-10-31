@@ -35,7 +35,8 @@ const WAVE_EVERY := 12.0
 const WAVE_MAX_ALIVE := 14
 const CLUE_RADIUS := 56.0
 const MISSION_TITLES := {"retrieval": "Recover the relic", "combat": "Clear the floor", "rescue": "Rescue the villager",
-	"exploration": "Explore the forest", "survival": "Survive the onslaught", "defense": "Hold the shrine", "boss": "Defeat the chieftain"}
+	"exploration": "Explore the forest", "survival": "Survive the onslaught", "defense": "Hold the shrine", "boss": "Defeat the chieftain",
+	"farm": "Gather in the Wilds"}
 
 var floor_number: int = 0
 var map: NavMap = null
@@ -105,7 +106,9 @@ func _init(p_floor: int = 0) -> void:
 
 func _ready() -> void:
 	if map == null:
-		if floor_number > 0:
+		if floor_number < 0:
+			map = Game.new_wilds_map(-floor_number)          # D-066: a new map every run, never saved
+		elif floor_number > 0:
 			var game_node := get_node_or_null("/root/Game")
 			if game_node != null and game_node.has_method("get_or_create_tower_floor_map"):
 				map = game_node.get_or_create_tower_floor_map(floor_number)
@@ -148,7 +151,7 @@ func _ready() -> void:
 	_world.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_ON
 	get_tree().physics_interpolation = true
 
-	mission_type = String(TowerExpedition.get_floor_config(floor_number)["mission"]) if floor_number > 0 else "retrieval"
+	mission_type = String(TowerExpedition.get_floor_config(floor_number)["mission"]) if floor_number != 0 else "retrieval"
 	_rng.seed = hash(floor_number) ^ 0x5eed
 	relic = SandboxRelic.new("captive" if mission_type == "rescue" else "relic")
 	relic.position = map.center_of(map.relic_cell)      # never the extraction cell (F-003)
@@ -204,7 +207,7 @@ func _build_enemies() -> void:
 	if cells.is_empty():
 		cells = [Vector2i(10, 10)]
 	for i in cells.size():
-		_spawn_enemy(cells[i], TowerExpedition.foe_for(floor_number, i) if floor_number > 0 else ENEMY_TYPES[i % ENEMY_TYPES.size()])
+		_spawn_enemy(cells[i], TowerExpedition.foe_for(floor_number, i) if floor_number != 0 else ENEMY_TYPES[i % ENEMY_TYPES.size()])
 
 
 var objective_enemies: Array[SandboxEnemy] = []   # the guards of the goal (the boss is the first one)
@@ -231,7 +234,8 @@ func _on_enemy_died(e: SandboxEnemy) -> void:
 	var killer = e.get_meta("last_hitter") if e.has_meta("last_hitter") else null
 	if killer != null and is_instance_valid(killer) and killer.has_method("credit"):
 		killer.credit("kills", 1.0)
-	var drops: Dictionary = EnemyDefs.DROPS.get(e.type_id, {})
+	# D-066: creature parts are hunted in the Wilds; tower creatures sometimes leave a rare spirit essence
+	var drops: Dictionary = EnemyDefs.TOWER_DROPS if floor_number > 0 else EnemyDefs.DROPS.get(e.type_id, {})
 	for res in drops:
 		var d: Array = drops[res]
 		if _rng.randf() < float(d[0]):
@@ -244,9 +248,12 @@ func _spawn_nodes() -> void:
 	for n in (map as ProceduralMap).resource_nodes:
 		var def: Dictionary = EconomyDefs.NODES.get(String(n["kind"]), {})
 		var amounts := {}
+		var rich := DungeonDefs.zone_richness((map as ProceduralMap).zone_of(n["cell"]), -floor_number) if is_wilds() else 1.0
 		for res in def.get("res", {}):
 			var r: Array = def["res"][res]
-			amounts[res] = _rng.randi_range(int(r[0]), int(r[1]))
+			var got := roundi(float(_rng.randi_range(int(r[0]), int(r[1]))) * rich)
+			if got > 0:
+				amounts[res] = got
 		var g := GatherNode.new(String(n["kind"]), amounts)
 		g.position = map.center_of(n["cell"])
 		_world.add_child(g)
@@ -314,6 +321,8 @@ func _spawn_encounter(enc: Dictionary) -> void:
 	for i in cells.size():
 		var e := _spawn_enemy(cells[i], String(enc["members"][i]))
 		e.home = e.position
+		if is_wilds():
+			e.scale_stats(DungeonDefs.zone_strength(String(enc["zone"])))   # deeper = harder
 		match String(enc["kind"]):
 			"ambush":
 				e.dormant = true
@@ -470,6 +479,11 @@ func _on_boss_phase(b: SandboxEnemy, phase: int) -> void:
 	CombatFeel.shake(b, "medium")
 
 
+## D-066: a run in the repeatable Wilds (negative floor numbers are its tiers).
+func is_wilds() -> bool:
+	return floor_number < 0
+
+
 func mission_title() -> String:
 	return String(MISSION_TITLES.get(mission_type, MISSION_NAME))
 
@@ -587,7 +601,7 @@ func _build_ui() -> void:
 	_band.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_band.visible = false
 	add_child(_band)
-	UIKit.music("boss" if mission_type == "boss" else ("explore" if floor_number > 0 else "battle"))
+	UIKit.music("boss" if mission_type == "boss" else ("explore" if floor_number != 0 else "battle"))
 
 
 ## Esc / the menu button: options and a way out, the expedition keeps running (D-062, D-014).
@@ -596,7 +610,7 @@ func open_menu() -> void:
 		_menu.close()
 		return
 	_menu = GameMenu.new()
-	_menu.leave_label = "Leave (the squad abandons the floor)" if mission_state == Mission.ACTIVE and floor_number > 0 else "Back to the town"
+	_menu.leave_label = "Leave (the squad abandons the floor)" if mission_state == Mission.ACTIVE and floor_number != 0 else "Back to the town"
 	_menu.leave_requested.connect(func(_to): back_requested.emit())
 	add_child(_menu)
 
@@ -1034,7 +1048,7 @@ func _on_hero_died(h: SandboxHero) -> void:
 		relic.position = h.position
 		relic.visible = true
 	var cause := "Slain by %s" % h.killed_by if h.killed_by != "" else "Fell in battle"
-	Game.record_death(h.hero, cause, mission_title() if floor_number > 0 else MISSION_NAME)
+	Game.record_death(h.hero, cause, mission_title() if floor_number != 0 else MISSION_NAME)
 
 
 func _end_mission(state: Mission) -> void:
@@ -1049,7 +1063,9 @@ func _end_mission(state: Mission) -> void:
 		entries.append({"hero": h.hero, "alive": not h.dead, "contrib": h.contrib})
 	if real_squad and not reward_given:
 		reward_given = true
-		if floor_number > 0:
+		if floor_number < 0:
+			results = Game.finish_wilds(-floor_number, outcome, ledger, entries, kill_xp)
+		elif floor_number > 0:
 			results = Game.finish_expedition(floor_number, outcome, ledger, entries, kill_xp, mission_type)
 			reward = results.get("reward", {})
 		elif state == Mission.SUCCESS:
@@ -1066,7 +1082,8 @@ func _end_mission(state: Mission) -> void:
 		for h in heroes:
 			if not h.dead:
 				back.append({"hero": h.hero, "downed": h.was_downed, "poisoned": h.was_poisoned})
-		town_report = Game.after_expedition(back, floor_number, fallen.size())
+		town_report = Game.after_expedition(back, floor_number, fallen.size(),
+			DungeonDefs.HOURS_PER_RUN if is_wilds() else EconomyDefs.HOURS_PER_EXPEDITION)
 	_show_result()
 
 
@@ -1084,10 +1101,10 @@ func result_text() -> String:
 		Mission.SUCCESS:
 			lines.append("MISSION COMPLETE")
 		Mission.ESCAPED:
-			lines.append("ESCAPED — the squad got out")
+			lines.append("BACK FROM THE WILDS" if is_wilds() else "ESCAPED — the squad got out")
 		_:
 			lines.append("MISSION FAILED")
-	lines.append(mission_title() if floor_number > 0 else MISSION_NAME)
+	lines.append(mission_title() if floor_number != 0 else MISSION_NAME)
 	lines.append("Time: %d:%02d   Enemies defeated: %d / %d   Survivors: %d / %d" % [floori(elapsed / 60.0), int(elapsed) % 60,
 		defeated, enemies.size(), living_heroes().size(), heroes.size()])
 	if fog != null and floor_number > 0:
@@ -1101,12 +1118,14 @@ func result_text() -> String:
 		lines.append("Lost in the tower: %s" % _res_line(results.get("lost_loot", ledger)))
 	else:
 		lines.append("Gathered and dropped (kept): %s" % _res_line(results.get("loot", {})))
-	if mission_state == Mission.ESCAPED:
+	if mission_state == Mission.ESCAPED and not is_wilds():
 		lines.append("No completion reward: the objective was not finished.")
 	if mission_state == Mission.SUCCESS and real_squad:
 		if floor_number > 0:
-			lines.append("Completion reward: %d materials, %d meals, %d gems, %d stones, %d books" % [int(reward.get("materials", 0)),
-				int(reward.get("food", 0)), int(reward.get("gems", 0)), int(reward.get("stones", 0)), int(reward.get("books", 0))])
+			lines.append("Completion reward%s: %d gems, %d stones, %d books, %d starsteel, %d spirit essence" % [
+				"" if bool(reward.get("first", true)) else " (floor already cleared: a small one)",
+				int(reward.get("gems", 0)), int(reward.get("stones", 0)), int(reward.get("books", 0)),
+				int(reward.get("starsteel", 0)), int(reward.get("essence", 0))])
 			for b in reward.get("skill_books", []):
 				lines.append("Skill book found: %s" % String(SkillDefs.info(String(b)).get("name", b)))
 			for it in reward.get("items", []):
@@ -1478,6 +1497,8 @@ func _objective_text() -> String:
 
 func _mission_objective() -> String:
 	match mission_type:
+		"farm":
+			return "gather and get out at the entrance (X)  ·  deeper = richer and deadlier"
 		"combat":
 			var n := living_enemies().size()
 			return "defeat every enemy (%d left%s)" % [n, ", marked on the map" if not revealed_enemies().is_empty() else ""]

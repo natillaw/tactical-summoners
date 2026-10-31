@@ -515,6 +515,14 @@ func _on_transcribe(id: String, class_id: String) -> void:
 
 
 func _add_tower_buttons() -> void:
+    # D-066: the repeatable Wilds (the town's materials) and the tower (gear and rarities), gated by the Hall
+    var tier := Game.wilds_tier()
+    var wcfg := DungeonDefs.config(tier)
+    var wilds := UIKit.button("%s  ·  repeatable  ·  materials" % String(wcfg["name"]), func(): navigate.emit("sandbox", -tier), Vector2(320, 38))
+    wilds.focus_mode = Control.FOCUS_NONE
+    wilds.alignment = HORIZONTAL_ALIGNMENT_LEFT
+    wilds.tooltip_text = "%s\nA new map every run; leave by the entrance (X) to keep what you carry. Half a day passes." % String(wcfg["intro"])
+    _panel_box.add_child(wilds)
     var train := UIKit.button("Training ground (fixed map)", func(): navigate.emit("sandbox", 0), Vector2(300, 38))
     train.focus_mode = Control.FOCUS_NONE
     _panel_box.add_child(train)
@@ -530,6 +538,11 @@ func _add_tower_buttons() -> void:
         btn.tooltip_text = "%s
 Recommended: %d heroes. Explored: %s" % [String(cfg.get("intro", "")), TowerExpedition.RECOMMENDED_HEROES,
             "yes" if Game.floor_explored(f) != "" else "not yet"]
+        var why := Game.floor_block(f)
+        if why != "":
+            btn.disabled = true
+            btn.tooltip_text = "Locked: " + why
+            btn.text += "  ·  Hall %d" % int(cfg.get("hall", 1))
         _panel_box.add_child(btn)
     var grid := GridContainer.new()
     grid.columns = 5
@@ -539,6 +552,9 @@ Recommended: %d heroes. Explored: %s" % [String(cfg.get("intro", "")), TowerExpe
         var btn := UIKit.button("F%d" % f, func(): navigate.emit("sandbox", floor_num), Vector2(56, 30))
         btn.focus_mode = Control.FOCUS_NONE
         btn.tooltip_text = String(TowerExpedition.get_floor_config(f)["name"]) + " (beyond the demo: not tuned yet)"
+        if Game.floor_block(f) != "":
+            btn.disabled = true
+            btn.tooltip_text = "Locked: " + Game.floor_block(f)
         grid.add_child(btn)
     if Game.party_heroes().size() < Game.PARTY_SIZE:
         var warn := UIKit.label("Party not full: a test squad will go instead and nothing is kept (Menu -> Party, or the War Room).", 13, Color(1.0, 0.7, 0.5))

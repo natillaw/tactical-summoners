@@ -236,7 +236,7 @@ Números provisionales, en datos, medidos con `tests/playthrough_bot` (informe `
 - **Jefe con fases** (resuelve en parte P-25, para todos los jefes): al 60 % llama a su banda (despierta a los cercanos y se unen 2), y al 30 % llama a 3 más y se enfurece (+25 % de daño, preparación ×0,8).
 - **Invocar**: 300 gemas iniciales y 100 por invocación (×10: 900).
 - **Economía**:
-  - Los pisos pagan 40 + 20 × piso en materiales.
+  - ~~Los pisos pagan 40 + 20 × piso en materiales.~~ Sustituido por D-066: los materiales salen de los Wilds.
   - Santuario de Ascensión con Salón 1 y coste 60.
   - Taller: coste 30 y 2 puestos.
   - Almacén base de 300 por recurso.
@@ -282,6 +282,31 @@ La tecla **T** pasa los héroes seleccionados a habilidades "manuales" (solo W/E
 | 5 | El jefe trae 2 chamanes. Mientras vive uno, recibe un 40 % menos de daño. Sus escudos se rompen con un aturdimiento. Además conserva las fases de D-064 |
 
 **Medición.** Se comparan dos bots, uno "a lo loco" y uno "táctico", en varias cuentas (`tests/playthrough_bot`, `PT_STYLE`). Un piso está bien diseñado cuando el estilo táctico rinde claramente mejor que el loco. El juicio final es del dueño jugando.
+
+### D-066 — Los Wilds: mazmorra repetible para farmear; la torre es el reto (2026-10-31, dueño)
+Respuestas del dueño: el freno es el nivel del pueblo más la dificultad; el nivel de los Wilds sigue a la torre; la muerte es permanente; cuanto más hondo, más riesgo y más recompensa.
+
+**Los Wilds** (`scripts/data/dungeon_defs.gd`)
+- Mazmorra procedural fuera de la torre, con un **mapa nuevo en cada entrada** que nunca se guarda (no le aplica D-026).
+- **Nivel:** 1 + (piso más alto superado / 10). El nivel 1 son "The Overgrown Wilds" y el 2 "The Ashen Quarries", cada uno con otro bioma, otros enemigos y más recursos.
+- **Sin misión:** se sale por la entrada (X) y se conserva lo que se lleva. Si cae toda la escuadra se pierde todo, y la muerte es permanente (D-011).
+- **Profundidad:** cuanto más lejos de la entrada, más fuertes los enemigos (×1,0 / 1,0 / 1,3 / 1,6) y más ricos los puntos (×0,8 / 1,0 / 1,6 / 2,4).
+- **Recursos:** madera, piedra, mineral, hierbas y partes de criaturas. En las salas profundas hay **cachés ocultas** de materiales de construcción.
+- Una salida a los Wilds pasa medio día en el pueblo; un piso de la torre, un día entero.
+
+**La torre**
+- Sin puntos de recolección, y sus criaturas no sueltan partes.
+- La primera vez que se supera un piso paga gemas, piedras, libros, **equipo** (como mínimo poco común; raro en los pisos de jefe y en los múltiplos de 5) y dos rarezas que los Wilds nunca dan:
+  - **Acero estelar:** forja fina en la herrería (nivel 3 de herrero; el objeto sale como mínimo raro y con +3 de nivel).
+  - **Esencia espiritual:** ascensiones a 3★ y superiores.
+- Repetir un piso ya superado paga muy poco (10 gemas y 1 objeto).
+- **Cada piso pide un nivel del Salón del Invocador:**
+
+  | Pisos | 1-2 | 3-4 | 5-6 | 7-8 | 9-10 |
+  |---|---|---|---|---|---|
+  | Salón | 1 | 2 | 3 | 4 | 5 |
+
+  El pueblo crece con lo que se saca de los Wilds, así que la torre se sube entre salidas a farmear, no en un día.
 
 ## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)
 

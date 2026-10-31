@@ -24,6 +24,12 @@ Las pruebas automáticas se ejecutan en GitHub (Godot 4.7.1 Linux) con cada push
 - Al abrir el Sandbox **no aparecen héroes** y sale un error en la consola (F-038, confirmado en GitHub).
 - "Living Headquarters → Explore Base" da error (F-001).
 
+### v13 (D-065, D-066)
+1. Puerta de la Torre: arriba **The Overgrown Wilds** (repetible). Entra: mapa nuevo cada vez, sin misión; recoge (las **cachés doradas** están en las salas lejanas) y vuelve a la entrada con X.
+2. Los pisos 3 y 5 aparecen bloqueados hasta subir el Salón (2 y 3). Los pisos ya no tienen puntos de recolección; al superarlos dan equipo, **acero estelar** y **esencia**.
+3. En los pisos: curanderos que se pueden cortar con un aturdimiento, el portador de la reliquia lento y perseguido, vigías en el piso 4 y chamanes del jefe en el 5.
+4. Pulsa **T** con un héroe seleccionado para alternar sus habilidades automáticas o manuales.
+
 ### v12
 1. Empieza una partida nueva y entra al piso 1 sin mirar nada más: la primera vez debería durar unos 10-15 min explorando con niebla.
 2. Piso 2: las 3 pistas están en salas distintas y alejadas.

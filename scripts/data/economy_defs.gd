@@ -38,7 +38,7 @@ const RESOURCES := {
     "medicine": {"name": "Medicine", "cat": "consumable"},
     "potion": {"name": "Healing potions", "cat": "consumable"},
     "antidote": {"name": "Antidotes", "cat": "consumable"},
-    # creature drops (EnemyDefs "drops"): crafting and ascension materials from the tower
+    # creature drops (EnemyDefs "drops"): crafting and ascension materials, hunted in the Wilds (D-066)
     "hide": {"name": "Beast hide", "cat": "drop"},
     "fang": {"name": "Fangs", "cat": "drop"},
     "gel": {"name": "Slime gel", "cat": "drop"},
@@ -47,6 +47,9 @@ const RESOURCES := {
     "venom": {"name": "Venom sacs", "cat": "drop"},
     "bone": {"name": "Bones", "cat": "drop"},
     "core": {"name": "Golem core", "cat": "drop"},
+    # D-066 tower-only rarities (never in the Wilds): forging fine gear and the higher ascensions
+    "starsteel": {"name": "Starsteel", "cat": "rare"},
+    "essence": {"name": "Spirit essence", "cat": "rare"},
 }
 
 ## Gathering spots in tower floors (ProceduralMap v2 "nodes"): what a hero collects in GATHER_TIME.
@@ -55,6 +58,8 @@ const NODES := {
     "ore": {"name": "Ore vein", "res": {"ore": [2, 4], "stone": [1, 2]}, "color": Color(0.55, 0.6, 0.75)},
     "wood": {"name": "Fallen timber", "res": {"wood": [3, 5]}, "color": Color(0.6, 0.42, 0.25)},
     "herb": {"name": "Herb patch", "res": {"herb": [2, 4]}, "color": Color(0.45, 0.85, 0.4)},
+    "stone": {"name": "Rock outcrop", "res": {"stone": [3, 5]}, "color": Color(0.62, 0.6, 0.58)},
+    "cache": {"name": "Hidden cache", "res": DungeonDefs.CACHE, "color": Color(0.95, 0.8, 0.35)},   # D-066: deep in the Wilds
 }
 
 # --- recipes -------------------------------------------------------------------------------------
@@ -71,6 +76,11 @@ const RECIPES := {
     "smelt_iron": {"name": "Smelt iron", "building": "blacksmith", "prof": "blacksmith", "min": 0, "work": 3.0, "in": {"ore": 2}, "out": {"ingot": 1}},
     "forge_weapon": {"name": "Forge a weapon", "building": "blacksmith", "prof": "blacksmith", "min": 1, "work": 8.0, "in": {"ingot": 3, "wood": 1}, "out": {}, "item": "weapon"},
     "forge_armor": {"name": "Forge armor", "building": "blacksmith", "prof": "blacksmith", "min": 2, "work": 8.0, "in": {"ingot": 4}, "out": {}, "item": "armor"},
+    # D-066: fine gear needs tower starsteel (the Wilds never give it): at least rare, higher item level
+    "forge_fine_weapon": {"name": "Forge a starsteel weapon", "building": "blacksmith", "prof": "blacksmith", "min": 3, "work": 12.0,
+        "in": {"ingot": 3, "starsteel": 1}, "out": {}, "item": "weapon", "min_rarity": "rare", "ilvl_bonus": 3},
+    "forge_fine_armor": {"name": "Forge starsteel armor", "building": "blacksmith", "prof": "blacksmith", "min": 3, "work": 12.0,
+        "in": {"ingot": 4, "starsteel": 2}, "out": {}, "item": "armor", "min_rarity": "rare", "ilvl_bonus": 3},
     "brew_medicine": {"name": "Brew medicine", "building": "alchemy", "prof": "alchemist", "min": 0, "work": 3.0, "in": {"herb": 2}, "out": {"medicine": 1}},
     "brew_potion": {"name": "Brew healing potions", "building": "alchemy", "prof": "alchemist", "min": 1, "work": 4.0, "in": {"herb": 2, "grain": 1}, "out": {"potion": 1}},
     "brew_antidote": {"name": "Brew antidotes", "building": "alchemy", "prof": "alchemist", "min": 1, "work": 4.0, "in": {"herb": 3}, "out": {"antidote": 1}},

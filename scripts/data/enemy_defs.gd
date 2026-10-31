@@ -58,6 +58,9 @@ const DROPS := {
     "orc_chieftain": {"core": [1.0, 1, 1], "bone": [1.0, 2, 3]},
     "warlord": {"hide": [1.0, 3, 5], "bone": [1.0, 2, 3], "core": [0.5, 1, 1]},
 }
+## D-066: in the tower creatures leave no parts (those are hunted in the Wilds) but sometimes a rare
+## spirit essence, which the Wilds never give (higher ascensions, fine forging).
+const TOWER_DROPS := {"essence": [0.06, 1, 1]}
 const XP_PER_HP := 0.2            # experience a creature is worth (its max HP x this)
 
 

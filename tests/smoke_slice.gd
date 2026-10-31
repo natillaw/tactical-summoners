@@ -58,11 +58,11 @@ func _ready() -> void:
     for i in squad.size():
         Game.assign_party(i, (squad[i] as HeroData).id)
     var stock_before := Game.hq_outputs.duplicate()
-    var sb := SandboxScreen.new(1)
+    var sb := SandboxScreen.new(-1)                 # D-066: gathering happens in the Wilds
     add_child(sb)
     sb.size = Vector2(1280, 720)
     await get_tree().process_frame
-    check(sb.real_squad and sb.nodes.size() > 0, "floor 1 has gathering spots (%d)" % sb.nodes.size())
+    check(sb.real_squad and sb.nodes.size() > 0, "the Wilds have gathering spots (%d)" % sb.nodes.size())
     var foe: SandboxEnemy = sb.enemies[0]
     foe.take_hit(DamageInfo.make(99999.0, "true", sb.heroes[0]))
     var g: GatherNode = sb.nodes[0]
@@ -79,13 +79,19 @@ func _ready() -> void:
     for h in sb.heroes:
         h.position = exit + Vector2(randf_range(-20, 20), randf_range(-20, 20))
     check(sb.extract(), "the squad escapes from the extraction point")
-    check(sb.mission_state == SandboxScreen.Mission.ESCAPED and int(Game.tower_cleared.get("1", 0)) == 0, "escaping does not complete the floor")
+    check(sb.mission_state == SandboxScreen.Mission.ESCAPED and int(Game.tower_cleared.get("1", 0)) == 0, "leaving the Wilds completes no tower floor")
     var kept := true
     for res in ledger:
         if int(Game.hq_outputs.get(res, 0)) < mini(Game.storage_cap(), int(stock_before.get(res, 0)) + int(ledger[res])) - 60:
             kept = false
     check(kept and not sb.results.get("loot", {}).is_empty(), "an escape keeps what was gathered and dropped")
-    check(String(sb.results.get("mvp", "")) == "" and sb.result_text().contains("No completion reward"), "an escape gives no completion reward and no MVP")
+    check(String(sb.results.get("mvp", "")) == "" and sb.result_text().contains("BACK FROM THE WILDS"), "a Wilds run has no completion reward and no MVP")
+    var tsb := SandboxScreen.new(1)
+    add_child(tsb)
+    await get_tree().process_frame
+    check(tsb.nodes.is_empty(), "D-066: tower floors have no gathering spots")
+    tsb.queue_free()
+    await get_tree().process_frame
     sb.queue_free()
     await get_tree().process_frame
 
@@ -101,7 +107,7 @@ func _ready() -> void:
     sb2.heroes[3].credit("healing", 500.0)
     sb2.tick(0.05)
     check(sb2.mission_state == SandboxScreen.Mission.SUCCESS and int(Game.tower_cleared.get("1", 0)) == 1, "clearing floor 1 completes it")
-    check(int(sb2.results.get("reward", {}).get("materials", 0)) > 0, "completion pays its reward")
+    check(int(sb2.results.get("reward", {}).get("starsteel", 0)) > 0 and int(sb2.results.get("reward", {}).get("gems", 0)) > 0, "completion pays its reward (gems, starsteel)")
     check(String(sb2.results.get("mvp", "")) != "" and int(sb2.results.get("mvp_bonus", 0)) > 0, "an MVP is chosen and gets a bonus: %s (%s, +%d)" % [sb2.results.get("mvp", ""), sb2.results.get("mvp_reason", ""), int(sb2.results.get("mvp_bonus", 0))])
     var grew := true
     for i in squad.size():
