@@ -202,7 +202,14 @@ La cadena completa **minero → mineral → herrero → lingote → arma → equ
   | `test_simulation` y `test_deep_systems` | Producción sin materias primas | Producción con materias primas |
   | `test_procedural` | Capacidad de 15 o más | Capacidad = camas |
   | `smoke_tower` | Edificio construido al instante | Construcción con constructor |
-- **No ejecutado:** partida manual en Windows y prueba visual de los paneles de gestión. La CI ahora captura los paneles del Salón y de la Herrería (`01e`, `01f`), pero todavía no los he revisado.
+- **No ejecutado:** partida manual en Windows y prueba visual de los paneles de gestión. La CI ahora captura los paneles del Salón y de la Herrería (`01e`, `01f`, commit `0299aff`, 20/20 PASS). **Los revisé:** se dibujan correctamente:
+  - el reloj y los recursos;
+  - los botones de trabajo (fundir, forjar arma, forjar armadura);
+  - los trabajadores 0/1 con candidatos y su nivel de profesión;
+  - el equipo de obra;
+  - el motivo del bloqueo ("needs 120 materials").
+
+  El pueblo de 44×26 se ve completo, con los edificios nuevos (`01_town`).
 
 ## J. Problemas conocidos
 - La IA de los héroes no usa habilidades sola.
