@@ -36,12 +36,13 @@ static func freeze(sprite: AnimatedSprite2D, kind: String) -> void:
         if tw.is_valid():
             tw.pause()
     sprite.pause()
-    sprite.get_tree().create_timer(float(FREEZE[kind])).timeout.connect(func():
-        if is_instance_valid(sprite) and not sprite.is_playing():
+    # B4: a tween owned by the sprite dies with it, so the callback never runs on a freed node
+    sprite.create_tween().tween_callback(func():
+        if not sprite.is_playing():
             sprite.play()
         if tw != null and tw.is_valid():
             tw.play()
-    )
+    ).set_delay(float(FREEZE[kind]))
 
 
 ## The unit already moved (rules); its sprite starts at the old spot and slides home.

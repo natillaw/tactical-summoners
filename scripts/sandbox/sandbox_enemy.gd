@@ -348,10 +348,10 @@ func _step_toward(goal: Vector2, delta: float, map: NavMap) -> void:
     var top := speed * move_mult()
     _cur_speed = move_toward(_cur_speed, top, top / maxf(0.01, _accel) * delta)
     var np := position + _heading * _cur_speed * delta
-    if map.is_blocked(np):
+    if not map.can_step(position, np):
         _heading = want                              # never let the turn rate push it into a wall
         np = position + want * _cur_speed * delta
-    if not map.is_blocked(np):
+    if map.can_step(position, np):
         velocity = (np - position) / maxf(0.0001, delta)
         position = np
         if _sprite != null and _anim_lock <= 0.0:

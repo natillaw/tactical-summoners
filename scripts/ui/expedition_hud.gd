@@ -497,15 +497,26 @@ class Minimap extends Control:
     func _cell_pos(world: Vector2) -> Vector2:
         return world / float(NavMap.CELL) * _scale()
 
+    var _terrain: ImageTexture = null
+
+    static func terrain_texture(m: NavMap) -> ImageTexture:
+        var img := Image.create(maxi(1, m.width), maxi(1, m.height), false, Image.FORMAT_RGBA8)
+        img.fill(ArtPalette.GREEN[1])
+        for y in m.height:
+            for x in m.width:
+                if m.is_blocked_cell(Vector2i(x, y)):
+                    img.set_pixel(x, y, ArtPalette.GREEN[0])
+        return ImageTexture.create_from_image(img)
+
     func _draw() -> void:
         if sb.map == null:
             return
         var r := Rect2(Vector2.ZERO, _size())
-        draw_rect(r, ArtPalette.GREEN[1])
-        for y in sb.map.height:
-            for x in sb.map.width:
-                if sb.map.is_blocked_cell(Vector2i(x, y)) and (sb.fog == null or sb.fog.is_explored(Vector2i(x, y))):
-                    draw_rect(Rect2(Vector2(x, y) * _scale(), Vector2.ONE * maxf(1.0, _scale())), ArtPalette.GREEN[0])
+        # B3: the terrain is one image made once (1 pixel per cell); the opaque fog image on top hides
+        # what was never explored, so nothing is looped per cell per frame (was ~6.6 ms on floor 5).
+        if _terrain == null:
+            _terrain = terrain_texture(sb.map)
+        draw_texture_rect(_terrain, r, false)
         if sb._fog_view != null and sb._fog_view._tex != null:
             draw_texture_rect(sb._fog_view._tex, r, false)
         var ex := _cell_pos(sb.map.center_of(sb.map.extract_cell))

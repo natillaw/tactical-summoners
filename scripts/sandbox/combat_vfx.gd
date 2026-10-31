@@ -209,10 +209,7 @@ static func _later(parent: Node, pos: Vector2, key: String, sc: float, delay: fl
     if delay <= 0.02 or not parent.is_inside_tree():
         play(parent, pos, key, sc)
         return
-    parent.get_tree().create_timer(delay).timeout.connect(func():
-        if is_instance_valid(parent):
-            play(parent, pos, key, sc)
-    )
+    parent.create_tween().tween_callback(func(): play(parent, pos, key, sc)).set_delay(delay)   # dies with parent (B4)
 
 
 ## One-shot effect at a world point (frees itself). Returns the node (null if the art is missing).
