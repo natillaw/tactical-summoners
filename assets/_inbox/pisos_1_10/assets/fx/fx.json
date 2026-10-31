@@ -1,0 +1,7 @@
+{
+"flecha":{"frame_size":[10,3],"frames":1},
+"bola_fuego":{"frame_size":[14,12],"frames":4},
+"explosion":{"frame_size":[20,20],"frames":5},
+"curacion":{"frame_size":[16,16],"frames":4},
+"escudo_altar":{"frame_size":[48,48],"frames":4}
+}

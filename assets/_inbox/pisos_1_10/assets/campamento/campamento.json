@@ -1,0 +1,14 @@
+{
+"tienda":{"size":[34,30],"origin":[17,27],"rect":[48,0,34,30]},
+"fogata_anim":{"frame_size":[16,18],"frames":4,"fps":8,"origin":[8,16]},
+"empalizada":{"size":[16,26],"origin":[8,25],"rect":[83,0,16,26]},
+"caja":{"size":[14,14],"origin":[7,13],"rect":[34,53,14,14]},
+"barril":{"size":[12,15],"origin":[6,14],"rect":[21,53,12,15]},
+"saco_botin":{"size":[14,12],"origin":[7,11],"rect":[49,53,14,12]},
+"carreta":{"size":[36,24],"origin":[17,22],"rect":[100,0,36,24]},
+"estandarte":{"size":[14,32],"origin":[4,31],"rect":[33,0,14,32]},
+"jaula":{"size":[22,24],"origin":[11,23],"rect":[137,0,22,24]},
+"torre_vigia":{"size":[32,52],"origin":[16,51],"rect":[0,0,32,52]},
+"armero":{"size":[20,18],"origin":[10,17],"rect":[0,53,20,18]},
+"saco_dormir":{"size":[18,9],"origin":[9,8],"rect":[64,53,18,9]}
+}
