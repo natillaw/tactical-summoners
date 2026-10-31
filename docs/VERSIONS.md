@@ -14,11 +14,21 @@ Las pruebas automáticas se ejecutan en GitHub (Godot 4.7.1 Linux) con cada push
 | **v6** | `72c2f04` | [ZIP](https://github.com/natillaw/tactical-summoners/archive/72c2f04.zip) | **Combate fase 1**: base común de unidades, atributos FUE/AGI/VIT/INT/TEM con efecto real, daño físico/mágico/verdadero, armadura y resistencia mágica, críticos, estados (veneno, quemadura, sangrado, aturdimiento, raíz, lentitud, debilidad, escudo, herido), caída + agonía 20 s + rescate, clic derecho contextual, números de daño | **16/16 PASS** |
 | **v7** | `5ab21e7` | [ZIP](https://github.com/natillaw/tactical-summoners/archive/5ab21e7.zip) | **Combate fase 2**: órdenes atacar avanzando (A), mantener (H), seguir (F), reagrupar (C), retirada (X), parar (S) con botones; línea de visión (los árboles bloquean disparos); arqueros/magos retroceden si se les acercan; los héroes esquivan solos los golpes telegrafiados | **17/17 PASS** |
 | **v8** | `ed3c5a7` | [ZIP](https://github.com/natillaw/tactical-summoners/archive/ed3c5a7.zip) | **Combate fase 3**: habilidades como datos (≈45), recurso por clase (Furia, Foco, Maná, Aguante), teclas **Q W E R** con botones, tiempos de lanzamiento (solo los rompe un aturdimiento), interrupciones, provocar, empujar, carga, teletransporte, zonas, estados Marcado y Regeneración; nacen con 1 habilidad y eligen 1 de 2-3 en niveles 5/10/20…; libros de habilidad (jefe, rescate, exploración, botín) y **Biblioteca**; guardado v8 | **18/18 PASS** — [ejecución](https://github.com/natillaw/tactical-summoners/actions/runs/41147327096) |
+| **v9** | `6558c35` | [ZIP](https://github.com/natillaw/tactical-summoners/archive/6558c35.zip) | **Cuartel general vivo:** reloj del pueblo, profesiones con nivel, trabajo con recetas (granja, tala, mina, cocina, taller, herrería, alquimia), almacén, camas reales, hambre/fatiga/estrés, hospital con médicos y enfermedades, taberna, obras por constructores con techo del Salón, mover edificios; **equipo** con rarezas, afijos, únicos y sets, botín y forja; guardado v9 | **20/20 PASS** — [ejecución](https://github.com/natillaw/tactical-summoners/actions/runs/41150421537) |
 
 ## Qué probar a mano en cada versión (en Windows, con el editor o F5)
 ### v1 (estado original, como referencia)
 - Al abrir el Sandbox **no aparecen héroes** y sale un error en la consola (F-038, confirmado en GitHub).
 - "Living Headquarters → Explore Base" da error (F-001).
+
+### v9
+1. En el pueblo, arriba aparecen el **día y la hora** y los recursos. El tiempo corre (1 hora cada 30 s) o pulsa **Pass a day**.
+2. Invoca héroes. Clic en la **Granja**, la **Mina**, la **Cocina**… → "Assign" para poner trabajadores. Elige qué hacen (por ejemplo, "Dig ore" en la mina, "Smelt iron" y luego "Forge a weapon" en la herrería).
+3. Si un edificio no produce, aparece un **"!" rojo**; su panel dice por qué (falta material, nadie cualificado, almacén lleno…).
+4. En el **Salón del Invocador** asigna constructores y luego pulsa "Upgrade" en cualquier edificio: la obra avanza con el tiempo.
+5. Clic en un héroe: profesiones, hambre, fatiga y estrés, enfermedades, cama, **equipo** (Equip/Scrap desde el almacén) y bolsa (+potion).
+6. Juega un piso: al volver pasa un día, aparece el botín en el resultado y algún héroe puede volver herido o enfermo → el **Hospital** (necesita un médico y medicina).
+7. Botón "Move building": mueve un edificio (verde = se puede; clic derecho o Esc para cancelar).
 
 ### v8
 1. Selecciona un héroe: el panel muestra sus habilidades en **Q W E R**, con su estado (lista, enfriamiento o recurso insuficiente). Debajo de la vida hay una barra de recurso (roja = Furia, amarilla = Foco, azul = Maná, verde = Aguante).
