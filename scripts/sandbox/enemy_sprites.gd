@@ -5,7 +5,7 @@ extends RefCounted
 ## Idle = 32x32 frames, run = 64x64, death = per-mob frame width (table). Feet sit at the bottom
 ## of every frame, so a bottom-center anchor keeps the mob on its cell.
 
-const ROOT := "res://assets/pixel/enemies/pixel-crawler/"
+const ROOT := AssetCatalog.PIXEL_CRAWLER_ENEMIES
 const IDS := ["orc", "orc_rogue", "orc_shaman", "orc_warrior", "skeleton_base", "skeleton_mage", "skeleton_rogue", "skeleton_warrior"]
 const IDLE_W := 32
 const RUN_W := 64
@@ -15,7 +15,7 @@ const DEATH_W := {"orc_warrior": 96, "skeleton_base": 96}     # every other mob:
 ## slimes, mushrooms and eyes; 64 px for most; 96-144 px for the trex and golems), facing right.
 ## Used by the tower floors (TowerExpedition "foes"). Some creatures hop or fly instead of walking.
 ## Besides idle/run/death they bring "attack" (attack, bite, cast, slam or roar) and "hurt".
-const VOXEL_ROOT := "res://assets/packs/voxel-dungeon-pack-full/creatures/sheets/"
+const VOXEL_ROOT := AssetCatalog.VOXEL_CREATURES
 const VOXEL_W := 64
 const VOXEL_SCALE := 1.0
 
@@ -27,12 +27,12 @@ static var _cache: Dictionary = {}
 ## D-055: creature sheets drawn from processed copies (contour darkened to match the heroes, made by
 ## tools/art_cohesion.gd) when they exist; the original packs are never modified. false = originals.
 const USE_COHESION_COPIES := true
-const COHESION_ROOT := "res://assets/processed/outline/"
+const COHESION_ROOT := AssetCatalog.PROCESSED_OUTLINE
 
 
 static func _load_sheet(path: String) -> Texture2D:
     if USE_COHESION_COPIES:
-        var copy := COHESION_ROOT + path.trim_prefix("res://assets/")
+        var copy := COHESION_ROOT + path.trim_prefix(AssetCatalog.ASSETS_ROOT)
         if ResourceLoader.exists(copy):
             return load(copy) as Texture2D
     return load(path) as Texture2D

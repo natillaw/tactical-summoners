@@ -4,8 +4,8 @@ extends RefCounted
 ## Installed at assets/pixel/caz-base/. Everything returns null when the pack is missing, so callers
 ## fall back to ProcArt. Images are 1 px = 1 tile px (tiles are 16 px; one map cell = 48 px).
 
-const ROOT := "res://assets/pixel/caz-base/Tiles/"
-const CHAR_ROOT := "res://assets/pixel/caz-base/Characters/"
+const ROOT := AssetCatalog.CAZ_TILES
+const CHAR_ROOT := AssetCatalog.CAZ_CHARACTERS
 
 const GRASS := ["Outside/Outside_1_1", "Outside/Outside_1_1", "Outside/Outside_1_2", "Outside/Outside_1_3", "Outside/Outside_1_4"]
 const DIRT := ["Outside/Outside_3_1", "Outside/Outside_3_2", "Outside/Outside_3_3"]
