@@ -13,7 +13,7 @@ const CONTROLS := [
     ["1-5 / Shift+1-5", "Drive a hero (focus + direct control)"], ["Tab", "Squad view, everyone autonomous"],
     ["G", "Select the whole squad"], ["Right click", "Move (attack / rescue in squad view)"],
     ["Q", "Basic attack at the mouse (hero you drive)"], ["W E R", "Skills (hold to aim, release to cast)"],
-    ["A", "Attack-move"], ["H", "Hold"], ["F", "Follow"], ["C", "Regroup"], ["X", "Retreat"], ["S", "Stop"],
+    ["A", "Attack-move"], ["H", "Hold"], ["F", "Follow"], ["C", "Regroup"], ["X", "Retreat (picks up the fallen nearby)"], ["S", "Stop"], ["T", "Skills: auto / manual"],
     ["M", "Whole map (the fog stays)"], ["I", "Details panel"], ["F3", "Debug overlay (debug builds)"], ["Esc", "This menu"],
 ]
 

@@ -232,7 +232,7 @@ Esc abre el menú del juego (opciones, volver al pueblo o al título) y la simul
 ### D-064 — Balance y lógica tras el playtest de 5 pisos (2026-10-31, dueño: "arregla también el balance del juego y cosas ilógicas 6 a 16")
 Números provisionales, en datos, medidos con `tests/playthrough_bot` (informe `docs/reports/PLAYTEST_5_FLOORS_REPORT.md`):
 - **Pisos para una primera partida a ciegas de 10-15 min** (D-056): ~1,7× el área, con la misma densidad de criaturas y recursos. Las pistas de exploración van a 3 salas distintas.
-- **Fuerza por piso** (`scale`): 1,0 / 1,25 / 1,45 / 1,65 / 1,35 (piso de jefe) y de 1,8 a 2,4 en los pisos 6-10.
+- ~~**Fuerza por piso** (`scale`): 1,0 / 1,25 / 1,45 / 1,65 / 1,35 (piso de jefe) y de 1,8 a 2,4 en los pisos 6-10.~~ Sustituida por D-065 (+10 % por piso; la dificultad viene de las mecánicas).
 - **Jefe con fases** (resuelve en parte P-25, para todos los jefes): al 60 % llama a su banda (despierta a los cercanos y se unen 2), y al 30 % llama a 3 más y se enfurece (+25 % de daño, preparación ×0,8).
 - **Invocar**: 300 gemas iniciales y 100 por invocación (×10: 900).
 - **Economía**:
@@ -246,6 +246,42 @@ Números provisionales, en datos, medidos con `tests/playthrough_bot` (informe `
   - Furia: empieza en 30, se enfría a 3/s y sube 10 por golpe.
 - **Retirada (X)**: cada héroe recoge primero al caído más cercano a ≤ 260 px y luego los dos van a la salida. D-036 se mantiene: quien quede en el suelo lejos de la salida muere.
 - **Limpiar el piso**: con ≤ 3 criaturas, o si todas las que quedan están dormidas, se marcan en el minimapa.
+
+### D-065 — Pisos que obligan a pensar (2026-10-31, dueño: "el jugador tiene que pensar muy bien cómo usar los héroes")
+La dificultad sale de **mecánicas**, no de inflar vida y daño. La fuerza de las criaturas vuelve a +10 % por piso, y la escala por piso de D-064 queda **sustituida**.
+
+**Héroes autónomos.** Un héroe que no controla el jugador usa sus habilidades solo, respetando coste y recarga, en este orden:
+1. Curar a un aliado por debajo del 60 % de vida.
+2. Interrumpir a una criatura que lanza algo.
+3. Provocar si un aliado herido recibe golpes.
+4. Escudo.
+5. Limpiar estados.
+6. Atacar.
+
+La tecla **T** pasa los héroes seleccionados a habilidades "manuales" (solo W/E/R). Así el jugador decide quién va libre y quién actúa solo cuando lo manda.
+
+**Criaturas con clases y habilidades.** Los roles funcionan como clases: escaramuzador, luchador, bruto, defensor, arquero, curandero/chamán, más los vigías que asigna el piso. Cada lanzamiento se anuncia (un anillo sobre el lanzador, o el área marcada en el suelo) y un aturdimiento o una interrupción lo corta.
+
+| Habilidad | Quién | Efecto |
+|---|---|---|
+| Mend | curanderos | Cura al más herido |
+| Ward | chamanes | Escudo a un aliado, al jefe primero |
+| Rally | comandantes | +30 % de daño a los cercanos |
+| Slam | brutos | Golpe en área con aturdimiento |
+| Spore Cloud | hongos | Nube de veneno |
+| Aimed Shot | arqueros | Disparo cargado contra un héroe |
+
+**Por piso.** Las habilidades de apoyo enemigas aparecen desde el piso 2.
+
+| Piso | Mecánica |
+|---|---|
+| 1 | Golpes anunciados |
+| 2 | Curanderos detrás de la línea |
+| 3 | Quien lleva la reliquia va al 60 % de velocidad, no ataca ni lanza, y las criaturas lo notan al doble de distancia |
+| 4 | En cada grupo despierto, el más rápido es vigía: al ver a la escuadra huye a avisar al grupo más cercano |
+| 5 | El jefe trae 2 chamanes. Mientras vive uno, recibe un 40 % menos de daño. Sus escudos se rompen con un aturdimiento. Además conserva las fases de D-064 |
+
+**Medición.** Se comparan dos bots, uno "a lo loco" y uno "táctico", en varias cuentas (`tests/playthrough_bot`, `PT_STYLE`). Un piso está bien diseñado cuando el estilo táctico rinde claramente mejor que el loco. El juicio final es del dueño jugando.
 
 ## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)
 

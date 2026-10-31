@@ -82,3 +82,33 @@ Rama: `ccr-cb2bbfa2-cg889y` (contenido de `feat/ui-and-art-unification`). Godot 
 | D12 | Se borró el zip duplicado de la raíz (sigue en el historial: `7c2c8a9`). | Los 311 PNG estaban en `assets/pixel/caz-base/`. |
 
 Pruebas locales tras el balance: **25/25 PASS**.
+
+## Mecánicas tácticas (D-065): bot "a lo loco" contra bot "táctico" (2026-10-31)
+Las dos versiones del bot juegan con conocimiento del mapa, en cuentas nuevas, del piso 1 al 5, con hasta 3 intentos por piso; si fallan, repiten el piso anterior para subir de nivel. Las dos usan la autonomía nueva de los héroes (habilidades automáticas).
+- **A lo loco:** ataca al enemigo más cercano y no hace nada más.
+- **Táctico:** además mata primero a curanderos, chamanes y vigías, interrumpe lanzamientos con aturdimientos, saca a los héroes de las áreas marcadas, y el héroe con más vida lleva la reliquia mientras los demás lo escoltan.
+
+### A lo loco: 4 accounts, highest floor cleared per account: [5, 4, 5, 4]
+| Floor | attempts | won | won 1st try | escaped / failed / timeout | heroes lost | downs | avg time | lowest HP (median) |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 4 | 4 | 4/4 | 0 / 0 / 0 | 0 | 0 | 3:36 | 54% |
+| 2 | 4 | 4 | 4/4 | 0 / 0 / 0 | 0 | 0 | 2:33 | 100% |
+| 3 | 4 | 4 | 4/4 | 0 / 0 / 0 | 0 | 1 | 3:50 | 67% |
+| 4 | 5 | 4 | 3/4 | 0 / 0 / 1 | 0 | 0 | 10:02 | 62% |
+| 5 | 8 | 2 | 2/4 | 2 / 4 / 0 | 29 | 29 | 2:27 | 2% |
+
+### Táctico: 4 accounts, highest floor cleared per account: [5, 5, 5, 5]
+| Floor | attempts | won | won 1st try | escaped / failed / timeout | heroes lost | downs | avg time | lowest HP (median) |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 4 | 4 | 4/4 | 0 / 0 / 0 | 0 | 0 | 3:30 | 98% |
+| 2 | 4 | 4 | 4/4 | 0 / 0 / 0 | 0 | 0 | 2:33 | 100% |
+| 3 | 4 | 4 | 4/4 | 0 / 0 / 0 | 0 | 0 | 3:27 | 95% |
+| 4 | 4 | 4 | 4/4 | 0 / 0 / 0 | 0 | 0 | 4:44 | 95% |
+| 5 | 4 | 4 | 4/4 | 0 / 0 / 0 | 0 | 1 | 1:42 | 7% |
+
+
+Lectura:
+- **Piso 5:** a lo loco ganó 2 de 8 intentos y perdió 29 héroes para siempre (2 de las 4 cuentas no pasaron). El táctico ganó 4 de 4 a la primera sin perder a nadie. Las mecánicas del jefe (chamanes, escudo, Slam) premian pensar.
+- **Piso 4:** a lo loco tardó el doble (10 min frente a 4:44) y tuvo un bloqueo; los vigías juntan grupos. El táctico terminó con más vida (95 % frente a 62 %).
+- **Pisos 1-3:** casi no hay diferencia; los dos los pasan siempre. Los curanderos del piso 2 apenas pesan porque la misión de exploración no obliga a pelear, y el piso 3 solo se nota en la vida (67 % frente a 95 %). Es lo siguiente que hay que reforzar.
+- Lo que el bot no mide: usar W/E/R a mano, colocar a los héroes y decidir a quién dejar libre con T. Eso lo tiene que probar una persona.
