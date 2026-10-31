@@ -49,7 +49,7 @@ func _init() -> void:
 
     # 6. Test population cap & dorms
     var cap: int = g.max_hero_capacity()
-    check(cap >= 15, "max hero capacity scales with dorms (cap=%d)" % cap)
+    check(cap == TownTables.beds_at("dorm_1", g.building_level("dorm_1")) + TownTables.beds_at("dorm_2", g.building_level("dorm_2")) + TownTables.beds_at("dorm_3", g.building_level("dorm_3")) and cap > 0, "max hero capacity = beds in the dorms (cap=%d)" % cap)
 
     for p in ["user://test_persistent_map.json", "user://test_persistent_map.json.bak", "user://test_persistent_map.json.tmp"]:
         if FileAccess.file_exists(p):

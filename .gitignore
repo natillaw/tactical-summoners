@@ -25,3 +25,9 @@ _backup_dropD/
 ehthumbs.db
 Thumbs.db
 Desktop.ini
+
+# Raw third-party packs: only the files the game uses are imported into assets/ (UI/art prompt)
+assets/source_packs/
+assets/*.zip
+assets/_inbox/*.zip
+assets/_inbox/**/raw/

@@ -1,8 +1,13 @@
-description = "End a session: log entry, rebuild context files, run the consistency check"
+description = "End a session: report evidence and update the implementation status"
 prompt = """
-Finish this session following AGENTS.md "End of every session":
-1. Run python infos/tools/sync/ts_sync.py log --agent "Gemini" --did "..." --verified "..." --next "..." (fill the three fields honestly; "verified" must name the command you ran and its result, or say NOT RUN).
-2. Update docs/ai-context/CURRENT_STATE.md for what changed. Only tick ROADMAP items you verified.
-3. Run python infos/tools/sync/ts_sync.py lite, then bundle, then check. If check reports errors, fix them.
-4. Tell me the new STATE_HASH and list the files you changed. Do not run git push; I will do that.
+Finish this session following AGENTS.md:
+1. List the files you changed.
+2. List every command you ran and its result (PASS/FAIL lines). Anything not run is NOT VERIFIED.
+3. Update docs/IMPLEMENTATION_STATUS.md only for what you verified. Do not edit docs/archive/.
+4. If you found a contradiction with docs/DECISIONS.md, report it; do not resolve it silently.
+Do not run git push; I will do that.
 """
+cat >> .geminiignore <<'EOF'
+docs/archive/
+assets/
+audit/AUDIT_FINDINGS.json

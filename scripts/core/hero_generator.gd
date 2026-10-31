@@ -5,7 +5,7 @@ extends RefCounted
 ## more traits/passives and a higher level cap - all of it procedural.
 
 
-const VERSION := 2   # 1 = Drop A. 2 adds Trust/Obedience/Composure (look/class/traits are unchanged)
+const VERSION := 3   # 1 = Drop A. 2 adds Trust/Obedience/Composure. 3 adds the starting active skill (D-044) and the first profession from the past life (D-049, no new rolls); look/class/traits are unchanged
 
 
 static func generate(hero_seed: int, stars: int) -> HeroData:
@@ -47,6 +47,8 @@ static func generate(hero_seed: int, stars: int) -> HeroData:
 	h.obedience = clampi(obedience, 0, 100)
 	h.composure = 100
 	h.generator_version = VERSION
+	h.ensure_skills()
+	h.init_professions()
 	return h
 
 
@@ -55,8 +57,9 @@ static func apply_promotion(h: HeroData) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = h.hero_seed ^ (h.stars * 7919)
 	var sd: Dictionary = HeroTables.STAR_DATA[h.stars]
-	if h.hero_class == "class.none" and h.stars >= 3:
-		var pool: Array = HeroTables.PROMOTION_CLASS_POOL
+	var pool: Array = HeroTables.PROMOTION_CLASS_POOL
+	# F-007: the pool is empty until advanced classes are decided (P-07); never divide by zero.
+	if h.hero_class == "class.none" and h.stars >= 3 and not pool.is_empty():
 		h.hero_class = String(pool[rng.randi() % pool.size()])
 	if h.traits.size() < int(sd["traits"]):
 		h.traits = _roll_traits(rng, int(sd["traits"]), h.traits)

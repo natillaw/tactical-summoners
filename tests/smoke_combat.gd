@@ -25,7 +25,7 @@ func _ready() -> void:
 
     check(CombatRules.damage(10, 4) == 8 and CombatRules.damage(1, 50) == 1, "damage formula: half DEF, minimum 1")
     check(CombatRules.hero_interval(1) <= 1.6 and CombatRules.hero_interval(99) >= 0.6, "attack interval clamped")
-    check(sb.enemies.size() == SandboxScreen.ENEMY_CELLS.size(), "enemies spawned on the fixed map")
+    check(sb.enemies.size() == sb.map.enemy_spawn_cells.size(), "enemies spawned on the fixed map")
     var on_floor := sb.enemies.all(func(e): return not sb.map.is_blocked(e.position))
     check(on_floor, "enemies spawn on walkable ground")
 
@@ -95,9 +95,10 @@ func _ready() -> void:
     sb.select_only([h0])
     h0.take_damage(99999)
     sb.tick(1.0 / 60.0)
-    check(not h0.alive and not sb.selected.has(h0), "dead hero is removed from selection")
+    check(not h0.alive and h0.downed and not sb.selected.has(h0), "fallen hero is removed from selection")
+    var agony0 := h0.agony
     h0.take_damage(1)
-    check(h0.hp == 0 and not h0.alive, "dead hero cannot be revived or damaged further")
+    check(h0.hp == 0 and not h0.alive and h0.agony < agony0, "a hit on a fallen hero shortens the agony instead of hp (D-036)")
     sb.select_slot(0)
     check(not sb.selected.has(h0), "key 1 cannot select a dead hero")
 

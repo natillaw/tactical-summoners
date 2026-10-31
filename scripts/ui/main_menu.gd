@@ -12,13 +12,13 @@ func _ready() -> void:
     add_child(center)
     UIKit.fill(center)
     var vb := VBoxContainer.new()
-    vb.add_theme_constant_override("separation", 12)
+    vb.add_theme_constant_override("separation", 6)  # px
     center.add_child(vb)
 
     var title := UIKit.label("TACTICAL SUMMONERS", 52, UIKit.ACCENT)
     title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     vb.add_child(title)
-    var sub := UIKit.label("Drop C  -  Summoning, real-time missions, permanent death", 18, UIKit.MUTED)
+    var sub := UIKit.label("Debug menu  -  the game starts in the town", 18, UIKit.MUTED)
     sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     vb.add_child(sub)
     vb.add_child(Control.new())
@@ -29,6 +29,7 @@ func _ready() -> void:
     vb.add_child(UIKit.button("Memorial  (fallen heroes)", func(): navigate.emit("memorial"), Vector2(360, 56)))
     vb.add_child(UIKit.button("Sandbox  (real-time control test)", func(): navigate.emit("sandbox"), Vector2(360, 56)))
     vb.add_child(UIKit.button("Living Headquarters", func(): navigate.emit("hq"), Vector2(360, 56)))
+    vb.add_child(UIKit.button("Back to the town", func(): navigate.emit("town"), Vector2(360, 56)))
 
     _summary = UIKit.label("", 16, UIKit.MUTED)
     _summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -40,6 +41,7 @@ func _ready() -> void:
     dbg.add_child(UIKit.button("+1000 gems", func(): Game.grant(1000, 0, 0)))
     dbg.add_child(UIKit.button("+10 stones", func(): Game.grant(0, 10, 0)))
     dbg.add_child(UIKit.button("+10 books", func(): Game.grant(0, 0, 10)))
+    dbg.add_child(UIKit.button("Full town", func(): Game.debug_full_town()))
     dbg.add_child(UIKit.button("Reset save", _ask_reset))
     vb.add_child(dbg)
 
@@ -54,6 +56,8 @@ func _refresh() -> void:
 func _ask_reset() -> void:
     var dlg := ConfirmationDialog.new()
     dlg.dialog_text = "Delete all heroes and progress?"
-    dlg.confirmed.connect(func(): Game.new_game())
+    dlg.confirmed.connect(func():
+        Game.new_game()
+        navigate.emit("welcome"))          # a fresh account starts with the welcome and its first summons
     add_child(dlg)
     dlg.popup_centered()

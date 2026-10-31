@@ -49,12 +49,14 @@ func _ready() -> void:
     # pathfinding around walls: spawn room -> exit room
     var goal := sb.map.center_of(SandboxMap.GOAL_CELL)
     var path := sb.map.find_path(sb.heroes[0].position, goal)
-    var wp_ok := path.size() > 2
+    # paths are smoothed (NavMap.smooth_path): what matters is that no waypoint and no segment crosses a wall
+    var wp_ok := path.size() >= 1
     var cur: Vector2 = sb.heroes[0].position
     for p in path:
-        if sb.map.is_blocked(p):
+        if sb.map.is_blocked(p) or not sb.map.has_line_of_sight(cur, p):
             wp_ok = false
-    check(wp_ok, "path to the far room exists and avoids walls (%d waypoints)" % path.size())
+        cur = p
+    check(wp_ok, "path to the far room exists and every segment avoids walls (%d waypoints)" % path.size())
     check(sb.map.is_blocked(sb.map.center_of(Vector2i(13, 3))), "test wall is solid")
     var snapped := sb.map.nearest_walkable(sb.map.center_of(Vector2i(13, 3)))
     check(not sb.map.is_blocked(snapped), "order inside a wall snaps to the nearest walkable cell")
@@ -97,12 +99,20 @@ func _ready() -> void:
     sb.order_move_selected(sb.map.center_of(Vector2i(3, 3)))
     for i in 1800:
         sb.tick(1.0 / 60.0)
+    # D-053: the order goes only to the driven hero; the others are not ordered, they follow it on their own
     var moved_only_one := sb.heroes[0].position.distance_to(sb.map.center_of(Vector2i(3, 3))) < 40.0
-    var others_still := true
+    var others_unordered := true
+    var others_near := true
     for i in 4:
-        if sb.heroes[i + 1].position.distance_to(others_before[i]) > SandboxScreen.SEPARATION * 2.0:
-            others_still = false
-    check(moved_only_one and others_still, "order only affects the selected hero")
+        var o: SandboxHero = sb.heroes[i + 1]
+        if o.order == "move" or o.is_controlled():
+            others_unordered = false
+        if o.alive and o.position.distance_to(sb.heroes[0].position) > o.leash() + 80.0:
+            others_near = false
+    check(moved_only_one and others_unordered and sb.heroes[0].is_controlled(), "order only affects the driven hero; the others stay autonomous")
+    check(others_near, "autonomous squadmates keep up with the driven hero instead of standing still")
+    sb.group_view()
+    check(sb.controlled() == null, "Tab / group view gives control back to autonomy")
 
     # real mouse events through _gui_input: click select, drag-box select, right-click order
     for i in sb.heroes.size():                         # regroup so everyone is on screen

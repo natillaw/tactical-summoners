@@ -9,6 +9,8 @@ var _detail: VBoxContainer
 var _sort: OptionButton
 var _selected_id: String = ""
 var _count_label: Label
+var _status_msg: String = ""        # result of the last action on the sheet
+var _sheet_tab: int = 0
 
 
 func _ready() -> void:
@@ -44,12 +46,12 @@ func _ready() -> void:
 	body.add_child(left)
 	_grid = GridContainer.new()
 	_grid.columns = 4
-	_grid.add_theme_constant_override("h_separation", 10)
-	_grid.add_theme_constant_override("v_separation", 10)
+	_grid.add_theme_constant_override("h_separation", 5)  # px
+	_grid.add_theme_constant_override("v_separation", 5)  # px
 	left.add_child(_grid)
 
 	var right := PanelContainer.new()
-	right.custom_minimum_size = Vector2(450, 0)
+	right.custom_minimum_size = Vector2(320, 0)  # px: the tabbed hero sheet
 	body.add_child(right)
 	var rscroll := ScrollContainer.new()
 	rscroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -97,109 +99,34 @@ func _on_card(h: HeroData) -> void:
 func _show_detail() -> void:
 	for c in _detail.get_children():
 		c.queue_free()
-	if _selected_id == "":
-		_detail.add_child(UIKit.label("No heroes yet.\nSummon some first!", 20, UIKit.MUTED))
+	if _selected_id == "" or not Game.heroes.has(_selected_id):
+		_detail.add_child(UIKit.label("No heroes yet.
+Summon some first!", 20, UIKit.MUTED))
 		return
-	var h: HeroData = Game.heroes[_selected_id]
-	var col := h.star_color()
-
-	var top := HBoxContainer.new()
-	_detail.add_child(top)
-	var portrait := HeroPortrait.new(h, 4.0)
-	top.add_child(portrait)
-	var info := VBoxContainer.new()
-	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top.add_child(info)
-	var nm := UIKit.label(h.hero_name, 24, col)
-	nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	nm.custom_minimum_size = Vector2(190, 0)
-	info.add_child(nm)
-	if h.epithet != "":
-		info.add_child(UIKit.label(h.epithet, 16, UIKit.MUTED))
-	info.add_child(StarRow.new(h.stars, 18.0, col))
-	info.add_child(UIKit.label("%s   -   Power %d" % [h.class_title(), h.power()], 16, UIKit.TEXT))
-
-	# level / xp
-	var lv := "Level %d / %d" % [h.level, h.level_cap()]
-	_detail.add_child(UIKit.label(lv, 18, UIKit.TEXT))
-	if h.is_max_level():
-		var cap_text := "Max level for %d-star." % h.stars
-		if h.stars < HeroTables.MAX_STARS:
-			cap_text += " Promote to keep growing."
-		_detail.add_child(UIKit.label(cap_text, 15, UIKit.ACCENT))
-	else:
-		var bar := ProgressBar.new()
-		bar.max_value = h.xp_to_next()
-		bar.value = h.xp
-		bar.custom_minimum_size = Vector2(0, 18)
-		bar.show_percentage = false
-		_detail.add_child(bar)
-		_detail.add_child(UIKit.label("XP %d / %d" % [h.xp, h.xp_to_next()], 14, UIKit.MUTED))
-
-	# actions
-	var actions := HBoxContainer.new()
-	_detail.add_child(actions)
-	var train1 := UIKit.button("Train (1 book)", func(): Game.train(h, 1), Vector2(140, 40))
-	train1.disabled = h.is_max_level() or Game.books < 1
-	actions.add_child(train1)
-	var train5 := UIKit.button("Train x5", func(): Game.train(h, 5), Vector2(100, 40))
-	train5.disabled = h.is_max_level() or Game.books < 5
-	actions.add_child(train5)
-	var promo := UIKit.button("Promote: %d stones" % h.promotion_cost(), func(): Game.promote(h), Vector2(180, 40))
-	promo.disabled = not h.can_promote() or Game.stones < h.promotion_cost()
-	actions.add_child(promo)
-
-	# stats
-	_detail.add_child(UIKit.label("Stats", 20, UIKit.ACCENT))
-	var stats := h.get_stats()
-	var sg := GridContainer.new()
-	sg.columns = 5
-	sg.add_theme_constant_override("h_separation", 16)
-	_detail.add_child(sg)
-	for k in HeroTables.STAT_KEYS:
-		sg.add_child(UIKit.label(HeroTables.STAT_NAMES[k], 13, UIKit.MUTED))
-	for k in HeroTables.STAT_KEYS:
-		sg.add_child(UIKit.label(str(stats[k]), 18, UIKit.TEXT))
-
-	# personality
-	_detail.add_child(UIKit.label("Personality", 20, UIKit.ACCENT))
-	for t in h.traits:
-		var td: Dictionary = HeroTables.TRAITS[t]
-		_detail.add_child(_wrapped("%s - %s" % [td["name"], td["desc"]], 15, UIKit.TEXT))
-	_detail.add_child(UIKit.label("Trust %d   |   Obedience %d   |   Composure %d" % [h.trust, h.obedience, h.composure], 14, UIKit.MUTED))
-	if h.summon_index > 0:
-		_detail.add_child(UIKit.label("Summoned #%d   |   %d recorded events" % [h.summon_index, h.events.size()], 13, UIKit.MUTED))
-
-	_detail.add_child(UIKit.label("Passives", 20, UIKit.ACCENT))
-	for p in h.passives:
-		var pd: Dictionary = HeroTables.PASSIVES[p]
-		_detail.add_child(_wrapped("%s: %s" % [pd["name"], pd["desc"]], 15, UIKit.TEXT))
-
-	_detail.add_child(UIKit.label("Background", 20, UIKit.ACCENT))
-	_detail.add_child(_wrapped(h.background_text, 15, UIKit.MUTED))
-
-	# Past-Life Occupation
-	_detail.add_child(UIKit.label("Past-Life Occupation", 20, UIKit.ACCENT))
-	if HeroTables.PROFESSIONS.has(h.profession):
-		var prof: Dictionary = HeroTables.PROFESSIONS[h.profession]
-		_detail.add_child(_wrapped("%s: %s\nLobby Benefit: %s | Self-Defense: %s" % [prof["name"], prof["desc"], prof["bonus"].capitalize(), prof["action"]], 15, UIKit.TEXT))
-	else:
-		_detail.add_child(_wrapped("No recorded past-life occupation.", 15, UIKit.MUTED))
-
-	# Phase 2 & 3: Simulation & Headquarters
-	_detail.add_child(UIKit.label("Simulation & Headquarters", 20, UIKit.ACCENT))
-	_detail.add_child(UIKit.label("HQ Assignment: %s" % (h.hq_assignment if h.hq_assignment != "" else "Idle / Quarters"), 15, UIKit.ACCENT))
-	_detail.add_child(UIKit.label("Memories recorded: %d" % h.memories.size(), 14, UIKit.MUTED))
-	for m in h.memories.slice(-3):
-		_detail.add_child(_wrapped("• [%s] %s" % [String(m["type"]).capitalize(), String(m["text"])], 13, UIKit.TEXT))
-	if h.discovered_secrets.size() > 0:
-		_detail.add_child(UIKit.label("Discovered Secrets: %d" % h.discovered_secrets.size(), 14, UIKit.ACCENT))
-		for sec in h.discovered_secrets:
-			_detail.add_child(_wrapped("• %s" % sec, 13, UIKit.TEXT))
+	# D-063: the hero sheet in tabs (summary, skills, equipment, progression, profession, relations)
+	var sheet := HeroSheet.new(Game.heroes[_selected_id], _sheet_tab)
+	sheet._msg = _status_msg
+	sheet.changed.connect(func():
+		_status_msg = sheet._msg
+		_sheet_tab = sheet._tab_index
+		if not Game.heroes.has(_selected_id):
+			_selected_id = ""                     # sacrificed: back to the list
+		_show_detail())
+	_detail.add_child(sheet)
 
 
 func _wrapped(text: String, p_size: int, color: Color) -> Label:
 	var l := UIKit.label(text, p_size, color)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.custom_minimum_size = Vector2(380, 0)
+	l.custom_minimum_size = Vector2(190, 0)  # px
 	return l
+
+
+func _ascend(h: HeroData) -> void:
+	var r := Game.attempt_promotion(h)
+	_status_msg = ("%s ascended to %d stars!" % [h.display_name(), h.stars]) if bool(r["ok"]) else ("The ascension failed (%d%% chance). Next try: %d%%." % [roundi(float(r["chance"]) * 100.0), roundi(Game.promotion_chance(h) * 100.0)])
+	_rebuild()
+
+
+func _train_skill(h: HeroData, sid: String) -> void:
+	Game.train_skill(h, sid)

@@ -1,0 +1,298 @@
+# Registro de decisiones — Tactical Summoners
+
+**Autoridad máxima del proyecto.** Si otro documento contradice este, manda este. Un conflicto se reporta; no se resuelve en silencio.
+**Consolidado:** 2026-10-30 desde `docs/archive/infos/docs/ai-context/DECISIONS.md` (D-001…D-022), `DESIGN_GAPS.md`, `REFERENCE_SYSTEMS.md`, `HANDOFF_LOG.md`, `SESSION_SUMMARY.md`, el prompt maestro del usuario (2026-10-30) y las imágenes de referencia. Nada se ha eliminado: lo retirado está en la sección SUSTITUIDAS.
+
+| Estado | Significado | ¿Se implementa? |
+|---|---|---|
+| **CONFIRMADA** | Aprobada explícitamente por el dueño | Sí, cuando el roadmap lo indique |
+| **PENDIENTE** | Idea del dueño o del proyecto que requiere decisión o detalle | **No.** Preguntar primero |
+| **CANDIDATA** | Propuesta de agente o inspiración, no aprobada | No |
+| **DIFERIDA** | Aprobada en principio, fuera del alcance actual | No hasta reactivarla |
+| **SUSTITUIDA** | Reemplazada; solo historia | Nunca |
+
+Qué está *implementado* no se registra aquí: ver `docs/IMPLEMENTATION_STATUS.md`.
+
+---
+
+## 1. CONFIRMADAS
+
+### D-001 — Free-first (2026-10-27)
+El gameplay central funciona sin APIs, suscripciones ni assets de pago. La generación procedural y el diálogo por defecto se basan en código/datos; una IA opcional nunca es dependencia del núcleo.
+
+### D-002 — IP original
+Inspiración amplia de sistemas, nunca expresión protegida. No se copian personajes, nombres, diálogos, arte, mapas, logos, música ni historia de *Pick Me Up: Infinite Gacha* (ni de otras referencias). Lista de nombres prohibidos: `docs/specs/REFERENCE_INSPIRATION.md`.
+
+### D-004 — Identidad persistente
+Todo héroe/mundo tiene ID estable. Apariencia, stats, origen e historia no se re-generan al cargar. Se guarda el resultado generado (snapshot versionado), no solo la semilla.
+
+### D-005 — Prototipo local antes que backend
+Validar el bucle localmente; mantener límites de servicio limpios para persistencia online futura.
+
+### D-007 — Dirección de arte: pixel art 2D (actualizada 2026-10-28)
+Pixel art 2D original: siluetas legibles, paleta limitada y cohesiva, telegrafías claras, UI legible, sprites modulares. Probar un héroe, un enemigo, un tileset y un panel antes de producir/importar en masa. (Sustituye la dirección 3D/low-poly.)
+
+### D-008 — Nada de assets en masa antes de la prueba de arte
+Probar primero un héroe, enemigo, arma, prop, tile e icono: estilo, escala, animación, rendimiento y licencia.
+
+### D-009 — Flujo script-first en Godot (2026-10-27)
+Escenas, nodos, configuración, setup de assets y pruebas se automatizan con scripts/CLI siempre que sea práctico. Generadores idempotentes; inspeccionar y preservar trabajo existente; verificar resultados.
+
+### D-011 — Muerte permanente (2026-10-28)
+Un héroe que llega a 0 PV en misión muere para siempre en esa partida. Se preservan su registro, historia, destino del equipo y entrada en el memorial; nunca se re-genera ni se borra en silencio. Sin resurrección en el primer prototipo. Avisar antes del despliegue y definir resultados de retirada/derrota.
+
+### D-012 — Atributos iniciales; fórmulas provisionales (2026-10-28)
+Atributos: Fuerza (FUE), Agilidad (AGI), Vitalidad (VIT), Intelecto (INT), Temple (TEM). Fórmulas propuestas (placeholder para pruebas de balance): PV = 40 + 10×VIT; daño físico = poder del arma + 2×FUE; poder mágico = poder del foco + 2×INT; defensa física = armadura + floor(VIT/2); iniciativa = AGI + TEM; energía = 3 + floor(TEM/3); precisión 85% + AGI% (con tope); evasión 2×AGI% (con tope). El estrés es un medidor de combate aparte, no un sexto atributo.
+
+### D-013 — La identidad del personaje es la primera prioridad (2026-10-28)
+Personalidad, trasfondo, habilidades y recuerdos persistentes van antes que amplitud de mundo, simulación de base o volumen de contenido. La personalidad afecta reacciones, eventos de relación y reglas de comportamiento limitadas, sin quitar el control al jugador.
+
+### D-014 — Control RTS híbrido y mapas de misión continuos (2026-10-28)
+Tiempo real **sin pausa ni cámara lenta**. Héroes autónomos (navegan y atacan) + órdenes directas del jugador + activación directa de habilidades. Cámara cenital de grupo por defecto. Exploración, interacción, combate y extracción comparten mapa. Misiones con objetivos distintos de "matar a todos". Jefes con mecánicas legibles y contrajuego, no solo más PV. Las órdenes directas son fiables y nunca se deniegan por una tirada de obediencia.
+> La cláusula de D-014 "generación de mundo diferida, mapa fijo" queda **sustituida por D-026** (2026-10-30).
+
+### D-015 — Foco de cámara con 1–5 y panel contextual (2026-10-28)
+1–5 selecciona al héroe desplegado y la cámara lo sigue suavemente; aparecen su retrato, vitales, habilidades y órdenes. La simulación nunca se pausa. `Tab` vuelve a vista de grupo; `G` selecciona el escuadrón. Ranura vacía o muerta = mensaje claro, nunca seleccionar otro héroe en silencio.
+
+### D-016 — Trust, Obedience y Composure separados (2026-10-28)
+Trust (relación a largo plazo con el comandante/compañía), Obedience (disciplina de mando a largo plazo), Composure (estado a corto plazo en misión) + vínculos/rivalidades entre pares. Se guardan y muestran desde el inicio. En el MVP solo cambios deterministas por eventos y **ningún rechazo aleatorio de órdenes normales**. Efectos de comportamiento complejos, diferidos hasta que el control sea fiable.
+
+### D-017 — Escuadrón de cinco, definitivo (2026-10-28, usuario explícito)
+El escuadrón es de 5, también en la primera vertical slice. No proponer 3. El alcance se controla con una habilidad por héroe, comportamientos placeholder y mapa simple, no recortando el escuadrón. Roster de prueba ≥ 6. Las teclas 1–5 son obligatorias.
+
+### D-018 — Síntesis, Sacrificio y Promoción (dirección aprobada, números abiertos) (2026-10-28)
+- **Síntesis:** consumir un héroe para mejorar otro; deliberadamente con pérdidas; irreversible.
+- **Sacrificio:** consumir un héroe para obtener materiales (interpretación del agente: ver P-12).
+- **Promoción:** subir de tier con materiales; desbloquea capacidades (ranura de habilidad, opción de clase, tope de nivel, potencial).
+- La identidad nunca cambia (ID, nombre, semilla, personalidad, historia). Un héroe sacrificado va al memorial con causa "sacrificed".
+- Nombres originales; todos los números configurables y versionados. Spec completa: `docs/specs/HEROES_AND_SUMMONING.md` §14.
+- Memoria desbloqueada al promocionar: ver P-11.
+
+### D-019 — "No-hands Godot" (2026-10-28, dueño)
+El dueño no opera el editor de Godot. Los agentes implementan escenas, nodos, recursos, importaciones y animaciones por script (GDScript, `@tool`, Godot headless) y PowerShell para archivos/git/herramientas, y los conectan ellos mismos. El dueño solo ejecuta un comando y reporta la salida. Nunca responder "abre el editor y haz clic".
+
+### D-020 — Las animaciones que faltan se hacen en código, sin arte nuevo (2026-10-28, dueño)
+La hoja de Tiny Pixel Fantasy (576×384 por capa, 12×8 frames de 48 px) tiene: movimiento en 4 direcciones, lunge lateral de 4 frames (filas 5-6, cols 2-5), pose tumbado de 2 frames por lado (filas 5-6, cols 0-1) y poses sueltas (señalar, mano alzada, agachado). NO tiene: hit, cast, arco, ataque arriba/abajo, muerte multi-frame, correr, bloquear, interactuar ni victoria. Se construyen en código: hit = destello blanco + retroceso; muerte = frames tumbado + caída/fundido; cast/arco = poses señalar/mano alzada + proyectil o efecto aparte; ataque arriba/abajo = lunge lateral + tween. Frames dibujados a mano solo como pulido opcional posterior, solo si la EULA lo permite y para TODAS las capas.
+
+### D-021 — Equipo: muchas armas/armaduras de varios packs; el aspecto base no da stats (2026-10-28, dueño)
+- Vendrán más clases y muchas variantes de armas/armaduras, de packs adicionales.
+- Ropa/pelo base del generador = cosméticos, **sin stats**. Todos los stats vienen de objetos.
+- La armadura equipada **reemplaza** (oculta) la capa base correspondiente; nunca se dibuja encima. El aspecto base guardado nunca cambia.
+- Cada pack nuevo necesita: misma rejilla de 48 px o un mapa de frames por pack, estilo coherente, entrada de licencia y una entrada de datos por objeto (id, slot, archivo de capa, stats, clases permitidas).
+- Abierto: ver P-14.
+
+### D-023 — Los sprites originales de héroes no se modifican (2026-10-30, dueño; prompt de auditoría §6)
+Los sprites de héroes son de **Tiny Pixel Fantasy – Character Generator by Caz**. No se reemplazan, redibujan ni modifican destructivamente (`assets/sprites/**`). Las mejoras preservan su identidad visual y se hacen con animaciones compatibles, efectos, interacciones y retratos derivados.
+
+### D-024 — Solo assets gratuitos y con licencia registrada (2026-10-30, dueño)
+Todo recurso nuevo debe ser gratuito, con su licencia leída y registrada en `docs/ASSET_REGISTRY.md` antes de usarse. (Refuerza D-001 y D-008.)
+
+### D-025 — Estabilizar antes de ampliar (2026-10-30, dueño)
+No se añaden sistemas nuevos encima de la base actual hasta reparar los errores de la auditoría (`audit/`) y tener pruebas ejecutadas con evidencia. Orden: memoria del proyecto → reparar el juego → construir lo que falta. Nada de reescrituras completas sin justificación demostrada.
+
+### D-026 — Pisos de la torre generados proceduralmente (2026-10-30, dueño; resuelve P-01)
+Los pisos de la torre se generan proceduralmente. Reglas obligatorias: semilla + versión del generador, validación de navegación y **snapshot persistido** (D-004; nunca regenerar un piso guardado con otro generador). Sustituye a D-003 y a la cláusula "mapa fijo" de D-014. Referencia visual: `docs/specs/reference/procedural_map_reference.jpg`. Biomas: siguen PENDIENTES (P-03).
+
+### D-027 — Torre de 100 pisos; los pisos 1-10 son el primer alcance (2026-10-30, dueño; resuelve P-02)
+La meta es una torre de 100 pisos. El primer alcance jugable son los pisos 1-10, con un jefe en el piso 10. Siguen abiertos: progreso y repetición de pisos, recompensas, desbloqueos cada 10 pisos (P-02b) y el diseño del jefe (P-25).
+
+### D-028 — Clases base: las del código (2026-10-30, dueño; resuelve P-06)
+Commoner, Warrior, Rogue, Ranger, Cleric y Mage (más Novice como estado "sin clase"). La biblioteca de habilidades (P-10) deberá adaptarse a estas clases; Thief, Spearman y Archer quedan como nombres antiguos (sus habilidades se conservan como ideas para reasignar). Clases avanzadas: siguen PENDIENTES (P-07).
+
+### D-029 — 7 estrellas y 70 niveles (2026-10-30, dueño; resuelve P-08)
+7★ con 70 niveles: una estrella por cada 10 niveles (star_gate = ceil(nivel/10), como en la biblioteca de habilidades). Sustituye a la escala del código (5★, topes 10/20/40/60/80). Implementarlo exige cambiar `HeroTables.MAX_STARS`/`STAR_DATA`, las odds de los banners (7 entradas), los colores de estrella, la migración de guardados (subir `SAVE_VERSION`) y las pruebas. Es una tarea de la Fase 5, no antes de la reparación (D-025). Nombres de rareza: siguen PENDIENTES (P-09).
+
+### D-030 — El juego empieza en el pueblo; el pueblo se construye (2026-10-30, dueño; resuelve P-04 y parte de P-22)
+Lo primero que ve el jugador es **la base = el pueblo**, no un menú. Desde el pueblo se hace todo lo demás (invocar, héroes, escuadrón, torre, memorial, gestión). El pueblo es un **mapa fijo y persistente** (siempre el mismo). Se **construye y mejora** con edificios: herrería, hospital, alquimia, etc. Implementación inicial (v3): vista cenital como el resto del juego (el estilo isométrico de la imagen de referencia queda como opción futura), edificios definidos en `scripts/data/town_tables.gd`, coste en materiales, niveles 0 (sin construir) a máx. Efectos concretos de herrería y alquimia esperan al equipo/crafting (P-19, P-20); bonus por profesión sigue PENDIENTE (P-05).
+
+### D-031 — Pisos 1-10 desbloqueados y con bioma de bosque (2026-10-30, dueño; resuelve P-03 para 1-10 y P-02b por ahora)
+Todos los pisos 1-10 están desbloqueados (son los que hay por ahora). Bioma: **bosque**, "nada loco". Implementación (v4): claros de hierba con flores, senderos de tierra en los pasillos, muros de árboles; criaturas de bosque del pack Voxel Dungeon por piso (slimes, ratas, murciélagos, arañas, setas, goblins, hobgoblins, orcos, gólems; jefe orco en el piso 10). Tamaños de piso reducidos a 40-60 celdas para que sean jugables y ligeros. Progreso real de la torre (desbloqueo, recompensas por piso) sigue PENDIENTE (P-02b).
+
+### D-032 — Héroes con autonomía total en el pueblo; ficha al hacer clic (2026-10-30, dueño)
+En el pueblo cada héroe decide qué hacer (pasear, visitar edificios, entrenar, trabajar, descansar, charlar), según su personalidad y su trabajo. Es solo visual hasta que existan los sistemas de entrenamiento, etc. Al hacer clic en un héroe se abre su ficha: equipo, colores, stats, personalidad, relaciones, recuerdos y actividad actual.
+
+### D-033 — Progreso rápido de torre y profesiones expertas (2026-10-30, dueño: "sí")
+- Completar un piso da recompensa (gemas, piedras, materiales, libros; números provisionales en `Game.complete_floor`) y queda registrado (`tower_cleared`). Todos los pisos 1-10 siguen desbloqueados.
+- Profesiones: un experto produce ×2 en su edificio (cocina: chef/granjero/pescador/cazador; taller: leñador/minero/cantero/constructor/ingeniero/herrero; hospital: médico/sacerdote/alquimista; taberna: artista/mercader). Tabla en `TownTables` ("experts").
+- El dueño pide un **sistema de profesiones mucho más sólido**: esta es solo la primera capa; el diseño completo sigue PENDIENTE (P-05).
+
+### D-034 — Misiones por tipo de piso (2026-10-30)
+Implementados 7 tipos (combate, recuperación, rescate, exploración, supervivencia, defensa, jefe) según `TowerExpedition`. El jefe del piso 10 (Jefe Orco) es la primera versión: más vida, golpe telegrafiado más amplio y lento; fases y mecánicas de arena (P-25) siguen pendientes.
+
+### D-035 — Atributos híbridos (2026-10-30, dueño; resuelve C-2 del combate)
+FUE/AGI/VIT/INT/TEM son la base de cada héroe (perfil por clase + crecimiento por nivel + estrellas + variación personal + rasgos). Los stats de combate se **derivan** de ellos en un solo sitio (`CombatRules.derive`): vida (40 + 10×VIT), poder físico (2×FUE + arma de clase), poder mágico (2×INT + foco de clase), armadura, resistencia mágica (TEM), velocidad y cadencia (AGI), probabilidad de crítico (AGI), energía (3 + TEM/3) y resistencia a estados (TEM). Los héroes existentes se migran automáticamente (los atributos se calculan desde sus datos guardados, sin nueva tirada).
+
+### D-036 — Incapacitación, agonía y rescate (2026-10-30, dueño; resuelve P-13 y matiza D-011)
+A 0 PV un héroe **cae** (no muere): agonía visible de 20 s. Otro héroe con la orden **Rescue** (clic derecho sobre el caído) lo levanta tras 2,5 s de canalización, que se interrumpe si el rescatador recibe daño o se aleja; vuelve con el 25 % de vida y el estado **Herido** (−20 % de vida máxima durante el resto de la misión). Si la agonía expira, muerte permanente (D-011 sigue vigente). Golpes recibidos en el suelo restan 5 s de agonía. Si todo el escuadrón cae, la misión fracasa y los caídos mueren. Rematar caídos: no por ahora (opción descartada).
+
+### D-037 — Azar: solo críticos (2026-10-30, dueño; resuelve C-1)
+Los golpes que alcanzan siempre conectan: sin fallos ni variación de daño. Hay críticos con probabilidad (base 5 % + AGI; luego equipo) y multiplicador ×1,5, mostrados con número grande. La esquiva aleatoria de D-012 queda descartada.
+
+### D-038 — Pushes de la rama autorizados (2026-10-30, dueño)
+Commit + push solo a la rama de trabajo de Claude cada vez que se termina un bloque, para que GitHub ejecute pruebas y capturas. Nunca merge a `main` sin permiso.
+
+### D-039 — Ranuras de equipo y raids (2026-10-30, dueño, prompt de combate)
+- Ranuras: arma principal, arma secundaria o escudo (las armas a dos manos ocupan ambas), casco, pechera, guantes, pantalones, botas, 2 anillos, amuleto y accesorio especial. Al morir, el héroe pierde su equipo con él. Los legendarios y míticos tienen identidad y efectos propios. (Implementación en la fase de progresión; sin valores inventados.)
+- El grupo habitual es de 5 (D-017); habrá encuentros especiales (raids) de hasta 10 héroes. La arquitectura no debe fijar el tamaño del grupo en 5 en más sitios.
+
+### D-040 — Teclas de combate (2026-10-30, dueño; resuelve C-6)
+Habilidades en **Q/W/E/R**. Órdenes: **A** atacar avanzando, **H** mantener posición, **F** seguir, **C** reagrupar, **X** retirada, **S** parar, **M** mapa; 1-5 / Tab / G sin cambios. Todas las órdenes tienen también botón en el panel. Clic derecho contextual (atacar / rescatar / mover).
+
+### D-041 — Recurso de habilidades por clase (2026-10-30, dueño)
+Cada clase gestiona su propio recurso, además de los enfriamientos: **Furia** (Warrior: sube al golpear y al recibir daño, baja fuera de combate), **Concentración** (Rogue y Ranger: se regenera de forma constante), **Maná** (Mage y Cleric: reserva grande según INT/TEM, regeneración lenta). Commoner/Novice usan **Aguante** (como la Concentración) de forma provisional. Números en datos.
+
+### D-042 — Interrupciones solo por control (2026-10-30, dueño)
+Una carga o canalización (de héroes, enemigos o jefes) solo se corta con aturdimiento, empuje o habilidades marcadas como "interrumpir". El daño normal no interrumpe. Excepción ya decidida: el rescate (D-036) sí se corta al recibir daño.
+
+### D-043 — Los héroes nacen con 1 habilidad activa (2026-10-30, dueño; matiza D-022)
+Cada héroe empieza con **una** activa de su clase. Las demás (hasta 4 activas en Q/W/E/R, más la definitiva de D-022 en el futuro) se **aprenden**: al subir de nivel, entrenando y con **libros de habilidades**, entre otras vías. Las habilidades aprendidas se guardan en el héroe. (El entrenamiento y los libros de habilidades llegarán con sus sistemas; el aprendizaje por nivel, en la fase 3.)
+
+### D-044 — Habilidad inicial al azar dentro de la clase (2026-10-30, dueño)
+Cada clase tiene un grupo de habilidades "de inicio"; el héroe recibe una elegida con su semilla (RNG aparte, sin alterar el resto de la generación, D-004). Los héroes ya guardados reciben la suya con la misma regla al cargar.
+
+### D-045 — Aprender por nivel = elegir 1 entre 2-3 (2026-10-30, dueño)
+En ciertos niveles (5, 10, 20 y siguientes) el héroe ofrece 2-3 habilidades de su clase y el jugador elige una; las no elegidas se pueden aprender después con libros o entrenamiento. Las elecciones pendientes se guardan.
+
+### D-046 — Fuentes de libros de habilidades (2026-10-30, dueño)
+Botín de la torre (el jefe del piso 10, uno garantizado), un edificio nuevo del pueblo (**Biblioteca**: materiales → libro de la clase elegida), recompensas fijas de algunas misiones (rescate, exploración) y **secretos** (habilidades secretas que solo se aprenden por eventos o descubrimientos).
+
+---
+
+### D-047 — Tiempo del pueblo mixto (2026-10-30, dueño)
+El reloj del pueblo corre despacio mientras el jugador está en el pueblo y salta por días al volver de la torre. Sin esperas de tiempo real fuera del juego ni aceleración con gemas. Detalle técnico en `docs/design/HQ_PROFESSIONS_RESEARCH.md` §4.5 (simulación por ciclos, independiente de la escena).
+
+### D-048 — Solo construyen héroes con profesión de constructor (2026-10-30, dueño)
+Cada obra (construir o mejorar) necesita un héroe asignado con la profesión de constructor (principal o secundaria). El número de obras simultáneas = constructores disponibles. Riesgo anotado: al empezar sin ningún constructor el pueblo queda bloqueado; se preguntará cómo evitarlo.
+
+### D-049 — Profesión principal + secundaria (2026-10-30, dueño; matiza P-05)
+Cada héroe tiene como máximo 2 profesiones con nivel y experiencia. Cambiar exige olvidar una. La vida pasada se convierte en la profesión principal inicial.
+
+### D-050 — Colocación libre en cuadrícula (2026-10-30, dueño; matiza D-030)
+Colocar, mover y demoler edificios sobre una cuadrícula con vista previa válida/inválida, comprobación de espacio y de un camino libre hasta la puerta. Los edificios actuales conservan su sitio al migrar. El terreno se amplía con el edificio central.
+
+---
+
+### D-051 — Obediencia mínima para órdenes y control (2026-10-30, dueño; matiza D-016)
+Un héroe con **Obediencia por debajo de un umbral** (dato: `CombatRules.OBEY_MIN`, 25) **no acata órdenes directas ni se deja controlar**: actúa en autónomo y la UI dice por qué. Es determinista, nunca una tirada: sigue valiendo que las órdenes "no se rechazan al azar". Por encima del umbral, las órdenes se cumplen siempre.
+
+### D-052 — La esquiva automática es una tirada pequeña según AGI y nivel (2026-10-30, dueño; acota G-07)
+La IA ya no sale siempre de los círculos telegrafiados. Por cada golpe telegrafiado que le apunta, el héroe autónomo tira **una vez** contra una probabilidad derivada de AGI y nivel (`CombatRules.auto_dodge_chance`), que es **≈0 a nivel 1** y baja en el early game. Si falla, recibe el golpe. Mover al héroe a mano sigue siendo la forma fiable de esquivar. No contradice D-037: un golpe que alcanza siempre conecta; lo que se tira es si el héroe reacciona.
+
+### D-053 — Enfocar es controlar (2026-10-30, dueño; matiza D-015)
+1-5 (y Shift+1-5 para 6-10 en raids) enfoca **y toma el control directo** de ese héroe: el clic derecho mueve o ataca solo con él, Q/W/E/R usan sus habilidades apuntadas al cursor y su autonomía deja de contradecir al jugador (no esquiva ni se aparta por su cuenta). Los demás siguen en autónomo. Tab devuelve la vista de grupo y la autonomía. Con D-051, un héroe sin obediencia no se puede controlar. Las reglas del héroe (alcance, arma, habilidades) son las mismas para el jugador y la IA.
+
+### D-054 — El daño de los proyectiles se aplica al impactar (2026-10-30, dueño)
+Flechas, orbes y proyectiles de habilidades hacen daño cuando llegan, no cuando se disparan. Si el objetivo ya murió, el proyectil no hace nada.
+
+### D-055 — Cohesión visual de criaturas por copias procesadas (2026-10-30, dueño)
+Los sprites de héroes no se tocan (D-023). Para que las criaturas de otros packs encajen (contorno oscuro como los héroes), un script genera **copias** con el contorno corregido en una carpeta aparte; los PNG originales y sus licencias no cambian. Guía: `docs/specs/ART_DIRECTION.md`.
+
+### D-056 — Expediciones reales autorizadas (2026-10-30, dueño; tarea de roadmap para D-025)
+Autorizadas como trabajo actual: fog of war (visible / explorado / nunca explorado, la visión es de los héroes y no de la cámara, lo explorado se guarda), mapas más grandes con zonas y encuentros (objetivo de 10-30 min por piso), control directo (D-053), dificultad sin inflar la vida (composición, roles, esquiva D-052) y héroes visibles en el pueblo.
+
+### D-057 — Construcción libre, cerca del pueblo (2026-10-31, dueño; matiza D-050)
+Los edificios nuevos se colocan donde el jugador quiera (estilo Clash of Clans): no hay parcelas reservadas para lo que no se ha construido. Única regla de forma: a ≤ `TownTables.NEAR_CELLS` (3) celdas de otro edificio, sin tapar la plaza ni cortar caminos. Mover edificios (D-050) sigue la misma regla.
+
+### D-058 — Vertical slice de 5 pisos (2026-10-31, dueño; prompt "vertical slice")
+- Cuenta nueva: bienvenida breve + 10 summons gratis (banner `starter`: 72/26/2 % de 1-3★, sin 4-5★) con al menos un constructor y al menos 4 clases de combate. El pueblo empieza con la puerta de la torre, 2 dormitorios de 5 camas, el Summoner's Hall y el círculo de invocación (decisión tomada aquí: el Hall limita los niveles y el círculo es el origen de las invocaciones; reversible en `TownTables` "start").
+- Expediciones: botín recolectado y caído se conserva al completar o al escapar; se pierde si cae todo el escuadrón. Completar da recompensa, XP de finalización y MVP; escapar no.
+- Promoción = **ascensión** en el Santuario de Ascensión: nivel máximo del rango + materiales de la torre, con probabilidad (base + Suerte + nivel del santuario + pity, segura tras 3 fallos). Sustituye al pago con "stones".
+- Entrenamiento: solo héroes de 2★ o más, una habilidad de clase elegida entre 3 por cada estrella por encima de 1.
+- Los pisos 1-5 son los pulidos; 6-10 siguen accesibles sin ajustar.
+
+### D-059 — El héroe controlado ataca solo con Q, apuntando con el ratón (2026-10-31, dueño; matiza D-040 y D-053)
+El héroe que controla el jugador **nunca ataca automáticamente**. Su ataque básico es **Q** hacia el cursor (mantener Q repite al ritmo de su velocidad de ataque): a distancia, el proyectil vuela hacia el cursor hasta su alcance y golpea al primer enemigo visible de su línea (los árboles lo paran); cuerpo a cuerpo, un golpe en abanico hacia el cursor (puede fallar). Mismo arma, alcance, daño e intervalo que la IA. El clic derecho del héroe controlado solo mueve. Las habilidades pasan a **W/E/R** y solo hay **3 ranuras** de habilidad activa (antes 4 en Q/W/E/R; matiza D-043). Una cuarta habilidad ya aprendida sigue conocida y puede equiparse en lugar de otra. Los héroes autónomos siguen atacando solos.
+
+### D-060 — 8 ranuras de equipo activas ahora, 11 en el futuro (2026-10-31, dueño; matiza D-039)
+Activas: arma principal, mano secundaria/escudo, cabeza, pecho, piernas, pies, anillo y amuleto (`ItemDefs.ACTIVE_SLOTS`; coinciden con los 8 marcos de Dragon Regalia). Manos, segundo anillo y accesorio especial existen en los datos y el guardado, pero están bloqueados ("próximamente"): no se equipan ni salen en botín o forja hasta abrirlos.
+
+### D-061 — Síntesis y sacrificio (2026-10-31, dueño: "implementa"; resuelve P-12 y fija G-21/G-22 con números provisionales)
+- **Síntesis:** un héroe objetivo absorbe de 1 a 3 héroes fuente. Recibe el 30 % de la experiencia total que acumularon (40 % si son de su misma clase), sin superar su tope de nivel, y **+1 permanente** al atributo más alto de cada fuente de su misma clase. No se transfieren habilidades.
+- **Sacrificio:** un héroe se convierte en materiales según sus estrellas y su clase (`ProgressionDefs.SACRIFICE`). Se pueden sacrificar todas las estrellas.
+- **Reglas comunes (spec §14):**
+  - Pantalla de confirmación con lo que se gana y se pierde.
+  - Guardado previo.
+  - Transaccional.
+  - Las fuentes van al memorial con causa "sacrificed" y conservan su identidad.
+  - No se puede usar a un héroe muerto ni a uno en una expedición.
+  - Avisa si quedarían menos de 5 héroes desplegables.
+  - Los testigos no cambian su Trust (por defecto, sin efecto).
+  - Eventos `synthesized`, `received_synthesis` y `sacrificed`.
+- P-11 (memoria al promocionar) sigue PENDIENTE.
+
+### D-062 — Esc abre un menú sin pausar; 5★ por ahora (2026-10-31, dueño)
+Esc abre el menú del juego (opciones, volver al pueblo o al título) y la simulación sigue corriendo (D-014). El techo de estrellas se queda en 5★; la migración a 7★ (D-029) se aplaza.
+
+### D-063 — Interfaz y arte unificados (2026-10-31, dueño; prompt de UI y arte)
+- Resolución base **640×360** con escalado entero: ×2 a 1280×720, ×3 a 1920×1080, ×4 a 2560×1440.
+- Las licencias de Raven Fantasy Icons, Enemy_Animations_Set, 2D Pixel Dungeon y m6x11 **las tiene el dueño**: se usan y se registran así.
+- Cute_Fantasy (no comercial) e items.zip (de origen desconocido) no se usan.
+- Teclas según D-059.
+
+## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)
+
+| ID | Tema | Lo que existe / origen | Pregunta abierta |
+|---|---|---|---|
+| P-01 | ~~Generación procedural de pisos/mundo~~ | **RESUELTA → D-026** (2026-10-30) | — |
+| P-02 | ~~Torre de 100 pisos; primeros 10 como alcance inicial~~ | **RESUELTA → D-027** (2026-10-30) | — |
+| P-02b | Progreso de la torre | D-027 | Repetición de pisos, recompensas por piso, desbloqueos cada 10 pisos (mazmorras, instalaciones, tope de nivel: REFERENCE #15) |
+| P-03 | **Biomas** (pisos 1-10 → bosque, D-031; resto pendiente) | Imagen de mapa (piedra, agua profunda, hierba, lava, cristal mágico, puentes, puertas); 8 familias temáticas del Bible: Ashen/cursed kingdom, Verdant/overgrown wilds, Arcane/fractured reality, Umbral/abyssal depths, Storm/sky-isles, Forge/clockwork empire, Tidal/drowned civilization, Crystal/glass desert (etiquetas de trabajo) | ¿Qué biomas en los pisos 1-10? |
+| P-04 | ~~HQ in-game explorable, no un menú~~ **RESUELTA → D-030** | Imagen `hq_ingame_reference_THIRD_PARTY.jpg` (sala con zonas etiquetadas, héroes paseando con bocadillos de diálogo); `HQWorld` (Mega Prompt) | ¿Vista isométrica o cenital? ¿Qué zonas? |
+| P-05 | **Profesiones de vida pasada** | 20 profesiones en `HeroTables.PROFESSIONS` (granjero, chef, herrero, leñador, minero, constructor, médico, mercader, guardia, cazador, sastre, ingeniero, explorador, erudito, alquimista, sacerdote, pescador, mozo de cuadra, cantero, artista), cada una con bonus y acción improvisada (Gemini, 2026-10-29) | ¿Afectan a producción, crafting y/o combate? ¿Cómo? |
+| P-06 | ~~Conjunto de clases base~~ | **RESUELTA → D-028** (2026-10-30) | — |
+| P-07 | **Clases avanzadas por promoción** | Berserker, Assassin, Sniper, Templar, Sorcerer (HANDOFF 2026-10-28 23:41; no en código) | ¿Confirmadas? ¿Una por clase base? |
+| P-08 | ~~Estrellas y niveles~~ | **RESUELTA → D-029** (2026-10-30) | — |
+| P-09 | **Rarezas** | Spec: Common/Uncommon/Rare/Epic/Legendary (provisional). Código: 1-5★. Regla vigente: rareza ≠ personalidad ni moralidad | ¿Nombres o estrellas? |
+| P-10 | **Biblioteca de habilidades (D-022)** | 130 habilidades en `docs/specs/SKILLS.md` (7 "implemented", 124 "spec"); regla 4 activas + 1 definitiva; nivel 1-70; ≥30 aprendibles y ≥20 exclusivas por clase de combate; cada skill con qué hace, cómo se juega en tiempo real, sinergia, etiquetas de enemigo; API prevista `SkillLibrary` + generador `tools/gen_skill_library.py` (**no existen en el repo**) | ¿Se mantiene la regla y se regenera para las clases de P-06? |
+| P-11 | **Memoria desbloqueada al promocionar** | D-018 "MAYBE": revelaría un recuerdo ya guardado en la generación, nunca inventaría hechos | Sí/No |
+| P-12 | ~~Significado de "sacrificio"~~ **Resuelta por D-061** (héroe → materiales) | — | — |
+| P-13 | ~~Rescate de caídos~~ **RESUELTA → D-036** | Descrito en `SESSION_SUMMARY` (no existe en código); `rescue_hero()` existe solo como función de datos | ¿Es idea del dueño? ¿Cómo encaja con D-011? |
+| P-14 | **Ropa interior por defecto vs cuerpo base** al equipar armaduras | D-021 | Elegir |
+| P-15 | **Secretos y cadenas de descubrimiento** | `discover_secret()` idempotente, no heredable tras la muerte (solo datos + test) | Alcance y fuentes de secretos |
+| P-16 | **Legado tras la muerte** | Prompt 2026-10-30; memorial existente | Definir qué deja un héroe muerto (reliquias, archivo, recuerdos en otros héroes…) |
+| P-17 | **Expediciones** | Bible pilar 4 ("base, economía, equipo y expediciones se refuerzan"); prompt 2026-10-30 | ¿Son las misiones de torre o envíos sin control directo? |
+| P-18 | **Eventos de misión / objetivos que cambian** | REFERENCE #9 (explorar → exterminar → escapar), prompt | Alcance |
+| P-19 | **Inventario, loot procedural, afijos, sets** | Prompt 2026-10-30; Bible exige guardar inventario/equipo | Necesita spec: `docs/specs/ITEMS_AND_LOOT.md` |
+| P-20 | **Crafting** | Bible "Base/economy: training, crafting, research, storage, production"; prompt | Recetas, estaciones, relación con profesiones |
+| P-21 | **Economía y recursos** | Código: gemas, piedras de promoción, libros, comida, materiales, medicina; REFERENCE #17 moneda abstracta única (CANDIDATA) | Fuentes, sumideros, topes |
+| P-22 | **Construcción e instalaciones** | Código: cocina/taller/enfermería/sala común con niveles; edificios de pueblo (ayuntamiento, 2 dormitorios, herrería, cocina, enfermería) donde cada dormitorio da +5 de capacidad; REFERENCE #8 (estación de promoción, casa de conversión, archivo de reliquias de caídos) | ¿Un único modelo? ¿Qué instalaciones? |
+| P-23 | **Producción** | Código: cantidades fijas por trabajador; se pretendía bonificar por profesión | Reglas |
+| P-24 | **Diálogo de personalidad ("chatter")** | `HeroChatter` (frases por rasgo al entrar al piso); Roadmap: plantillas deterministas por evento; LLM solo opcional para verbalizar (Bible) | ¿Plantillas por evento? |
+| P-25 | **Jefe del piso 10** | Principios confirmados en D-014; nada diseñado | Diseño concreto |
+| P-26 | **Política de duplicados, renombrar y liberar héroes** | Spec §9: recomendado = cada tirada es un héroe distinto, nombres repetidos con callsign (implementado) | Decidir si hay conversión en fragmentos, renombrado o liberación |
+| P-27 | **Pasivas en tiempo real** | 16 pasivas con texto heredado de turnos/filas | Reescribir para tiempo real |
+| P-28 | **Protocolo de agentes** | Antes: claims + STATE_HASH + `ts_sync.py` (archivado 2026-10-30). Ahora: ramas + PRs + evidencia | Confirmar el nuevo flujo |
+
+### Preguntas abiertas heredadas (de DESIGN_GAPS, todas conservadas)
+**Durante el prototipo de control:** G-01 plataforma/entrada (teclado+ratón propuesto) · G-02 pathfinding, evitación y reparto alrededor del destino · G-03 semántica y bindings finales de órdenes · G-04 ajuste del ataque básico (alcance, wind-up, recuperación, intervalo, proyectil, línea de visión) · G-05 habilidades: energía vs cooldown, objetivo, interrupción, canalización · G-06 legibilidad sin pausa (duración de telegrafías, avisos, zoom, densidad del HUD) · G-07 esquiva automática de peligros letales telegrafiados (acotada y legible) · G-08 percepción enemiga (línea de visión, ruido, radio, persecución) · G-09 compleción de misión (objetivo, extracción, enemigos opcionales, extracción fallida, recompensas parciales) · G-10 muerte/lesión (cuándo se guarda la muerte, recuperación de equipo, coste de retirada, escuadrón entero caído) · G-11 qué rasgos afectan preferencias transparentes · G-12 economía de invocación (probabilidades, coste, pity, pools, duplicados) · G-13 stats y crecimiento (presupuesto inicial, potencial, subida de nivel, compatibilidad clase/skill) · G-14 estados alterados (duración, acumulación, resistencia, ticks, control de masas en tiempo real) · G-15 legibilidad de jefes.
+**Crecimiento (D-018):** G-21 eficiencia de síntesis, qué se transfiere, topes, bonus por misma clase · G-22 tipos y cantidades de materiales del sacrificio; ¿se pueden sacrificar tiers altos? · G-23 número de tiers y tabla de desbloqueos · G-24 = P-11 · G-25 ¿sacrificios/muertes cambian el Trust de otros y cuánto? · G-26 fuente de materiales de promoción tras el prototipo.
+**Antes de ampliar el arte:** G-16 resolución interna, tamaño de sprite/tile, paleta, convención de frames · G-17 estilo de retrato y cómo se compone y persiste la variación visual · G-18 fuentes de assets con licencia o plan de arte original.
+
+---
+
+## 3. CANDIDATAS (inspiración, no requisitos)
+De `docs/specs/REFERENCE_INSPIRATION.md`: clase exclusiva de invocación / clases disponibles según tier de nacimiento (#6) · instalaciones de promoción, conversión y archivo de reliquias de caídos (#8) · máquina de estados de objetivos cambiantes (#9) · opinión del héroe visible en objetivos opcionales, sin cancelar órdenes (#10) · regalos que suben Trust (#11) · jefes inmunes hasta activar un mecanismo del campo (#12) · moneda abstracta única con nombre original (#17). Ideas de agentes: profesiones con "acción improvisada" de combate; diálogo de entrada por rasgo.
+
+## 4. DIFERIDAS
+- **D-006 — Multijugador asíncrono primero:** visitas, defensas en instantánea, invasiones, rankings, eventos. Tiempo real fuera del alcance inicial.
+- Progreso offline (basado en timestamp, con tope, idempotente; hora de servidor cuando haya online).
+- Diálogo con LLM opcional (validado, nunca decide estado del juego).
+- REFERENCE #7 mazmorras diarias de materiales · #13 repetición de misiones · #16 invasiones con penalización · #18 pisos ocultos por subquests. (#14 multi-escuadrón: NO por ahora.)
+- Fuera de alcance inicial (Bible): multijugador en tiempo real, mundo abierto continuo, LLM locales, APIs generativas de pago, campaña enorme hecha a mano, monetización, producción masiva de assets antes de validar estilo.
+
+---
+
+## 5. SUSTITUIDAS (historia; no implementar nunca)
+| Antes | Sustituida por | Nota |
+|---|---|---|
+| Dirección de arte 3D estilizada / low-poly (2026-10-27) | D-007 | — |
+| **D-010** Combate por turnos y por rangos/filas (2026-10-28) | D-014 | Restos en código: filas FRONT/BACK en `party_screen.gd`, pasivas con "turno/fila" (ver P-27) |
+| "La primera vertical slice puede usar 3 héroes" (changelog v1.4) | D-017 | — |
+| Contador único `loyalty` | D-016 (Trust + Obedience) | Migración v1→v2 en el guardado |
+| "Loyalty" como medidor aparte | Diferido indefinidamente (spec §7) | Solapa con Trust/Obedience |
+| **D-003** "Mundos procedurales diferidos; mazmorra fija" (2026-10-28) | **D-026** | Los héroes procedurales siguen siendo núcleo (parte vigente de D-003) |
+| Escala 5★ / niveles 10-20-40-60-80 (código) | D-029 | Pendiente de migrar en la Fase 5 |
+| Clases Thief / Spearman / Archer (biblioteca de skills) | D-028 | Sus habilidades se conservan como ideas en `docs/specs/SKILLS.md` |
+| "El repo/ZIP es solo documentación; no hay proyecto Godot" | Estado real del repo | — |
+| Protocolo multiagente con claims, STATE_HASH, CONTEXT_BUNDLE/LITE | Ramas + PR + evidencia (P-28) | Archivado en `docs/archive/infos/` |
+| Instalación por "drops" ZIP (`Apply-DropD.ps1`, `Update-Project.ps1`) | Git | Archivado |

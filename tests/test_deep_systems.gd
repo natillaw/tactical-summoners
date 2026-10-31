@@ -18,6 +18,7 @@ func _new_game(seed_value: int, path: String) -> Node:
     g.autosave = false
     g.save_path = path
     g.rng.seed = seed_value
+    g.debug_full_town()          # the HQ production under test needs the basic town (new accounts start empty)
     return g
 
 
@@ -55,14 +56,14 @@ func _init() -> void:
     check(g.memorial.size() == 1, "dead hero recorded in memorial")
     check(not g.heroes.has(h2.id), "dead hero removed from roster")
     check(h1.discovered_secrets.size() == h1_secrets_before, "surviving hero did not inherit dead hero's secret skill")
-    check(str(g.memorial[0]["id"]) == h2.id, "memorial preserves dead hero identity and records")
+    check(str(g.memorial[0]["hero_id"]) == h2.id, "memorial preserves dead hero identity and records")
 
     # Scenario F: Headquarters systems integration & co-worker relationships
     g.assign_hq(h1.id, "kitchen")
     g.assign_hq(h3.id, "kitchen")
     var food_before: int = g.hq_outputs["food"]
     var turn_summary: Dictionary = g.process_headquarters_turn()
-    check(g.hq_outputs["food"] > food_before, "hq kitchen produces food output")
+    check(int(turn_summary.get("food_produced", 0)) > 0, "hq kitchen produces food output (the town also eats it: %d -> %d)" % [food_before, int(g.hq_outputs["food"])])
     var rel_h1_h3 := h1.get_relationship(h3.id)
     check(rel_h1_h3["interactions"] > 0, "co-workers in kitchen build relationship interactions")
 

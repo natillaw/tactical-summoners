@@ -38,11 +38,11 @@ func _ready() -> void:
     root.add_child(body)
 
     var left := PanelContainer.new()
-    left.custom_minimum_size = Vector2(430, 0)
+    left.custom_minimum_size = Vector2(215, 0)  # px
     body.add_child(left)
     _slot_box = HBoxContainer.new()
     _slot_box.alignment = BoxContainer.ALIGNMENT_CENTER
-    _slot_box.add_theme_constant_override("separation", 24)
+    _slot_box.add_theme_constant_override("separation", 12)  # px
     left.add_child(_slot_box)
 
     var scroll := ScrollContainer.new()
@@ -51,8 +51,8 @@ func _ready() -> void:
     body.add_child(scroll)
     _grid = GridContainer.new()
     _grid.columns = 4
-    _grid.add_theme_constant_override("h_separation", 10)
-    _grid.add_theme_constant_override("v_separation", 10)
+    _grid.add_theme_constant_override("h_separation", 5)  # px
+    _grid.add_theme_constant_override("v_separation", 5)  # px
     scroll.add_child(_grid)
 
     Game.changed.connect(_rebuild)

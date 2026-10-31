@@ -29,10 +29,33 @@ var composure: int = 100          # short-term mission steadiness, 0-100 (resets
 # Simulation fields (Phase 2 & 3): memories, relationships, hq assignments, activity states, secrets
 var memories: Array = []          # [{"id": String, "type": String, "text": String, "time": int, "actor_id": String, "importance": int}]
 var relationships: Dictionary = {} # other_id -> {"level": int, "status": String, "interactions": int}
-var hq_assignment: String = ""    # "" or facility id ("kitchen", "workshop", "infirmary", "common", "training")
-var activity_state: String = "resting" # "resting", "working", "training", "recovering", "socializing"
+var hq_assignment: String = ""    # workplace: "" | a building id | "construction" (D-048)
+## Town activity (single state, TownSim): idle | working | sleeping | eating | socializing |
+## in_treatment | deployed. Exclusive: a hero is never working and deployed at once.
+var activity_state: String = "idle"
+# Town life (HQ Phase 1, save v9): professions (D-049), needs, health, bed, gear.
+var professions: Dictionary = {}  # prof id -> {"lvl": int, "xp": float}; at most ProfessionDefs.MAX_KNOWN
+var passion: String = ""          # profession from the past life (learns faster)
+var hunger: int = 0               # 0 fed .. 100 starving
+var fatigue: int = 0              # 0 rested .. 100 exhausted
+var stress: int = 0               # 0 calm .. 100 breaking
+var diseases: Array = []          # [{"id": String, "hours": float, "cause": String}]
+var bed: String = ""              # dorm id ("" = sleeps rough), kept while deployed or in hospital
+var exhausted_hours: int = 0
+var equipment: Dictionary = {}    # slot -> item dict (ItemDefs.SLOTS)
+var bag: Dictionary = {}          # consumable id -> count, carried into the tower
 var discovered_secrets: Array = [] # secret IDs discovered
 var secret_clues: Array = []      # discovered clue strings
+
+# Active skills (combat Phase 3, D-043..D-046): known skills, the W/E/R loadout (D-059) and the
+# level-up choices still waiting for the player.
+var skills: Array = []            # known skill ids (SkillDefs.SKILLS)
+var loadout: Array = []           # equipped ids, up to SkillDefs.MAX_SLOTS, in W E R order
+var skill_choices: Array = []     # [{"level": int, "options": [ids]}], oldest first
+var ascension_fails: int = 0      # failed ascension attempts in a row (pity, ProgressionDefs)
+var trained_skills: int = 0       # skills learned at the Training Grounds
+var synth_bonus: Dictionary = {}  # D-061: permanent attribute points absorbed by synthesis {attr: n}
+var synthesis_history: Array = [] # [{"from": hero id, "name": String, "xp": int, "attr": String}]
 
 # Structured event ledger: [{seq, type, trust, obedience, info}], newest last, capped.
 var events: Array = []
@@ -193,6 +216,7 @@ func add_xp(amount: int) -> int:
     var gained := 0
     if is_max_level():
         return 0
+    var before := level
     xp += amount
     while level < level_cap() and xp >= xp_to_next():
         xp -= xp_to_next()
@@ -200,7 +224,79 @@ func add_xp(amount: int) -> int:
         gained += 1
     if level >= level_cap():
         xp = 0
+    _queue_skill_choices(before, level)
     return gained
+
+
+# --- active skills (D-043..D-046) -----------------------------------------------------------
+
+## Makes sure the hero knows one skill of its current class: new heroes and heroes that just got
+## a class from promotion learn their class starter (D-044, picked with the hero seed).
+func ensure_skills() -> void:
+    var has_class_skill := false
+    for s in skills:
+        if hero_class == "class.none" or String(SkillDefs.info(s).get("class", "")) == hero_class:
+            has_class_skill = true
+    if not has_class_skill:
+        learn_skill(SkillDefs.starter_for(hero_class, hero_seed), false)
+
+
+## Learns a skill (level choice, book, trainer). Fills a free W/E/R slot. False if already known
+## or not for this class.
+func learn_skill(id: String, log_event: bool = true) -> bool:
+    if skills.has(id) or not SkillDefs.usable_by(id, hero_class):
+        return false
+    skills.append(id)
+    if loadout.size() < SkillDefs.MAX_SLOTS:
+        loadout.append(id)
+    if log_event:
+        add_event("learned_skill", {"skill": id})
+    return true
+
+
+## Puts a known skill in a slot (0-3 = Q W E R); swaps if it was in another slot.
+func equip_skill(slot_index: int, id: String) -> bool:
+    if not skills.has(id) or slot_index < 0 or slot_index >= SkillDefs.MAX_SLOTS:
+        return false
+    var old := loadout.find(id)
+    if slot_index >= loadout.size():
+        if old >= 0:
+            return true
+        loadout.append(id)
+        return true
+    if old >= 0:
+        loadout[old] = loadout[slot_index]
+    loadout[slot_index] = id
+    return true
+
+
+## D-045: resolves the oldest pending level choice. False if `id` is not one of its options.
+func choose_skill(choice_index: int, id: String) -> bool:
+    if choice_index < 0 or choice_index >= skill_choices.size():
+        return false
+    var c: Dictionary = skill_choices[choice_index]
+    if not (c["options"] as Array).has(id) or not learn_skill(id):
+        return false
+    skill_choices.remove_at(choice_index)
+    # options learned meanwhile disappear from the other pending choices
+    for other in skill_choices:
+        (other["options"] as Array).erase(id)
+    skill_choices = skill_choices.filter(func(x): return not (x["options"] as Array).is_empty())
+    return true
+
+
+func _queue_skill_choices(from_level: int, to_level: int) -> void:
+    for lv in SkillDefs.LEARN_LEVELS:
+        if lv > from_level and lv <= to_level:
+            var opts := SkillDefs.level_choices(hero_class, skills, lv, hero_seed)
+            if not opts.is_empty():
+                skill_choices.append({"level": lv, "options": opts})
+
+
+## Luck 1-10: a fixed trait of the hero, derived from its seed (nothing new is stored, the same hero
+## always has the same luck). Used by ascension; other systems can read it later.
+func luck() -> int:
+    return 1 + int(absi(hero_seed) % 10)
 
 
 func promotion_cost() -> int:
@@ -216,21 +312,146 @@ func promote() -> void:
         return
     stars += 1
     HeroGenerator.apply_promotion(self)
+    ensure_skills()
     add_event("promoted", {"stars": stars})
 
 
-func get_stats() -> Dictionary:
-    var base: Dictionary = HeroTables.CLASSES[hero_class]["base"]
-    var mult: float = float(HeroTables.STAR_DATA[stars]["mult"])
-    var growth: float = 1.0 + 0.12 * float(level - 1)
+# --- professions (D-049) --------------------------------------------------------------------
+
+func prof_level(prof: String) -> int:
+    return int((professions.get(prof, {}) as Dictionary).get("lvl", -1))
+
+
+func knows_prof(prof: String) -> bool:
+    return professions.has(prof)
+
+
+## Learns a profession as an apprentice (level 0). "" if learned, else the reason it cannot.
+func learn_prof(prof: String) -> String:
+    if knows_prof(prof):
+        return ""
+    if not ProfessionDefs.PROFESSIONS.has(prof):
+        return "unknown profession"
+    if professions.size() >= ProfessionDefs.MAX_KNOWN:
+        return "already knows %d professions: forget one first" % ProfessionDefs.MAX_KNOWN
+    professions[prof] = {"lvl": 0, "xp": 0.0}
+    add_event("learned_profession", {"prof": prof})
+    return ""
+
+
+func forget_prof(prof: String) -> bool:
+    if not professions.has(prof):
+        return false
+    professions.erase(prof)
+    add_event("forgot_profession", {"prof": prof})
+    return true
+
+
+## Experience from work; returns true on level-up.
+func add_prof_xp(prof: String, amount: float) -> bool:
+    if not professions.has(prof):
+        return false
+    var p: Dictionary = professions[prof]
+    if int(p["lvl"]) >= ProfessionDefs.MAX_LEVEL:
+        return false
+    p["xp"] = float(p["xp"]) + amount * (ProfessionDefs.PASSION_XP if prof == passion else 1.0)
+    var up := false
+    while int(p["lvl"]) < ProfessionDefs.MAX_LEVEL and float(p["xp"]) >= ProfessionDefs.xp_to_next(int(p["lvl"])):
+        p["xp"] = float(p["xp"]) - ProfessionDefs.xp_to_next(int(p["lvl"]))
+        p["lvl"] = int(p["lvl"]) + 1
+        up = true
+    if up:
+        add_memory("prof_level", "Became a level %d %s." % [int(p["lvl"]), ProfessionDefs.info(prof)["name"]], "", 2)
+    return up
+
+
+## Work done per hour in a profession: level, helping attribute, fatigue, hunger, diseases.
+func work_efficiency(prof: String) -> float:
+    var lvl := prof_level(prof)
+    if lvl < 0:
+        return 0.0
+    var eff := ProfessionDefs.efficiency(lvl)
+    var attr := String(ProfessionDefs.info(prof).get("attr", ""))
+    if attr != "":
+        eff *= 1.0 + 0.02 * float(int(attributes().get(attr, 5)) - 5)
+    eff *= 1.0 - float(fatigue) / 200.0
+    if hunger >= 100:
+        eff *= 0.5
+    for d in diseases:
+        eff *= float(EconomyDefs.DISEASES.get(String(d["id"]), {}).get("work", 1.0))
+    return maxf(0.05, eff)
+
+
+## Past-life occupation becomes the first profession (new heroes and save migration).
+func init_professions() -> void:
+    var prof := String(ProfessionDefs.FROM_PAST_LIFE.get(profession, ""))
+    if prof != "" and professions.is_empty():
+        professions[prof] = {"lvl": ProfessionDefs.PAST_LIFE_LEVEL, "xp": 0.0}
+        passion = prof
+
+
+# --- health ----------------------------------------------------------------------------------
+
+func has_disease(id: String) -> bool:
+    return diseases.any(func(d): return String(d["id"]) == id)
+
+
+## Adds a disease (once per kind). Returns true if it is new.
+func catch_disease(id: String, cause: String) -> bool:
+    if has_disease(id) or not EconomyDefs.DISEASES.has(id):
+        return false
+    diseases.append({"id": id, "hours": float(EconomyDefs.DISEASES[id]["hours"]), "cause": cause})
+    add_memory("disease", "Fell ill: %s (%s)." % [EconomyDefs.DISEASES[id]["name"], cause], "", 2)
+    return true
+
+
+## Mood 0..100 from needs (derived, never saved).
+func mood() -> int:
+    return clampi(100 - stress / 2 - hunger / 4 - fatigue / 4 - 10 * diseases.size(), 0, 100)
+
+
+## D-035: the five attributes, computed from saved data (class, stars, level, personal variance,
+## traits). No new random roll, so existing heroes keep their identity.
+func attributes() -> Dictionary:
+    var prof: Dictionary = HeroTables.CLASS_COMBAT.get(hero_class, HeroTables.CLASS_COMBAT["class.none"])
+    var star_factor := 0.8 + 0.2 * float(stars)
     var out := {}
-    for k in HeroTables.STAT_KEYS:
-        var v: float = float(base[k]) * mult * growth * float(variance.get(k, 1.0))
+    for i in HeroTables.ATTR_KEYS.size():
+        var k: String = HeroTables.ATTR_KEYS[i]
+        var legacy: String = HeroTables.ATTR_LEGACY[k]
+        var v: float = (float(prof["attrs"][i]) + float(prof["growth"][i]) * float(level - 1)) * star_factor
+        v *= float(variance.get(legacy, 1.0))
         for t in traits:
             var mods: Dictionary = HeroTables.TRAITS[t].get("mods", {})
-            v *= float(mods.get(k, 1.0))
-        out[k] = maxi(1, roundi(v))
+            v *= float(mods.get(legacy, 1.0))
+        for d in diseases:
+            v *= float((EconomyDefs.DISEASES.get(String(d["id"]), {}).get("mods", {}) as Dictionary).get(k, 1.0))
+        out[k] = maxi(1, roundi(v) + int(synth_bonus.get(k, 0)))
     return out
+
+
+## All the experience this hero has gathered since level 1 (for synthesis).
+func total_xp() -> int:
+    var t := xp
+    for lv in range(1, level):
+        t += 40 + lv * lv * 6                    # same curve as xp_to_next()
+    return t
+
+
+## The attribute this hero is strongest in (what a synthesis passes on).
+func best_attribute() -> String:
+    var a := attributes()
+    var best := ""
+    for k in a:
+        if best == "" or int(a[k]) > int(a[best]):
+            best = String(k)
+    return best
+
+
+## Combat stats derived from the attributes (CombatRules.derive). Keeps the legacy keys
+## hp/atk/mag/def/spd used by the UI: atk = physical power, mag = magic power, def = armor, spd = AGI.
+func get_stats() -> Dictionary:
+    return ItemDefs.apply_equipment(CombatRules.derive(attributes(), hero_class), equipment, hero_class)
 
 
 func power() -> int:
@@ -270,6 +491,20 @@ func to_dict() -> Dictionary:
         "activity_state": activity_state,
         "discovered_secrets": discovered_secrets.duplicate(),
         "secret_clues": secret_clues.duplicate(),
+        "skills": skills.duplicate(),
+        "loadout": loadout.duplicate(),
+        "skill_choices": intify(skill_choices.duplicate(true)),
+        "professions": intify(professions.duplicate(true)),     # same numbers as after a JSON round trip
+        "passion": passion,
+        "needs": [hunger, fatigue, stress, exhausted_hours],
+        "diseases": intify(diseases.duplicate(true)),
+        "bed": bed,
+        "equipment": intify(equipment.duplicate(true)),
+        "bag": bag.duplicate(),
+        "ascension_fails": ascension_fails,
+        "trained_skills": trained_skills,
+        "synth_bonus": synth_bonus.duplicate(),
+        "synthesis_history": synthesis_history.duplicate(true),
     }
 
 
@@ -310,7 +545,55 @@ static func from_dict(d: Dictionary) -> HeroData:
     h.memories = intify(d.get("memories", []) as Array)
     h.relationships = (d.get("relationships", {}) as Dictionary).duplicate()
     h.hq_assignment = str(d.get("hq_assignment", ""))
-    h.activity_state = str(d.get("activity_state", "resting"))
+    h.activity_state = str(d.get("activity_state", "idle"))
+    if not (h.activity_state in ["idle", "working", "sleeping", "eating", "socializing", "in_treatment"]):
+        h.activity_state = "idle"          # old free-text states and a stale "deployed" become idle
     h.discovered_secrets = (d.get("discovered_secrets", []) as Array).duplicate()
     h.secret_clues = (d.get("secret_clues", []) as Array).duplicate()
+    if d.has("skills"):
+        for sid in d["skills"]:
+            if SkillDefs.SKILLS.has(String(sid)) and not h.skills.has(String(sid)):
+                h.skills.append(String(sid))
+        for sid in d.get("loadout", []):
+            if h.skills.has(String(sid)) and not h.loadout.has(String(sid)) and h.loadout.size() < SkillDefs.MAX_SLOTS:
+                h.loadout.append(String(sid))
+        h.skill_choices = intify(d.get("skill_choices", []) as Array)
+        h.ascension_fails = int(d.get("ascension_fails", 0))
+        h.trained_skills = int(d.get("trained_skills", 0))
+        h.synth_bonus = intify(d.get("synth_bonus", {}) as Dictionary)
+        h.synthesis_history = (d.get("synthesis_history", []) as Array).duplicate(true)
+        h.ensure_skills()
+    else:
+        # save v7 or older (D-043..D-045): the class starter, plus the choices of every learn
+        # level already reached, so veteran heroes are not left behind.
+        h.ensure_skills()
+        h._queue_skill_choices(0, h.level)
+    if d.has("professions"):
+        h.professions = (d["professions"] as Dictionary).duplicate(true)
+        for k in h.professions.keys():
+            if not ProfessionDefs.PROFESSIONS.has(k):
+                h.professions.erase(k)
+            else:
+                h.professions[k] = {"lvl": int(h.professions[k].get("lvl", 0)), "xp": float(h.professions[k].get("xp", 0.0))}
+        h.passion = str(d.get("passion", ""))
+    else:
+        h.init_professions()               # save v8 or older: past life -> first profession
+    var needs: Array = d.get("needs", [0, 0, 0, 0])
+    if needs.size() >= 4:
+        h.hunger = clampi(int(needs[0]), 0, 100)
+        h.fatigue = clampi(int(needs[1]), 0, 100)
+        h.stress = clampi(int(needs[2]), 0, 100)
+        h.exhausted_hours = int(needs[3])
+    for dz in d.get("diseases", []):
+        if EconomyDefs.DISEASES.has(String(dz.get("id", ""))):
+            h.diseases.append({"id": String(dz["id"]), "hours": float(dz.get("hours", 1.0)), "cause": str(dz.get("cause", ""))})
+    h.bed = str(d.get("bed", ""))
+    var eq: Dictionary = d.get("equipment", {})
+    for slot in eq:
+        if ItemDefs.SLOTS.has(String(slot)) and typeof(eq[slot]) == TYPE_DICTIONARY:
+            h.equipment[String(slot)] = intify(eq[slot])
+    var bg: Dictionary = d.get("bag", {})
+    for k in bg:
+        if int(bg[k]) > 0:
+            h.bag[String(k)] = int(bg[k])
     return h
