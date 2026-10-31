@@ -129,6 +129,12 @@ func _ready() -> void:
         archer_h.hero.hero_class = "class.ranger"
     var dummy := sb._spawn_enemy(sb.map.cell_of(archer_h.position), "slime_green")
     dummy.position = archer_h.position + Vector2(120, 0)
+    for k in 16:                                   # a spot in clear sight (random floors: a tree may stand in the way)
+        var cand: Vector2 = archer_h.position + Vector2(120, 0).rotated(TAU * float(k) / 16.0)
+        if not sb.map.is_blocked(cand) and sb.map.has_line_of_sight(archer_h.position + Vector2(0, -16), cand + Vector2(0, -12)) \
+                and sb.map.has_line_of_sight(archer_h.position, cand):
+            dummy.position = cand
+            break
     dummy.perception = 0.0
     dummy.visible = true
     sb.select_slot(sb.heroes.find(archer_h))
