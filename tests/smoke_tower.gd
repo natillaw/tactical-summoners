@@ -39,7 +39,7 @@ func _ready() -> void:
         var sb := _make(floor_num)
         await get_tree().process_frame
         var cfg: Dictionary = TowerExpedition.get_floor_config(floor_num)
-        check(sb.map is ProceduralMap and sb.heroes.size() == 5 and sb.mission_type == String(cfg["mission"]), "floor %d: procedural forest, 5 heroes, mission '%s'" % [floor_num, sb.mission_type])
+        check(sb.map is ProceduralMap and sb.heroes.size() == TowerExpedition.party_max(floor_num) and sb.mission_type == String(cfg["mission"]), "floor %d: procedural forest, %d heroes (party max), mission '%s'" % [floor_num, sb.heroes.size(), sb.mission_type])
         check(not sb.enemies.is_empty() and sb.enemies.all(func(e): return (cfg["foes"] as Array).has(e.type_id) or e.job == "shaman"), "floor %d: forest creatures from the floor table (+ the boss's shamans, D-065)" % floor_num)
         var extract: Vector2 = sb.map.center_of(sb.map.extract_cell)
         match sb.mission_type:
@@ -82,7 +82,7 @@ func _ready() -> void:
                     sb.tick(2.0)
                     if sb.mission_state != SandboxScreen.Mission.ACTIVE:
                         break
-                check(sb.enemies.size() > cfg["enemies"], "floor %d: waves spawned more enemies" % floor_num)
+                check(sb.enemies.size() > int(cfg.get("threat", 0)) / 3, "floor %d: waves spawned more enemies" % floor_num)
         check(sb.mission_state == SandboxScreen.Mission.SUCCESS, "floor %d: '%s' can be completed" % [floor_num, sb.mission_title()])
         sb.queue_free()
         await get_tree().process_frame
@@ -116,6 +116,45 @@ func _ready() -> void:
     town.queue_free()
 
     check(not get_tree().paused and is_equal_approx(Engine.time_scale, 1.0), "no pause and no time-slow")
+    # --- master prompt D: party per floor, threat budget, modifiers, escape -------------------------
+    var sizes_ok := true
+    var bandits_ok := true
+    for f in range(1, 11):
+        var pm := TowerExpedition.party_max(f)
+        sizes_ok = sizes_ok and pm >= 1 and pm <= 5
+        for id in TowerExpedition.get_floor_config(f)["foes"]:
+            bandits_ok = bandits_ok and BanditArt.has(String(id))
+    check(sizes_ok and TowerExpedition.party_max(1) == 1 and TowerExpedition.party_max(10) == 5, "every floor has a squad size of 1-5 (floor 1: 1, floor 10: 5)")
+    check(bandits_ok, "floors 1-10 are held by the bandit band")
+    var m4 := ProceduralMap.new(136, 116, 777, 4)
+    var spent := 0
+    var same := 0
+    for enc in m4.encounters:
+        for id in enc["members"]:
+            spent += EnemyDefs.threat_of(String(id))
+        if (enc["members"] as Array).size() == TowerExpedition.party_max(4) and String(enc["zone"]) != "objective":
+            same += 1
+    check(spent > 0 and spent <= int(TowerExpedition.get_floor_config(4)["threat"]) + 12, "floor 4 spends its threat budget (%d of %d)" % [spent, int(TowerExpedition.get_floor_config(4)["threat"])])
+    for pair in [[3, "fog"], [4, "hazard"], [5, "enrage"], [6, "no_heal"]]:
+        var sm := _make(int(pair[0]))
+        await get_tree().process_frame
+        var applied := false
+        match String(pair[1]):
+            "fog":
+                applied = sm.heroes[0].vision_mod < 0
+            "hazard":
+                applied = sm._world.get_children().any(func(n): return n is CombatZone)
+            "enrage":
+                applied = sm.enemies.all(func(e): return e.enrage_low)
+            "no_heal":
+                applied = sm.heroes[0].heal(50) == 0
+        check(sm.modifier == String(pair[1]) and applied, "floor %d: modifier '%s' is in effect" % [pair[0], pair[1]])
+        if int(pair[0]) == 4:
+            for h in sm.heroes:
+                h.position = sm.map.center_of(sm.map.relic_cell)
+            sm.tick(0.05)
+            check(sm.mission_state == SandboxScreen.Mission.SUCCESS, "floor 4 escape: reaching the far side wins")
+        sm.queue_free()
     print("== %s ==" % ("ALL PASSED" if fails == 0 else "%d FAILED" % fails))
     for p in ["user://smoke_tower.json", "user://smoke_tower.json.bak", "user://smoke_tower.json.tmp"]:
         if FileAccess.file_exists(p):

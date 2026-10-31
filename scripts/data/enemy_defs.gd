@@ -192,6 +192,15 @@ static func floor_atk_scale(floor_num: int) -> float:
     return float(cfg.get("atk_scale", 1.0 + FLOOR_ATK_SCALE * float(maxi(0, floor_num - 1))))
 
 
+## Master prompt D: what a creature costs from a floor's threat budget, by role (a type may override).
+const THREAT := {"swarm": 1, "melee": 1, "ranged": 2, "support": 2, "assassin": 2, "guard": 3, "brute": 3}
+
+
+static func threat_of(id: String) -> int:
+    var d := info(id)
+    return int(d.get("threat", THREAT.get(String(d["role"]), 1)))
+
+
 static func info(id: String) -> Dictionary:
     var d := DEFAULT.duplicate()
     d.merge(TYPES.get(id, {}), true)

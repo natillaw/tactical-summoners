@@ -102,7 +102,7 @@ func _ready() -> void:
     # --- the boss and its shamans (floor 5) ------------------------------------------------------
     var sb5 := _screen(5)
     await get_tree().process_frame
-    check(sb5.shamans.size() == EnemyDefs.BOSS_SHAMANS and sb5.shamans.all(func(s): return s.skills.has("ward")), "the boss comes with %d shamans" % sb5.shamans.size())
+    check(sb5.shamans.size() == int(TowerExpedition.get_floor_config(5).get("shamans", EnemyDefs.BOSS_SHAMANS)) and sb5.shamans.all(func(s): return s.skills.has("ward")), "the boss comes with %d shamans" % sb5.shamans.size())
     sb5.tick(0.05)
     var b: SandboxEnemy = sb5.boss
     var dmg_warded := b.take_hit(DamageInfo.make(100.0, "true", sb5.heroes[0]))
@@ -119,7 +119,7 @@ func _ready() -> void:
     await get_tree().process_frame
 
     # --- heroes use skills on their own (unless manual) ------------------------------------------
-    var sbh := _screen(1)
+    var sbh := _screen(7)                       # needs 2+ heroes (party per floor)
     await get_tree().process_frame
     _clear(sbh, [])
     var healer: SandboxHero = null

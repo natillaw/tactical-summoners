@@ -138,7 +138,7 @@ func _try_generate(rng: RandomNumberGenerator) -> bool:
 		_place_encounters(rooms, map_grid, rng)
 	elif not is_hq:
 		var cfg := TowerExpedition.get_floor_config(floor_number)
-		var target_enemies: int = int(cfg.get("enemies", 8))
+		var target_enemies: int = int(cfg.get("enemies", cfg.get("threat", 8)))
 		for i in range(1, rooms.size() - 1):
 			var rm := rooms[i]
 			var enemies_in_room := rng.randi_range(1, 2)
@@ -209,7 +209,10 @@ func _place_encounters(rooms: Array[Rect2i], map_grid: Array, rng: RandomNumberG
 	encounters.clear()
 	room_zones.clear()
 	var cfg := TowerExpedition.get_floor_config(floor_number)
-	var budget: int = int(cfg.get("enemies", 8))
+	# master prompt D: a floor's "threat" budget is spent in EnemyDefs.THREAT points (basic 1, healer 2,
+	# elite 3...) so roles mix; old configs ("enemies") count one point per creature.
+	var budget: int = int(cfg.get("threat", cfg.get("enemies", 8)))
+	var party := TowerExpedition.party_max(floor_number) if floor_number > 0 else 5
 	var foes: Array = cfg.get("foes", ["goblin"])
 	var boss_id := ""
 	if String(cfg.get("mission", "")) == "boss" and foes.size() > 1:
@@ -261,19 +264,25 @@ func _place_encounters(rooms: Array[Rect2i], map_grid: Array, rng: RandomNumberG
 			size = mini(size, budget - reserve - used)
 			if size <= 0:
 				continue
+		if size == party and floor_number > 0:
+			size += 1                                            # a group is never the squad's size
 		var cells := _free_cells(rooms[i], map_grid, rng, size)
 		if cells.is_empty():
 			continue
 		var members := _compose(foes, cells.size(), rng, cfg.get("pack", []) as Array)
 		if zone == "objective" and boss_id != "":
 			members[0] = boss_id
+		if cfg.has("threat") and zone != "objective":
+			while members.size() > 1 and _threat(members) > budget - reserve - used:
+				members.pop_back()
+				cells.pop_back()
 		var enc := {"kind": kind, "zone": zone, "members": members, "cells": cells, "patrol": []}
 		if kind == "patrol" and i + 1 < n:
 			enc["patrol"] = [rooms[i].get_center(), rooms[mini(n - 2, i + 1)].get_center()]
 		if kind == "guard" and zone != "objective":
 			_add_treasure(rooms[i], map_grid, rng)
 		encounters.append(enc)
-		used += cells.size()
+		used += _threat(members) if cfg.has("threat") else cells.size()
 		for c in cells:
 			enemy_spawn_cells.append(c)
 	_place_nodes(rooms, map_grid, rng, cfg)
@@ -319,6 +328,13 @@ func zone_of(cell: Vector2i) -> String:
 
 
 ## A mixed group: a front-liner first, then any creature of the floor, at most one support.
+func _threat(members: Array) -> int:
+	var t := 0
+	for id in members:
+		t += EnemyDefs.threat_of(String(id))
+	return t
+
+
 func _compose(foes: Array, count: int, rng: RandomNumberGenerator, pack: Array = []) -> Array:
 	if not pack.is_empty():
 		var by_role: Array = []

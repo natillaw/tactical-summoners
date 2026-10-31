@@ -13,6 +13,7 @@ var max_hp: int = 1
 var hp: int = 1
 var armor: int = 0
 var mres: int = 0
+var heal_block: bool = false         # floor modifier "no_heal" (master prompt D)
 var resistances: Dictionary = {}    # P-29 hook (pending): element -> fraction resisted (0..1); no content yet
 var crit_chance: float = 0.0
 var status_resist: float = 0.0
@@ -94,7 +95,7 @@ func take_damage(amount: int, source: Node2D = null) -> void:
 
 
 func heal(amount: int) -> int:
-    if not alive:
+    if not alive or heal_block:
         return 0
     var before := hp
     hp = mini(max_hp, hp + maxi(0, amount))
