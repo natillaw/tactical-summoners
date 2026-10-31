@@ -418,7 +418,8 @@ func _spawn_wave() -> void:
 
 ## "Clear the floor" (playtest B6): the last creatures can be ambushers, hidden until a hero walks next
 ## to them, even in rooms already explored, so a first-time player could not find them. When only
-## REVEAL_LAST are left they are marked on the minimap (their position, not their sight).
+## REVEAL_LAST are left, or every creature left is a sleeping ambusher, they are marked on the minimap
+## (their position, not their sight).
 const REVEAL_LAST := 3
 
 
@@ -426,7 +427,7 @@ func revealed_enemies() -> Array:
 	if mission_type != "combat" or mission_state != Mission.ACTIVE:
 		return []
 	var live := living_enemies()
-	return live if live.size() <= REVEAL_LAST else []
+	return live if live.size() <= REVEAL_LAST or live.all(func(e): return e.dormant) else []
 
 
 func living_heroes() -> Array:
