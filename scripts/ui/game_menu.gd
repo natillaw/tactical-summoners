@@ -50,10 +50,10 @@ func _ready() -> void:
     add_child(center)
     UIKit.fill(center)
     var pc := PanelContainer.new()
-    pc.add_theme_stylebox_override("panel", UIKit.nine(String(AssetCatalog.UI["dragon_frame"][0]), 12, 0, 0, 12))
+    # the kit panel: the Dragon Regalia frames are bright blue, out of the palette (ArtPalette)
     center.add_child(pc)
     _box = VBoxContainer.new()
-    _box.custom_minimum_size = Vector2(200, 0)
+    _box.custom_minimum_size = Vector2(240, 0)
     pc.add_child(_box)
     UIKit.sound("open")
     show_main()
@@ -68,13 +68,13 @@ func show_main() -> void:
     _clear()
     _box.add_child(UIKit.label("Menu", 28, UIKit.ACCENT))
     _box.add_child(UIKit.label("The game keeps running.", 12, UIKit.MUTED))
-    _box.add_child(UIKit.button("Resume", close, Vector2(400, 40)))
-    _box.add_child(UIKit.button("Options", show_options, Vector2(400, 40)))
-    _box.add_child(UIKit.button("Controls", show_controls, Vector2(400, 40)))
-    _box.add_child(UIKit.button("Credits", show_credits, Vector2(400, 40)))
+    _box.add_child(UIKit.button("Resume", close, Vector2(480, 40)))
+    _box.add_child(UIKit.button("Options", show_options, Vector2(480, 40)))
+    _box.add_child(UIKit.button("Controls", show_controls, Vector2(480, 40)))
+    _box.add_child(UIKit.button("Credits", show_credits, Vector2(480, 40)))
     _box.add_child(UIKit.button(leave_label, func():
         close()
-        leave_requested.emit("town"), Vector2(400, 40)))
+        leave_requested.emit("town"), Vector2(480, 40)))
 
 
 func close() -> void:
@@ -120,7 +120,7 @@ func show_options() -> void:
         DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED if full else DisplayServer.WINDOW_MODE_FULLSCREEN), Vector2(64, 32)))
     _box.add_child(hb)
     _box.add_child(UIKit.label("The picture always scales by whole numbers (crisp pixels).", 12, UIKit.MUTED))
-    _box.add_child(UIKit.button("Back", show_main, Vector2(400, 36)))
+    _box.add_child(UIKit.button("Back", show_main, Vector2(480, 36)))
 
 
 func show_controls() -> void:
@@ -132,7 +132,7 @@ func show_controls() -> void:
     for c in CONTROLS:
         grid.add_child(UIKit.label(String(c[0]), 12, UIKit.ACCENT))
         grid.add_child(UIKit.label(String(c[1]), 12, UIKit.TEXT))
-    _box.add_child(UIKit.button("Back", show_main, Vector2(400, 36)))
+    _box.add_child(UIKit.button("Back", show_main, Vector2(480, 36)))
 
 
 ## Credits generated from the asset registry (assets/CREDITS.md, made by the import tools).
@@ -151,7 +151,7 @@ func show_credits() -> void:
         l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
         l.custom_minimum_size = Vector2(290, 0)
         vb.add_child(l)
-    _box.add_child(UIKit.button("Back", show_main, Vector2(400, 36)))
+    _box.add_child(UIKit.button("Back", show_main, Vector2(480, 36)))
 
 
 ## "Name by Author - License" for every registered asset (markdown links stripped).

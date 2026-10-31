@@ -35,8 +35,9 @@ func _ready() -> void:
 
     Game.changed.connect(_refresh_currency)
     _refresh_currency()
-    # a new account starts with the welcome and its first summons; everyone else lands in the town (D-030)
-    show_screen("welcome" if Game.heroes.is_empty() and not Game.onboarded else "town")
+    # D-063: the title screen first; Continue -> the town (D-030), New game -> welcome + first summons
+    GameMenu.load_settings()
+    show_screen("title")
 
 
 func _refresh_currency() -> void:
@@ -69,6 +70,13 @@ func show_screen(screen: String, arg: int = 0) -> void:
             hq_screen.back_requested.connect(back)
             hq_screen.explore_requested.connect(back)
             s = hq_screen
+        "title":
+            var t := TitleScreen.new()
+            t.navigate.connect(show_screen)
+            s = t
+        "inventory":
+            s = InventoryScreen.new()
+            s.back_requested.connect(back)
         "welcome":
             var w := WelcomeScreen.new()
             w.finished.connect(back)

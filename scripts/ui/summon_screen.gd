@@ -92,17 +92,14 @@ func _pull(n: int) -> void:
     _refresh()
     for c in _grid.get_children():
         c.queue_free()
-    var cards: Array = []
+    # D-063: the kit reveal (circle -> beam -> card -> hero), skippable, summary grid at the end
+    var reveal := SummonReveal.new(results)
+    add_child(reveal)
+    await reveal.finished
+    if not is_inside_tree():
+        return
     for h in results:
-        var card := HeroCard.new(h)
-        card.modulate.a = 0.0
-        _grid.add_child(card)
-        cards.append(card)
-    await get_tree().process_frame
-    for i in cards.size():
-        if not is_inside_tree():
-            return
-        await _reveal(cards[i], results[i])
+        _grid.add_child(HeroCard.new(h))
     _busy = false
     _show_result(results)
     _refresh()

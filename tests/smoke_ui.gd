@@ -15,6 +15,11 @@ func _ready() -> void:
     while screen._busy and waited < 15.0:   # reveal animations run on real time
         await get_tree().create_timer(0.2).timeout
         waited += 0.2
+        for n in screen.get_children():
+            if n is SummonReveal:
+                n._skip_all = true                # D-063 reveal: skip, then Done on the summary
+                if n.summary_shown:
+                    n.close()
     var ok := screen._result.text != "" and Game.heroes.size() == 10 and Game.summon_log.size() == 10
     var roster := RosterScreen.new()
     add_child(roster)

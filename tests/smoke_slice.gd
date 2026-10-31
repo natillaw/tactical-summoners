@@ -67,7 +67,7 @@ func _ready() -> void:
     foe.take_hit(DamageInfo.make(99999.0, "true", sb.heroes[0]))
     var g: GatherNode = sb.nodes[0]
     sb.heroes[1].position = g.position + Vector2(10, 0)
-    sb.heroes[1].stop()
+    sb.heroes[1].order_hold()                      # holds there (an explorer would otherwise go scouting)
     for i in 40:
         sb.tick(0.05)
     check(g.taken and not sb.ledger.is_empty(), "drops and a gathered node fill the expedition ledger: %s" % str(sb.ledger))
@@ -166,6 +166,27 @@ func _ready() -> void:
     if not opts.is_empty():
         check(Game.train_skill(hero, String(opts[0])) == "" and hero.skills.has(opts[0]), "it learns the chosen one, not all of them")
         check(Game.training_block(hero).contains("as much as its rank"), "2 stars = one trained skill")
+
+    # --- synthesis and sacrifice (D-061) ------------------------------------------------------------
+    Game.clear_party()
+    var pool: Array = Game.heroes.values().filter(func(x): return x != hero)
+    var target: HeroData = pool[0]
+    var src: HeroData = pool[1]
+    src.add_xp(400)                                # a source with some experience to pass on
+    var xp0 := target.total_xp()
+    var pv := Game.synthesis_preview(target, [src])
+    check(bool(pv["ok"]) and int(pv["xp"]) > 0 and (pv["lost"] as Array).has(src.display_name()), "synthesis shows what is gained and lost first")
+    var mem0 := Game.memorial.size()
+    Game.synthesize(target, [src])
+    check(target.total_xp() >= xp0 + int(pv["xp"]) - 1 and not Game.heroes.has(src.id) and Game.memorial.size() == mem0 + 1
+        and String(Game.memorial[Game.memorial.size() - 1]["cause"]) == "sacrificed", "the source is absorbed (lossy XP) and goes to the memorial as sacrificed")
+    var victim: HeroData = pool[2]
+    var mat0 := int(Game.hq_outputs.get("materials", 0))
+    var sp := Game.sacrifice_preview(victim)
+    Game.sacrifice(victim)
+    check(not Game.heroes.has(victim.id) and int(Game.hq_outputs.get("materials", 0)) > mat0 and bool(sp["ok"]), "a sacrifice turns a hero into tower materials")
+    Game.assign_party(0, target.id)
+    check(not bool(Game.sacrifice_preview(target)["ok"]), "a hero in the party (on an expedition) cannot be consumed")
 
     # --- save and load ----------------------------------------------------------------------------
     Game.save_game()

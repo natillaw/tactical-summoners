@@ -1,27 +1,28 @@
 class_name StarRow
-extends Control
-## Draws N five-point stars (no font needed, so it works with any default font).
+extends HBoxContainer
+## Hero rank as kit stars (D-063): full stars up to the hero's rank, empty ones up to the cap (5 for now,
+## D-062). Small (9 x 8) or big (16 px) icons; the rank is also in the tooltip (never colour alone).
 
 var count: int = 1
-var star_color: Color = Color.WHITE
 var star_size: float = 14.0
+var star_color: Color = Color.WHITE        # kept for callers; the kit stars carry their own colour
 
 
 func _init(c: int = 1, s: float = 14.0, col: Color = Color.WHITE) -> void:
     count = c
     star_size = s
     star_color = col
-    mouse_filter = Control.MOUSE_FILTER_IGNORE
-    custom_minimum_size = Vector2((s + 2.0) * float(c), s)
+    add_theme_constant_override("separation", 1)
+    tooltip_text = "%d star%s" % [c, "" if c == 1 else "s"]
+    mouse_filter = Control.MOUSE_FILTER_PASS
 
 
-func _draw() -> void:
-    for i in count:
-        var cx := star_size * 0.5 + float(i) * (star_size + 2.0)
-        var cy := star_size * 0.5
-        var pts := PackedVector2Array()
-        for k in 10:
-            var r := star_size * 0.5 if k % 2 == 0 else star_size * 0.22
-            var ang := -PI / 2.0 + float(k) * PI / 5.0
-            pts.append(Vector2(cx + cos(ang) * r, cy + sin(ang) * r))
-        draw_colored_polygon(pts, star_color)
+func _ready() -> void:
+    var big := star_size >= 16.0
+    for i in HeroTables.MAX_STARS:
+        var r := TextureRect.new()
+        var id := ("star_full" if i < count else "star_empty") if big else ("star_small_full" if i < count else "star_small_empty")
+        var path := AssetCatalog.icon(id)
+        r.texture = load(path) if ResourceLoader.exists(path) else null
+        r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        add_child(r)

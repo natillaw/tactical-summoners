@@ -40,3 +40,20 @@ const ASCENSION_FAIL_KEEP := 0.5     # a failure gives back this fraction of the
 const TRAIN_MIN_STARS := 2
 const TRAIN_OPTIONS := 3
 const TRAIN_COST := {"materials": 25, "ingot": 1}
+
+
+# --- synthesis and sacrifice (D-061; provisional numbers, G-21 / G-22) --------------------------------
+const SYNTH_EFFICIENCY := 0.30        # share of the sources' total experience the target receives
+const SYNTH_SAME_CLASS := 0.40        # ... when the source is of the target's class
+const SYNTH_MAX_SOURCES := 3
+const SYNTH_ATTR_BONUS := 1           # +1 permanent to the source's best attribute (same class only)
+## Sacrifice: materials by stars, plus a class flavour.
+const SACRIFICE := {
+    1: {"materials": 15, "hide": 1},
+    2: {"materials": 35, "bone": 2, "silk": 1},
+    3: {"materials": 70, "bone": 3, "core": 1},
+    4: {"materials": 120, "core": 2, "venom": 3},
+    5: {"materials": 200, "core": 3, "ingot": 5},
+}
+const SACRIFICE_CLASS := {"class.warrior": {"bone": 1}, "class.rogue": {"venom": 1}, "class.ranger": {"silk": 1},
+    "class.mage": {"spore": 2}, "class.cleric": {"herb": 2}, "class.commoner": {"materials": 5}, "class.none": {"materials": 5}}
