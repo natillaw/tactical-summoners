@@ -24,6 +24,7 @@ var killed_by: String = ""
 var statuses: Dictionary = {}     # id -> {"t": seconds, "mag": float, "stacks": int, "src": Node2D}
 var combat_rng := RandomNumberGenerator.new()
 var _status_tick: float = 0.0
+var _status_fx: Dictionary = {}   # status id -> looping aura node (CombatVFX.STATUS_FX), look only
 
 
 func setup_combat(p_max_hp: int, p_armor: int, p_mres: int, p_crit: float, p_resist: float, seed_value: int) -> void:
@@ -93,6 +94,7 @@ func go_down() -> void:
     hp = 0
     agony = CombatRules.AGONY_TIME
     statuses.clear()
+    _sync_status_fx()
     _on_down()
     went_down.emit(self)
 
@@ -116,6 +118,7 @@ func die() -> void:
     alive = false
     hp = 0
     statuses.clear()
+    _sync_status_fx()
     _on_die()
     died.emit(self)
 
@@ -136,6 +139,7 @@ func apply_status(id: String, duration: float, magnitude: float = 0.0, source: N
     else:
         statuses[id] = {"t": t, "mag": magnitude, "stacks": 1, "src": source}
     _recalc_max_hp()
+    _sync_status_fx()
 
 
 func has_status(id: String) -> bool:
@@ -199,8 +203,24 @@ func _recalc_max_hp() -> void:
     hp = mini(hp, max_hp)
 
 
+## Keeps one looping aura per active status (fire while burning, a bubble while shielded...).
+func _sync_status_fx() -> void:
+    for id in _status_fx.keys():
+        if not statuses.has(id):
+            if is_instance_valid(_status_fx[id]):
+                (_status_fx[id] as Node).queue_free()
+            _status_fx.erase(id)
+    for id in statuses:
+        if not _status_fx.has(id) and CombatVFX.STATUS_FX.has(id):
+            var d: Array = CombatVFX.STATUS_FX[id]
+            var fx := CombatVFX.attach(self, String(d[0]), d[1], float(d[2]))
+            if fx != null:
+                _status_fx[id] = fx
+
+
 ## Call every simulation step: status durations, damage over time, agony countdown.
 func tick_combat(delta: float) -> void:
+    _sync_status_fx()
     if dead:
         return
     if downed:

@@ -56,6 +56,8 @@ var last_refusal: String = ""       # why the last skill request was refused (sh
 var _cast_enemies: Array = []
 var _cast_allies: Array = []
 var _map: NavMap = null
+var _firing: String = ""            # id of the skill being resolved (for its look)
+var _cast_fx: Node2D = null         # cast circle under the hero while casting
 # Equipment powers (ItemDefs.apply_equipment "mods") and carried consumables (HeroData.bag).
 var item_mods: Dictionary = {}
 var was_downed: bool = false        # for the expedition's after-effects (Game.after_expedition)
@@ -376,10 +378,12 @@ func _use_consumables(delta: float) -> void:
 	if float(hp) < float(max_hp) * POTION_AT and int(hero.bag.get("potion", 0)) > 0:
 		_spend("potion")
 		heal(roundi(float(max_hp) * POTION_HEAL))
+		CombatVFX.play(get_parent(), position + Vector2(0, -14), "heal", 1.0)
 		FloatingText.spawn(self, "potion", Color(0.5, 1.0, 0.6), false)
 	elif has_status("poison") and int(hero.bag.get("antidote", 0)) > 0:
 		_spend("antidote")
 		statuses.erase("poison")
+		CombatVFX.play(get_parent(), position + Vector2(0, -18), "sparkle_small", 1.0)
 		FloatingText.spawn(self, "antidote", Color(0.6, 1.0, 0.5), false)
 
 
@@ -404,13 +408,28 @@ func _busy_mult(t: Node) -> float:
 	return 1.0
 
 
+## Weapon the hero swings: the equipped main-hand base, else the class's default (look only).
+func weapon_id() -> String:
+	if hero != null and hero.equipment.has("main_hand"):
+		return String(hero.equipment["main_hand"].get("base", "fist"))
+	return String(CombatVFX.CLASS_WEAPON.get(hero.hero_class if hero != null else "", "fist"))
+
+
 func _basic_attack(t: SandboxEnemy) -> void:
 	_anim_lock = HeroAnim.play_attack(_sprite, facing, _side, is_ranged())
-	if is_ranged():
-		CombatVFX.spawn_strip16(get_parent(), t.position + Vector2(0, -12), "spritepilot-combat-pack", "arrow-16px_strip4.png", 2.0)
+	var wf: Dictionary = CombatVFX.WEAPON_FX.get(weapon_id(), CombatVFX.WEAPON_FX["fist"])
+	var aim := t.position + Vector2(0, -12)
+	var sc := float(wf.get("scale", 1.0))
+	if wf.has("proj"):
+		CombatVFX.projectile(get_parent(), position + Vector2(0, -16), aim, String(wf["proj"]), String(wf["hit"]), 650.0, 1.0, sc)
 	else:
-		CombatVFX.spawn_strip16(get_parent(), t.position + Vector2(0, -12), "spritepilot-combat-pack", "sword-slash-16px_strip7.png")
-	var dealt := t.take_hit(DamageInfo.make(float(power()) * _busy_mult(t), String(stats.get("kind", "physical")), self, crit_chance, combat_rng))
+		CombatVFX.play(get_parent(), aim, String(wf["hit"]), sc, t.position.x < position.x)
+		if wf.has("extra"):
+			CombatVFX.play(get_parent(), t.position, String(wf["extra"]), 0.8)
+	var info := DamageInfo.make(float(power()) * _busy_mult(t), String(stats.get("kind", "physical")), self, crit_chance, combat_rng)
+	var dealt := t.take_hit(info)
+	if info.crit:
+		CombatVFX.play(get_parent(), aim + Vector2(0, -8), "crit", 0.8)
 	gain_resource(float(SkillDefs.RESOURCES[res_kind]["on_hit"]))
 	_on_dealt(t, dealt)
 
@@ -422,8 +441,10 @@ func _on_dealt(t: Combatant, dealt: int) -> void:
 	for p in item_mods.get("procs", []):
 		if t.alive and combat_rng.randf() < float(p["chance"]):
 			t.apply_status(String(p["on_hit_status"]), float(p["dur"]), float(power()) * float(p["mult"]), self)
+			CombatVFX.play(t.get_parent(), t.position + Vector2(0, -14), "spark_fire" if String(p["on_hit_status"]) == "burn" else "frost_burst", 0.6)
 	if not t.alive and item_mods.has("kill_heal"):
 		heal(roundi(float(max_hp) * float(item_mods["kill_heal"])))
+		CombatVFX.play(get_parent(), position + Vector2(0, -14), "heal", 0.7)
 
 
 func _rescue_tick(map: NavMap) -> void:
@@ -437,6 +458,7 @@ func _rescue_tick(map: NavMap) -> void:
 		rescue_progress += _last_delta
 		if rescue_progress >= CombatRules.RESCUE_TIME:
 			rescue_target.revive(CombatRules.RESCUE_HP)
+			CombatVFX.play(get_parent(), rescue_target.position + Vector2(0, -16), "level_up", 1.0)
 			if hero != null and rescue_target.hero != null:
 				hero.rescue_hero(rescue_target.hero)          # memory, bond and Trust (Phase 3 data)
 			FloatingText.spawn(rescue_target, "Rescued!", Color(0.5, 1.0, 0.6), true)
@@ -530,6 +552,7 @@ func use_skill_slot(i: int, enemies: Array, allies: Array) -> bool:
 		_face(tgt.position - position)
 	if float(sk["cast"]) > 0.0:
 		casting = slots[i]
+		_start_cast_fx(casting)
 		cast_left = float(sk["cast"])
 		cast_target = tgt
 		cast_point = tgt.position
@@ -538,6 +561,7 @@ func use_skill_slot(i: int, enemies: Array, allies: Array) -> bool:
 		path.clear()
 		_anim_lock = HeroAnim.play_cast(_sprite, _side)
 		return true
+	_firing = slots[i]
 	_fire_skill(sk, tgt, tgt.position, enemies, allies)
 	return true
 
@@ -614,6 +638,8 @@ func interrupt_cast(reason: String = "interrupted") -> void:
 	casting = ""
 	cast_target = null
 	_anim_lock = 0.0
+	_clear_cast_fx()
+	CombatVFX.play(get_parent(), position + Vector2(0, -20), "parry", 0.8)
 	FloatingText.spawn(self, reason, Color(1.0, 0.6, 0.4), false)
 
 
@@ -626,8 +652,10 @@ func _tick_cast(delta: float) -> void:
 		return
 	var sk := SkillDefs.info(casting)
 	var tgt := cast_target
+	_firing = casting
 	casting = ""
 	cast_target = null
+	_clear_cast_fx()
 	if tgt == null or not is_instance_valid(tgt) or not tgt.alive:
 		if String(sk["target"]) != "target_aoe":
 			FloatingText.spawn(self, "target lost", Color(0.8, 0.8, 0.8), false)
@@ -658,7 +686,7 @@ func _fire_skill(sk: Dictionary, tgt: Combatant, point: Vector2, enemies: Array,
 			friends.append(tgt)
 	for eff in sk["effects"]:
 		_apply_effect(eff, foes, friends, centre, enemies, allies)
-	_skill_vfx(tmode, centre, float(sk.get("radius", sk["range"])), sk)
+	_skill_vfx(_firing, tmode, centre, float(sk.get("radius", sk["range"])), sk)
 	_anim_lock = HeroAnim.play_cast(_sprite, _side)
 
 
@@ -683,9 +711,11 @@ func _apply_effect(eff: Dictionary, foes: Array, friends: Array, centre: Vector2
 		"heal":
 			for u in friends:
 				u.heal(roundi(float(stats["mag"]) * float(eff["mult"])))
+				CombatVFX.play(u.get_parent(), u.position + Vector2(0, -14), "heal", 0.9)
 		"heal_pct":
 			for u in friends:
 				u.heal(roundi(float(u.max_hp) * float(eff["pct"])))
+				CombatVFX.play(u.get_parent(), u.position + Vector2(0, -14), "heal", 0.9)
 		"shield":
 			for u in friends:
 				var sm := float(item_mods.get("shield_mult", 1.0))      # Warden set: shields given...
@@ -695,12 +725,14 @@ func _apply_effect(eff: Dictionary, foes: Array, friends: Array, centre: Vector2
 		"cleanse":
 			for u in friends:
 				u.cleanse()
+				CombatVFX.play(u.get_parent(), u.position + Vector2(0, -18), "sparkle_small", 1.0)
 		"interrupt":
 			for f in foes:
-				if f.has_method("interrupt"):
-					f.interrupt()
+				if f.has_method("interrupt") and f.interrupt():
+					CombatVFX.play(f.get_parent(), f.position + Vector2(0, -20), "parry", 1.0)
 		"knockback":
 			for f in foes:
+				CombatVFX.play(f.get_parent(), f.position, "dust_puff", 1.0)
 				_push(f, (f.position - position).normalized(), float(eff["dist"]))
 				if f.has_method("interrupt"):
 					f.interrupt()
@@ -709,8 +741,10 @@ func _apply_effect(eff: Dictionary, foes: Array, friends: Array, centre: Vector2
 				var f: Node2D = foes[0]
 				var spot := f.position + (position - f.position).normalized() * 28.0
 				if not _map.is_blocked(spot):
+					CombatVFX.play(get_parent(), position, "dust", 0.9, spot.x < position.x)
 					position = spot
 					path.clear()
+					CombatVFX.play(get_parent(), position, "dust_puff", 1.0)
 		"blink":
 			if _map != null:
 				var away := Vector2.DOWN
@@ -718,8 +752,10 @@ func _apply_effect(eff: Dictionary, foes: Array, friends: Array, centre: Vector2
 				if near != null and near.position.distance_to(position) > 1.0:
 					away = (position - near.position).normalized()
 				var spot := _map.nearest_walkable(position + away * float(eff["dist"]))
+				CombatVFX.play(get_parent(), position + Vector2(0, -16), "teleport", 1.0)
 				position = spot
 				path.clear()
+				CombatVFX.play(get_parent(), position + Vector2(0, -16), "teleport", 1.0)
 		"taunt":
 			for e in enemies:
 				if e.alive and e.position.distance_to(position) <= float(eff["radius"]) and e.has_method("taunt"):
@@ -754,22 +790,67 @@ func _push(u: Node2D, dir: Vector2, dist: float) -> void:
 		moved += step
 
 
-func _skill_vfx(tmode: String, centre: Vector2, radius: float, sk: Dictionary) -> void:
-	var magic := _effects_have(sk, ["heal", "heal_pct", "shield", "cleanse", "zone"]) or String(stats.get("kind", "")) == "magical"
-	match tmode:
-		"enemy":
-			_fire_fx(centre, 0.0)
-			CombatVFX.spawn_strip16(get_parent(), centre + Vector2(0, -12), "spritepilot-combat-pack", "critical-hit-16px_strip8.png", 3.0)
-		"self_aoe":
-			_fire_fx(position, radius)
-			CombatVFX.spawn_strip16(get_parent(), position, "spritepilot-combat-pack", "shockwave-16px_strip8.png", 5.0)
-		"target_aoe":
-			_fire_fx(centre, radius)
-			CombatVFX.spawn_strip16(get_parent(), centre + Vector2(0, -12), "spritepilot-magic-pack", "fireball-16px_strip8.png", 4.0)
-		_:
-			_fire_fx(position, 0.0)
-			if magic:
-				CombatVFX.spawn_strip16(get_parent(), position + Vector2(0, -14), "spritepilot-magic-pack", "healing-aura-16px_strip8.png", 3.0)
+## The skill's look (CombatVFX.SKILL_FX): projectiles fly to the target and the impacts play when
+## they land; area effects are scaled to the skill's radius. Logic was already resolved.
+func _skill_vfx(id: String, tmode: String, centre: Vector2, radius: float, sk: Dictionary) -> void:
+	var fx: Dictionary = CombatVFX.SKILL_FX.get(id, {})
+	var parent := get_parent()
+	var from := position + Vector2(0, -16)
+	var aim := centre + Vector2(0, -12)
+	var delay := 0.0
+	for k in fx.get("self", []):
+		CombatVFX.play(parent, position + Vector2(0, -14), String(k), 1.0)
+	if fx.has("proj"):
+		var key := String(fx["proj"])
+		var speed := float(fx.get("speed", 650.0))
+		var ps := float(fx.get("proj_scale", 1.0))
+		var n := int(fx.get("n", 1))
+		if fx.get("rain", false):
+			for j in n:
+				var spot := centre + Vector2(combat_rng.randf_range(-1.0, 1.0), combat_rng.randf_range(-0.6, 0.6)) * radius * 0.8
+				CombatVFX.projectile(parent, spot + Vector2(-60, -240 - 30 * j), spot, key, "spark_small", 700.0, ps, 0.8)
+			delay = 0.45
+		elif fx.get("sky", false):
+			var start := centre + Vector2(-160, -420)
+			CombatVFX.projectile(parent, start, aim, key, "", 520.0, ps)
+			delay = start.distance_to(aim) / 520.0
+		else:
+			var side := (aim - from).normalized().orthogonal()
+			for j in n:
+				CombatVFX.projectile(parent, from + side * (float(j) - float(n - 1) * 0.5) * 8.0, aim, key, "", speed, ps)
+			delay = from.distance_to(aim) / speed
+	var flip := centre.x < position.x
+	for k in fx.get("hit", []):
+		_fx_later(String(k), aim, 1.0, delay, flip)
+	var area_scale := clampf(radius / 40.0, 0.8, 3.0)
+	for k in fx.get("area", []):
+		_fx_later(String(k), centre + Vector2(0, -6), area_scale, delay, false)
+	if tmode == "self_aoe" or tmode == "target_aoe":
+		_fire_fx(centre, radius)
+	elif tmode == "enemy":
+		_fire_fx(centre, 0.0)
+
+
+func _fx_later(key: String, pos: Vector2, sc: float, delay: float, flip: bool) -> void:
+	var parent := get_parent()
+	if delay <= 0.02 or not is_inside_tree():
+		CombatVFX.play(parent, pos, key, sc, flip)
+		return
+	get_tree().create_timer(delay).timeout.connect(func():
+		if is_instance_valid(parent):
+			CombatVFX.play(parent, pos, key, sc, flip)
+	)
+
+
+func _start_cast_fx(id: String) -> void:
+	_clear_cast_fx()
+	_cast_fx = CombatVFX.attach(self, String(CombatVFX.SKILL_FX.get(id, {}).get("cast", "circle_arcane")), Vector2(0, -2), 1.0, true)
+
+
+func _clear_cast_fx() -> void:
+	if _cast_fx != null and is_instance_valid(_cast_fx):
+		_cast_fx.queue_free()
+	_cast_fx = null
 
 
 func _fire_fx(at: Vector2, radius: float) -> void:
@@ -796,6 +877,8 @@ func _on_hit(info: DamageInfo, dmg: int) -> void:
 func _on_down() -> void:
 	was_downed = true
 	casting = ""
+	_clear_cast_fx()
+	CombatVFX.play(get_parent(), position, "blood", 1.0)
 	cast_target = null
 	path.clear()
 	order = "auto"

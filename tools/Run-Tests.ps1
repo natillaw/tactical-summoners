@@ -42,6 +42,7 @@ $suites = @(
   @{ name = "combat core";   args = @("res://tests/smoke_combat_core.tscn", "--quit-after", "3000");    ok = "ALL PASSED" },
   @{ name = "orders";        args = @("res://tests/smoke_orders.tscn", "--quit-after", "3000");         ok = "ALL PASSED" },
   @{ name = "skills";        args = @("res://tests/smoke_skills.tscn", "--quit-after", "3000");         ok = "ALL PASSED" },
+  @{ name = "vfx";           args = @("res://tests/smoke_vfx.tscn", "--quit-after", "3000");            ok = "ALL PASSED" },
   @{ name = "hq";            args = @("--script", "res://tests/test_hq.gd");                           ok = "ALL PASSED" },
   @{ name = "items";         args = @("--script", "res://tests/test_items.gd");                        ok = "ALL PASSED" },
   @{ name = "town";          args = @("--script", "res://tests/test_town.gd");                         ok = "ALL PASSED" },

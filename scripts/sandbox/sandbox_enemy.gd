@@ -26,6 +26,7 @@ var _sprite: AnimatedSprite2D = null
 var _path: Array[Vector2] = []
 var _repath: float = 0.0
 const REPATH_EVERY := 0.4
+var _anim_lock: float = 0.0        # attack / hurt animation playing (look only)
 var focus: SandboxHero = null       # hero it is currently going for (rogue Backstab reads it)
 var taunted_by: SandboxHero = null  # Warrior War Cry: forced target while taunt_t > 0
 var taunt_t: float = 0.0
@@ -62,10 +63,24 @@ func _fit(anim: String) -> void:
 
 
 func _play(anim: String) -> void:
-    if _sprite == null or _sprite.animation == anim:
+    if _sprite == null or _anim_lock > 0.0 or _sprite.animation == anim:
         return
+    _sprite.speed_scale = 1.0
     _sprite.play(anim)
     _fit(anim)
+
+
+## Plays a one-shot creature animation lasting `duration` seconds (stretched to fit), if it has one.
+func _play_once(anim: String, duration: float) -> void:
+    if _sprite == null or not _sprite.sprite_frames.has_animation(anim):
+        return
+    var n := _sprite.sprite_frames.get_frame_count(anim)
+    var natural := float(n) / maxf(1.0, _sprite.sprite_frames.get_animation_speed(anim))
+    _sprite.speed_scale = natural / maxf(0.05, duration)
+    _sprite.stop()
+    _sprite.play(anim)
+    _fit(anim)
+    _anim_lock = duration
 
 
 func _look_at_x(x: float) -> void:
@@ -130,6 +145,8 @@ func interrupt() -> bool:
         return false
     state = State.RECOVER
     _timer = recover_time
+    _anim_lock = 0.0
+    _play_once("hurt", 0.4)
     FloatingText.spawn(self, "interrupted", Color(1.0, 0.85, 0.4), false)
     return true
 
@@ -148,6 +165,7 @@ func tick(delta: float, heroes: Array, map: NavMap) -> void:
     taunt_t = maxf(0.0, taunt_t - delta)
     if _flash > 0.0:
         _flash = maxf(0.0, _flash - delta)
+    _anim_lock = maxf(0.0, _anim_lock - delta)
     if not can_act():
         interrupt()                       # a stun breaks the wind-up (D-042)
         _update_sprite()
@@ -172,6 +190,7 @@ func tick(delta: float, heroes: Array, map: NavMap) -> void:
             elif position.distance_to(t.position) <= strike_range:
                 state = State.WINDUP
                 _timer = windup_time
+                _play_once("attack", windup_time + 0.15)    # the blow lands when the wind-up ends
                 _aim = t.position
             else:
                 state = State.CHASE
@@ -216,14 +235,25 @@ func _nearest_hero(heroes: Array) -> SandboxHero:
 
 func _strike(heroes: Array) -> void:
     _do_lunge()
-    CombatVFX.spawn_strip16(get_parent(), _aim + Vector2(0, -12), "spritepilot-combat-pack", "claw-slash-16px_strip8.png")
+    # look per creature (CombatVFX.ENEMY_FX): claws, slime splashes, spores, slams, spells; sized to the strike
+    var fx := CombatVFX.enemy_fx(type_id)
+    var sc := strike_radius / 44.0
+    var at := _aim + Vector2(0, -12)
+    if fx.has("proj"):
+        CombatVFX.projectile(get_parent(), position + Vector2(0, -20), at, String(fx["proj"]), String(fx["hit"]), 900.0, 1.0, sc)
+    else:
+        CombatVFX.play(get_parent(), at, String(fx.get("hit", "claw")), sc, _aim.x < position.x)
+    if fx.has("extra"):
+        CombatVFX.play(get_parent(), _aim, String(fx["extra"]), sc)
     for h in heroes:
         if not h.dead and h.position.distance_to(_aim) <= strike_radius:
             h.take_hit(DamageInfo.make(float(atk), "physical", self, crit_chance, combat_rng))
 
 
-func _on_hit(_info: DamageInfo, _dmg: int) -> void:
+func _on_hit(_info: DamageInfo, dmg: int) -> void:
     _flash = 0.12
+    if dmg > 0 and state != State.WINDUP and hp > 0:
+        _play_once("hurt", 0.3)
 
 
 func _on_die() -> void:
