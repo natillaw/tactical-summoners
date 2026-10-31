@@ -50,6 +50,16 @@ const RESOURCES := {
     # D-066 tower-only rarities (never in the Wilds): forging fine gear and the higher ascensions
     "starsteel": {"name": "Starsteel", "cat": "rare"},
     "essence": {"name": "Spirit essence", "cat": "rare"},
+    # master prompt A: tower-only materials and keys (LootDefs: tiers, stacks, where they drop)
+    "mat_enchanted_cloth": {"name": "Enchanted cloth", "cat": "tower"},
+    "mat_iron_ore": {"name": "Iron ore", "cat": "tower"},
+    "mat_resonant_crystal": {"name": "Resonant crystal", "cat": "tower"},
+    "mat_moon_flower": {"name": "Moon flower", "cat": "tower"},
+    "mat_rune_plate": {"name": "Rune plate", "cat": "tower"},
+    "key_floor5_seal": {"name": "Seal of Floor 5", "cat": "key"},
+    "key_guardian_heart": {"name": "Guardian's heart", "cat": "key"},
+    "key_legendary_fragment": {"name": "Legendary fragment", "cat": "key"},
+    "con_potion_major": {"name": "Greater potions", "cat": "consumable"},
 }
 
 ## Gathering spots in tower floors (ProceduralMap v2 "nodes"): what a hero collects in GATHER_TIME.
@@ -82,6 +92,7 @@ const RECIPES := {
     "forge_fine_armor": {"name": "Forge starsteel armor", "building": "blacksmith", "prof": "blacksmith", "min": 3, "work": 12.0,
         "in": {"ingot": 4, "starsteel": 2}, "out": {}, "item": "armor", "min_rarity": "rare", "ilvl_bonus": 3},
     "brew_medicine": {"name": "Brew medicine", "building": "alchemy", "prof": "alchemist", "min": 0, "work": 3.0, "in": {"herb": 2}, "out": {"medicine": 1}},
+    "brew_potion_major": {"name": "Brew greater potions", "building": "alchemy", "prof": "alchemist", "min": 2, "work": 5.0, "in": {"mat_moon_flower": 2, "potion": 1}, "out": {"con_potion_major": 1}},
     "brew_potion": {"name": "Brew healing potions", "building": "alchemy", "prof": "alchemist", "min": 1, "work": 4.0, "in": {"herb": 2, "grain": 1}, "out": {"potion": 1}},
     "brew_antidote": {"name": "Brew antidotes", "building": "alchemy", "prof": "alchemist", "min": 1, "work": 4.0, "in": {"herb": 3}, "out": {"antidote": 1}},
     "treat": {"name": "Treat patients", "building": "infirmary", "prof": "doctor", "min": 0, "work": 0.0, "in": {}, "out": {}, "service": true},

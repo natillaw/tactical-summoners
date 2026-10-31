@@ -98,7 +98,20 @@ func _ready() -> void:
     st.set_physics_process(false)
     await get_tree().process_frame
     check(st.nodes.is_empty() and not st.is_wilds(), "tower floors have no gathering spots")
-    check(EnemyDefs.TOWER_DROPS.has("essence") and not EnemyDefs.TOWER_DROPS.has("hide"), "tower creatures drop rare essence, not the Wilds' parts")
+    var basic := ["hide", "wood", "stone", "herb", "ore", "bone", "gel", "silk", "fang", "materials"]
+    var clean := true
+    for f in LootDefs.FLOORS:
+        for t in ["drops", "chest", "boss"]:
+            for id in (LootDefs.FLOORS[f] as Dictionary).get(t, {}):
+                clean = clean and not basic.has(String(id)) and EconomyDefs.RESOURCES.has(String(id))
+    check(clean, "master prompt A: tower floors drop only rare materials and keys (no Wilds' basics), all known resources")
+    var lr := RandomNumberGenerator.new()
+    lr.seed = LootService.seed_for(5, 1)
+    var boss5 := LootService.enemy_drops(5, true, true, lr)
+    var chest1 := LootService.chest(1, true, lr)
+    var replay1 := LootService.chest(1, false, lr)
+    check(int(boss5.get("core", 0)) >= 1 and not chest1.is_empty() and not replay1.is_empty(), "floor 5 miniboss always drops a guardian core; the chest always pays, also on replays")
+    check(LootService.chest(5, true, lr).has("key_floor5_seal") and not LootService.chest(5, false, lr).has("key_floor5_seal"), "the floor 5 seal is first-clear only")
     st.queue_free()
     await get_tree().process_frame
 

@@ -240,8 +240,14 @@ func _on_enemy_died(e: SandboxEnemy) -> void:
 	var killer = e.get_meta("last_hitter") if e.has_meta("last_hitter") else null
 	if killer != null and is_instance_valid(killer) and killer.has_method("credit"):
 		killer.credit("kills", 1.0)
-	# D-066: creature parts are hunted in the Wilds; tower creatures sometimes leave a rare spirit essence
-	var drops: Dictionary = EnemyDefs.TOWER_DROPS if floor_number > 0 else EnemyDefs.DROPS.get(e.type_id, {})
+	# master prompt A: tower creatures drop their floor's rare materials and keys (LootDefs); creature
+	# parts are hunted in the Wilds (D-066)
+	if floor_number > 0:
+		var got := LootService.enemy_drops(floor_number, e.is_boss, int(Game.tower_cleared.get(str(floor_number), 0)) == 0, _rng)
+		for res in got:
+			_add_loot(String(res), int(got[res]), e)
+		return
+	var drops: Dictionary = EnemyDefs.DROPS.get(e.type_id, {})
 	for res in drops:
 		var d: Array = drops[res]
 		if _rng.randf() < float(d[0]):
