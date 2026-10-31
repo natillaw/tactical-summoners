@@ -60,7 +60,15 @@ const ORDER_LABELS := {"auto": "Auto", "move": "Moving", "attack": "Attacking", 
 var auto_path: bool = false         # true while walking toward a target on its own
 var target: SandboxEnemy = null
 var rescue_target: SandboxHero = null
-var then_retreat: Vector2 = Vector2.INF   # #14: a retreat that first picks up a fallen ally on the way out
+var then_retreat: Vector2 = Vector2.INF
+var squad: Array = []                     # every hero of the mission (set by the screen): allies for skills
+## D-065: an autonomous hero uses its skills on its own (heal a hurt ally, break a creature's cast,
+## draw blows off a fragile ally, shield, attack). T toggles it; a driven hero never auto-casts.
+var auto_skills: bool = true
+var _auto_t: float = 0.0
+const AUTO_EVERY := 0.4
+const AUTO_HEAL_BELOW := 0.6              # heals an ally under this fraction of its health
+const CARRY_MOVE := 0.6                   # the relic carrier walks slower and cannot fight   # #14: a retreat that first picks up a fallen ally on the way out
 var rescue_progress: float = 0.0
 var _repath: float = 0.0
 var _last_delta: float = 0.0
@@ -386,6 +394,15 @@ func combat_tick(enemies: Array, map: NavMap) -> void:
 				path = map.find_path(position, follow_leader.position)
 	if not can_act():
 		return
+	if carrying:
+		target = null                            # D-065: both hands on the relic; the others must protect them
+		return
+	if auto_skills and not is_controlled() and order != "move" and order != "retreat":
+		_auto_t -= _last_delta
+		if _auto_t <= 0.0:
+			_auto_t = AUTO_EVERY
+			if _auto_skill(enemies):
+				return
 	if _maybe_fall_back(map):
 		return
 	if is_controlled():
@@ -680,6 +697,8 @@ func _spend(res: String) -> void:
 
 func move_mult() -> float:
 	var m := super.move_mult()
+	if carrying:
+		m *= CARRY_MOVE
 	if item_mods.has("slow_immune") and has_status("slow"):
 		m /= float(CombatRules.STATUS["slow"]["move"])
 	return m
@@ -769,6 +788,94 @@ func _rescue_tick(map: NavMap) -> void:
 		path = map.find_path(position, rescue_target.position)
 
 
+## D-065 autonomy: one skill per check, in this order: heal a hurt ally, break a creature's cast, draw
+## blows off a hurt ally (taunt), shield when hurt, cleanse, then attack. Returns true if one fired.
+func _auto_skill(enemies: Array) -> bool:
+	var allies: Array = squad if not squad.is_empty() else [self]
+	var order_of := ["heal", "interrupt", "taunt", "shield", "cleanse", "damage"]
+	for want in order_of:
+		for i in slots.size():
+			var sk := slot_skill(i)
+			if sk.is_empty() or skill_cd(i) > 0.0 or res < float(sk["cost"]):
+				continue
+			if _auto_kind(sk) != want:
+				continue
+			var aim := Vector2.INF
+			var reach := float(sk["range"])
+			match want:
+				"heal":
+					var hurt := false
+					for a in allies:
+						if is_instance_valid(a) and a.alive and position.distance_to(a.position) <= maxf(reach, 1.0) \
+								and float(a.hp) < float(a.max_hp) * AUTO_HEAL_BELOW:
+							hurt = true
+					if not hurt:
+						continue
+				"interrupt":
+					var caster: SandboxEnemy = null
+					for e in enemies:
+						if e.alive and e.visible and e.is_telegraphing() and (e.casting_skill != "" or e.is_heavy()) \
+								and position.distance_to(e.position) <= maxf(reach, 75.0):
+							caster = e
+							break
+					if caster == null:
+						continue
+					aim = caster.position
+				"taunt":
+					var threat := false
+					for e in enemies:
+						if e.alive and e.focus != null and e.focus != self and is_instance_valid(e.focus) \
+								and float(e.focus.hp) < float(e.focus.max_hp) * 0.7 and position.distance_to(e.position) <= 170.0:
+							threat = true
+					if not threat:
+						continue
+				"shield":
+					var low := float(hp) < float(max_hp) * 0.5
+					for a in allies:
+						if is_instance_valid(a) and a.alive and a != self and position.distance_to(a.position) <= 180.0 and float(a.hp) < float(a.max_hp) * 0.45:
+							low = true
+					if not low or enemies.is_empty():
+						continue
+				"cleanse":
+					var bad := false
+					for a in allies:
+						if is_instance_valid(a) and a.alive and position.distance_to(a.position) <= maxf(reach, 1.0):
+							for st in a.statuses:
+								if bool(CombatRules.STATUS.get(st, {}).get("debuff", false)):
+									bad = true
+					if not bad:
+						continue
+				"damage":
+					if target == null or not is_instance_valid(target) or not target.alive:
+						continue
+					if position.distance_to(target.position) > maxf(reach, attack_range()) + 10.0:
+						continue
+					aim = target.position if String(sk["target"]) == "target_aoe" else Vector2.INF
+			if use_skill_slot(i, enemies, allies, aim):
+				return true
+	return false
+
+
+## What a skill is for, as the autonomy sees it.
+func _auto_kind(sk: Dictionary) -> String:
+	var kinds: Array = []
+	for e in sk["effects"]:
+		kinds.append(String(e["t"]))
+		for inner in e.get("inner", []):
+			kinds.append(String(inner["t"]))
+	if kinds.has("heal") or kinds.has("heal_pct"):
+		return "heal"
+	if kinds.has("interrupt") or sk["effects"].any(func(e): return String(e["t"]) == "status" and String(e.get("id", "")) == "stun"):
+		return "interrupt"
+	if kinds.has("taunt"):
+		return "taunt"
+	if kinds.has("shield"):
+		return "shield"
+	if kinds.has("cleanse"):
+		return "cleanse"
+	return "damage"
+
+
 ## After a rescue: back to Auto, or on to the exit when the rescue was part of a retreat (#14).
 func _after_rescue(map: NavMap) -> void:
 	var exit := then_retreat
@@ -845,6 +952,8 @@ func use_skill_slot(i: int, enemies: Array, allies: Array, aim: Vector2 = Vector
 		return _refuse("no skill learned")
 	if not alive:
 		return _refuse("down")
+	if carrying:
+		return _refuse("carrying the relic")
 	if casting != "":
 		return _refuse("already casting")
 	if not can_act():

@@ -58,6 +58,15 @@ var _support_cd: float = 0.0
 var _back_cd: float = 0.0
 var on_hit_status: Dictionary = {}
 var _allies: Array = []             # living creatures (supports heal them), set each tick by the screen
+## D-065 creature skills (EnemyDefs.SKILLS): cast like a hero's, with a visible wind-up a stun breaks.
+var skills: Array = []
+var skill_cd: Dictionary = {}       # skill id -> seconds left
+var casting_skill: String = ""      # the WINDUP is this skill's cast ("" = a basic strike)
+var _skill_ally: SandboxEnemy = null
+var _skill_check: float = 0.0
+var job: String = ""                # "scout" (raises the alarm) | "shaman" (keeps the boss alive) | ""
+var hero_list: Array = []           # every hero of the mission (live array, for lasting zones)
+var _alarm_to: SandboxEnemy = null
 
 
 func _init() -> void:
@@ -99,6 +108,10 @@ func _apply_def(id: String, floor_num: int) -> void:
     windup_time = float(d.get("windup", windup_time))
     recover_time = float(d.get("recover", recover_time))
     on_hit_status = d.get("status", {})
+    skills.clear()
+    for sid in d.get("skills", []):
+        if EnemyDefs.SKILLS.has(sid) and floor_num >= int(EnemyDefs.SKILLS[sid].get("min_floor", 1)):
+            skills.append(String(sid))
     if role == "ranged":
         strike_range = EnemyDefs.RANGED_RANGE
         strike_radius = EnemyDefs.RANGED_RADIUS
@@ -234,6 +247,9 @@ func is_telegraphing() -> bool:
 func interrupt() -> bool:
     if state != State.WINDUP:
         return false
+    if casting_skill != "":
+        FloatingText.spawn(self, "%s broken" % String(EnemyDefs.SKILLS[casting_skill]["name"]), Color(1.0, 0.85, 0.4), false)
+        casting_skill = ""
     state = State.RECOVER
     _timer = recover_time
     _anim_lock = 0.0
@@ -255,6 +271,9 @@ func tick(delta: float, heroes: Array, map: NavMap) -> void:
     _repath = maxf(0.0, _repath - delta)
     taunt_t = maxf(0.0, taunt_t - delta)
     _support_cd = maxf(0.0, _support_cd - delta)
+    _skill_check = maxf(0.0, _skill_check - delta)
+    for sid in skill_cd:
+        skill_cd[sid] = maxf(0.0, float(skill_cd[sid]) - delta)
     _back_cd = maxf(0.0, _back_cd - delta)
     if _pending_strike >= 0.0:
         _pending_strike -= delta
@@ -272,7 +291,10 @@ func tick(delta: float, heroes: Array, map: NavMap) -> void:
         State.WINDUP:
             _timer -= delta
             if _timer <= 0.0:
-                _strike(heroes)
+                if casting_skill != "":
+                    _resolve_skill(heroes)
+                else:
+                    _strike(heroes)
                 state = State.RECOVER
                 _timer = recover_time
         State.RECOVER:
@@ -295,8 +317,10 @@ func tick(delta: float, heroes: Array, map: NavMap) -> void:
             if t != null and role == "guard" and home != Vector2.INF and t.position.distance_to(home) > EnemyDefs.GUARD_LEASH:
                 t = null                          # a guard does not leave its post
             focus = t
-            if role == "support" and _support_tick():
-                pass                              # healed an ally this tick
+            if job == "scout" and alerted and _scout_tick(delta, map):
+                pass                              # running to raise the alarm: no fighting on the way
+            elif _try_skill(heroes, t):
+                pass                              # started a cast (wind-up visible, a stun breaks it)
             elif t == null:
                 state = State.IDLE
                 _wander(delta, map)
@@ -360,29 +384,6 @@ func _step_toward(goal: Vector2, delta: float, map: NavMap) -> void:
             _sprite.speed_scale = clampf(_cur_speed / RUN_ANIM_SPEED, 0.6, 1.4)
 
 
-## Support: heals the most hurt creature in reach every SUPPORT_EVERY seconds (visible, interruptible
-## by killing it first: that is the decision the player has to make).
-func _support_tick() -> bool:
-    if _support_cd > 0.0:
-        return false
-    var best: SandboxEnemy = null
-    var best_k := 0.85
-    for a in _allies:
-        if not is_instance_valid(a) or not a.alive or a.position.distance_to(position) > EnemyDefs.SUPPORT_REACH:
-            continue
-        var k := float(a.hp) / float(maxi(1, a.max_hp))
-        if k < best_k:
-            best_k = k
-            best = a
-    if best == null:
-        return false
-    _support_cd = EnemyDefs.SUPPORT_EVERY
-    best.heal(roundi(float(best.max_hp) * EnemyDefs.SUPPORT_HEAL))
-    CombatVFX.play(get_parent(), best.position + Vector2(0, -14), "heal_toxic", 1.0)
-    _play_once("attack", 0.4)
-    return true
-
-
 ## Nothing perceived: patrols walk their route, guards drift back to their post, the rest stay put.
 func _wander(delta: float, map: NavMap) -> void:
     if not patrol.is_empty():
@@ -400,6 +401,10 @@ func _wander(delta: float, map: NavMap) -> void:
 func _nearest_hero(heroes: Array) -> SandboxHero:
     if taunt_t > 0.0 and taunted_by != null and is_instance_valid(taunted_by) and taunted_by.alive:
         return taunted_by
+    # D-065 relic: the carrier draws every creature that notices it, from much further away
+    for h in heroes:
+        if h.alive and h.carrying and position.distance_to(h.position) <= perception * EnemyDefs.CARRIER_HUNT:
+            return h
     var best: SandboxHero = null
     var best_d := perception * (EnemyDefs.ALERT_PERCEPTION if alerted else 1.0)
     for h in heroes:
@@ -410,6 +415,144 @@ func _nearest_hero(heroes: Array) -> SandboxHero:
             best_d = d
             best = h
     return best
+
+
+# --- D-065 skills ----------------------------------------------------------------------------------
+
+## Starts a skill when one is ready and has a use now. Checked a few times a second, not every tick.
+func _try_skill(heroes: Array, t: SandboxHero) -> bool:
+    if skills.is_empty() or _skill_check > 0.0:
+        return false
+    _skill_check = 0.25
+    for sid in skills:
+        if float(skill_cd.get(sid, 0.0)) > 0.0:
+            continue
+        var sk: Dictionary = EnemyDefs.SKILLS[sid]
+        var reach := float(sk["range"])
+        var aim := Vector2.INF
+        _skill_ally = null
+        match String(sk["target"]):
+            "ally_low":
+                var best_k := float(sk.get("below", 0.75))
+                for a in _allies:
+                    if is_instance_valid(a) and a.alive and a.position.distance_to(position) <= reach:
+                        var k := float(a.hp) / float(maxi(1, a.max_hp))
+                        if k < best_k:
+                            best_k = k
+                            _skill_ally = a
+            "ally_key":
+                if t == null and not alerted:
+                    continue
+                var best_hp := -1
+                for a in _allies:
+                    if is_instance_valid(a) and a.alive and a != self and a.position.distance_to(position) <= reach and not a.has_status("shield"):
+                        var w: int = a.max_hp * (10 if a.is_boss else 1)
+                        if w > best_hp:
+                            best_hp = w
+                            _skill_ally = a
+            "allies":
+                if t == null:
+                    continue
+                var n := 0
+                for a in _allies:
+                    if is_instance_valid(a) and a.alive and a != self and a.position.distance_to(position) <= reach:
+                        n += 1
+                if n >= 1:
+                    aim = position
+            "hero_area":
+                if t != null and position.distance_to(t.position) <= reach:
+                    aim = t.position
+        if _skill_ally == null and aim == Vector2.INF:
+            continue
+        casting_skill = sid
+        skill_cd[sid] = float(sk["cd"])
+        _aim = aim if aim != Vector2.INF else _skill_ally.position
+        state = State.WINDUP
+        strike_seq += 1
+        _cur_speed = 0.0
+        velocity = Vector2.ZERO
+        _timer = float(sk["cast"])
+        _play_once("attack", _timer + 0.15)
+        FloatingText.spawn(self, String(sk["name"]) + "!", Color(1.0, 0.7, 0.35), false, 1.0)
+        return true
+    return false
+
+
+## The radius of the area the current wind-up marks (a skill's own, or the basic strike's).
+func telegraph_radius() -> float:
+    if casting_skill != "":
+        return float(EnemyDefs.SKILLS[casting_skill].get("radius", 0.0))
+    return strike_radius
+
+
+func _resolve_skill(heroes: Array) -> void:
+    var sid := casting_skill
+    casting_skill = ""
+    var sk: Dictionary = EnemyDefs.SKILLS[sid]
+    var parent := get_parent()
+    if sk.has("heal_pct") and _skill_ally != null and is_instance_valid(_skill_ally) and _skill_ally.alive:
+        _skill_ally.heal(roundi(float(_skill_ally.max_hp) * float(sk["heal_pct"])))
+        CombatVFX.play(parent, _skill_ally.position + Vector2(0, -14), "heal_toxic", 1.0)
+    if sk.has("shield_pct") and _skill_ally != null and is_instance_valid(_skill_ally) and _skill_ally.alive:
+        _skill_ally.apply_status("shield", 10.0, float(_skill_ally.max_hp) * float(sk["shield_pct"]), self)
+    if String(sk["target"]) == "allies":
+        for a in _allies:
+            if is_instance_valid(a) and a.alive and a.position.distance_to(position) <= float(sk["range"]):
+                var st: Dictionary = sk["status"]
+                a.apply_status(String(st["id"]), float(st["dur"]), float(st["mag"]), self)
+        CombatFeel.shake(self, "small")
+    if String(sk["target"]) == "hero_area":
+        var r := float(sk["radius"])
+        if sk.has("dmg_mult"):
+            for h in heroes:
+                if is_instance_valid(h) and not h.dead and h.position.distance_to(_aim) <= r:
+                    h.take_hit(DamageInfo.make(float(atk) * float(sk["dmg_mult"]), "physical", self, crit_chance, combat_rng))
+                    if sk.has("status") and h.alive:
+                        var st2: Dictionary = sk["status"]
+                        h.apply_status(String(st2["id"]), float(st2["dur"]), float(st2["mag"]), self)
+            if parent != null:
+                CombatVFX.area_burst(parent, _aim, r, "slam" if r >= 60.0 else "spark")
+            CombatFeel.shake(self, "medium" if r >= 90.0 else "small", _aim - position)
+        if sk.has("zone") and parent != null:
+            var z: Dictionary = sk["zone"]
+            CombatZone.spawn(parent, _aim, r, float(z["life"]), String(z["status"]), float(z["dur"]), float(z["mag"]),
+                hero_list if not hero_list.is_empty() else heroes, self)
+    _do_lunge()
+
+
+## Lookout (D-065): once it has seen the squad it does not fight; it runs to the nearest creature that
+## has not been alerted yet and raises the alarm there (its whole group joins). Kill it before it arrives.
+func _scout_tick(delta: float, map: NavMap) -> bool:
+    if _alarm_to == null or not is_instance_valid(_alarm_to) or not _alarm_to.alive or _alarm_to.alerted:
+        _alarm_to = null
+        var best_d := 1400.0
+        for a in _allies:
+            if is_instance_valid(a) and a.alive and not a.alerted and not group_mates.has(a):
+                var d: float = a.position.distance_to(position)
+                if d < best_d:
+                    best_d = d
+                    _alarm_to = a
+        if _alarm_to == null:
+            job = ""                              # nobody left to warn: fights like the others
+            return false
+        FloatingText.spawn(self, "!", Color(1.0, 0.3, 0.2), true, 1.2)
+    if position.distance_to(_alarm_to.position) <= EnemyDefs.SCOUT_ALARM_RADIUS:
+        _alarm_to.alert()
+        FloatingText.spawn(_alarm_to, "ALARM!", Color(1.0, 0.3, 0.2), true, 1.6)
+        _alarm_to = null
+        job = ""
+        return false
+    state = State.CHASE
+    _step_toward(_alarm_to.position, delta * EnemyDefs.SCOUT_FLEE_SPEED, map)
+    return true
+
+
+## D-065: a stun breaks a boss's shield (the shamans' Ward): control is how a squad gets through it.
+func apply_status(id: String, duration: float, magnitude: float = 0.0, source: Node2D = null) -> void:
+    if id == "stun" and is_boss and statuses.has("shield") and alive:
+        statuses.erase("shield")
+        FloatingText.spawn(self, "shield broken!", Color(0.6, 0.85, 1.0), true)
+    super.apply_status(id, duration, magnitude, source)
 
 
 func _strike(heroes: Array) -> void:
@@ -505,12 +648,18 @@ func _draw() -> void:
     draw_rect(Rect2(-bar_w * 0.5, bar_y, bar_w * float(hp) / float(maxi(1, max_hp)), 4), Color(0.9, 0.35, 0.35))
     if state == State.WINDUP:
         # telegraph = the real strike area; the inner disc fills it as the blow approaches (lands when full)
-        var k := 1.0 - clampf(_timer / windup_time, 0.0, 1.0)
-        draw_set_transform(_aim - position, 0.0, Vector2(1.0, 0.55))
-        draw_circle(Vector2.ZERO, strike_radius, Color(1.0, 0.2, 0.2, 0.10 + 0.12 * k))
-        draw_circle(Vector2.ZERO, strike_radius * k, Color(1.0, 0.25, 0.2, 0.25))
-        draw_arc(Vector2.ZERO, strike_radius, 0.0, TAU, 40, Color(1.0, 0.3, 0.3), 3.0 if is_heavy() else 2.0)
-        draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+        var total := windup_time if casting_skill == "" else float(EnemyDefs.SKILLS[casting_skill]["cast"])
+        var k := 1.0 - clampf(_timer / maxf(0.01, total), 0.0, 1.0)
+        var r := telegraph_radius()
+        if r <= 0.0:
+            # a help spell (heal, ward, rally): a ring on the caster fills up; stun it before it closes
+            draw_arc(Vector2(0, -6), body_radius + 10.0, -PI / 2.0, -PI / 2.0 + TAU * k, 32, Color(0.4, 1.0, 0.6), 3.0)
+        else:
+            draw_set_transform(_aim - position, 0.0, Vector2(1.0, 0.55))
+            draw_circle(Vector2.ZERO, r, Color(1.0, 0.2, 0.2, 0.10 + 0.12 * k))
+            draw_circle(Vector2.ZERO, r * k, Color(1.0, 0.25, 0.2, 0.25))
+            draw_arc(Vector2.ZERO, r, 0.0, TAU, 40, Color(1.0, 0.3, 0.3), 3.0 if is_heavy() or casting_skill != "" else 2.0)
+            draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 ## Height of the creature on screen (opaque frame height x scale), for the health bar.

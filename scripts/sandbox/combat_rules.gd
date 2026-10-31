@@ -79,6 +79,8 @@ const STATUS := {
     "marked": {"name": "Marked", "in_dmg": 1.25, "debuff": true, "color": Color(1.0, 0.4, 0.7)},
     "regen": {"name": "Regenerating", "hot": true, "no_resist": true, "color": Color(0.4, 1.0, 0.6)},
     "shield": {"name": "Shielded", "absorb": true, "no_resist": true, "color": Color(0.6, 0.85, 1.0)},
+    "empowered": {"name": "Empowered", "out_dmg": 1.3, "color": Color(1.0, 0.45, 0.2)},
+    "warded": {"name": "Warded by shamans", "in_dmg": 0.6, "no_resist": true, "color": Color(0.5, 0.8, 1.0)},
     "wounded": {"name": "Wounded", "max_hp": WOUNDED_MAX_HP, "no_resist": true, "color": Color(0.8, 0.3, 0.3)},
 }
 

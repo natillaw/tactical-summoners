@@ -163,9 +163,9 @@ func _ready() -> void:
 
     # --- creature roles ----------------------------------------------------------------------
     var healer := SandboxEnemy.new()
-    healer.setup_type("mushroom_red", 1)
+    healer.setup_type("mushroom_red", 2)          # D-065: creature healers appear from floor 2
     var hurt := SandboxEnemy.new()
-    hurt.setup_type("slime_green", 1)
+    hurt.setup_type("slime_green", 2)
     sb._world.add_child(healer)
     sb._world.add_child(hurt)
     healer.position = Vector2(-5000, -5000)
@@ -174,7 +174,23 @@ func _ready() -> void:
     var before := hurt.hp
     healer._allies = [healer, hurt]
     healer.tick(0.1, [], sb.map)
-    check(healer.role == "support" and hurt.hp > before, "a support creature heals a hurt ally (%d -> %d)" % [before, hurt.hp])
+    check(healer.casting_skill == "mend" and healer.is_telegraphing() and hurt.hp == before, "a creature healer starts a visible Mend cast (no instant heal)")
+    for i in 20:
+        healer.tick(0.1, [], sb.map)
+    check(healer.role == "support" and hurt.hp > before, "the Mend lands when the cast ends (%d -> %d)" % [before, hurt.hp])
+    hurt.hp = hurt.max_hp / 3
+    healer.skill_cd["mend"] = 0.0
+    healer._skill_check = 0.0
+    healer.tick(0.1, [], sb.map)
+    var before2 := hurt.hp
+    healer.apply_status("stun", 1.0)
+    healer.tick(0.1, [], sb.map)
+    for i in 20:
+        healer.tick(0.1, [], sb.map)
+    check(hurt.hp == before2, "a stun breaks the Mend: no heal (%d -> %d)" % [before2, hurt.hp])
+    var low := SandboxEnemy.new()
+    low.setup_type("mushroom_red", 1)
+    check(low.skills.is_empty(), "floor 1 creatures have no healing (it teaches the basics)")
     var archer := SandboxEnemy.new()
     archer.setup_type("spider", 1)
     check(archer.role == "ranged" and archer.strike_range >= 140.0, "a ranged creature strikes from afar (%.0f px)" % archer.strike_range)
