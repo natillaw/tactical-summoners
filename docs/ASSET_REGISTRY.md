@@ -18,10 +18,10 @@ Consolidado de `ASSET_MANIFEST.md` (archivado) y de `audit/ASSET_AUDIT.md`.
 | **Tiny Pixel Fantasy – Base Pack (Caz)** | `assets/pixel/caz-base/` (Tiles: Outside, OutsideFeatures, RuralTown/City/Castle/Ship/Cave exterior+interior, Furniture; 8 Characters 576×384) | `CazArt` (pueblo y pisos de bosque) | ⚠ EULA del autor (CC BY 4.0 según el autor): acreditar a Caz. Subido por el dueño 2026-10-30 | **En uso (v5)** |
 | Pixel Crawler Free Pack 2.11 (Anokolisa) — tiles | `assets/pixel/tilesets/pixel-crawler/` | `MapTiles` | Términos del autor (`Terms.txt`): crédito opcional, uso comercial sí, no revender | Importado |
 | Pixel Crawler — mobs (8) | `assets/pixel/enemies/pixel-crawler/` | `EnemySprites` | Igual | Importado |
-| SpritePilot (combat, creatures, effects, environment, magic, pickups, ui, weather) | `assets/packs/spritepilot-*/` | Un efecto, con la ruta mal (F-012) | CC0 | Sin prueba de estilo |
-| KILN FX Free Sampler | `assets/packs/KILN_FX_Free_Sampler/` | No | ⚠ Uso en juegos sí; **prohibido redistribuirlo como pack** | Sin prueba |
-| Sprite Kitchen – Combat Essentials v0.1 | `assets/packs/sprite_kitchen_combat_essentials_v0.1/` | No | ⚠ Uso en juegos sí; **prohibido subirlo/redistribuirlo como pack**; no entrenar IA con él | Sin prueba |
-| Voxel Dungeon Pack (Cole Foster) | `assets/packs/voxel-dungeon-pack-full/` (4 431 PNG, 47 MB) | No | CC0 | Sin prueba; estilo render 3D/voxel (riesgo de choque con D-007) |
+| SpritePilot (combat, creatures, effects, environment, magic, pickups, ui, weather) | `assets/packs/spritepilot-*/` | **Sí** (v10): combat, magic y effects en `CombatVFX.FX` | CC0 | Probado (`vfx` + capturas 06) |
+| KILN FX Free Sampler | `assets/packs/KILN_FX_Free_Sampler/` | **Sí** (v10): tajos, chispas, explosiones, rayos, círculos, curación, humo, sangre, bolas de fuego | ⚠ Uso en juegos sí; **prohibido redistribuirlo como pack** | Sin prueba |
+| Sprite Kitchen – Combat Essentials v0.1 | `assets/packs/sprite_kitchen_combat_essentials_v0.1/` | **Sí** (v10): cross/crescent slash, impactos, polvo | ⚠ Uso en juegos sí; **prohibido subirlo/redistribuirlo como pack**; no entrenar IA con él | Sin prueba |
+| Voxel Dungeon Pack (Cole Foster) | `assets/packs/voxel-dungeon-pack-full/` (4 431 PNG, 47 MB) | **Sí**: criaturas de la torre (idle/run/death y, desde v10, attack/hurt) y efectos `fx/sheets` | CC0 | Sin prueba; estilo render 3D/voxel (riesgo de choque con D-007) |
 | Copia duplicada de todos los packs | `assets/source_packs/` + `assets/*.zip` | No (salvo confusión de ruta) | — | **Duplicado** (F-021); no se elimina hasta comprobar referencias |
 
 ## Candidatos investigados (no descargados)

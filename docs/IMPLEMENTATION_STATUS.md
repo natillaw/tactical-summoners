@@ -45,7 +45,7 @@ Leyenda: **I** implementado (sin ejecutar) · **ID** implementado pero defectuos
 | HQ (pantalla de asignación, desde el Salón) | I (v9) | `scripts/ui/hq_screen.gd` | Usa las mismas reglas (`assign_work`, un día por turno). Duplica en parte el panel del Salón |
 | Animaciones en código (D-020) | I | `scripts/sandbox/hero_anim.gd`, `sprite_composer.gd` | No verificadas visualmente |
 | Sprites de enemigos y tiles (Pixel Crawler) | I | `enemy_sprites.gd`, `map_tiles.gd` | — |
-| VFX de combate | I (v3) | `combat_vfx.gd` | F-012 reparado; efectos SpritePilot en ataques, habilidades y golpes enemigos |
+| VFX de combate | I (v10, probado: `vfx` + capturas `06_combat_fx_*` revisadas) | `scripts/sandbox/combat_vfx.gd` | Catálogo de ~60 efectos de 5 packs. Ataque básico según el arma (tajos; proyectiles de flecha, bola arcana u orbe). Cada una de las ~45 habilidades con su lanzamiento (círculo), proyectil y su impacto o área. Auras de estado (fuego, veneno, aturdimiento, escudo…). Zonas. Criaturas con sus animaciones reales de ataque y daño, y golpe propio de cada tipo. Corregido el recorte de los sprites voxel de 48, 96 y 144 px. Son solo visuales: los proyectiles no retrasan el daño |
 | Diálogo por rasgo al entrar | P | `hero_chatter.gd` | Siempre habla del relicario |
 | Personalidad de 8 dimensiones, síntesis, sacrificio, equipo, inventario, loot, afijos, sets, crafting, biomas, eventos, jefes, audio, fuente pixel | N | — | — |
 
