@@ -38,10 +38,13 @@ func _ready() -> void:
     check(CombatVFX.STATUS_FX.keys().all(func(s): return CombatRules.STATUS.has(s)), "status auras map to real statuses")
 
     # --- creature animations (and the 48 / 144 px frame fix) ----------------------------------------
+    # D-063: tower creatures come from normalised strips (square frames, drawn at an integer scale)
     var rat := EnemySprites.build_frames("rat")
-    check(rat != null and int(rat.get_frame_texture("idle", 0).get_width()) == 48 and rat.get_frame_count("idle") == 8, "48 px creatures are cut into 48 px frames (rat idle: 8 frames)")
+    check(rat != null and int(rat.get_frame_texture("idle", 0).get_width()) == 16 and rat.get_frame_count("run") == 4 and is_equal_approx(EnemySprites.scale_for("rat"), 2.0),
+        "Ninja creatures are cut into 16 px frames and drawn at x2 (rat)")
     var golem := EnemySprites.build_frames("golem")
-    check(golem != null and int(golem.get_frame_texture("idle", 0).get_width()) == 144, "big creatures are cut into their own frame size (golem: 144 px)")
+    var gs := EnemySprites.scale_for("golem")
+    check(golem != null and gs == floorf(gs) and gs > EnemySprites.scale_for("rat"), "big creatures are drawn bigger, at a whole-number scale (golem x%d)" % int(gs))
     var no_attack: Array = []
     for f in range(1, 11):
         for foe in TowerExpedition.get_floor_config(f)["foes"]:

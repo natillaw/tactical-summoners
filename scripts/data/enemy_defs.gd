@@ -29,6 +29,7 @@ const TYPES := {
     "orc_brute": {"hp": 170, "atk": 18, "armor": 5, "mres": 2, "speed": 56.0, "role": "brute"},
     "golem": {"hp": 320, "atk": 24, "armor": 10, "mres": 6, "speed": 40.0, "role": "brute"},
     "orc_chieftain": {"hp": 150, "atk": 14, "armor": 6, "mres": 3, "speed": 60.0, "role": "brute"},
+    "warlord": {"hp": 120, "atk": 13, "armor": 5, "mres": 3, "speed": 58.0, "role": "brute"},   # floor 5 boss (make_boss scales it)
     # training ground (Pixel Crawler mobs): the old shared numbers, with roles
     "orc": {"role": "melee"},
     "orc_rogue": {"role": "melee", "speed": 72.0},
@@ -55,6 +56,7 @@ const DROPS := {
     "orc_brute": {"bone": [0.9, 1, 2], "hide": [0.7, 1, 2]},
     "golem": {"core": [0.6, 1, 1], "stone": [1.0, 2, 4], "ore": [0.8, 1, 3]},
     "orc_chieftain": {"core": [1.0, 1, 1], "bone": [1.0, 2, 3]},
+    "warlord": {"hide": [1.0, 3, 5], "bone": [1.0, 2, 3], "core": [0.5, 1, 1]},
 }
 const XP_PER_HP := 0.2            # experience a creature is worth (its max HP x this)
 

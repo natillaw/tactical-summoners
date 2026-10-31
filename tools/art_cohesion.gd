@@ -149,6 +149,36 @@ static func _made_death(pose: Image) -> Array:
     return out
 
 
+## The pose moved by (dx, dy) pixels inside its frame (for made-up lunges and recoils).
+static func _shifted(pose: Image, dx: int, dy: int) -> Image:
+    var out := Image.create(pose.get_width(), pose.get_height(), false, Image.FORMAT_RGBA8)
+    out.blit_rect(pose, Rect2i(Vector2i.ZERO, pose.get_size()), Vector2i(dx, dy))
+    return out
+
+
+## The pose lightened toward white (hit flash), alpha kept.
+static func _flashed(pose: Image, k: float) -> Image:
+    var out := pose.duplicate() as Image
+    for y in out.get_height():
+        for x in out.get_width():
+            var c := out.get_pixel(x, y)
+            if c.a > 0.05:
+                out.set_pixel(x, y, Color(c.lerp(Color.WHITE, k), c.a))
+    return out
+
+
+## Attack made from the pose: wind back, snap forward (the blow), recover (3 frames).
+static func _made_attack(pose: Image) -> Array:
+    var step := maxi(1, pose.get_width() / 16)
+    return [_shifted(pose, -step, 0), _shifted(pose, 2 * step, 0), pose]
+
+
+## Hurt made from the pose: flash, recoil (2 frames).
+static func _made_hurt(pose: Image) -> Array:
+    var step := maxi(1, pose.get_width() / 16)
+    return [_flashed(pose, 0.6), _shifted(pose, -step, 0)]
+
+
 ## Builds the strips of one catalogue creature: {anim: Image}.
 static func creature_strips(def: Dictionary) -> Dictionary:
     var fw := int(def["frame"])
@@ -171,6 +201,11 @@ static func creature_strips(def: Dictionary) -> Dictionary:
                 anims[anim] = _strip_frames(_load(String(def["src"]) + String(def["files"][anim])), fw)
             if not anims.has("death"):
                 anims["death"] = _made_death((anims["idle"] as Array)[0])
+    var pose: Image = (anims["idle"] as Array)[0]
+    if not anims.has("attack"):
+        anims["attack"] = _made_attack(pose)
+    if not anims.has("hurt"):
+        anims["hurt"] = _made_hurt(pose)
     var out := {}
     for anim in anims:
         out[anim] = _join(anims[anim])
