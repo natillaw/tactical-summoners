@@ -74,7 +74,7 @@ func setup_type(id: String, floor_num: int = 0) -> void:
     var f := EnemySprites.build_frames(id)
     if f == null or _sprite != null:
         return
-    enemy_name = id.capitalize() if EnemySprites.is_voxel(id) else enemy_name
+    enemy_name = id.capitalize() if EnemySprites.is_voxel(id) or EnemySprites.has_processed(id) else enemy_name
     apply_size(CombatRules.size_class_of(id))
     _sprite = AnimatedSprite2D.new()
     _sprite.sprite_frames = f
