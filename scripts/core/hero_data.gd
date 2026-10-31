@@ -29,8 +29,21 @@ var composure: int = 100          # short-term mission steadiness, 0-100 (resets
 # Simulation fields (Phase 2 & 3): memories, relationships, hq assignments, activity states, secrets
 var memories: Array = []          # [{"id": String, "type": String, "text": String, "time": int, "actor_id": String, "importance": int}]
 var relationships: Dictionary = {} # other_id -> {"level": int, "status": String, "interactions": int}
-var hq_assignment: String = ""    # "" or facility id ("kitchen", "workshop", "infirmary", "common", "training")
-var activity_state: String = "resting" # "resting", "working", "training", "recovering", "socializing"
+var hq_assignment: String = ""    # workplace: "" | a building id | "construction" (D-048)
+## Town activity (single state, TownSim): idle | working | sleeping | eating | socializing |
+## in_treatment | deployed. Exclusive: a hero is never working and deployed at once.
+var activity_state: String = "idle"
+# Town life (HQ Phase 1, save v9): professions (D-049), needs, health, bed, gear.
+var professions: Dictionary = {}  # prof id -> {"lvl": int, "xp": float}; at most ProfessionDefs.MAX_KNOWN
+var passion: String = ""          # profession from the past life (learns faster)
+var hunger: int = 0               # 0 fed .. 100 starving
+var fatigue: int = 0              # 0 rested .. 100 exhausted
+var stress: int = 0               # 0 calm .. 100 breaking
+var diseases: Array = []          # [{"id": String, "hours": float, "cause": String}]
+var bed: String = ""              # dorm id ("" = sleeps rough), kept while deployed or in hospital
+var exhausted_hours: int = 0
+var equipment: Dictionary = {}    # slot -> item dict (ItemDefs.SLOTS)
+var bag: Dictionary = {}          # consumable id -> count, carried into the tower
 var discovered_secrets: Array = [] # secret IDs discovered
 var secret_clues: Array = []      # discovered clue strings
 
@@ -293,6 +306,100 @@ func promote() -> void:
     add_event("promoted", {"stars": stars})
 
 
+# --- professions (D-049) --------------------------------------------------------------------
+
+func prof_level(prof: String) -> int:
+    return int((professions.get(prof, {}) as Dictionary).get("lvl", -1))
+
+
+func knows_prof(prof: String) -> bool:
+    return professions.has(prof)
+
+
+## Learns a profession as an apprentice (level 0). "" if learned, else the reason it cannot.
+func learn_prof(prof: String) -> String:
+    if knows_prof(prof):
+        return ""
+    if not ProfessionDefs.PROFESSIONS.has(prof):
+        return "unknown profession"
+    if professions.size() >= ProfessionDefs.MAX_KNOWN:
+        return "already knows %d professions: forget one first" % ProfessionDefs.MAX_KNOWN
+    professions[prof] = {"lvl": 0, "xp": 0.0}
+    add_event("learned_profession", {"prof": prof})
+    return ""
+
+
+func forget_prof(prof: String) -> bool:
+    if not professions.has(prof):
+        return false
+    professions.erase(prof)
+    add_event("forgot_profession", {"prof": prof})
+    return true
+
+
+## Experience from work; returns true on level-up.
+func add_prof_xp(prof: String, amount: float) -> bool:
+    if not professions.has(prof):
+        return false
+    var p: Dictionary = professions[prof]
+    if int(p["lvl"]) >= ProfessionDefs.MAX_LEVEL:
+        return false
+    p["xp"] = float(p["xp"]) + amount * (ProfessionDefs.PASSION_XP if prof == passion else 1.0)
+    var up := false
+    while int(p["lvl"]) < ProfessionDefs.MAX_LEVEL and float(p["xp"]) >= ProfessionDefs.xp_to_next(int(p["lvl"])):
+        p["xp"] = float(p["xp"]) - ProfessionDefs.xp_to_next(int(p["lvl"]))
+        p["lvl"] = int(p["lvl"]) + 1
+        up = true
+    if up:
+        add_memory("prof_level", "Became a level %d %s." % [int(p["lvl"]), ProfessionDefs.info(prof)["name"]], "", 2)
+    return up
+
+
+## Work done per hour in a profession: level, helping attribute, fatigue, hunger, diseases.
+func work_efficiency(prof: String) -> float:
+    var lvl := prof_level(prof)
+    if lvl < 0:
+        return 0.0
+    var eff := ProfessionDefs.efficiency(lvl)
+    var attr := String(ProfessionDefs.info(prof).get("attr", ""))
+    if attr != "":
+        eff *= 1.0 + 0.02 * float(int(attributes().get(attr, 5)) - 5)
+    eff *= 1.0 - float(fatigue) / 200.0
+    if hunger >= 100:
+        eff *= 0.5
+    for d in diseases:
+        eff *= float(EconomyDefs.DISEASES.get(String(d["id"]), {}).get("work", 1.0))
+    return maxf(0.05, eff)
+
+
+## Past-life occupation becomes the first profession (new heroes and save migration).
+func init_professions() -> void:
+    var prof := String(ProfessionDefs.FROM_PAST_LIFE.get(profession, ""))
+    if prof != "" and professions.is_empty():
+        professions[prof] = {"lvl": ProfessionDefs.PAST_LIFE_LEVEL, "xp": 0.0}
+        passion = prof
+
+
+# --- health ----------------------------------------------------------------------------------
+
+func has_disease(id: String) -> bool:
+    return diseases.any(func(d): return String(d["id"]) == id)
+
+
+## Adds a disease (once per kind). Returns true if it is new.
+func catch_disease(id: String, cause: String) -> bool:
+    if has_disease(id) or not EconomyDefs.DISEASES.has(id):
+        return false
+    diseases.append({"id": id, "hours": float(EconomyDefs.DISEASES[id]["hours"]), "cause": cause})
+    add_memory("disease", "Fell ill: %s (%s)." % [EconomyDefs.DISEASES[id]["name"], cause], "", 2)
+    return true
+
+
+## Mood 0..100 from needs (derived, never saved).
+func mood() -> int:
+    return clampi(100 - stress / 2 - hunger / 4 - fatigue / 4 - 10 * diseases.size(), 0, 100)
+
+
 ## D-035: the five attributes, computed from saved data (class, stars, level, personal variance,
 ## traits). No new random roll, so existing heroes keep their identity.
 func attributes() -> Dictionary:
@@ -307,6 +414,8 @@ func attributes() -> Dictionary:
         for t in traits:
             var mods: Dictionary = HeroTables.TRAITS[t].get("mods", {})
             v *= float(mods.get(legacy, 1.0))
+        for d in diseases:
+            v *= float((EconomyDefs.DISEASES.get(String(d["id"]), {}).get("mods", {}) as Dictionary).get(k, 1.0))
         out[k] = maxi(1, roundi(v))
     return out
 
@@ -314,7 +423,7 @@ func attributes() -> Dictionary:
 ## Combat stats derived from the attributes (CombatRules.derive). Keeps the legacy keys
 ## hp/atk/mag/def/spd used by the UI: atk = physical power, mag = magic power, def = armor, spd = AGI.
 func get_stats() -> Dictionary:
-    return CombatRules.derive(attributes(), hero_class)
+    return ItemDefs.apply_equipment(CombatRules.derive(attributes(), hero_class), equipment, hero_class)
 
 
 func power() -> int:
@@ -357,6 +466,13 @@ func to_dict() -> Dictionary:
         "skills": skills.duplicate(),
         "loadout": loadout.duplicate(),
         "skill_choices": intify(skill_choices.duplicate(true)),
+        "professions": professions.duplicate(true),
+        "passion": passion,
+        "needs": [hunger, fatigue, stress, exhausted_hours],
+        "diseases": diseases.duplicate(true),
+        "bed": bed,
+        "equipment": equipment.duplicate(true),
+        "bag": bag.duplicate(),
     }
 
 
@@ -397,7 +513,9 @@ static func from_dict(d: Dictionary) -> HeroData:
     h.memories = intify(d.get("memories", []) as Array)
     h.relationships = (d.get("relationships", {}) as Dictionary).duplicate()
     h.hq_assignment = str(d.get("hq_assignment", ""))
-    h.activity_state = str(d.get("activity_state", "resting"))
+    h.activity_state = str(d.get("activity_state", "idle"))
+    if not (h.activity_state in ["idle", "working", "sleeping", "eating", "socializing", "in_treatment"]):
+        h.activity_state = "idle"          # old free-text states and a stale "deployed" become idle
     h.discovered_secrets = (d.get("discovered_secrets", []) as Array).duplicate()
     h.secret_clues = (d.get("secret_clues", []) as Array).duplicate()
     if d.has("skills"):
@@ -414,4 +532,32 @@ static func from_dict(d: Dictionary) -> HeroData:
         # level already reached, so veteran heroes are not left behind.
         h.ensure_skills()
         h._queue_skill_choices(0, h.level)
+    if d.has("professions"):
+        h.professions = (d["professions"] as Dictionary).duplicate(true)
+        for k in h.professions.keys():
+            if not ProfessionDefs.PROFESSIONS.has(k):
+                h.professions.erase(k)
+            else:
+                h.professions[k] = {"lvl": int(h.professions[k].get("lvl", 0)), "xp": float(h.professions[k].get("xp", 0.0))}
+        h.passion = str(d.get("passion", ""))
+    else:
+        h.init_professions()               # save v8 or older: past life -> first profession
+    var needs: Array = d.get("needs", [0, 0, 0, 0])
+    if needs.size() >= 4:
+        h.hunger = clampi(int(needs[0]), 0, 100)
+        h.fatigue = clampi(int(needs[1]), 0, 100)
+        h.stress = clampi(int(needs[2]), 0, 100)
+        h.exhausted_hours = int(needs[3])
+    for dz in d.get("diseases", []):
+        if EconomyDefs.DISEASES.has(String(dz.get("id", ""))):
+            h.diseases.append({"id": String(dz["id"]), "hours": float(dz.get("hours", 1.0)), "cause": str(dz.get("cause", ""))})
+    h.bed = str(d.get("bed", ""))
+    var eq: Dictionary = d.get("equipment", {})
+    for slot in eq:
+        if ItemDefs.SLOTS.has(String(slot)) and typeof(eq[slot]) == TYPE_DICTIONARY:
+            h.equipment[String(slot)] = intify(eq[slot])
+    var bg: Dictionary = d.get("bag", {})
+    for k in bg:
+        if int(bg[k]) > 0:
+            h.bag[String(k)] = int(bg[k])
     return h

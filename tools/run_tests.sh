@@ -28,6 +28,8 @@ suites=(
   "combat core|res://tests/smoke_combat_core.tscn --quit-after 3000|ALL PASSED"
   "orders|res://tests/smoke_orders.tscn --quit-after 3000|ALL PASSED"
   "skills|res://tests/smoke_skills.tscn --quit-after 3000|ALL PASSED"
+  "items|--script res://tests/test_items.gd|ALL PASSED"
+  "hq|--script res://tests/test_hq.gd|ALL PASSED"
   "town|--script res://tests/test_town.gd|ALL PASSED"
   "boot|res://tests/smoke_boot.tscn --quit-after 3000|ALL PASSED"
   "tower|res://tests/smoke_tower.tscn --quit-after 3000|ALL PASSED"

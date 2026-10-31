@@ -205,6 +205,41 @@ func _ready() -> void:
     check(h.position.distance_to(e1.position) > 100.0 and not map.is_blocked(h.position), "Blink teleports away from the nearest foe onto walkable ground")
     h.position = base
 
+    # --- equipment powers and consumables in combat (HQ session, D-039) -------------------------
+    h.position = base
+    _fresh(e1, base + Vector2(40, 0))
+    h.item_mods = {"lifesteal": 0.5}
+    h.hp = h.max_hp / 2
+    var hp_ls := h.hp
+    h._basic_attack(e1)
+    check(h.hp > hp_ls, "lifesteal heals on a basic hit")
+    h.item_mods = {"procs": [{"on_hit_status": "burn", "chance": 1.0, "dur": 3.0, "mult": 0.1}]}
+    _fresh(e1, base + Vector2(40, 0))
+    h._basic_attack(e1)
+    check(e1.has_status("burn"), "a unique's on-hit power applies its status")
+    h.item_mods = {"thorns": 0.5}
+    _fresh(e1, base + Vector2(30, 0))
+    h.statuses.clear()
+    h.hp = h.max_hp
+    h.take_hit(DamageInfo.make(40.0, "physical", e1))
+    check(e1.hp < e1.max_hp, "thorns hurt a melee attacker")
+    h.item_mods = {"slow_immune": 1.0}
+    h.apply_status("slow", 3.0)
+    check(is_equal_approx(h.move_mult(), 1.0), "slow immunity ignores slows")
+    h.item_mods = {}
+    h.statuses.clear()
+    h.hero.bag = {"potion": 1, "antidote": 1}
+    h.hp = h.max_hp / 5
+    var hp_p := h.hp
+    h._potion_cd = 0.0
+    h._use_consumables(0.05)
+    check(h.hp > hp_p and not h.hero.bag.has("potion"), "a hurt hero drinks a carried potion on their own")
+    h.apply_status("poison", 5.0, 1.0)
+    h._potion_cd = 0.0
+    h._use_consumables(0.05)
+    check(not h.has_status("poison") and not h.hero.bag.has("antidote") and h.was_poisoned, "a carried antidote cures poison (and the poisoning is remembered for after the mission)")
+    h.hp = h.max_hp
+
     # every skill in the data is well formed
     var bad: Array = []
     for sid in SkillDefs.SKILLS:

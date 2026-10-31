@@ -62,7 +62,7 @@ func _init() -> void:
     g.assign_hq(h3.id, "kitchen")
     var food_before: int = g.hq_outputs["food"]
     var turn_summary: Dictionary = g.process_headquarters_turn()
-    check(g.hq_outputs["food"] > food_before, "hq kitchen produces food output")
+    check(int(turn_summary.get("food_produced", 0)) > 0, "hq kitchen produces food output (the town also eats it: %d -> %d)" % [food_before, int(g.hq_outputs["food"])])
     var rel_h1_h3 := h1.get_relationship(h3.id)
     check(rel_h1_h3["interactions"] > 0, "co-workers in kitchen build relationship interactions")
 

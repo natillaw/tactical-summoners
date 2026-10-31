@@ -73,8 +73,8 @@ func _ready() -> void:
 
 
 func _refresh() -> void:
-    _pity.text = "4-star or better guaranteed in %d pulls   |   5-star guaranteed in %d pulls   |   Gems: %d" % [
-        int(_banner["pity4"]) - Game.pity4, int(_banner["pity5"]) - Game.pity5, Game.gems]
+    _pity.text = "4-star or better guaranteed in %d pulls   |   5-star guaranteed in %d pulls   |   Gems: %d   |   Beds free: %d" % [
+        int(_banner["pity4"]) - Game.pity4, int(_banner["pity5"]) - Game.pity5, Game.gems, maxi(0, Game.max_hero_capacity() - Game.heroes.size())]
     _btn1.disabled = _busy or Game.gems < SummonConfig.cost_for(_banner, 1)
     _btn10.disabled = _busy or Game.gems < SummonConfig.cost_for(_banner, int(_banner["multi_count"]))
 
@@ -84,7 +84,8 @@ func _pull(n: int) -> void:
         return
     var results: Array = Game.pull(n)
     if results.is_empty():
-        _msg.text = "Not enough gems."
+        var why := Game.housing_block(n)
+        _msg.text = ("Cannot summon: " + why) if why != "" else "Not enough gems."
         return
     _msg.text = ""
     _busy = true

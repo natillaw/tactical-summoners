@@ -19,6 +19,9 @@ const STYLES := {"town_hall": "stone", "barracks": "stone", "tower_gate": "stone
     "blacksmith": "stone", "kitchen": "wood", "workshop": "wood", "common": "wood"}
 
 var map: TownMap
+var ghost_id: String = ""            # D-050 placement preview: building being moved
+var ghost_cell: Vector2i = Vector2i.ZERO
+var ghost_ok: bool = false
 var hovered: String = ""
 var selected: String = ""
 var _ground: Texture2D = null
@@ -200,7 +203,7 @@ func _draw() -> void:
     var font := ThemeDB.fallback_font
     for id in TownTables.ids():
         var b: Dictionary = TownTables.info(id)
-        var plot: Rect2i = b["plot"]
+        var plot: Rect2i = map.plot_of(id)
         var r := Rect2(Vector2(plot.position) * cell, Vector2(plot.size) * cell)
         var level := Game.building_level(id)
         if level > 0:
@@ -214,7 +217,7 @@ func _draw() -> void:
             if id == "tower_gate" and CazArt.texture(CazArt.ARCH) != null:
                 draw_texture(CazArt.texture(CazArt.ARCH), Vector2(r.get_center().x - 24, r.end.y - 48))
             var props: Array = b["props"]
-            var front := Vector2(TownTables.door_cell(id)) * cell + Vector2(cell * 0.5, cell * 0.85)
+            var front := Vector2(map.door_of(id)) * cell + Vector2(cell * 0.5, cell * 0.85)
             for i in props.size():
                 var side := -1.0 if i % 2 == 0 else 1.0
                 _draw_prop(String(props[i]), -1, front + Vector2(side * cell * (1.0 + i / 2), 0))
@@ -230,11 +233,34 @@ func _draw() -> void:
         var ring := Color(1.0, 0.9, 0.5) if id == selected else (Color(1, 1, 1, 0.7) if id == hovered else Color(0, 0, 0, 0))
         if ring.a > 0.0:
             draw_rect(r.grow(3), ring, false, 3.0)
+        var proj: Dictionary = Game.under_construction(id)
+        if not proj.is_empty():
+            var total := EconomyDefs.BUILD_HOURS_PER_LEVEL * float(proj["to"])
+            var k := clampf(1.0 - float(proj["work_left"]) / total, 0.0, 1.0)
+            draw_rect(Rect2(r.position.x + 6, r.end.y - 8, r.size.x - 12, 6), Color(0.1, 0.1, 0.1, 0.8))
+            draw_rect(Rect2(r.position.x + 6, r.end.y - 8, (r.size.x - 12) * k, 6), Color(0.95, 0.75, 0.3))
+            _draw_prop("rubble", 0, Vector2(r.end.x - cell * 0.5, r.end.y))
+        var problem := String(Game.town_problems.get(id, ""))
+        if problem != "" and level > 0:
+            draw_circle(Vector2(r.end.x - 8, r.position.y + 8), 8.0, Color(0.9, 0.25, 0.2))
+            draw_string(font, Vector2(r.end.x - 11, r.position.y + 13), "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
         var title := String(b["name"]) + ("  Lv %d" % level if level > 0 else "  (build)")
         var tw := font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
         var tp := Vector2(r.get_center().x - tw * 0.5, r.position.y - 6)
         draw_rect(Rect2(tp + Vector2(-4, -14), Vector2(tw + 8, 18)), Color(0.08, 0.07, 0.12, 0.75))
         draw_string(font, tp, title, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1, 0.95, 0.8) if level > 0 else Color(0.8, 0.8, 0.8))
+    _draw_ghost(cell)
+
+
+## D-050 placement preview (green = valid, red = invalid).
+func _draw_ghost(cell: float) -> void:
+    if ghost_id == "":
+        return
+    var p: Rect2i = map.plot_of(ghost_id)
+    var r := Rect2(Vector2(ghost_cell) * cell, Vector2(p.size) * cell)
+    var c := Color(0.3, 1.0, 0.4) if ghost_ok else Color(1.0, 0.3, 0.3)
+    draw_rect(r, Color(c, 0.3))
+    draw_rect(r, c, false, 3.0)
 
 
 ## Draws a prop with its feet at `feet`. Caz props at native size, voxel props (64 px) at 0.75.

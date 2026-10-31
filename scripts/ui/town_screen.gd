@@ -26,6 +26,8 @@ var _drag_from: Vector2 = Vector2.ZERO
 var _cam_from: Vector2 = Vector2.ZERO
 var _dragging: bool = false
 var _moved: bool = false
+var moving: String = ""            # D-050: building being placed ("" = not in move mode)
+var _move_msg: Label
 
 
 func _ready() -> void:
@@ -55,7 +57,7 @@ func rebuild() -> void:
     for c in _world.get_children():
         c.queue_free()
     heroes.clear()
-    map = TownMap.new(Game.town_buildings)
+    map = TownMap.new(Game.town_buildings, Game.town_layout.duplicate())
     view = TownView.new(map)
     view.selected = selected
     _world.add_child(view)
@@ -86,12 +88,18 @@ func _on_changed() -> void:
 
 
 func _levels_changed() -> bool:
+    if map.layout != Game.town_layout:
+        return true
     for id in TownTables.ids():
         var built := Game.building_level(id) > 0
-        var plot: Rect2i = TownTables.info(id)["plot"]
-        if built != map.is_blocked_cell(plot.position):
+        if built != map.is_blocked_cell(map.plot_of(id).position):
             return true
     return false
+
+
+## D-047: the town clock runs while the player is here.
+func _process(delta: float) -> void:
+    Game.town_tick(delta)
 
 
 func _build_ui() -> void:
@@ -104,30 +112,46 @@ func _build_ui() -> void:
     top.add_child(menu_btn)
     var res_panel := PanelContainer.new()
     top.add_child(res_panel)
-    _res = UIKit.label("", 15, UIKit.ACCENT)
+    _res = UIKit.label("", 14, UIKit.ACCENT)
     res_panel.add_child(_res)
+    var day_btn := UIKit.button("Pass a day", func(): Game.pass_time(24), Vector2(110, 34))
+    day_btn.focus_mode = Control.FOCUS_NONE
+    day_btn.tooltip_text = "Let the town work, eat, sleep and heal for 24 hours"
+    top.add_child(day_btn)
+    _move_msg = UIKit.label("", 15, UIKit.ACCENT)
+    _move_msg.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+    _move_msg.position += Vector2(-200, 52)
+    _move_msg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    add_child(_move_msg)
 
-    var hint := UIKit.label("Click a building to enter, build or upgrade it    Click a hero to see them    Drag to move    Wheel to zoom", 14, UIKit.MUTED)
+    var hint := UIKit.label("Click a building to manage it    Click a hero to see them    Drag to move    Wheel to zoom    Red ! = a building has a problem", 14, UIKit.MUTED)
     hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
     hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
     hint.position += Vector2(14, -30)
     add_child(hint)
 
     _panel = PanelContainer.new()
-    _panel.custom_minimum_size = Vector2(330, 0)
+    _panel.custom_minimum_size = Vector2(350, 0)
     _panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-    _panel.position = Vector2(-342, 8)
+    _panel.position = Vector2(-362, 52)
     _panel.visible = false
     add_child(_panel)
+    var scroll := ScrollContainer.new()
+    scroll.custom_minimum_size = Vector2(340, 590)
+    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    _panel.add_child(scroll)
     _panel_box = VBoxContainer.new()
-    _panel_box.add_theme_constant_override("separation", 8)
-    _panel.add_child(_panel_box)
+    _panel_box.add_theme_constant_override("separation", 6)
+    _panel_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    scroll.add_child(_panel_box)
 
 
 func _refresh() -> void:
-    _res.text = "Materials %d   Food %d   Medicine %d   Heroes %d / %d" % [
-        int(Game.hq_outputs.get("materials", 0)), int(Game.hq_outputs.get("food", 0)),
-        int(Game.hq_outputs.get("medicine", 0)), Game.heroes.size(), Game.max_hero_capacity()]
+    var st := Game.hq_outputs
+    _res.text = "%s   Mat %d  Food %d  Grain %d  Wood %d  Stone %d  Ore %d  Iron %d  Herb %d  Med %d   Beds %d/%d" % [
+        Game.town_time_text(), int(st.get("materials", 0)), int(st.get("food", 0)), int(st.get("grain", 0)), int(st.get("wood", 0)),
+        int(st.get("stone", 0)), int(st.get("ore", 0)), int(st.get("ingot", 0)), int(st.get("herb", 0)), int(st.get("medicine", 0)),
+        Game.heroes.size(), Game.max_hero_capacity()]
     if selected != "":
         _show_panel(selected)
 
@@ -163,25 +187,19 @@ func _show_panel(id: String) -> void:
     desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     desc.custom_minimum_size = Vector2(300, 0)
     _panel_box.add_child(desc)
-    var produces: Dictionary = b.get("produces", {})
-    if not produces.is_empty():
-        var parts: Array = []
-        for res in produces:
-            parts.append("+%d %s" % [int(produces[res]) * maxi(1, level), res])
-        _panel_box.add_child(UIKit.label("Per worker each turn: " + ", ".join(parts), 14, UIKit.TEXT))
-    var experts: Array = (b.get("experts", []) as Array).map(func(p): return String(HeroTables.PROFESSIONS[p]["name"]))
-    if not experts.is_empty():
-        var ex := UIKit.label("Experts (x%d): %s" % [TownTables.EXPERT_MULT, ", ".join(experts)], 13, UIKit.MUTED)
-        ex.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-        ex.custom_minimum_size = Vector2(300, 0)
-        _panel_box.add_child(ex)
-    var workers: Array = []
-    for hid in Game.heroes:
-        var wh := Game.heroes[hid] as HeroData
-        if wh.hq_assignment == id:
-            workers.append(wh.hero_name.split(" ")[0] + (" (expert)" if TownTables.is_expert(id, wh.profession) else ""))
-    if not workers.is_empty():
-        _panel_box.add_child(UIKit.label("Workers: " + ", ".join(workers), 14, UIKit.TEXT))
+    _panel_construction(id, level)
+    if TownTables.is_dorm(id) and level > 0:
+        _panel_dorm(id, level)
+    if id == "infirmary" and level > 0:
+        _panel_hospital(level)
+    if id == "warehouse" and level > 0:
+        _panel_storage()
+    if id == "town_hall":
+        _panel_hall()
+    if not (b.get("jobs", []) as Array).is_empty() and level > 0:
+        _panel_jobs(id)
+    if level > 0 and (TownTables.worker_slots(id, level) > 0):
+        _panel_workers(id, TownTables.worker_slots(id, level))
     if level > 0 and id == "library":
         var books := 0
         for k in Game.skill_books:
@@ -204,13 +222,190 @@ func _show_panel(id: String) -> void:
         enter.focus_mode = Control.FOCUS_NONE
         _panel_box.add_child(enter)
     var cost := Game.next_building_cost(id)
-    if cost >= 0:
+    if cost >= 0 and Game.under_construction(id).is_empty():
         var label := ("Build (%d materials)" if level == 0 else "Upgrade to Lv %d (%%d materials)" % (level + 1)) % cost
-        var up := UIKit.button(label, func(): Game.build_or_upgrade(id), Vector2(300, 40))
+        var up := UIKit.button(label, func(): Game.build_or_upgrade(id), Vector2(320, 38))
         up.focus_mode = Control.FOCUS_NONE
-        up.disabled = int(Game.hq_outputs.get("materials", 0)) < cost
+        var why := Game.construction_block(id)
+        up.disabled = why != ""
         _panel_box.add_child(up)
+        if why != "":
+            _panel_box.add_child(_wrap("Cannot start: " + why, 13, Color(1.0, 0.6, 0.5)))
+        elif Game.builders().is_empty():
+            _panel_box.add_child(_wrap("No builder assigned yet: the work waits until someone builds (Summoner's Hall).", 13, Color(1.0, 0.8, 0.5)))
+    var mv := UIKit.button("Move building", func(): start_move(id), Vector2(320, 32))
+    mv.focus_mode = Control.FOCUS_NONE
+    _panel_box.add_child(mv)
     _panel.visible = true
+
+
+func _wrap(text: String, size_px: int, color: Color) -> Label:
+    var l := UIKit.label(text, size_px, color)
+    l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    l.custom_minimum_size = Vector2(320, 0)
+    return l
+
+
+func _small_btn(text: String, cb: Callable, w: float = 70.0) -> Button:
+    var b := UIKit.button(text, cb, Vector2(w, 26))
+    b.focus_mode = Control.FOCUS_NONE
+    b.add_theme_font_size_override("font_size", 12)
+    return b
+
+
+func _panel_construction(id: String, level: int) -> void:
+    var p := Game.under_construction(id)
+    if p.is_empty():
+        return
+    var total := EconomyDefs.BUILD_HOURS_PER_LEVEL * float(p["to"])
+    _panel_box.add_child(_wrap("Under construction → Lv %d: %.0f of %.0f work-hours left. Builders on site: %d" % [int(p["to"]), float(p["work_left"]), total, Game.builders().size()], 14, Color(0.95, 0.8, 0.4)))
+
+
+func _panel_dorm(id: String, level: int) -> void:
+    var beds := TownTables.beds_at(id, level)
+    var used := Game.beds_used(id)
+    _panel_box.add_child(UIKit.label("Beds: %d used / %d  (%d free)" % [used, beds, beds - used], 15, UIKit.TEXT))
+    _panel_box.add_child(UIKit.label("Rest quality: x%.1f" % (0.8 + 0.1 * float(level)), 13, UIKit.MUTED))
+    var names: Array = []
+    for hid in Game.heroes:
+        var h: HeroData = Game.heroes[hid]
+        if h.bed == id:
+            names.append("%s (%s)" % [h.hero_name.split(" ")[0], h.activity_state])
+    if not names.is_empty():
+        _panel_box.add_child(_wrap("Residents: " + ", ".join(names), 13, UIKit.TEXT))
+    var rough := Game.heroes.values().filter(func(h): return (h as HeroData).bed == "").size()
+    if rough > 0:
+        _panel_box.add_child(_wrap("%d hero(es) sleep rough: build or upgrade a dormitory." % rough, 13, Color(1.0, 0.6, 0.5)))
+
+
+func _panel_hospital(level: int) -> void:
+    var beds: int = TownTables.info("infirmary")["sick_beds"][clampi(level, 0, 5)]
+    _panel_box.add_child(UIKit.label("Sick beds: %d / %d   Medicine %d   Antidotes %d" % [Game.patients.size(), beds,
+        int(Game.hq_outputs.get("medicine", 0)), int(Game.hq_outputs.get("antidote", 0))], 14, UIKit.TEXT))
+    var docs: Array = Game.workers_at("infirmary").filter(func(h): return (h as HeroData).knows_prof("doctor")).map(func(h): return "%s (Lv %d)" % [h.hero_name.split(" ")[0], h.prof_level("doctor")])
+    _panel_box.add_child(_wrap("Doctors: " + (", ".join(docs) if not docs.is_empty() else "none — patients only rest"), 13, UIKit.TEXT if not docs.is_empty() else Color(1.0, 0.6, 0.5)))
+    for hid in Game.patients:
+        var h: HeroData = Game.heroes[hid]
+        for dz in h.diseases:
+            _panel_box.add_child(_wrap("• %s — %s, ~%.0f h left (%s)" % [h.hero_name.split(" ")[0], EconomyDefs.DISEASES[String(dz["id"])]["name"], float(dz["hours"]), dz["cause"]], 13, UIKit.TEXT))
+    var waiting := Game.heroes.values().filter(func(h): return not (h as HeroData).diseases.is_empty() and not Game.patients.has(h.id)).size()
+    if waiting > 0:
+        _panel_box.add_child(_wrap("%d sick hero(es) waiting for a bed." % waiting, 13, Color(1.0, 0.6, 0.5)))
+
+
+func _panel_storage() -> void:
+    _panel_box.add_child(UIKit.label("Capacity per resource: %d" % Game.storage_cap(), 14, UIKit.TEXT))
+    for res in EconomyDefs.RESOURCES:
+        _panel_box.add_child(UIKit.label("%s: %d" % [EconomyDefs.RESOURCES[res]["name"], int(Game.hq_outputs.get(res, 0))], 13, UIKit.TEXT))
+    _panel_box.add_child(UIKit.label("Equipment stash: %d / %d items (open a hero to equip)" % [Game.stash.size(), Game.stash_cap()], 14, UIKit.TEXT))
+
+
+func _panel_hall() -> void:
+    _panel_box.add_child(_wrap("Every other building can reach at most this level. Some buildings need a higher Hall to be built.", 13, UIKit.MUTED))
+    var queue: Array = Game.construction.map(func(p): return "%s → Lv %d (%.0f h)" % [TownTables.info(String(p["bid"]))["name"], int(p["to"]), float(p["work_left"])])
+    _panel_box.add_child(_wrap("Construction queue: " + (", ".join(queue) if not queue.is_empty() else "empty"), 13, UIKit.TEXT))
+    _panel_workers("construction", 99)
+    _panel_box.add_child(UIKit.label("Town log", 15, UIKit.ACCENT))
+    var n := Game.town_log.size()
+    for i in range(maxi(0, n - 8), n):
+        _panel_box.add_child(_wrap(String(Game.town_log[i]), 12, UIKit.MUTED))
+
+
+func _panel_jobs(id: String) -> void:
+    var current := Game.job_of(id)
+    var row := HFlowContainer.new()
+    for rid in TownTables.info(id)["jobs"]:
+        var r: Dictionary = EconomyDefs.RECIPES[rid]
+        if r.get("service", false):
+            continue
+        var recipe := String(rid)
+        var btn := _small_btn(("● " if recipe == current else "") + String(r["name"]), func(): Game.set_job(id, recipe), 150.0)
+        btn.tooltip_text = "%s → %s. %s level %d+, %.0f work-hours." % [_res_text(r["in"]), (_res_text(r["out"]) if not r.has("item") else "a %s" % r["item"]),
+            ProfessionDefs.info(String(r["prof"]))["name"], int(r["min"]), float(r["work"])]
+        row.add_child(btn)
+    if row.get_child_count() > 0:
+        _panel_box.add_child(UIKit.label("Job", 15, UIKit.ACCENT))
+        _panel_box.add_child(row)
+        var cr: Dictionary = EconomyDefs.RECIPES[current]
+        _panel_box.add_child(_wrap("%s: %s → %s" % [cr["name"], _res_text(cr["in"]), (_res_text(cr["out"]) if not cr.has("item") else "a %s (quality from smith and forge level)" % cr["item"])], 13, UIKit.TEXT))
+        var bt: Dictionary = Game.town_batches.get(id, {})
+        if not bt.is_empty():
+            _panel_box.add_child(UIKit.label("In progress: %.1f / %.0f work-hours" % [float(bt["progress"]), float(EconomyDefs.RECIPES[String(bt["recipe"])]["work"])], 13, UIKit.TEXT))
+    var problem := String(Game.town_problems.get(id, ""))
+    if problem != "":
+        _panel_box.add_child(_wrap("Problem: " + problem, 13, Color(1.0, 0.6, 0.5)))
+
+
+func _res_text(d: Dictionary) -> String:
+    if d.is_empty():
+        return "nothing"
+    var parts: Array = []
+    for k in d:
+        parts.append("%d %s" % [int(d[k]), String(EconomyDefs.RESOURCES[k]["name"]).to_lower()])
+    return ", ".join(parts)
+
+
+## Workers of a workplace (or the construction crew) with remove buttons, then candidates to assign.
+func _panel_workers(id: String, slots: int) -> void:
+    var prof := Game.workplace_prof(id)
+    var here := Game.workers_at(id)
+    _panel_box.add_child(UIKit.label(("Builders" if id == "construction" else "Workers") + (" %d / %d" % [here.size(), slots] if slots < 99 else " %d" % here.size()), 15, UIKit.ACCENT))
+    for h in here:
+        var hd := h as HeroData
+        var row := HBoxContainer.new()
+        row.add_child(_wrap("%s — %s Lv %d · %s" % [hd.hero_name.split(" ")[0], ProfessionDefs.info(prof).get("name", prof), hd.prof_level(prof), hd.activity_state], 13, UIKit.TEXT))
+        (row.get_child(0) as Label).custom_minimum_size = Vector2(250, 0)
+        row.add_child(_small_btn("Remove", func(): Game.assign_work(hd, "")))
+        _panel_box.add_child(row)
+    if here.size() >= slots:
+        return
+    var cands: Array = Game.heroes.values().filter(func(h): return (h as HeroData).hq_assignment != id)
+    cands.sort_custom(func(a, b): return a.prof_level(prof) > b.prof_level(prof))
+    for i in mini(5, cands.size()):
+        var hd := cands[i] as HeroData
+        var lvl := hd.prof_level(prof)
+        var note := ("%s Lv %d" % [ProfessionDefs.info(prof).get("name", prof), lvl]) if lvl >= 0 else ("can learn it" if hd.professions.size() < ProfessionDefs.MAX_KNOWN else "knows 2 professions")
+        var row := HBoxContainer.new()
+        row.add_child(_wrap("%s (%s)%s" % [hd.hero_name.split(" ")[0], note, " · now: " + hd.hq_assignment if hd.hq_assignment != "" else ""], 13, UIKit.MUTED))
+        (row.get_child(0) as Label).custom_minimum_size = Vector2(250, 0)
+        var b := _small_btn("Assign", func(): Game.assign_work(hd, id))
+        b.disabled = lvl < 0 and hd.professions.size() >= ProfessionDefs.MAX_KNOWN
+        row.add_child(b)
+        _panel_box.add_child(row)
+
+
+# --- move mode (D-050) ------------------------------------------------------------------------
+
+func start_move(id: String) -> void:
+    moving = id
+    select_building("")
+    view.ghost_id = id
+    _move_msg.text = "Placing the %s: click a spot (green = valid). Right-click or Esc to cancel." % TownTables.info(id)["name"]
+
+
+func cancel_move() -> void:
+    moving = ""
+    if view != null:
+        view.ghost_id = ""
+    _move_msg.text = ""
+
+
+## Places the building being moved with its top-left at the cell under `world`. Returns the reason
+## when it cannot go there ("" = moved).
+func place_at(world: Vector2) -> String:
+    var cell := _ghost_cell(world)
+    var why := Game.move_building(moving, cell)
+    if why == "":
+        cancel_move()
+        rebuild()
+    else:
+        _move_msg.text = "Cannot place it there: " + why
+    return why
+
+
+func _ghost_cell(world: Vector2) -> Vector2i:
+    var p := map.plot_of(moving)
+    return map.cell_of(world) - Vector2i(p.size.x / 2, p.size.y / 2)
 
 
 func _on_transcribe(id: String, class_id: String) -> void:
@@ -257,7 +452,12 @@ func _gui_input(event: InputEvent) -> void:
             else:
                 _dragging = false
                 if not _moved:
-                    click_at(screen_to_world(mb.position))
+                    if moving != "":
+                        place_at(screen_to_world(mb.position))
+                    else:
+                        click_at(screen_to_world(mb.position))
+        elif mb.pressed and mb.button_index == MOUSE_BUTTON_RIGHT and moving != "":
+            cancel_move()
         elif mb.pressed and mb.button_index == MOUSE_BUTTON_WHEEL_UP:
             _zoom(1.1)
         elif mb.pressed and mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
@@ -268,6 +468,9 @@ func _gui_input(event: InputEvent) -> void:
             _moved = true
             camera.position = _clamp_cam(_cam_from - (mm.position - _drag_from) / camera.zoom.x)
         _update_hover(screen_to_world(mm.position))
+        if moving != "" and view != null:
+            view.ghost_cell = _ghost_cell(screen_to_world(mm.position))
+            view.ghost_ok = Game.placement_block(moving, view.ghost_cell) == ""
 
 
 func click_at(world: Vector2) -> void:
@@ -331,3 +534,8 @@ func _clamp_cam(p: Vector2) -> Vector2:
         return p
     var ws := map.world_size()
     return Vector2(clampf(p.x, 0.0, ws.x), clampf(p.y, 0.0, ws.y))
+
+
+func _unhandled_key_input(event: InputEvent) -> void:
+    if moving != "" and event is InputEventKey and event.pressed and (event as InputEventKey).keycode == KEY_ESCAPE:
+        cancel_move()
