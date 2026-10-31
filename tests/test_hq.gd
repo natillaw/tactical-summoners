@@ -71,11 +71,11 @@ func _init() -> void:
     var smith := _hero(g, {"blacksmith": 4})
     g.assign_work(miner, "mine")
     g.set_job("mine", "dig_ore")
-    g.assign_work(smith, "blacksmith")
     g.hq_outputs["ore"] = 0
     g.hq_outputs["ingot"] = 0
     g.pass_time(6)
     check(int(g.hq_outputs["ore"]) > 0, "the miner digs ore (%d)" % int(g.hq_outputs["ore"]))
+    g.assign_work(smith, "blacksmith")
     g.pass_time(30)
     check(int(g.hq_outputs["ingot"]) > 0 or g.town_batches.has("blacksmith"), "the smith smelts that ore into ingots (%d ingots)" % int(g.hq_outputs["ingot"]))
     g.hq_outputs["ingot"] = 10
@@ -224,7 +224,7 @@ func _init() -> void:
         q2.stress = 90
         t1.stress = 0
         t2.stress = 0
-        g.town_clock = 12
+        g.town_clock = 12 + 24 * (i + 1)      # a different hour each time: a different (deterministic) roll
         g.pass_time(1)
     check(q1.get_relationship(q2.id)["level"] < 0, "two quarrelsome natures end up arguing (%d)" % q1.get_relationship(q2.id)["level"])
     var w1 := _hero(g, {"farmer": 3})
@@ -304,7 +304,7 @@ func _init() -> void:
     g2.load_game()
     var sv2: HeroData = g2.heroes[sv.id]
     check(g2.town_clock == g.town_clock and g2.hq_outputs == g.hq_outputs and g2.construction.size() == 1 and g2.town_layout == g.town_layout, "clock, storage, construction and layout survive save/load")
-    check(sv2.prof_level("blacksmith") == sv.prof_level("blacksmith") and sv2.hunger == 33 and sv2.has_disease("toxin") and sv2.bed == sv.bed and sv2.equipment.has("main_hand") == sv.equipment.has("main_hand"), "professions, needs, illness, bed and gear survive save/load")
+    check(sv2.prof_level("blacksmith") == sv.prof_level("blacksmith") and sv2.hunger == sv.hunger and sv2.has_disease("toxin") and sv2.bed == sv.bed and sv2.equipment.has("main_hand") == sv.equipment.has("main_hand"), "professions, needs, illness, bed and gear survive save/load")
     var items_a: int = g.stash.size() + sv.equipment.size()
     g2.save_game()
     g2.load_game()

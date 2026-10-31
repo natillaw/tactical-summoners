@@ -466,12 +466,12 @@ func to_dict() -> Dictionary:
         "skills": skills.duplicate(),
         "loadout": loadout.duplicate(),
         "skill_choices": intify(skill_choices.duplicate(true)),
-        "professions": professions.duplicate(true),
+        "professions": intify(professions.duplicate(true)),     # same numbers as after a JSON round trip
         "passion": passion,
         "needs": [hunger, fatigue, stress, exhausted_hours],
-        "diseases": diseases.duplicate(true),
+        "diseases": intify(diseases.duplicate(true)),
         "bed": bed,
-        "equipment": equipment.duplicate(true),
+        "equipment": intify(equipment.duplicate(true)),
         "bag": bag.duplicate(),
     }
 
