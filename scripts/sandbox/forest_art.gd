@@ -29,7 +29,11 @@ static func is_trail(map: NavMap, c: Vector2i) -> bool:
     return lr or ud
 
 
-static func bake(map: NavMap, art_seed: int) -> Texture2D:
+static func bake(map: NavMap, art_seed: int, camps: bool = false) -> Texture2D:
+    if BosqueArt.available():                       # master prompt G: the owner's forest tileset
+        var t := BosqueArt.bake(map, art_seed, camps)
+        if t != null:
+            return t
     if CazArt.available():
         return bake_caz(map, art_seed)
     return bake_fallback(map, art_seed)

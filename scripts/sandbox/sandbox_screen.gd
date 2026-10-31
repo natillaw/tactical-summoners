@@ -134,6 +134,12 @@ func _ready() -> void:
 	var ground := SandboxMapView.new(map)
 	ground.z_index = -10                         # floor < zones (-5) < ground effects (-4) < units (0) < air effects (20)
 	_world.add_child(ground)
+	if SandboxMapView.has_camps(map) and BosqueArt.available():
+		for fire in BosqueArt.campfires(map, (map as ProceduralMap).seed_value):
+			_world.add_child(fire)                   # master prompt I: animated campfires in the bandit camps
+	var grade := CanvasModulate.new()            # master prompt G: one warm, slightly muted palette
+	grade.color = Color(1.0, 0.97, 0.9)
+	_viewport.add_child(grade)
 	fog = FogMap.new(map.width, map.height)
 	if floor_number > 0:
 		fog.unpack(Game.floor_explored(floor_number))     # what this account already explored here
