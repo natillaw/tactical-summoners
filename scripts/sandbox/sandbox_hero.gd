@@ -17,6 +17,7 @@ const WALK_ANIM_SPEED := 85.0       # move speed at which the walk cycle plays a
 const ATTACK_LEAD := 0.12           # the attack pose starts this early so the blow lands on the damage
 
 var hero: HeroData
+var vision_mod: int = 0              # floor modifier "fog" (master prompt D)
 var slot: int = 0                 # 0-4 -> key 1-5
 var selected: bool = false : set = _set_selected
 var path: Array[Vector2] = []
@@ -140,7 +141,7 @@ func _ready() -> void:
 func vision_cells() -> int:
 	if downed:
 		return CombatRules.DOWNED_VISION
-	var v := CombatRules.VISION_CELLS + int(item_mods.get("vision", 0))
+	var v := CombatRules.VISION_CELLS + int(item_mods.get("vision", 0)) + vision_mod
 	if hero != null and CombatRules.SCOUT_CLASSES.has(hero.hero_class):
 		v += CombatRules.SCOUT_VISION_BONUS
 	return v

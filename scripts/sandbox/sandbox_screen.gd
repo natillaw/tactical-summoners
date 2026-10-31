@@ -35,7 +35,7 @@ const WAVE_EVERY := 12.0
 const WAVE_MAX_ALIVE := 14
 const CLUE_RADIUS := 56.0
 const MISSION_TITLES := {"retrieval": "Recover the relic", "combat": "Clear the floor", "rescue": "Rescue the villager",
-	"exploration": "Explore the forest", "survival": "Survive the onslaught", "defense": "Hold the shrine", "boss": "Defeat the chieftain",
+	"exploration": "Explore the forest", "survival": "Survive the onslaught", "defense": "Hold the shrine", "boss": "Defeat the chieftain", "escape": "Cross to the far side",
 	"farm": "Gather in the Wilds"}
 
 var floor_number: int = 0
@@ -166,6 +166,7 @@ func _ready() -> void:
 	_build_enemies()
 	_spawn_nodes()
 	_setup_mission()
+	_apply_modifier()
 	_build_ui()
 	update_fog()
 	select_all()
@@ -187,6 +188,8 @@ func _build_squad() -> void:
 		squad = []
 		for entry in TEST_SQUAD:
 			squad.append(HeroGenerator.generate(int(entry[0]), int(entry[1])))
+	if floor_number > 0:
+		squad = squad.slice(0, TowerExpedition.party_max(floor_number))   # master prompt D: squad size per floor
 	for i in squad.size():
 		var h := SandboxHero.new(squad[i], i)
 		h.squad = heroes
@@ -485,11 +488,15 @@ var shamans: Array[SandboxEnemy] = []
 
 
 func _spawn_shamans() -> void:
-	for i in EnemyDefs.BOSS_SHAMANS:
-		var spot := map.nearest_walkable(boss.position + Vector2.RIGHT.rotated(PI * 0.5 + PI * float(i)) * 85.0)
-		var s := _spawn_enemy(map.cell_of(spot), "mushroom_blue")
+	var cfg := TowerExpedition.get_floor_config(floor_number)
+	var n := int(cfg.get("shamans", EnemyDefs.BOSS_SHAMANS))
+	var bandits := BanditArt.has(boss.type_id)
+	for i in n:
+		var spot := map.nearest_walkable(boss.position + Vector2.RIGHT.rotated(PI * 0.5 + TAU * float(i) / float(n)) * 85.0)
+		var s := _spawn_enemy(map.cell_of(spot), "bandido_chaman" if bandits else "mushroom_blue")
+		s.tactical = tactics_on()
 		s.job = "shaman"
-		s.enemy_name = "Grove Shaman"
+		s.enemy_name = "Bandit Healer" if bandits else "Grove Shaman"
 		s.skills = ["ward", "mend"]
 		s.home = boss.position
 		s.group_mates = boss.group_mates
@@ -520,6 +527,33 @@ func _on_boss_phase(b: SandboxEnemy, phase: int) -> void:
 		e.alert()
 		e.visible = fog == null or fog.is_visible(map.cell_of(e.position))
 	CombatFeel.shake(b, "medium")
+
+
+## Master prompt D: one floor modifier from floor 3 (data: the floor's "modifier", numbers in FloorMods).
+var modifier: String = ""
+
+
+func _apply_modifier() -> void:
+	modifier = String(TowerExpedition.get_floor_config(floor_number).get("modifier", "")) if floor_number > 0 else ""
+	match modifier:
+		"fog":
+			for h in heroes:
+				h.vision_mod = -FloorMods.FOG_VISION
+		"no_heal":
+			for h in heroes:
+				h.heal_block = true
+		"enrage":
+			for e in enemies:
+				e.enrage_low = true
+		"hazard":
+			if map is ProceduralMap:
+				var r := RandomNumberGenerator.new()
+				r.seed = (map as ProceduralMap).seed_value + 9
+				var rooms: Array = (map as ProceduralMap).room_zones.filter(func(z): return String(z["zone"]) != "entrance")
+				for i in mini(FloorMods.HAZARD_ZONES, rooms.size()):
+					var rc: Rect2i = (rooms[r.randi() % rooms.size()] as Dictionary)["rect"]
+					var at := map.nearest_walkable(map.center_of(rc.position + Vector2i(r.randi_range(1, maxi(1, rc.size.x - 2)), r.randi_range(1, maxi(1, rc.size.y - 2)))))
+					CombatZone.spawn(_world, at, FloorMods.HAZARD_RADIUS, 1e9, "poison", FloorMods.HAZARD_DUR, FloorMods.HAZARD_MAG, heroes, null)
 
 
 ## D-066: a run in the repeatable Wilds (negative floor numbers are its tiers).
@@ -1004,6 +1038,15 @@ func _update_mission(delta: float) -> void:
 			if boss != null and not boss.alive:
 				_end_mission(Mission.SUCCESS)
 				return
+		"escape":
+			# master prompt D: cross to the far side; every standing hero must reach it
+			var goal := map.center_of(map.relic_cell)
+			var standing := heroes.filter(func(h): return h.alive and not h.downed)
+			if not standing.is_empty() and standing.all(func(h): return h.position.distance_to(goal) <= EXTRACT_RADIUS * EXTRACT_GATHER):
+				for h in standing:
+					h.credit("objective", 2.0)
+				_end_mission(Mission.SUCCESS)
+				return
 		"exploration":
 			for clue in clues:
 				var finder = heroes.filter(func(h): return h.alive and h.position.distance_to(clue.position) <= CLUE_RADIUS)
@@ -1029,6 +1072,11 @@ func _update_mission(delta: float) -> void:
 			if mission_timer >= (SURVIVE_TIME if mission_type == "survival" else HOLD_TIME) and not living_heroes().is_empty():
 				_end_mission(Mission.SUCCESS)
 				return
+	var limit := float(TowerExpedition.get_floor_config(floor_number).get("time_limit", 0.0)) if floor_number > 0 else 0.0
+	if limit > 0.0 and elapsed >= limit:
+		FloatingText.spawn(heroes[0], "Too late!", Color(1.0, 0.4, 0.3), false, 2.5)
+		_end_mission(Mission.ESCAPED)                  # the captive is lost; the squad walks out
+		return
 	if mission_type != "retrieval" and mission_type != "rescue":
 		if living_heroes().is_empty():
 			_wipe()

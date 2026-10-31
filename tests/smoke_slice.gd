@@ -98,7 +98,7 @@ func _ready() -> void:
     # --- an expedition that succeeds -------------------------------------------------------------
     var levels_before: Array = squad.map(func(h): return (h as HeroData).level)
     var xp_before: Array = squad.map(func(h): return (h as HeroData).xp + (h as HeroData).level * 10000)
-    var sb2 := SandboxScreen.new(1)
+    var sb2 := SandboxScreen.new(7)                # a 4-hero combat floor (master prompt D: party per floor)
     add_child(sb2)
     sb2.size = Vector2(1280, 720)
     await get_tree().process_frame
@@ -106,12 +106,12 @@ func _ready() -> void:
         e.take_hit(DamageInfo.make(99999.0, "true", sb2.heroes[2]))
     sb2.heroes[3].credit("healing", 500.0)
     sb2.tick(0.05)
-    check(sb2.mission_state == SandboxScreen.Mission.SUCCESS and int(Game.tower_cleared.get("1", 0)) == 1, "clearing floor 1 completes it")
+    check(sb2.mission_state == SandboxScreen.Mission.SUCCESS and int(Game.tower_cleared.get("7", 0)) == 1, "clearing floor 7 completes it")
     check(int(sb2.results.get("reward", {}).get("starsteel", 0)) > 0 and int(sb2.results.get("reward", {}).get("gems", 0)) > 0, "completion pays its reward (gems, starsteel)")
     check(String(sb2.results.get("mvp", "")) != "" and int(sb2.results.get("mvp_bonus", 0)) > 0, "an MVP is chosen and gets a bonus: %s (%s, +%d)" % [sb2.results.get("mvp", ""), sb2.results.get("mvp_reason", ""), int(sb2.results.get("mvp_bonus", 0))])
     var grew := true
     for i in squad.size():
-        if (squad[i] as HeroData).xp + (squad[i] as HeroData).level * 10000 <= int(xp_before[i]):
+        if i < sb2.heroes.size() and (squad[i] as HeroData).xp + (squad[i] as HeroData).level * 10000 <= int(xp_before[i]):
             grew = false
     check(grew, "every survivor gained experience (levels %s -> %s)" % [str(levels_before), str(squad.map(func(h): return (h as HeroData).level))])
     check(sb2.result_text().contains("MVP OF THE EXPEDITION") and sb2.result_text().contains("Experience"), "the results screen shows loot, reward, XP and the MVP")

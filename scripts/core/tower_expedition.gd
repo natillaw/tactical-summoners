@@ -16,17 +16,32 @@ extends RefCounted
 
 const THEME_NAME := "Whispering Forest"
 
+## Master prompt D (2026-10-31, owner): the bandit band holds floors 1-10 (BanditArt / EnemyDefs). Each floor
+## sets its own squad size ("party", never above 5; 10-hero raids are backlog), its mission, a threat
+## budget ("threat", spent by ProceduralMap on creatures by EnemyDefs.THREAT so roles mix) and, from
+## floor 3, one modifier (FloorMods: fog, hazard, enrage, no_heal). Every 5th floor is a spike, the 10th
+## a major boss. Floor 7 "sabotage" (totems that revive) is not built yet: it plays as "combat" for now.
 const FLOORS := {
-    1: {"name": "Floor 1: Forest Edge", "hall": 1, "difficulty": "Easy", "mission": "combat", "width": 120, "height": 104, "enemies": 27, "foes": ["slime_green", "rat", "mushroom_red"], "nodes": 0, "intro": "Your first steps in the tower: explore in the fog, beat the creatures of the edge, bring something home."},
-    2: {"name": "Floor 2: Mossy Trail", "hall": 1, "difficulty": "Easy", "mission": "exploration", "width": 124, "height": 110, "enemies": 32, "foes": ["slime_green", "bat", "rat", "spider", "mushroom_red"], "nodes": 0, "intro": "A wide trail full of timber, ore and herbs. Find the three old markers; gather what the town needs."},
-    3: {"name": "Floor 3: Mushroom Hollow", "hall": 2, "difficulty": "Normal", "mission": "retrieval", "width": 130, "height": 112, "enemies": 37, "foes": ["mushroom_red", "slime_green", "spider", "rat"], "nodes": 0, "intro": "A relic lies at the far end of the hollow. Find it, carry it back to the entrance and get out."},
-    4: {"name": "Floor 4: Goblin Camp", "hall": 2, "difficulty": "Normal", "mission": "combat", "lookouts": true, "tactics": true, "width": 136, "height": 116, "enemies": 44, "foes": ["goblin", "spider", "bat", "mushroom_red"], "nodes": 0, "intro": "Goblins in groups, with archers and healers. Gear, potions and training will show here."},
-    5: {"name": "Floor 5: Warlord's Grove", "hall": 3, "difficulty": "Hard", "mission": "boss", "boss_name": "Grove Warlord", "tactics": true, "width": 140, "height": 120, "enemies": 47, "foes": ["warlord", "hobgoblin", "goblin", "mushroom_purple", "slime_blue", "spider"], "nodes": 0, "intro": "The first great challenge: cross the grove and defeat the Goblin Warlord at its heart."},
-    6: {"name": "Floor 6: Tangled Thicket", "hall": 3, "difficulty": "Hard", "mission": "exploration", "tactics": true, "width": 146, "height": 124, "enemies": 52, "foes": ["hobgoblin", "spider", "mushroom_blue"]},
-    7: {"name": "Floor 7: Raider Woods", "hall": 4, "difficulty": "Hard", "mission": "combat", "tactics": true, "width": 150, "height": 130, "enemies": 58, "foes": ["orc_brute", "goblin", "bat", "mushroom_blue"]},
-    8: {"name": "Floor 8: Stone Circle", "hall": 4, "difficulty": "Hard", "mission": "survival", "tactics": true, "width": 156, "height": 136, "enemies": 61, "foes": ["golem", "mushroom_purple", "hobgoblin"]},
-    9: {"name": "Floor 9: Warband Clearing", "hall": 5, "difficulty": "Very Hard", "mission": "defense", "tactics": true, "width": 160, "height": 138, "enemies": 65, "foes": ["orc_brute", "hobgoblin", "golem", "spider"]},
-    10: {"name": "Floor 10: Chieftain's Glade (Boss)", "hall": 5, "difficulty": "Very Hard", "mission": "boss", "tactics": true, "width": 118, "height": 104, "enemies": 24, "foes": ["orc_chieftain", "orc_brute", "mushroom_blue"]},
+    1: {"name": "Floor 1: Forest Edge", "hall": 1, "difficulty": "Tutorial", "mission": "combat", "party": 1, "threat": 6, "width": 96, "height": 84,
+        "foes": ["bandido_maton", "bandido_maton", "bandido_arquero"], "nodes": 0, "intro": "A lone scout against a few bandits on the forest edge."},
+    2: {"name": "Floor 2: Mossy Trail", "hall": 1, "difficulty": "Easy", "mission": "exploration", "party": 2, "threat": 14, "width": 124, "height": 110,
+        "foes": ["bandido_maton", "bandido_arquero", "bandido_bruto"], "nodes": 0, "intro": "Find the three old markers. A bandit elite patrols the trail."},
+    3: {"name": "Floor 3: Mushroom Hollow", "hall": 2, "difficulty": "Normal", "mission": "defense", "party": 3, "threat": 20, "modifier": "fog", "width": 130, "height": 112,
+        "foes": ["bandido_maton", "bandido_arquero", "bandido_degollador"], "nodes": 0, "intro": "Hold the shrine while the bandits come in waves. Mist hides them until they are close."},
+    4: {"name": "Floor 4: Bandit Pass", "hall": 2, "difficulty": "Hard", "mission": "escape", "party": 2, "threat": 34, "modifier": "hazard", "lookouts": true, "tactics": true, "width": 136, "height": 116,
+        "foes": ["bandido_bruto", "bandido_maton", "bandido_arquero", "bandido_degollador", "bandido_chaman"], "nodes": 0, "intro": "Cross the pass to the far side. Fighting them all is losing."},
+    5: {"name": "Floor 5: The Captain's Camp", "hall": 3, "difficulty": "Very Hard", "mission": "boss", "boss_name": "Bandit Captain", "party": 5, "threat": 40, "modifier": "enrage", "tactics": true, "shamans": 3, "width": 140, "height": 120,
+        "foes": ["capitan_bandido", "bandido_bruto", "bandido_maton", "bandido_arquero", "bandido_mago", "bandido_degollador"], "nodes": 0, "intro": "The first great challenge: the Bandit Captain and the healers who keep him standing."},
+    6: {"name": "Floor 6: Tangled Thicket", "hall": 3, "difficulty": "Hard", "mission": "rescue", "party": 3, "threat": 36, "modifier": "no_heal", "time_limit": 420.0, "tactics": true, "width": 146, "height": 124,
+        "foes": ["bandido_bruto", "bandido_degollador", "bandido_arquero", "bandido_mago", "bandido_chaman"], "nodes": 0, "intro": "A villager is caged in the thicket. Six guards, and not much time."},
+    7: {"name": "Floor 7: Raider Woods", "hall": 4, "difficulty": "Hard", "mission": "combat", "party": 4, "threat": 44, "modifier": "fog", "tactics": true, "width": 150, "height": 130,
+        "foes": ["bandido_maton", "bandido_mago", "bandido_degollador", "bandido_chaman", "bandido_arquero"], "nodes": 0},
+    8: {"name": "Floor 8: Stone Circle", "hall": 4, "difficulty": "Hard", "mission": "combat", "party": 1, "threat": 7, "modifier": "enrage", "tactics": true, "width": 96, "height": 84,
+        "foes": ["bandido_bruto", "bandido_degollador"], "nodes": 0, "intro": "A duel: one hero against a bandit elite and its two cutthroats."},
+    9: {"name": "Floor 9: Warband Clearing", "hall": 5, "difficulty": "Very Hard", "mission": "survival", "party": 5, "threat": 48, "modifier": "hazard", "tactics": true, "width": 160, "height": 138,
+        "foes": ["bandido_bruto", "bandido_maton", "bandido_mago", "bandido_degollador", "bandido_chaman", "bandido_arquero"], "nodes": 0},
+    10: {"name": "Floor 10: The Crimson Baron", "hall": 5, "difficulty": "Major Boss", "mission": "boss", "boss_name": "The Crimson Baron", "party": 5, "threat": 30, "modifier": "enrage", "tactics": true, "altar": true, "width": 118, "height": 104,
+        "foes": ["jefe_baron_carmesi", "bandido_bruto", "bandido_degollador", "bandido_mago", "bandido_chaman"], "nodes": 0, "intro": "The Crimson Baron cannot be hurt while his shield holds. The light comes from somewhere else."},
 }
 
 
@@ -47,6 +62,11 @@ static func floor_advice(floor_num: int, hall_level: int) -> String:
 
 const RECOMMENDED_HEROES := 5          # D-017 squad; shown at the tower gate before entering
 const SLICE_FLOORS := 5                # vertical slice: floors 1-5 are the polished, playable ones
+
+
+## How many heroes may enter (master prompt D; the party keeps its 5 slots, the first N go in).
+static func party_max(floor_num: int) -> int:
+    return clampi(int(get_floor_config(floor_num).get("party", 5)), 1, 5)
 
 
 static func get_floor_config(floor_num: int) -> Dictionary:
