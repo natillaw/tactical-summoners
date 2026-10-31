@@ -524,6 +524,9 @@ class Minimap extends Control:
         for e in sb.enemies:
             if e.alive and e.visible:
                 draw_rect(Rect2(_cell_pos(e.position) - Vector2(1, 1), Vector2(2, 2)), ArtPalette.RED[2])
+        for e in sb.revealed_enemies():          # B6: the last creatures of a "clear the floor" mission
+            if not e.visible:
+                draw_rect(Rect2(_cell_pos(e.position) - Vector2(2, 2), Vector2(4, 4)), ArtPalette.RED[2], false, 1.0)
         for h in sb.heroes:
             if not h.dead:
                 var c := ArtPalette.TEXT if h.is_controlled() else ArtPalette.GREEN[3]
