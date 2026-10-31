@@ -2,12 +2,12 @@ name: Godot tests and screenshots
 
 on:
   push:
-    branches: ["main", "claude/**"]
+    branches-ignore: ["ci-screenshots"]    # every work branch is tested (the screenshot branch only holds images)
     tags: ["v*"]
   workflow_dispatch:
 
 env:
-  GODOT_VERSION: "4.7.1"
+  GODOT_VERSION: "4.7.2"
 
 jobs:
   tests:
