@@ -18,18 +18,18 @@ const TYPES := {
     "slime_green": {"hp": 55, "atk": 8, "armor": 2, "mres": 1, "speed": 48.0, "role": "melee", "windup": 0.8},
     "slime_blue": {"hp": 65, "atk": 9, "armor": 3, "mres": 4, "speed": 48.0, "role": "melee", "windup": 0.8,
         "status": {"id": "slow", "dur": 2.0, "mag": 0.0}},
-    "mushroom_red": {"hp": 45, "atk": 4, "armor": 1, "mres": 3, "speed": 40.0, "role": "support"},
-    "mushroom_blue": {"hp": 50, "atk": 4, "armor": 1, "mres": 5, "speed": 40.0, "role": "support"},
+    "mushroom_red": {"hp": 45, "atk": 4, "armor": 1, "mres": 3, "speed": 40.0, "role": "support", "skills": ["mend"]},
+    "mushroom_blue": {"hp": 50, "atk": 4, "armor": 1, "mres": 5, "speed": 40.0, "role": "support", "skills": ["mend", "ward"]},
     "mushroom_purple": {"hp": 45, "atk": 7, "armor": 1, "mres": 3, "speed": 42.0, "role": "ranged",
-        "status": {"id": "poison", "dur": 4.0, "mag": 2.0}},
+        "status": {"id": "poison", "dur": 4.0, "mag": 2.0}, "skills": ["spore_cloud"]},
     "spider": {"hp": 40, "atk": 8, "armor": 1, "mres": 1, "speed": 70.0, "role": "ranged",
-        "status": {"id": "poison", "dur": 3.0, "mag": 2.0}},
+        "status": {"id": "poison", "dur": 3.0, "mag": 2.0}, "skills": ["aimed_shot"]},
     "goblin": {"hp": 60, "atk": 10, "armor": 2, "mres": 1, "speed": 70.0, "role": "melee"},
-    "hobgoblin": {"hp": 110, "atk": 13, "armor": 6, "mres": 2, "speed": 58.0, "role": "guard"},
-    "orc_brute": {"hp": 170, "atk": 18, "armor": 5, "mres": 2, "speed": 56.0, "role": "brute"},
-    "golem": {"hp": 320, "atk": 24, "armor": 10, "mres": 6, "speed": 40.0, "role": "brute"},
-    "orc_chieftain": {"hp": 150, "atk": 14, "armor": 6, "mres": 3, "speed": 60.0, "role": "brute"},
-    "warlord": {"hp": 120, "atk": 13, "armor": 5, "mres": 3, "speed": 58.0, "role": "brute"},   # floor 5 boss (make_boss scales it)
+    "hobgoblin": {"hp": 110, "atk": 13, "armor": 6, "mres": 2, "speed": 58.0, "role": "guard", "skills": ["rally"]},
+    "orc_brute": {"hp": 170, "atk": 18, "armor": 5, "mres": 2, "speed": 56.0, "role": "brute", "skills": ["slam"]},
+    "golem": {"hp": 320, "atk": 24, "armor": 10, "mres": 6, "speed": 40.0, "role": "brute", "skills": ["slam"]},
+    "orc_chieftain": {"hp": 150, "atk": 14, "armor": 6, "mres": 3, "speed": 60.0, "role": "brute", "skills": ["slam", "rally"]},
+    "warlord": {"hp": 120, "atk": 13, "armor": 5, "mres": 3, "speed": 58.0, "role": "brute", "skills": ["slam", "rally"]},   # floor 5 boss (make_boss scales it)
     # training ground (Pixel Crawler mobs): the old shared numbers, with roles
     "orc": {"role": "melee"},
     "orc_rogue": {"role": "melee", "speed": 72.0},
@@ -70,7 +70,35 @@ const SUPPORT_REACH := 170.0
 const GUARD_LEASH := 160.0        # a guard never follows further than this from its post
 const AMBUSH_WAKE := 90.0         # an ambusher stays hidden and still until a hero is this close
 const ALERT_PERCEPTION := 1.6     # an alerted group sees further (one of them was attacked or spotted you)
-const FLOOR_SCALE := 0.08         # +8% health and damage per floor above the first
+const FLOOR_SCALE := 0.10         # +10% health and damage per floor above the first (D-065: difficulty comes from mechanics)
+
+## --- creature classes and skills (D-065) -------------------------------------------------------------
+## Roles work as classes: swarm (skirmisher), melee (fighter), brute, guard (defender), ranged (archer),
+## support (healer / shaman), plus two jobs given by the floor: scout (lookout: flees to raise the alarm)
+## and the boss's shamans. A creature casts a skill like a hero: a visible wind-up (a ring on the caster
+## for help spells, the marked area for attacks) that a stun or an interrupt breaks; cooldown per skill.
+## min_floor: the skill appears from that floor (floor 1 teaches the basics without enemy healers).
+## Targets: ally_low = the most hurt creature in range (heals); ally_key = the boss if near, else the
+## strongest creature (wards); allies = every creature around the caster; hero_area = an area at a hero
+## (marked on the ground: step out of it).
+const SKILLS := {
+    "mend": {"name": "Mend", "cast": 1.5, "cd": 7.0, "range": 200.0, "target": "ally_low", "below": 0.75, "min_floor": 2,
+        "heal_pct": 0.3, "desc": "Heals the most hurt creature. Kill or stun the healer."},
+    "ward": {"name": "Ward", "cast": 1.1, "cd": 11.0, "range": 220.0, "target": "ally_key", "min_floor": 3,
+        "shield_pct": 0.22, "desc": "Shields an ally (the boss first)."},
+    "rally": {"name": "Rally", "cast": 1.2, "cd": 16.0, "range": 230.0, "target": "allies", "min_floor": 4,
+        "status": {"id": "empowered", "dur": 8.0, "mag": 0.0}, "desc": "Nearby creatures hit 30% harder for a while."},
+    "slam": {"name": "Slam", "cast": 1.4, "cd": 9.0, "range": 140.0, "target": "hero_area", "radius": 95.0, "min_floor": 1,
+        "dmg_mult": 1.8, "status": {"id": "stun", "dur": 1.0, "mag": 0.0}, "desc": "A huge marked blow: get out of the circle."},
+    "spore_cloud": {"name": "Spore Cloud", "cast": 1.0, "cd": 12.0, "range": 190.0, "target": "hero_area", "radius": 75.0, "min_floor": 3,
+        "zone": {"status": "poison", "life": 6.0, "dur": 2.0, "mag": 3.0}, "desc": "Leaves a poison cloud: do not stand in it."},
+    "aimed_shot": {"name": "Aimed Shot", "cast": 1.7, "cd": 8.0, "range": 230.0, "target": "hero_area", "radius": 28.0, "min_floor": 3,
+        "dmg_mult": 2.4, "desc": "A long aim at one hero: move that hero, or stun the archer."},
+}
+const SCOUT_ALARM_RADIUS := 140.0  # a fleeing lookout raises the alarm on reaching this close to another group
+const SCOUT_FLEE_SPEED := 1.25     # lookouts run faster than they walk
+const BOSS_SHAMANS := 2            # floor bosses come with shamans that heal and ward them
+const CARRIER_HUNT := 2.0          # creatures notice the relic carrier this many times further away
 
 ## #8 of the playtest: a boss used to be a big bag of health; a squad could run straight to it and win
 ## in a minute. Now it fights in phases: at each health threshold it calls its warband (every creature
@@ -83,9 +111,8 @@ const BOSS_PHASES := [
 
 
 ## Health and damage multiplier of a floor's creatures: the floor's "scale" (TowerExpedition) or, when it
-## has none, 1 + FLOOR_SCALE per floor above the first. #7 of the playtest: with +8% per floor floors 2-4
-## never downed a hero (lowest HP 70-100%); they now ramp faster while floor 5 keeps its old strength
-## (its boss phases already make it the hardest fight).
+## has none, 1 + FLOOR_SCALE per floor above the first. D-065: kept gentle on purpose; the challenge of a
+## floor is its mechanics (healers, lookouts, the relic carrier, the boss's shamans), not inflated numbers.
 static func floor_scale(floor_num: int) -> float:
     if floor_num <= 0:
         return 1.0

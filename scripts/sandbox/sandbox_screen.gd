@@ -180,6 +180,7 @@ func _build_squad() -> void:
 			squad.append(HeroGenerator.generate(int(entry[0]), int(entry[1])))
 	for i in squad.size():
 		var h := SandboxHero.new(squad[i], i)
+		h.squad = heroes
 		var sc: Vector2i = map.spawn_cells[i % map.spawn_cells.size()]
 		h.position = map.center_of(sc)
 		h.died.connect(_on_hero_died)
@@ -197,6 +198,7 @@ func _build_enemies() -> void:
 	if map is ProceduralMap and not (map as ProceduralMap).encounters.is_empty():
 		for enc in (map as ProceduralMap).encounters:
 			_spawn_encounter(enc)
+		_assign_lookouts()
 		return
 	var cells: Array[Vector2i] = map.enemy_spawn_cells
 	if cells.is_empty():
@@ -326,11 +328,30 @@ func _spawn_encounter(enc: Dictionary) -> void:
 		e.group_mates = group
 
 
+## D-065 floors with "lookouts": in each awake group (not ambushers, not the goal's guards) its fastest
+## member is a lookout: when it sees the squad it runs to warn the nearest other group.
+func _assign_lookouts() -> void:
+	if floor_number <= 0 or not bool(TowerExpedition.get_floor_config(floor_number).get("lookouts", false)):
+		return
+	var done := {}
+	for e in enemies:
+		if done.has(e) or e.dormant or objective_enemies.has(e) or e.group_mates.size() < 2:
+			continue
+		var fastest: SandboxEnemy = null
+		for m in e.group_mates:
+			done[m] = true
+			if fastest == null or m.speed > fastest.speed:
+				fastest = m
+		if fastest != null:
+			fastest.job = "scout"
+
+
 func _spawn_enemy(c: Vector2i, type_id: String) -> SandboxEnemy:
 	var e := SandboxEnemy.new()
 	e.setup_type(type_id, floor_number)
 	e.position = map.center_of(c)
 	e.died.connect(_on_enemy_died)
+	e.hero_list = heroes
 	_world.add_child(e)
 	enemies.append(e)
 	return e
@@ -348,6 +369,7 @@ func _setup_mission() -> void:
 			if boss != null:
 				boss.make_boss(String(TowerExpedition.get_floor_config(floor_number).get("boss_name", "Orc Chieftain")))
 				boss.boss_phase.connect(_on_boss_phase)
+				_spawn_shamans()
 		"exploration":
 			var spread := _clue_rooms()
 			if spread.size() >= 3:
@@ -403,6 +425,32 @@ func _clue_rooms() -> Array[Vector2i]:
 		out.append(cands[best])
 		cands.remove_at(best)
 	return out
+
+
+## D-065: the boss fights with shamans beside it. While one lives the boss is "warded" (takes 40% less
+## damage) and they heal and shield it (a stun breaks the shield). Kill or stun the shamans first.
+var shamans: Array[SandboxEnemy] = []
+
+
+func _spawn_shamans() -> void:
+	for i in EnemyDefs.BOSS_SHAMANS:
+		var spot := map.nearest_walkable(boss.position + Vector2.RIGHT.rotated(PI * 0.5 + PI * float(i)) * 85.0)
+		var s := _spawn_enemy(map.cell_of(spot), "mushroom_blue")
+		s.job = "shaman"
+		s.enemy_name = "Grove Shaman"
+		s.skills = ["ward", "mend"]
+		s.home = boss.position
+		s.group_mates = boss.group_mates
+		boss.group_mates.append(s)
+		objective_enemies.append(s)
+		shamans.append(s)
+
+
+func _tick_boss_wards() -> void:
+	if boss == null or not boss.alive:
+		return
+	if shamans.any(func(s): return s.alive):
+		boss.apply_status("warded", 0.6)
 
 
 ## #8: the boss calls its warband: creatures around it wake and come, and new ones join beside it.
@@ -748,6 +796,18 @@ func retreat_selected() -> void:
 	_mark(exit, Color(0.4, 1.0, 0.7))
 
 
+## T (D-065): the selected heroes use their skills on their own, or only when the player presses W/E/R.
+## Lets the player keep a healer's mana or a stun for the right moment, and leave the rest free.
+func toggle_auto_skills() -> void:
+	var live := selected.filter(func(h): return h.alive)
+	if live.is_empty():
+		return
+	var on := not live.all(func(h): return h.auto_skills)
+	for h in live:
+		h.auto_skills = on
+		FloatingText.spawn(h, "skills: %s" % ("auto" if on else "manual"), Color(0.8, 0.9, 1.0), false)
+
+
 func order_move_selected(world_point: Vector2) -> void:
 	var n := selected.size()
 	for i in n:
@@ -861,6 +921,7 @@ func tick(delta: float) -> void:
 			group_view()                         # the driven hero fell: back to the squad view
 	_separate()
 	_separate_enemies()
+	_tick_boss_wards()
 	_tick_gathering(delta)
 	_fog_t -= delta
 	if _fog_t <= 0.0:
@@ -1334,6 +1395,8 @@ func _input(event: InputEvent) -> void:
 			regroup_selected()
 		KEY_X:
 			retreat_selected()
+		KEY_T:
+			toggle_auto_skills()
 		KEY_ESCAPE:
 			if _arming_attack_move:
 				_arming_attack_move = false

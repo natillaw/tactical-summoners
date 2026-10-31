@@ -40,7 +40,7 @@ func _ready() -> void:
         await get_tree().process_frame
         var cfg: Dictionary = TowerExpedition.get_floor_config(floor_num)
         check(sb.map is ProceduralMap and sb.heroes.size() == 5 and sb.mission_type == String(cfg["mission"]), "floor %d: procedural forest, 5 heroes, mission '%s'" % [floor_num, sb.mission_type])
-        check(not sb.enemies.is_empty() and sb.enemies.all(func(e): return (cfg["foes"] as Array).has(e.type_id)), "floor %d: forest creatures from the floor table" % floor_num)
+        check(not sb.enemies.is_empty() and sb.enemies.all(func(e): return (cfg["foes"] as Array).has(e.type_id) or e.job == "shaman"), "floor %d: forest creatures from the floor table (+ the boss's shamans, D-065)" % floor_num)
         var extract: Vector2 = sb.map.center_of(sb.map.extract_cell)
         match sb.mission_type:
             "combat":

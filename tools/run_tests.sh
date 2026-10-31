@@ -38,6 +38,7 @@ suites=(
   "slice|res://tests/smoke_slice.tscn --quit-after 6000|ALL PASSED"
   "ui full|res://tests/smoke_ui_full.tscn --quit-after 6000|ALL PASSED"
   "map safety|res://tests/smoke_map_safety.tscn --quit-after 3000|ALL PASSED"
+  "tactics|res://tests/smoke_tactics.tscn --quit-after 3000|ALL PASSED"
 )
 bad=0
 for s in "${suites[@]}"; do

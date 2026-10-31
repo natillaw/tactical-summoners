@@ -4,12 +4,16 @@ extends Control
 ## rescue, gather, carry the relic, extract). No damage cheats. Prints a report for balance review.
 ##   godot --headless --path . res://tests/playthrough_bot.tscn
 const DT := 1.0 / 30.0
-const THINK := 0.5
+const THINK := 0.25
 const MAX_SIM := 30.0 * 60.0          # seconds of game time per attempt
 var ATTEMPTS := int(OS.get_environment("PT_ATTEMPTS")) if OS.get_environment("PT_ATTEMPTS") != "" else 3
 
 var log_lines: Array = []
 var BLIND := OS.get_environment("PT_BLIND") != ""      # first-time player: knows only what the fog revealed
+## PT_STYLE=tactical: a thinking player (see _tactical_*). Default "naive": attack whatever is nearest and
+## let the heroes' autonomy do the rest (no focus, no dodging, no interrupts).
+var TACTICAL := OS.get_environment("PT_STYLE") == "tactical"
+var _dodging: Dictionary = {}           # hero -> seconds left of a dodge step ordered by the tactical player
 
 
 func say(s: String) -> void:
@@ -22,6 +26,7 @@ func _ready() -> void:
     Game.save_path = "user://playthrough_%d.json" % OS.get_process_id()
     Game.new_game()
     var first: Array = Game.starter_summons()
+    say("== STYLE %s%s" % ["tactical" if TACTICAL else "naive", " (blind)" if BLIND else ""])
     say("== NEW ACCOUNT: %d starter heroes, gems %d, capacity %d" % [first.size(), Game.gems, Game.max_hero_capacity()])
     for h in Game.heroes.values():
         say("  %s" % _hero_line(h))
@@ -273,6 +278,101 @@ func _frontier(sb: SandboxScreen, from: Vector2i) -> Vector2:
     return Vector2.INF
 
 
+# --- the tactical player -------------------------------------------------------------------------
+
+## Breaks creature casts with a ready stun/interrupt and steps heroes out of marked areas. Returns how
+## many skills it used.
+func _tactical_micro(sb: SandboxScreen, standing: Array, foes: Array) -> int:
+    var used := 0
+    for h in _dodging.keys():
+        _dodging[h] = float(_dodging[h]) - THINK
+        if float(_dodging[h]) <= 0.0:
+            _dodging.erase(h)
+    for e in foes:
+        if not e.alive or not e.is_telegraphing():
+            continue
+        # interrupt a help spell or a big blow
+        if e.casting_skill != "" or e.is_boss:
+            for h in standing:
+                if h.carrying or h.is_casting():
+                    continue
+                var done := false
+                for i in h.slots.size():
+                    var sk: Dictionary = h.slot_skill(i)
+                    if sk.is_empty() or h._auto_kind(sk) != "interrupt" or h.skill_cd(i) > 0.0 or h.res < float(sk["cost"]):
+                        continue
+                    if h.position.distance_to(e.position) > maxf(float(sk["range"]), 75.0):
+                        continue
+                    if h.use_skill_slot(i, [e], sb.heroes, e.position):
+                        used += 1
+                        done = true
+                        break
+                if done:
+                    break
+        # step out of the marked area
+        var r: float = e.telegraph_radius()
+        if r <= 0.0:
+            continue
+        var aim: Vector2 = e.aim_point()
+        for h in standing:
+            if h.position.distance_to(aim) <= r + 12.0 and not _dodging.has(h):
+                var away: Vector2 = (h.position - aim).normalized() if h.position.distance_to(aim) > 1.0 else Vector2.RIGHT.rotated(float(h.slot))
+                var spot: Vector2 = sb.map.nearest_walkable(aim + away * (r + 45.0))
+                var p := sb.map.find_path(h.position, spot)
+                if not p.is_empty():
+                    h.order_move(p)
+                    _dodging[h] = 1.2
+    return used
+
+
+## Kill first what makes the fight longer or bigger: healers and shamans, lookouts running for help.
+func _tactical_focus(sb: SandboxScreen, standing: Array, near: Array) -> bool:
+    var key: SandboxEnemy = null
+    var best := INF
+    for e in near:
+        var pri := 0
+        if e.job == "scout" and e.alerted:
+            pri = 3
+        elif e.job == "shaman" or e.skills.has("mend") or e.skills.has("ward"):
+            pri = 2
+        elif e.skills.has("rally"):
+            pri = 1
+        if pri == 0:
+            continue
+        var score := -float(pri) * 1000.0 + e.position.distance_to(_centre(standing))
+        if score < best:
+            best = score
+            key = e
+    if key == null:
+        return false
+    for h in standing:
+        if not _dodging.has(h) and h.rescue_target == null and not h.carrying and h.target != key:
+            h.order_attack(key)
+    return true
+
+
+## The relic: the toughest hero carries it (slow, cannot fight) and the rest escort and fight around it.
+func _tactical_relic(sb: SandboxScreen, standing: Array, goal: Vector2) -> void:
+    var carrier: SandboxHero = sb.carrier
+    if carrier == null:
+        var tank: SandboxHero = null
+        for h in standing:
+            if tank == null or h.max_hp > tank.max_hp:
+                tank = h
+        sb.select_only(standing)
+        sb.attack_move_selected(goal)                 # everyone goes, the tank leads the way to the relic
+        var p := sb.map.find_path(tank.position, goal)
+        if not p.is_empty():
+            tank.order_move(p)
+        return
+    var p2 := sb.map.find_path(carrier.position, goal)
+    if not p2.is_empty():
+        carrier.order_move(p2)
+    for h in standing:
+        if h != carrier and not _dodging.has(h) and h.rescue_target == null and h.target == null:
+            h.order_follow(carrier)
+
+
 func _play_floor(floor_num: int, attempt: int) -> Dictionary:
     var cfg := TowerExpedition.get_floor_config(floor_num)
     var sb := SandboxScreen.new(floor_num)
@@ -346,14 +446,10 @@ func _play_floor(floor_num: int, attempt: int) -> Dictionary:
         var near_foes: Array = foes.filter(func(e): return e.position.distance_to(c) < 380.0)
         if not near_foes.is_empty() and first_contact < 0.0:
             first_contact = t
-        # skills: every hero tries W/E/R when a foe is close
-        if not near_foes.is_empty():
-            for h in standing:
-                for i in 3:
-                    if h.use_skill_slot(i, foes, sb.heroes):
-                        skills_used += 1
-                    elif h.last_refusal != "" and not h.last_refusal.begins_with("cooldown"):
-                        skill_refusals[h.last_refusal] = int(skill_refusals.get(h.last_refusal, 0)) + 1
+        # D-065: both styles rely on the heroes' own autonomy (auto skills). The tactical player adds what
+        # a thinking player does: break casts, step out of marked areas, kill healers / shamans / lookouts first.
+        if TACTICAL:
+            skills_used += _tactical_micro(sb, standing, foes)
         # rescue downed allies
         for d in sb.heroes:
             if d.downed and not d.dead:
@@ -380,13 +476,15 @@ func _play_floor(floor_num: int, attempt: int) -> Dictionary:
                 sb.retreat_selected()
             continue
         if not near_foes.is_empty():
+            if TACTICAL and _tactical_focus(sb, standing, near_foes):
+                continue
             if order_t <= 0.0:
                 order_t = 1.5
                 var tgt = near_foes[0]
                 for e in near_foes:
                     if e.position.distance_to(c) < tgt.position.distance_to(c):
                         tgt = e
-                sb.select_only(standing.filter(func(h): return h.rescue_target == null))
+                sb.select_only(standing.filter(func(h): return h.rescue_target == null and not _dodging.has(h)))
                 sb.attack_move_selected(tgt.position)
             continue
         # objective
@@ -435,7 +533,9 @@ func _play_floor(floor_num: int, attempt: int) -> Dictionary:
             order_t = 3.0
             last_goal = goal
             sb.select_only(standing)
-            if sb.carrier != null and sb.mission_type in ["retrieval", "rescue"]:
+            if TACTICAL and sb.mission_type in ["retrieval", "rescue"]:
+                _tactical_relic(sb, standing, goal)
+            elif sb.carrier != null and sb.mission_type in ["retrieval", "rescue"]:
                 sb.order_move_selected(goal)
             else:
                 sb.attack_move_selected(goal)
