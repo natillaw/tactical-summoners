@@ -1,0 +1,44 @@
+{
+  "assets": [
+    {
+      "id": "pixel-crawler-free-pack-tiles",
+      "name": "Pixel Crawler Free Pack (tiles)",
+      "kind": "tilesets",
+      "source": "https://anokolisa.itch.io/free-pixel-art-asset-pack-topdown-tileset-rpg-16x16-sprites",
+      "author": "Anokolisa",
+      "license": "Author Terms (free pack)",
+      "license_url": "",
+      "frame_size": 16,
+      "modified": "no",
+      "notes": "Credit optional. Commercial use OK. Do not resell the assets or sell them as a final product. Only a selection is installed. Terms.txt kept next to the files.",
+      "status": "Imported",
+      "sha256": "B7B228CA232DA9958F191B01DB87764DDDB67610116151E06E8DD8ADE6DE94B8",
+      "original_file": "Pixel Crawler - Free Pack 2.11.zip",
+      "path": "assets/pixel/tilesets/pixel-crawler",
+      "files": 2,
+      "license_file_in_pack": true,
+      "imported": "2026-10-28",
+      "updated": "2026-10-28"
+    },
+    {
+      "id": "pixel-crawler-free-pack-mobs",
+      "name": "Pixel Crawler Free Pack (mobs)",
+      "kind": "enemies",
+      "source": "https://anokolisa.itch.io/free-pixel-art-asset-pack-topdown-tileset-rpg-16x16-sprites",
+      "author": "Anokolisa",
+      "license": "Author Terms (free pack)",
+      "license_url": "",
+      "frame_size": 16,
+      "modified": "no",
+      "notes": "Credit optional. Commercial use OK. Do not resell the assets or sell them as a final product. Only a selection is installed. Terms.txt kept next to the files.",
+      "status": "Imported",
+      "sha256": "B7B228CA232DA9958F191B01DB87764DDDB67610116151E06E8DD8ADE6DE94B8",
+      "original_file": "Pixel Crawler - Free Pack 2.11.zip",
+      "path": "assets/pixel/enemies/pixel-crawler",
+      "files": 24,
+      "license_file_in_pack": true,
+      "imported": "2026-10-28",
+      "updated": "2026-10-28"
+    }
+  ]
+}
