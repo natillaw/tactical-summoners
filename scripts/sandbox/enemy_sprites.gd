@@ -19,6 +19,10 @@ const VOXEL_ROOT := "res://assets/packs/voxel-dungeon-pack-full/creatures/sheets
 const VOXEL_W := 64
 const VOXEL_SCALE := 1.0
 
+## Voxel creatures whose name clashes with a Pixel Crawler mob ("orc" there is the training-ground
+## orc): the tower uses the voxel one under its own id, so every floor creature shares one art style.
+const VOXEL_ALIAS := {"orc_brute": "orc"}
+
 static var _cache: Dictionary = {}
 
 
@@ -31,6 +35,7 @@ static func scale_for(id: String) -> float:
 
 
 static func _voxel_sheet(id: String, names: Array) -> Texture2D:
+    id = String(VOXEL_ALIAS.get(id, id))
     for n in names:
         var path := VOXEL_ROOT + "%s_side_%s.png" % [id, n]
         if ResourceLoader.exists(path):

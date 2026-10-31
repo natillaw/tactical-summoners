@@ -312,7 +312,7 @@ const ENEMY_FX := [
     ["orc_chieftain", {"hit": "slash_heavy", "extra": "shockwave"}], ["mage_frost", {"proj": "frost_shard", "hit": "frost_burst"}],
     ["mage", {"proj": "fireball", "hit": "explosion"}], ["skeleton_mage", {"proj": "arcane_bolt", "hit": "arcane_burst"}],
     ["orc_shaman", {"proj": "orb", "hit": "electric_impact"}], ["eye", {"hit": "lightning_volt"}], ["ghost", {"hit": "arcane_burst"}],
-    ["trex", {"hit": "claw", "extra": "shockwave"}], ["hobgoblin", {"hit": "slash_heavy"}], ["", {"hit": "slash"}],
+    ["trex", {"hit": "claw", "extra": "shockwave"}], ["hobgoblin", {"hit": "slash_heavy"}], ["orc_brute", {"hit": "slash_heavy"}], ["", {"hit": "slash"}],
 ]
 
 
