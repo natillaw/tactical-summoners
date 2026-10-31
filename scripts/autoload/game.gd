@@ -652,6 +652,10 @@ func complete_floor(floor_num: int, mission: String = "") -> Dictionary:
     var r := {"gems": (50 * floor_num) if first else 10, "stones": (1 + floor_num / 4) if first else 0,
         "books": (1 if floor_num % 2 == 0 else 0) if first else 0, "skill_books": [], "materials": 0, "food": 0,
         "starsteel": ProgressionDefs.TOWER_STARSTEEL_BASE + floor_num / 2 if first else 0, "essence": 1 + floor_num / 3 if first else 0, "first": first}
+    # master prompt A: the mission chest (always something; full on the first clear) and first-clear keys
+    r["chest"] = LootService.chest(floor_num, first, rng)
+    for res in r["chest"]:
+        hq_outputs[res] = mini(storage_cap(), int(hq_outputs.get(res, 0)) + int(r["chest"][res]))
     tower_cleared[key] = int(tower_cleared.get(key, 0)) + 1
     gems += int(r["gems"])
     stones += int(r["stones"])
