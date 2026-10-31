@@ -20,6 +20,13 @@ const CONTRIB_LABELS := {"damage": "dealt the most damage", "kills": "struck the
     "shield": "shielded the squad", "rescues": "carried the fallen back", "explored": "scouted the way",
     "objective": "carried the mission", "gathered": "gathered for the town", "tanked": "took the blows for the others"}
 
+# --- floor completion ------------------------------------------------------------------------------
+## Materials paid by a completed floor: BASE + PER_FLOOR x floor. Playtest 2026-10-31 (#11): at 20 + 10 x f
+## the first five floors paid 250 materials in all, while the first ascension alone needs ~240 counting
+## its buildings, so heroes sat at their level cap for days. Now 60 / 80 / 100 / 120 / 140.
+const FLOOR_MATERIALS_BASE := 40
+const FLOOR_MATERIALS_PER_FLOOR := 20
+
 # --- ascension (promotion) -----------------------------------------------------------------------
 ## Materials per target star (tower drops make the player explore and hunt specific creatures).
 const ASCENSION_COST := {

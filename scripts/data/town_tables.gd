@@ -51,9 +51,9 @@ const BUILDINGS := {
     "blacksmith": {"name": "Blacksmith", "plot": Rect2i(9, 3, 4, 2), "start": 0, "max": 5, "cost": 40,
         "open": "", "roof": Color(0.55, 0.30, 0.25), "props": ["caz:OutsideFeatures/OutsideFeatures_6_1", "voxel:weaponrack"], "look": {"roof": "tile", "wall": "stone", "tint": Color(0.65, 0.6, 0.6)},
         "jobs": ["smelt_iron", "forge_weapon", "forge_armor"], "slots": 1, "hall": 0, "desc": "Blacksmiths smelt ore into ingots and forge weapons and armor; quality follows smith and forge level."},
-    "workshop": {"name": "Workshop", "plot": Rect2i(21, 3, 3, 2), "start": 0, "max": 5, "cost": 40,
+    "workshop": {"name": "Workshop", "plot": Rect2i(21, 3, 3, 2), "start": 0, "max": 5, "cost": 30,
         "open": "", "roof": Color(0.70, 0.55, 0.35), "props": ["caz:OutsideFeatures/OutsideFeatures_4_1", "caz:OutsideFeatures/OutsideFeatures_6_1"], "look": {"roof": "thatch", "wall": "timber", "tint": Color(0.9, 0.85, 0.75)}, "experts": ["occupation.lumberjack", "occupation.miner", "occupation.mason", "occupation.builder", "occupation.engineer", "occupation.blacksmith"],
-        "jobs": ["make_materials"], "slots": 1, "hall": 0, "desc": "Carpenters shape wood and stone into building materials."},
+        "jobs": ["make_materials"], "slots": 2, "hall": 0, "desc": "Carpenters shape wood and stone into building materials."},
     "alchemy": {"name": "Alchemy Lab", "plot": Rect2i(9, 15, 4, 2), "start": 0, "max": 5, "cost": 60,
         "open": "", "roof": Color(0.45, 0.85, 0.65), "props": ["voxel:crystal_deco", "caz:OutsideFeatures/OutsideFeatures_12_1"], "look": {"roof": "thatch", "wall": "plaster", "tint": Color(0.8, 1.0, 0.8)},
         "jobs": ["brew_medicine", "brew_potion", "brew_antidote"], "slots": 1, "hall": 1, "desc": "Alchemists brew medicine, healing potions and antidotes from herbs."},
@@ -84,7 +84,7 @@ const BUILDINGS := {
     "training_grounds": {"name": "Training Grounds", "plot": Rect2i(21, 20, 4, 2), "start": 0, "max": 5, "cost": 60, "slots": 0, "hall": 1,
         "open": "", "roof": Color(0.80, 0.60, 0.40), "props": ["caz:OutsideFeatures/OutsideFeatures_31_1", "voxel:weaponrack"], "look": {"roof": "thatch", "wall": "timber", "tint": Color(1, 0.9, 0.8)},
         "desc": "Heroes of 2 stars or more learn one more skill of their class here (a choice, not all of them). Class wings come later."},
-    "ascension": {"name": "Sanctuary of Ascension", "plot": Rect2i(27, 20, 4, 2), "start": 0, "max": 5, "cost": 90, "slots": 0, "hall": 2,
+    "ascension": {"name": "Sanctuary of Ascension", "plot": Rect2i(27, 20, 4, 2), "start": 0, "max": 5, "cost": 60, "slots": 0, "hall": 1,
         "open": "", "roof": Color(0.95, 0.90, 0.60), "props": ["voxel:altar", "voxel:crystal_deco"], "look": {"roof": "tile", "wall": "stone", "tint": Color(1, 0.95, 0.75)},
         "desc": "A hero at the top level of its star rank can attempt to ascend (promotion) with tower materials. Luck matters; failures make the next try likelier."},
 }
@@ -169,5 +169,18 @@ static func is_expert(building_id: String, profession: String) -> bool:
 
 
 ## Buildings where this profession is an expert (for the hero panel).
+## #16 of the playtest: "experts" holds the old past-life occupation ids ("occupation.chef") while the
+## town works with profession ids ("cook"), so asking with a profession found nothing. Both work now:
+## an occupation is turned into its profession, and a building counts when one of its jobs needs it.
 static func best_workplaces(profession: String) -> Array:
-    return ids().filter(func(id): return is_expert(id, profession))
+    var prof := String(ProfessionDefs.FROM_PAST_LIFE.get(profession, profession))
+    return ids().filter(func(id): return is_expert(id, profession) or _uses_prof(id, prof))
+
+
+static func _uses_prof(id: String, prof: String) -> bool:
+    if id == "library":
+        return prof == "scholar"
+    for rid in info(id).get("jobs", []):
+        if String(EconomyDefs.RECIPES.get(rid, {}).get("prof", "")) == prof:
+            return true
+    return false

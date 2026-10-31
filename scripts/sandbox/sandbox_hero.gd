@@ -60,6 +60,7 @@ const ORDER_LABELS := {"auto": "Auto", "move": "Moving", "attack": "Attacking", 
 var auto_path: bool = false         # true while walking toward a target on its own
 var target: SandboxEnemy = null
 var rescue_target: SandboxHero = null
+var then_retreat: Vector2 = Vector2.INF   # #14: a retreat that first picks up a fallen ally on the way out
 var rescue_progress: float = 0.0
 var _repath: float = 0.0
 var _last_delta: float = 0.0
@@ -258,6 +259,7 @@ func _clear_orders() -> void:
 	rescue_target = null
 	rescue_progress = 0.0
 	follow_leader = null
+	then_retreat = Vector2.INF
 	_repath = 0.0
 
 
@@ -745,7 +747,7 @@ func _on_dealt(t: Combatant, dealt: int) -> void:
 
 func _rescue_tick(map: NavMap) -> void:
 	if rescue_target == null or not is_instance_valid(rescue_target) or not rescue_target.downed:
-		stop()
+		_after_rescue(map)
 		return
 	if position.distance_to(rescue_target.position) <= CombatRules.RESCUE_RANGE:
 		path.clear()
@@ -759,10 +761,20 @@ func _rescue_tick(map: NavMap) -> void:
 			if hero != null and rescue_target.hero != null:
 				hero.rescue_hero(rescue_target.hero)          # memory, bond and Trust (Phase 3 data)
 			FloatingText.spawn(rescue_target, "Rescued!", Color(0.5, 1.0, 0.6), true)
-			stop()
+			if then_retreat != Vector2.INF:
+				rescue_target.order_retreat(then_retreat + Vector2(18, 0), map)   # both head for the exit
+			_after_rescue(map)
 	elif path.is_empty() or _repath <= 0.0:
 		_repath = REPATH_EVERY
 		path = map.find_path(position, rescue_target.position)
+
+
+## After a rescue: back to Auto, or on to the exit when the rescue was part of a retreat (#14).
+func _after_rescue(map: NavMap) -> void:
+	var exit := then_retreat
+	stop()
+	if exit != Vector2.INF:
+		order_retreat(exit, map)
 
 
 func _nearest(enemies: Array, radius: float) -> SandboxEnemy:

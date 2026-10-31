@@ -139,6 +139,17 @@ func _ready() -> void:
     await get_tree().process_frame
     sb5.set_physics_process(false)
     check(sb5._mission_objective() == "defeat Grove Warlord", "the boss objective names the floor's boss (%s)" % sb5._mission_objective())
+    # #8: the boss fights in phases (calls its warband, then enrages)
+    var b: SandboxEnemy = sb5.boss
+    var n0 := sb5.enemies.size()
+    var atk0 := b.atk
+    b.take_hit(DamageInfo.make(float(b.max_hp) * 0.45, "true", sb5.heroes[0]))
+    var n1 := sb5.enemies.size()
+    check(b.alive and n1 == n0 + int(EnemyDefs.BOSS_PHASES[0]["adds"]) and sb5.enemies[n1 - 1].alerted, "below 60%% the boss calls its warband (+%d creatures)" % (n1 - n0))
+    b.take_hit(DamageInfo.make(float(b.max_hp) * 0.3, "true", sb5.heroes[0]))
+    check(b.alive and sb5.enemies.size() == n1 + int(EnemyDefs.BOSS_PHASES[1]["adds"]) and b.atk > atk0, "below 30%% it calls again and enrages (atk %d -> %d)" % [atk0, b.atk])
+    b.take_hit(DamageInfo.make(1.0, "true", sb5.heroes[0]))
+    check(sb5.enemies.size() == n1 + int(EnemyDefs.BOSS_PHASES[1]["adds"]), "each phase happens once")
     sb5.queue_free()
     await get_tree().process_frame
 

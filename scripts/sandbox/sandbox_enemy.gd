@@ -5,6 +5,8 @@ extends Combatant
 ## so the player can dodge by ordering a move.
 
 enum State { IDLE, CHASE, WINDUP, RECOVER }
+signal boss_phase(boss, phase)                 # #8: the boss reached EnemyDefs.BOSS_PHASES[phase]
+var boss_phase_reached: int = -1
 
 var enemy_name: String = "Grunt"
 var atk: int = 12
@@ -89,7 +91,7 @@ func setup_type(id: String, floor_num: int = 0) -> void:
 ## Stats and role from EnemyDefs, scaled a little per floor (more health and damage deeper).
 func _apply_def(id: String, floor_num: int) -> void:
     var d := EnemyDefs.info(id)
-    var k := 1.0 + EnemyDefs.FLOOR_SCALE * float(maxi(0, floor_num - 1))
+    var k := EnemyDefs.floor_scale(floor_num)
     setup_combat(roundi(float(d["hp"]) * k), int(d["armor"]), int(d["mres"]), crit_chance, status_resist, int(combat_rng.seed))
     atk = roundi(float(d["atk"]) * k)
     speed = float(d["speed"])
@@ -454,9 +456,26 @@ const STAGGER_PCT := 0.06
 func _on_hit(_info: DamageInfo, dmg: int) -> void:
     _flash = 0.12
     alert()                                       # hurting one wakes its whole encounter
+    if is_boss and hp > 0:
+        _check_boss_phase()
     var flinch := not is_heavy() or float(dmg) >= float(max_hp) * STAGGER_PCT * (2.0 if is_boss else 1.0)
     if dmg > 0 and state != State.WINDUP and hp > 0 and flinch:
         _play_once("hurt", 0.3)
+
+
+func _check_boss_phase() -> void:
+    var frac := float(hp) / float(maxi(1, max_hp))
+    for i in EnemyDefs.BOSS_PHASES.size():
+        var ph: Dictionary = EnemyDefs.BOSS_PHASES[i]
+        if i > boss_phase_reached and frac <= float(ph["at"]):
+            boss_phase_reached = i
+            if ph.has("enrage_atk"):
+                atk = roundi(float(atk) * float(ph["enrage_atk"]))
+                windup_time *= float(ph["enrage_windup"])
+                FloatingText.spawn(self, "ENRAGED!", Color(1.0, 0.3, 0.2), true)
+            else:
+                FloatingText.spawn(self, "To me, warband!", Color(1.0, 0.55, 0.3), true)
+            boss_phase.emit(self, i)
 
 
 func _on_die() -> void:

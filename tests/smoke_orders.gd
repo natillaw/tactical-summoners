@@ -114,6 +114,25 @@ func _ready() -> void:
     foe.alive = false
     foe.visible = false
 
+    # #14: a retreat first picks up a fallen ally close by, then both run for the exit
+    for h in sb.heroes:
+        h.stop()
+    var fallen: SandboxHero = sb.heroes[1]
+    var helper: SandboxHero = sb.heroes[0]
+    fallen.position = map.nearest_walkable(helper.position + Vector2(60, 0))
+    fallen.go_down()
+    sb.select_only([helper])
+    _key(sb, KEY_X)
+    check(helper.order == "rescue" and helper.rescue_target == fallen and helper.then_retreat != Vector2.INF, "X near a fallen ally: pick them up first")
+    _key(sb, KEY_X)
+    check(helper.rescue_target == fallen, "pressing X again does not cancel the pick-up")
+    _run(sb, 5.0)
+    check(not fallen.downed and helper.order == "retreat" and fallen.order == "retreat", "after the pick-up both head for the exit")
+    for h in [helper, fallen]:
+        h.stop()
+        h.statuses.clear()
+        h.hp = h.max_hp                              # back to full for the tests below
+
     # line of sight: a ranged hero cannot shoot through a wall
     var archer: SandboxHero = null
     for h in sb.heroes:

@@ -10,7 +10,11 @@ const DEFAULT_BANNER := "standard"
 const STARTER_BANNER := "starter"
 const STARTER_COUNT := 10
 const STARTER_MIN_FIGHTERS := 4      # at least this many combat classes among the ten
-const LOG_CAP := 200   # how many past summons are kept in the save (reproducibility log)
+const LOG_CAP := 200
+## Playtest 2026-10-31 (#10): 2000 gems at 10 per summon were 200 summons, so beds were the only limit and
+## a summon + sacrifice loop with one free bed gave five 5-star heroes and endless materials. Gems now
+## buy a handful of summons; the tower pays more of them (Game.complete_floor).
+const START_GEMS := 300   # how many past summons are kept in the save (reproducibility log)
 
 const BANNERS := {
     "standard": {
@@ -20,9 +24,9 @@ const BANNERS := {
         "rates": [50.0, 30.0, 14.0, 5.0, 1.0],   # 1-star .. 5-star
         "pity4": 10,        # 4-star or better guaranteed within this many pulls
         "pity5": 80,        # 5-star guaranteed within this many pulls
-        "cost_single": 10,
+        "cost_single": 100,
         "multi_count": 10,
-        "cost_multi": 100,
+        "cost_multi": 900,
     },
     "starter": {
         "name": "First Summoning",

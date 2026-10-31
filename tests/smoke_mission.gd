@@ -107,7 +107,7 @@ func _ready() -> void:
         dead.take_damage(99999)
     sb2.tick(1.0 / 60.0)
     check(sb2.mission_state == SandboxScreen.Mission.FAILED and sb2.result_text().contains("MISSION FAILED"), "all heroes dead -> mission failed")
-    check(Game.memorial.is_empty() and Game.gems == 2000, "test heroes write no memorial and earn no reward")
+    check(Game.memorial.is_empty() and Game.gems == SummonConfig.START_GEMS, "test heroes write no memorial and earn no reward")
     sb2.queue_free()
 
     # --- skills ----------------------------------------------------------------------------

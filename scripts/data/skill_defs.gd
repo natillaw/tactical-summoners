@@ -20,7 +20,7 @@ const MAX_SLOTS := 3   # keys W E R (D-059; Q is the driven hero's basic attack)
 
 ## D-041 class resources. max = base + per point of the scaling attribute.
 const RESOURCES := {
-    "fury": {"name": "Fury", "color": Color(0.9, 0.3, 0.2), "base": 100, "start": 0.0, "regen": 0.0, "decay": 4.0, "on_hit": 8.0, "on_hurt": 12.0},
+    "fury": {"name": "Fury", "color": Color(0.9, 0.3, 0.2), "base": 100, "start": 0.3, "regen": 0.0, "decay": 3.0, "on_hit": 10.0, "on_hurt": 12.0},   # #13: enters with 30 (War Cry ready), cools slower
     "focus": {"name": "Focus", "color": Color(0.95, 0.85, 0.3), "base": 100, "start": 1.0, "regen": 9.0, "decay": 0.0, "on_hit": 0.0, "on_hurt": 0.0},
     "mana": {"name": "Mana", "color": Color(0.35, 0.55, 1.0), "base": 60, "per_attr": "int", "per": 6, "start": 1.0, "regen": 3.0, "decay": 0.0, "on_hit": 0.0, "on_hurt": 0.0},
     "stamina": {"name": "Stamina", "color": Color(0.5, 0.9, 0.5), "base": 100, "start": 1.0, "regen": 7.0, "decay": 0.0, "on_hit": 0.0, "on_hurt": 0.0},

@@ -66,6 +66,9 @@ func _ready() -> void:
     var foe: SandboxEnemy = sb.enemies[0]
     foe.take_hit(DamageInfo.make(99999.0, "true", sb.heroes[0]))
     var g: GatherNode = sb.nodes[0]
+    for e in sb.enemies:                           # a creature in reach would keep the gatherer busy fighting
+        if e.alive and e.position.distance_to(g.position) < CombatRules.HERO_PERCEPTION + 100.0:
+            e.take_hit(DamageInfo.make(99999.0, "true", sb.heroes[0]))
     sb.heroes[1].position = g.position + Vector2(10, 0)
     sb.heroes[1].order_hold()                      # holds there (an explorer would otherwise go scouting)
     for i in 40:
