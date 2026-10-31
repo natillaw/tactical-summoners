@@ -112,3 +112,29 @@ Lectura:
 - **Piso 4:** a lo loco tardó el doble (10 min frente a 4:44) y tuvo un bloqueo; los vigías juntan grupos. El táctico terminó con más vida (95 % frente a 62 %).
 - **Pisos 1-3:** casi no hay diferencia; los dos los pasan siempre. Los curanderos del piso 2 apenas pesan porque la misión de exploración no obliga a pelear, y el piso 3 solo se nota en la vida (67 % frente a 95 %). Es lo siguiente que hay que reforzar.
 - Lo que el bot no mide: usar W/E/R a mano, colocar a los héroes y decidir a quién dejar libre con T. Eso lo tiene que probar una persona.
+
+## Los Wilds y la torre como reto (D-066, 2026-10-31)
+El bot ahora juega el ciclo nuevo. Si el siguiente piso pide un Salón más alto, va a los Wilds (recoge todo, cachés incluidas, y sale al cabo de unos 7 min, cuando no queda nada o si la escuadra está herida), mejora el Salón en cuanto puede y vuelve a la torre. 2 cuentas por estilo:
+
+### A lo loco: 2 accounts, highest floor cleared per account: [5, 5]
+| Floor | attempts | won | won 1st try | escaped / failed / timeout | heroes lost | downs | avg time | lowest HP (median) |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 2 | 2 | 2/2 | 0 / 0 / 0 | 0 | 0 | 3:15 | 96% |
+| 2 | 2 | 2 | 2/2 | 0 / 0 / 0 | 0 | 0 | 2:10 | 92% |
+| 3 | 2 | 2 | 2/2 | 0 / 0 / 0 | 0 | 0 | 3:01 | 96% |
+| 4 | 2 | 2 | 2/2 | 0 / 0 / 0 | 0 | 0 | 3:56 | 88% |
+| 5 | 2 | 2 | 2/2 | 0 / 0 / 0 | 4 | 6 | 1:47 | 10% |
+
+### Táctico: 2 accounts, highest floor cleared per account: [5, 5]
+| Floor | attempts | won | won 1st try | escaped / failed / timeout | heroes lost | downs | avg time | lowest HP (median) |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 2 | 2 | 2/2 | 0 / 0 / 0 | 0 | 0 | 3:09 | 92% |
+| 2 | 2 | 2 | 2/2 | 0 / 0 / 0 | 0 | 0 | 2:23 | 88% |
+| 3 | 2 | 2 | 2/2 | 0 / 0 / 0 | 0 | 0 | 3:32 | 100% |
+| 4 | 2 | 2 | 2/2 | 0 / 0 / 0 | 0 | 0 | 4:29 | 98% |
+| 5 | 2 | 2 | 2/2 | 0 / 0 / 0 | 1 | 2 | 1:45 | 78% |
+
+
+- **Ritmo:** el piso 5 cae hacia el **día 14-15 del pueblo**, tras 5-6 salidas a los Wilds; antes de D-066, hacia el día 5-8. Los pisos 3 y 5 esperaron a que el Salón subiera de nivel.
+- **Wilds:** cada salida dura 4-7 min y la vida mínima va del 35 al 100 %. Ningún héroe murió en ellos: con conocimiento del mapa, el nivel 1 todavía es bastante seguro. Si quieres más riesgo, hay dos palancas: más fuerza en la sala más honda o patrullas que cazan.
+- **Piso 5:** a lo loco perdió 4 héroes en 2 cuentas; el táctico, 1.

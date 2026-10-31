@@ -645,16 +645,22 @@ const BOOK_MISSIONS := ["rescue", "exploration"]
 
 
 func complete_floor(floor_num: int, mission: String = "") -> Dictionary:
-    var r := {"gems": 50 * floor_num, "stones": 1 + floor_num / 4, "materials": ProgressionDefs.FLOOR_MATERIALS_BASE + floor_num * ProgressionDefs.FLOOR_MATERIALS_PER_FLOOR, "books": 1 if floor_num % 2 == 0 else 0, "skill_books": [],
-        "food": 20 + 10 * floor_num}
+    # D-066: the tower pays in gear and rarities, not in town materials (those come from the Wilds). The
+    # first clear of a floor pays in full; later clears pay much less (the tower is not a farm).
     var key := str(floor_num)
+    var first := int(tower_cleared.get(key, 0)) == 0
+    var r := {"gems": (50 * floor_num) if first else 10, "stones": (1 + floor_num / 4) if first else 0,
+        "books": (1 if floor_num % 2 == 0 else 0) if first else 0, "skill_books": [], "materials": 0, "food": 0,
+        "starsteel": ProgressionDefs.TOWER_STARSTEEL_BASE + floor_num / 2 if first else 0, "essence": 1 + floor_num / 3 if first else 0, "first": first}
     tower_cleared[key] = int(tower_cleared.get(key, 0)) + 1
     gems += int(r["gems"])
     stones += int(r["stones"])
     books += int(r["books"])
-    hq_outputs["materials"] = int(hq_outputs.get("materials", 0)) + int(r["materials"])
-    hq_outputs["food"] = mini(storage_cap(), int(hq_outputs.get("food", 0)) + int(r["food"]))   # supplies found
+    for rare in ["starsteel", "essence"]:
+        hq_outputs[rare] = int(hq_outputs.get(rare, 0)) + int(r[rare])
     var drops := 0
+    if not first:
+        drops = -99                                       # no free skill books from replays
     if floor_num % 10 == 0:
         drops += 1
     if BOOK_MISSIONS.has(mission):
@@ -669,9 +675,10 @@ func complete_floor(floor_num: int, mission: String = "") -> Dictionary:
     r["items"] = []
     r["left_behind"] = 0
     var boss := floor_num % 10 == 0
-    var n_items := 1 + floor_num / 4 + (2 if boss else 0)
+    var n_items := (2 + floor_num / 3 + (2 if boss else 0)) if first else 1
     for i in n_items:
-        var rarity := ItemGen.roll_rarity(rng, floor_num, 3.0 if boss else 0.0, "rare" if boss and i == 0 else "common")
+        # tower loot is better than anything a town forge makes early: at least uncommon, a boss floor rare
+        var rarity := ItemGen.roll_rarity(rng, floor_num + 2, 3.0 if boss else 1.0, "rare" if (boss or floor_num % 5 == 0) and i == 0 else "uncommon")
         if stash.size() >= stash_cap():
             r["left_behind"] = int(r["left_behind"]) + 1     # no room: left in the tower (shown in the result)
             continue
@@ -904,8 +911,11 @@ func finish_batch(bid: String, best_level: int, rr: RandomNumberGenerator, repor
         report["produced"][k] = int(report["produced"].get(k, 0)) + int(r["out"][k])
     if r.has("item"):
         var rarity := ItemGen.craft_rarity(rr, best_level, building_level(bid))
+        var floor_rarity := String(r.get("min_rarity", "common"))
+        if ItemDefs.RARITY_ORDER.find(rarity) < ItemDefs.RARITY_ORDER.find(floor_rarity):
+            rarity = floor_rarity                             # D-066: starsteel gear is at least rare
         var kinds: Array = ItemDefs.CRAFTABLE[String(r["item"])]
-        var it := ItemGen.generate(rr, _next_uid(), 1 + best_level + building_level(bid), rarity, String(kinds[rr.randi() % kinds.size()]))
+        var it := ItemGen.generate(rr, _next_uid(), 1 + best_level + building_level(bid) + int(r.get("ilvl_bonus", 0)), rarity, String(kinds[rr.randi() % kinds.size()]))
         stash.append(it)
         (report["events"] as Array).append("The %s forged %s." % [TownTables.info(bid)["name"], ItemDefs.item_label(it)])
 
@@ -1107,6 +1117,44 @@ func unpack_consumable(h: HeroData, res: String) -> String:
 ## loot = resources gathered and dropped during the run (resource -> amount): kept on success and on
 ## escape, lost if the squad was wiped. Success also pays the floor's completion reward (complete_floor)
 ## and completion XP + MVP bonus (ExpeditionResults). Returns everything the results screen shows.
+# --- the Wilds (D-066) ------------------------------------------------------------------------
+
+var wilds_runs: int = 0              # runs in the Wilds (stat only; not saved)
+
+
+func highest_cleared() -> int:
+    var best := 0
+    for k in tower_cleared:
+        if int(tower_cleared[k]) > 0:
+            best = maxi(best, int(k))
+    return best
+
+
+func wilds_tier() -> int:
+    return DungeonDefs.tier_for(highest_cleared())
+
+
+## A brand new Wilds map (never saved: every run is a different place).
+func new_wilds_map(tier: int) -> ProceduralMap:
+    var cfg := DungeonDefs.config(tier)
+    return ProceduralMap.new(int(cfg["width"]), int(cfg["height"]), rng.randi(), -tier)
+
+
+## "" if the squad may enter tower floor `floor_num` now, else why not (D-066: the town gates the climb).
+func floor_block(floor_num: int) -> String:
+    return TowerExpedition.floor_block(floor_num, building_level("town_hall"))
+
+
+## End of a Wilds run: what was gathered and dropped is kept when the squad gets out (escaped) and lost
+## if it was wiped. Creature XP is shared as in an escape; there is no completion reward or MVP bonus.
+func finish_wilds(tier: int, outcome: String, loot: Dictionary, entries: Array, kill_xp: int) -> Dictionary:
+    wilds_runs += 1
+    var rep := finish_expedition(0, "failed" if outcome == "failed" else "escaped", loot, entries, kill_xp)
+    rep["outcome"] = outcome
+    rep["tier"] = tier
+    return rep
+
+
 func finish_expedition(floor_num: int, outcome: String, loot: Dictionary, entries: Array, kill_xp: int, mission: String = "") -> Dictionary:
     var rep := {"outcome": outcome, "loot": {}, "lost_loot": {}, "reward": {}, "xp": [], "mvp": "", "mvp_reason": "", "mvp_bonus": 0}
     if outcome == "failed":
@@ -1137,11 +1185,11 @@ func finish_expedition(floor_num: int, outcome: String, loot: Dictionary, entrie
 ## Called when a squad comes back from a floor (won or lost). results = [{"hero": HeroData,
 ## "downed": bool, "poisoned": bool}] for the survivors; died = how many fell. The expedition day
 ## passes in the town with the squad away (D-047), then the squad comes home with its scars.
-func after_expedition(results: Array, floor_num: int, died: int) -> Dictionary:
+func after_expedition(results: Array, floor_num: int, died: int, hours: int = EconomyDefs.HOURS_PER_EXPEDITION) -> Dictionary:
     var ids: Array = []
     for r in results:
         ids.append((r["hero"] as HeroData).id)
-    var rep := TownSim.advance(self, EconomyDefs.HOURS_PER_EXPEDITION, ids)
+    var rep := TownSim.advance(self, hours, ids)
     for r in results:
         var h: HeroData = r["hero"]
         if not heroes.has(h.id):
@@ -1155,7 +1203,7 @@ func after_expedition(results: Array, floor_num: int, died: int) -> Dictionary:
             (rep["events"] as Array).append("%s's wound got infected." % h.hero_name)
         if bool(r.get("poisoned", false)) and rng.randf() < float(ch["poisoned"]) and h.catch_disease("toxin", "poisoned on floor %d" % floor_num):
             (rep["events"] as Array).append("%s still has poison in the blood." % h.hero_name)
-        if floor_num > 0 and floor_num < 10 and rng.randf() < float(ch["forest"]) and h.catch_disease("marsh_fever", "the wet forest of floor %d" % floor_num):
+        if floor_num != 0 and floor_num < 10 and rng.randf() < float(ch["forest"]) and h.catch_disease("marsh_fever", "the wet forest of floor %d" % floor_num):
             (rep["events"] as Array).append("%s came back with marsh fever." % h.hero_name)
         if floor_num >= 5 and rng.randf() < float(ch["deep"]) and h.catch_disease("cave_cough", "the damp air of floor %d" % floor_num):
             (rep["events"] as Array).append("%s has a cough." % h.hero_name)

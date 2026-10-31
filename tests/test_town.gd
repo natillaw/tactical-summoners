@@ -86,8 +86,11 @@ func _init() -> void:
 
     # floor rewards and tower progress
     var gems0: int = g.gems
+    var steel0 := int(g.hq_outputs.get("starsteel", 0))
     var r: Dictionary = g.complete_floor(4)
-    check(int(r["materials"]) == ProgressionDefs.FLOOR_MATERIALS_BASE + 4 * ProgressionDefs.FLOOR_MATERIALS_PER_FLOOR and g.gems == gems0 + 200 and int(g.tower_cleared["4"]) == 1, "completing floor 4 pays and is recorded")
+    check(int(r["materials"]) == 0 and int(r["starsteel"]) > 0 and int(g.hq_outputs["starsteel"]) == steel0 + int(r["starsteel"]) and g.gems == gems0 + 200
+        and int(g.tower_cleared["4"]) == 1, "D-066: completing floor 4 pays gems and starsteel, no town materials, and is recorded")
+    check(TowerExpedition.floor_block(3, 1) != "" and TowerExpedition.floor_block(3, 2) == "" and TowerExpedition.floor_block(1, 1) == "", "D-066: floor 3 needs the Summoner's Hall at level 2")
 
     # save v5 -> v6 migration keeps old facility levels and adds the new buildings
     var v5 := {"version": 5, "gems": 1, "stones": 1, "books": 1, "pity4": 0, "pity5": 0, "pull_count": 0,

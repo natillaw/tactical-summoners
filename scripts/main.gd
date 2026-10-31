@@ -63,7 +63,7 @@ func show_screen(screen: String, arg: int = 0) -> void:
             s = MemorialScreen.new()
             s.back_requested.connect(back)
         "sandbox":
-            s = SandboxScreen.new(arg)          # 0 = training ground, 1-10 = tower floors
+            s = SandboxScreen.new(arg)          # 0 = training ground, 1-10 = tower floors, -tier = the Wilds (D-066)
             s.back_requested.connect(back)
         "hq":
             var hq_screen := HQScreen.new()

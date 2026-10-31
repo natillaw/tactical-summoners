@@ -9,6 +9,10 @@ const MAX_SIM := 30.0 * 60.0          # seconds of game time per attempt
 var ATTEMPTS := int(OS.get_environment("PT_ATTEMPTS")) if OS.get_environment("PT_ATTEMPTS") != "" else 3
 
 var log_lines: Array = []
+const MAX_FARM_RUNS := 12
+const FARM_TIME := 420.0                 # seconds a Wilds run lasts before the bot heads home
+var total_farm_runs := 0
+var _next_floor := 1
 var BLIND := OS.get_environment("PT_BLIND") != ""      # first-time player: knows only what the fog revealed
 ## PT_STYLE=tactical: a thinking player (see _tactical_*). Default "naive": attack whatever is nearest and
 ## let the heroes' autonomy do the rest (no focus, no dodging, no interrupts).
@@ -37,6 +41,20 @@ func _ready() -> void:
         Game.tower_cleared[str(f0)] = 1
     for floor_num in range(from_floor, 6):
         var done := false
+        _next_floor = floor_num
+        # D-066: a floor opens only with the town grown enough; materials come from the Wilds
+        var farm_runs := 0
+        while Game.floor_block(floor_num) != "" and farm_runs < MAX_FARM_RUNS:
+            farm_runs += 1
+            total_farm_runs += 1
+            say("  -> floor %d locked (%s): Wilds run %d" % [floor_num, Game.floor_block(floor_num), farm_runs])
+            _pick_party()
+            await _play_floor(-Game.wilds_tier(), farm_runs)
+            _town_turn("after Wilds run %d" % farm_runs)
+        if Game.floor_block(floor_num) != "":
+            say("!! FLOOR %d STILL LOCKED after %d Wilds runs — stopping" % [floor_num, farm_runs])
+            break
+        say("  floor %d open after %d Wilds runs (town day %d)" % [floor_num, farm_runs, Game.town_day()])
         for attempt in range(1, ATTEMPTS + 1):
             _pick_party()
             var r: Dictionary = await _play_floor(floor_num, attempt)
@@ -44,18 +62,19 @@ func _ready() -> void:
             if r["outcome"] == "SUCCESS":
                 done = true
                 break
-            if floor_num > 1:
-                say("  -> grinding floor %d for experience before retrying" % (floor_num - 1))
-                _pick_party()
-                await _play_floor(floor_num - 1, 0)
-                _town_turn("after grinding")
+            say("  -> Wilds run for experience and materials before retrying")
+            _pick_party()
+            await _play_floor(-Game.wilds_tier(), 0)
+            total_farm_runs += 1
+            _town_turn("after a Wilds run")
             if Game.party_heroes().size() < Game.PARTY_SIZE and Game.heroes.size() < Game.PARTY_SIZE:
                 say("!! fewer than 5 heroes left: cannot field a squad")
                 break
         if not done:
             say("!! FLOOR %d NOT CLEARED after %d attempts — stopping" % [floor_num, ATTEMPTS])
             break
-    say("== FINAL: heroes %d, memorial %d, gems %d, stash %d, cleared %s" % [Game.heroes.size(), Game.memorial.size(), Game.gems, Game.stash.size(), str(Game.tower_cleared)])
+    say("== FINAL: heroes %d, memorial %d, gems %d, stash %d, cleared %s, Wilds runs %d, town day %d" % [Game.heroes.size(), Game.memorial.size(), Game.gems, Game.stash.size(),
+        str(Game.tower_cleared), total_farm_runs, Game.town_day()])
     say("  buildings: %s" % str(Game.town_buildings))
     say("  stock: %s" % str(Game.hq_outputs))
     for h in Game.heroes.values():
@@ -93,8 +112,15 @@ func _town_turn(why: String) -> void:
         for s in h.skills:
             if h.loadout.size() < SkillDefs.MAX_SLOTS and not h.loadout.has(s):
                 h.equip_skill(h.loadout.size(), String(s))
-    # build what we can afford, in order
+    # D-066: when the next tower floor needs a bigger Summoner's Hall, that comes first
+    if Game.floor_block(_next_floor) != "" and Game.construction_block("town_hall") == "":
+        Game.build_or_upgrade("town_hall")
+        say("  build town_hall -> %d for floor %d (materials left %d)" % [Game.building_level("town_hall") + 1, _next_floor, int(Game.hq_outputs.get("materials", 0))])
+    var saving := Game.floor_block(_next_floor) != "" and Game.under_construction("town_hall").is_empty()
+    # build what we can afford, in order (when saving for the Hall, only cheap essentials)
     for bid in BUILD_ORDER:
+        if saving and not bid in ["workshop", "lumber_camp", "mine"]:
+            continue
         if not TownTables.BUILDINGS.has(bid):
             continue
         if Game.construction_block(bid) == "":
@@ -224,6 +250,12 @@ func _goal(sb: SandboxScreen, c: Vector2, skip_targets: Array) -> Vector2:
         "boss":
             if sb.boss != null:
                 goal = sb.boss.position
+        "farm":
+            var best_d := INF
+            for g in sb.nodes:
+                if is_instance_valid(g) and not g.taken and g.position.distance_to(c) < best_d:
+                    best_d = g.position.distance_to(c)
+                    goal = g.position
     return goal
 
 
@@ -461,6 +493,18 @@ func _play_floor(floor_num: int, attempt: int) -> Dictionary:
                             best = h
                     if best != null:
                         best.order_rescue(d)
+        # D-066 Wilds: head home with the haul after a while, when everything is taken, or when hurt
+        if sb.is_wilds() and not retreating:
+            var hurt := 0.0
+            for h in standing:
+                hurt += float(h.hp) / float(h.max_hp)
+            hurt /= float(maxi(1, standing.size()))
+            var left: int = sb.nodes.filter(func(g): return is_instance_valid(g) and not g.taken).size()
+            if t > FARM_TIME or left == 0 or hurt < 0.4 or standing.size() <= 3:
+                retreating = true
+                sb.select_only(standing)
+                sb.retreat_selected()
+                say("  t=%.0fs Wilds: heading home (spots left %d, squad health %.0f%%, standing %d)" % [t, left, hurt * 100.0, standing.size()])
         # retreat when the squad is broken
         if not retreating and standing.size() <= 2 and sb.heroes.size() >= 4:
             retreating = true

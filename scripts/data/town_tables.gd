@@ -50,7 +50,7 @@ const BUILDINGS := {
         "jobs": ["treat"], "slots": 1, "hall": 1, "sick_beds": [0, 2, 3, 4, 5, 6], "desc": "Beds for the sick. A doctor with medicine cures diseases; without one, only rest."},
     "blacksmith": {"name": "Blacksmith", "plot": Rect2i(9, 3, 4, 2), "start": 0, "max": 5, "cost": 40,
         "open": "", "roof": Color(0.55, 0.30, 0.25), "props": ["caz:OutsideFeatures/OutsideFeatures_6_1", "voxel:weaponrack"], "look": {"roof": "tile", "wall": "stone", "tint": Color(0.65, 0.6, 0.6)},
-        "jobs": ["smelt_iron", "forge_weapon", "forge_armor"], "slots": 1, "hall": 0, "desc": "Blacksmiths smelt ore into ingots and forge weapons and armor; quality follows smith and forge level."},
+        "jobs": ["smelt_iron", "forge_weapon", "forge_armor", "forge_fine_weapon", "forge_fine_armor"], "slots": 1, "hall": 0, "desc": "Blacksmiths smelt ore into ingots and forge weapons and armor; quality follows smith and forge level."},
     "workshop": {"name": "Workshop", "plot": Rect2i(21, 3, 3, 2), "start": 0, "max": 5, "cost": 30,
         "open": "", "roof": Color(0.70, 0.55, 0.35), "props": ["caz:OutsideFeatures/OutsideFeatures_4_1", "caz:OutsideFeatures/OutsideFeatures_6_1"], "look": {"roof": "thatch", "wall": "timber", "tint": Color(0.9, 0.85, 0.75)}, "experts": ["occupation.lumberjack", "occupation.miner", "occupation.mason", "occupation.builder", "occupation.engineer", "occupation.blacksmith"],
         "jobs": ["make_materials"], "slots": 2, "hall": 0, "desc": "Carpenters shape wood and stone into building materials."},

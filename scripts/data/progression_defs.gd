@@ -21,19 +21,18 @@ const CONTRIB_LABELS := {"damage": "dealt the most damage", "kills": "struck the
     "objective": "carried the mission", "gathered": "gathered for the town", "tanked": "took the blows for the others"}
 
 # --- floor completion ------------------------------------------------------------------------------
-## Materials paid by a completed floor: BASE + PER_FLOOR x floor. Playtest 2026-10-31 (#11): at 20 + 10 x f
-## the first five floors paid 250 materials in all, while the first ascension alone needs ~240 counting
-## its buildings, so heroes sat at their level cap for days. Now 60 / 80 / 100 / 120 / 140.
-const FLOOR_MATERIALS_BASE := 40
-const FLOOR_MATERIALS_PER_FLOOR := 20
+## D-066: tower floors no longer pay town materials (the Wilds do, DungeonDefs). A first clear pays gems,
+## stones, gear (Game.complete_floor) and the tower-only rarities: starsteel (TOWER_STARSTEEL_BASE + floor/2)
+## and spirit essence (1 + floor/3). The old FLOOR_MATERIALS_* (D-064) are gone.
+const TOWER_STARSTEEL_BASE := 1
 
 # --- ascension (promotion) -----------------------------------------------------------------------
 ## Materials per target star (tower drops make the player explore and hunt specific creatures).
 const ASCENSION_COST := {
     2: {"materials": 30, "hide": 4, "gel": 3, "silk": 2},
-    3: {"materials": 80, "bone": 6, "spore": 4, "venom": 3, "ingot": 2},
-    4: {"materials": 160, "core": 2, "bone": 10, "silk": 6, "ingot": 6},
-    5: {"materials": 300, "core": 5, "venom": 10, "ingot": 12},
+    3: {"materials": 80, "bone": 6, "spore": 4, "venom": 3, "ingot": 2, "essence": 2},
+    4: {"materials": 160, "core": 2, "bone": 10, "silk": 6, "ingot": 6, "essence": 4, "starsteel": 2},
+    5: {"materials": 300, "core": 5, "venom": 10, "ingot": 12, "essence": 8, "starsteel": 5},
 }
 const ASCENSION_BASE := 0.5          # base chance
 const ASCENSION_PER_LUCK := 0.03     # luck 1..10

@@ -110,13 +110,24 @@ func _apply_def(id: String, floor_num: int) -> void:
     on_hit_status = d.get("status", {})
     skills.clear()
     for sid in d.get("skills", []):
-        if EnemyDefs.SKILLS.has(sid) and floor_num >= int(EnemyDefs.SKILLS[sid].get("min_floor", 1)):
+        var skill_floor := floor_num if floor_num >= 0 else DungeonDefs.skill_floor(-floor_num)   # D-066 Wilds tiers
+        if EnemyDefs.SKILLS.has(sid) and skill_floor >= int(EnemyDefs.SKILLS[sid].get("min_floor", 1)):
             skills.append(String(sid))
     if role == "ranged":
         strike_range = EnemyDefs.RANGED_RANGE
         strike_radius = EnemyDefs.RANGED_RADIUS
     elif role == "support":
         strike_range = 34.0
+
+
+## D-066: deeper rooms of the Wilds hold stronger creatures (health and damage times k).
+func scale_stats(k: float) -> void:
+    if is_equal_approx(k, 1.0):
+        return
+    base_max_hp = roundi(float(base_max_hp) * k)
+    max_hp = roundi(float(max_hp) * k)
+    hp = max_hp
+    atk = roundi(float(atk) * k)
 
 
 ## Wakes this creature and its whole encounter (spotted a hero, or one of them was hurt).

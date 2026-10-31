@@ -59,7 +59,7 @@ func _try_generate(rng: RandomNumberGenerator) -> bool:
 		map_grid.append(row)
 
 	# Headquarters (floor_number <= 0) gets a spacious open layout, tower gets multi-room dungeons
-	var is_hq := (floor_number <= 0)
+	var is_hq := (floor_number == 0)              # D-066: negative floor numbers are tiers of the Wilds (rooms, zones)
 	objective_cells.clear()
 	var target_rooms := 1 if is_hq else clampi(10 + floor_number * 2, 12, 30)
 	if gen_version >= 2 and not is_hq:
@@ -296,6 +296,26 @@ func _place_nodes(rooms: Array[Rect2i], map_grid: Array, rng: RandomNumberGenera
 		if cells.is_empty() or resource_nodes.any(func(n): return n["cell"] == cells[0]) or treasure_cells.has(cells[0]):
 			continue
 		resource_nodes.append({"kind": String(bag[rng.randi() % bag.size()]), "cell": cells[0]})
+	# D-066 Wilds: hidden caches of building materials in the deep rooms (danger / objective zones)
+	var deep: Array = room_zones.filter(func(z): return String(z["zone"]) in ["danger", "objective"])
+	var caches := int(cfg.get("caches", 0))
+	tries = 0
+	while caches > 0 and not deep.is_empty() and tries < 40:
+		tries += 1
+		var dz: Dictionary = deep[rng.randi() % deep.size()]
+		var cc := _free_cells(dz["rect"], map_grid, rng, 1)
+		if cc.is_empty() or resource_nodes.any(func(n): return n["cell"] == cc[0]):
+			continue
+		resource_nodes.append({"kind": "cache", "cell": cc[0]})
+		caches -= 1
+
+
+## Room zone of a cell ("" outside every room): the Wilds scale creatures and spots by it.
+func zone_of(cell: Vector2i) -> String:
+	for z in room_zones:
+		if (z["rect"] as Rect2i).has_point(cell):
+			return String(z["zone"])
+	return ""
 
 
 ## A mixed group: a front-liner first, then any creature of the floor, at most one support.
@@ -400,7 +420,7 @@ func _force_fallback_generate(_rng: RandomNumberGenerator) -> void:
 
 	spawn_cells = [Vector2i(3, 3), Vector2i(4, 3), Vector2i(3, 4), Vector2i(4, 4), Vector2i(5, 3)]
 	goal_cell = Vector2i(width - 4, height - 4)
-	if floor_number > 0:
+	if floor_number != 0:
 		enemy_spawn_cells = [Vector2i(width / 2, height / 2), Vector2i(width / 2 + 2, height / 2)]
 		treasure_cells = [Vector2i(width / 3, height / 3)]
 	else:
