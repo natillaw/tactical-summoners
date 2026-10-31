@@ -339,7 +339,7 @@ func _tactical_focus(sb: SandboxScreen, standing: Array, near: Array) -> bool:
             pri = 1
         if pri == 0:
             continue
-        var score := -float(pri) * 1000.0 + e.position.distance_to(_centre(standing))
+        var score: float = -float(pri) * 1000.0 + e.position.distance_to(_centre(standing))
         if score < best:
             best = score
             key = e
