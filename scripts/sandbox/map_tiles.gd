@@ -5,7 +5,7 @@ extends RefCounted
 ## Floor = cobble. Wall = flat top; a wall with floor to its south shows the cliff face instead.
 ## Floor cells under a wall get a soft shadow. Returns null when the art is not installed.
 
-const DIR := "res://assets/pixel/tilesets/pixel-crawler/"
+const DIR := AssetCatalog.PIXEL_CRAWLER_TILES
 const T := 16
 const SUB := 3
 const FLOOR := Vector2i(7, 10)          # Floors_Tiles.png (col, row)

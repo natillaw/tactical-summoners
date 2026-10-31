@@ -4,8 +4,8 @@ extends Node2D
 ## buildings drawn live from wall tiles tinted per building, voxel props at the doors, names and levels.
 ## Every texture is optional: without the art it falls back to flat colours.
 
-const TILE_DIR := "res://assets/pixel/tilesets/pixel-crawler/"
-const PROP_DIR := "res://assets/packs/voxel-dungeon-pack-full/props/frames/"
+const TILE_DIR := AssetCatalog.PIXEL_CRAWLER_TILES
+const PROP_DIR := AssetCatalog.VOXEL_PROPS
 const T := 16
 const GRASS := Vector2i(2, 10)
 const COBBLE := Vector2i(7, 10)

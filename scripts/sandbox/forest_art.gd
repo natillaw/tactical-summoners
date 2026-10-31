@@ -4,7 +4,7 @@ extends RefCounted
 ## dirt trails in the narrow corridors, and the solid cells as a dense wall of trees.
 ## Ground tiles come from Pixel Crawler; trees, bushes, rocks and flowers from ProcArt.
 
-const TILE_DIR := "res://assets/pixel/tilesets/pixel-crawler/"
+const TILE_DIR := AssetCatalog.PIXEL_CRAWLER_TILES
 const T := 16
 const GRASS := [Vector2i(2, 10), Vector2i(3, 10)]
 const DIRT := Vector2i(12, 10)

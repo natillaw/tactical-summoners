@@ -4,7 +4,7 @@ extends RefCounted
 ## Every layer is a 576x384 sheet = 12 columns x 8 rows of 48x48 frames, all aligned,
 ## so layers can simply be alpha-blended on top of each other.
 
-const ROOT := "res://assets/sprites/"
+const ROOT := AssetCatalog.HERO_LAYERS
 const FRAME := 48
 const COLS := 12
 const ROWS := 8

@@ -3,7 +3,7 @@ extends RefCounted
 ## Helper to generate SpriteFrames and play animated combat VFX from SpritePilot packs.
 ## Packs are unpacked as assets/packs/<pack>/<pack>/<size>/<file> (F-012: the folder is nested).
 
-const BASE_DIR := "res://assets/packs/"
+const BASE_DIR := AssetCatalog.PACKS
 static var _cache: Dictionary = {}
 
 

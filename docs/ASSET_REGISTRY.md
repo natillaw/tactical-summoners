@@ -57,3 +57,23 @@ La red de la sesión en la nube no permite itch.io ni OpenGameArt, así que el d
 | 5 | Pixel Village (fin-nio) | 6 casas y 3 árboles (tiles de 8×8) | https://fin-nio.itch.io/pixel-village | Uso comercial y no comercial permitido |
 | — | The Fantasy Tileset (Ventilatore) | 7 árboles × 5 colores y 6 casas con puertas animadas | https://ventilatore.itch.io/the-fantasy-tileset | Precio y licencia sin confirmar |
 Hasta que lleguen, árboles, arbustos, rocas, flores, casas y el pozo se dibujan por código (`scripts/sandbox/proc_art.gd`).
+
+## Packs del prompt de UI y arte (D-063, 2026-10-31)
+Importados con `tools/import_packs.py` (solo los archivos usados; los zips crudos quedan en `assets/source_packs/`, fuera de git). Registro en `assets/ASSET_REGISTRY.json` → `assets/CREDITS.md`.
+
+| Pack | Ruta | Uso | Licencia | Estado |
+|---|---|---|---|---|
+| Ninja Adventure (pixel-boy & AAA) | `assets/pixel/{enemies,bosses,fx}/ninja/`, `assets/audio/sfx/ninja/` | Criaturas de los pisos 1-10, jefes de los pisos 5 y 10, FX, SFX | CC0 | Importado |
+| Tiny RPG Dragon Regalia GUI | `assets/pixel/ui/dragon_regalia/` | Botones, cabeceras, pestañas, marcos de equipo, marco ornamental | CC0 | Importado |
+| Kit propio (`ts_generated_kit`) | `assets/pixel/ui/ts_kit/` | Paneles, barras, retratos, rareza, invocación, marcadores del mundo, iconos de órdenes, recursos y social | Propio | Importado |
+| Free RPG Skill Icons (KURAI) | `assets/pixel/icons/kurai_skills/` | Iconos de habilidad | Uso comercial sí; no revender ni redistribuir | Importado |
+| MV Icons Complete Sheet (Caz) | `assets/pixel/icons/caz_mv/` | Iconos de objetos y equipo | CC BY 4.0 (acreditar a Caz) | Importado |
+| Raven Fantasy Icons | `assets/pixel/icons/raven/` | Complemento de iconos | Licencia en poder del dueño (D-063) | Importado |
+| Kenney Interface Sounds | `assets/audio/ui/kenney/` | Sonidos de UI | CC0 | Importado |
+| xDeviruchi 8-bit Fantasy & Adventure Music | `assets/audio/music/xdeviruchi/` | 7 pistas en OGG (título, pueblo, exploración, mazmorra, batalla, jefe, resultados) | CC BY-SA 4.0 (acreditar) | Importado |
+| m5x7 / m6x11 (Daniel Linssen) | `assets/fonts/` | Texto / títulos | m5x7 CC0; m6x11 licencia en poder del dueño | Importado |
+| Enemy_Animations_Set | `assets/pixel/enemies/enemy_animations_set/` | Esqueletos del campo de entrenamiento | Licencia en poder del dueño | Importado |
+| 2D Pixel Dungeon v2.0 (Pixel_Poem) | `assets/pixel/tilesets/pixel_dungeon/` | Preparado para el bioma de mazmorra | Licencia en poder del dueño | Importado (sin uso todavía) |
+| Cute_Fantasy_Free | — | — | **Solo uso no comercial** | **No usar** |
+| items.zip / items_sheet.png | — | — | Desconocida | **No usar** hasta conocer el origen |
+| pumpkin_dude.png (0x72) | — | — | CC0 | Sobra (pack incompleto) |
