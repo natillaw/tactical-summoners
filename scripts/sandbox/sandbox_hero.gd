@@ -822,7 +822,7 @@ func _skill_vfx(id: String, tmode: String, centre: Vector2, radius: float, sk: D
 	var flip := centre.x < position.x
 	for k in fx.get("hit", []):
 		_fx_later(String(k), aim, 1.0, delay, flip)
-	var area_scale := clampf(radius / 40.0, 0.8, 3.0)
+	var area_scale := clampf(radius / 70.0, 0.7, 1.5)     # pixel art blown up too far turns into blocks
 	for k in fx.get("area", []):
 		_fx_later(String(k), centre + Vector2(0, -6), area_scale, delay, false)
 	if tmode == "self_aoe" or tmode == "target_aoe":
