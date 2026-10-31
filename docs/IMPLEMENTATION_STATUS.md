@@ -22,7 +22,7 @@ Leyenda: **I** implementado (sin ejecutar) · **ID** implementado pero defectuos
 | Trust/Obedience/Composure + ledger | P | `hero_data.gd` | Composure no cambia nunca; Trust solo con `ally_fell` −2 (F-019) |
 | Memorias, relaciones | P | `hero_data.gd`, `game.gd` | Se actualizan en HQ y muertes |
 | Rescate, cooperación, secretos | P | `hero_data.gd` | Solo se llaman desde las pruebas |
-| Profesiones | P | `hero_tables.gd` | Se muestran; no tienen efecto (F-009) |
+| Profesiones (D-049) | I (v9, probado: `hq`, `town`) | `scripts/data/profession_defs.gd`, `HeroData.professions` | 11 profesiones con nivel 0-10 y experiencia, principal + secundaria, pasión de la vida pasada; afectan a la eficiencia, a la calidad de la forja y a quién puede ocupar cada puesto |
 | Guardado atómico v5 + migraciones v1→v5 + `.bak` | I | `scripts/autoload/game.gd` | Los pisos se guardan como semilla (F-014) |
 | Muerte permanente + memorial | I | `Game.record_death`, `scripts/ui/memorial_screen.gd` | — |
 | Mapas: base común `NavMap` (fijo `SandboxMap` + procedural `ProceduralMap`) | I (v2, probado) | `scripts/core/nav_map.gd` | En v1 el sandbox no tenía héroes en Godot 4.7 (F-038) |
@@ -34,9 +34,15 @@ Leyenda: **I** implementado (sin ejecutar) · **ID** implementado pero defectuos
 | 1 habilidad activa por clase (Q) | I | `scripts/sandbox/skill_tables.gd` | La biblioteca D-022 no existe (F-010) |
 | Misiones: 7 tipos por piso + relicario en entrenamiento (D-034) | I (v5, probado: `smoke_tower` cubre los 7 tipos) | `sandbox_screen.gd` | Relicario en `map.relic_cell`, extracción en `map.extract_cell` (F-003/F-013 reparados) |
 | Torre pisos 1-10 + mapa procedural (bosque, D-031) | I (v4, probado: `smoke_tower` pisos 1/5/10 + capturas 1-5) | `scripts/core/tower_expedition.gd`, `procedural_map.gd` | F-002 reparado. Falta selector de piso en la UI y misiones por tipo (F-020) |
-| **Pueblo (pantalla inicial, D-030)** | I (v3, probado: `test_town`, `boot`, `tower` + capturas) | `scripts/ui/town_screen.gd`, `scripts/sandbox/town_*.gd`, `scripts/data/town_tables.gd` | 14 edificios con niveles; construir/mejorar con materiales; producción × nivel; save v6. Herrería/alquimia sin efecto hasta P-19/P-20 |
-| HQ (pantalla de asignación, desde el Ayuntamiento) | I | `scripts/ui/hq_screen.gd` | Producción depende del nivel del edificio |
-| HQ explorable | P (v2, probado: se construye sin errores) | `scripts/sandbox/hq_world.gd` | F-001 reparado (en v1 era error en ejecución; el juego sí arrancaba). Sin decorado (P-04) |
+| **Pueblo (pantalla inicial, D-030)** | I (v9, probado: `town`, `hq`, `boot`, `tower` + capturas 01–01f) | `scripts/ui/town_screen.gd`, `scripts/sandbox/town_*.gd`, `scripts/data/town_tables.gd` | 20 edificios en un mapa de 44×26; paneles por edificio (trabajadores, trabajo, camas, pacientes, almacén, obras, registro); "!" rojo con el motivo cuando un edificio no produce; mover edificios (D-050); los héroes representan su estado de simulación |
+| **Simulación del pueblo (D-047)** | I (v9, probado: `hq`, determinista y con rendimiento medido) | `scripts/core/town_sim.gd`, `scripts/data/economy_defs.gd`, `Game.pass_time/town_tick/after_expedition` | Por horas e independiente de las escenas: necesidades, trabajo y recetas, obras, hospital, curso de las enfermedades, contagio, taberna. 40 héroes × 240 h en < 4 s |
+| Construcción (D-048) y Salón del Invocador | I (v9, probado: `town`, `hq`, `tower`) | `Game.build_or_upgrade/construction_block` | Obras por constructores con tiempo; techo de nivel del Salón; desbloqueos con el Salón de nivel 2. **Sin demolición** |
+| Camas y población | I (v9, probado: `hq`, `procedural`) | `Game.assign_beds/max_hero_capacity/housing_block` | La capacidad son camas reales; la invocación explica el bloqueo; nadie se elimina |
+| Hospital y enfermedades | I (v9, probado: `hq`) | `EconomyDefs.DISEASES`, `TownSim._treat` | 5 enfermedades que bajan atributos; médico + medicina; camas limitadas; contagio solo de la tos |
+| Taberna y relaciones del trabajo | I (v9, probado: `hq`) | `TownSim._socialize/_teamwork` | Estrés, vínculos y discusiones según rasgos; amigos y rivales cambian la eficiencia |
+| Equipo, botín y forja (D-039) | I (v9, probado: `items`, `skills`, `hq`) | `scripts/data/item_defs.gd`, `scripts/core/item_gen.gd`, `Game.stash/equip/salvage` | 6 rarezas, afijos, 5 únicos + mítico, 2 sets; poderes en combate; bolsa de pociones y antídotos. **Sin durabilidad** |
+| Salón de investigación | No existe | — | Pendiente (Q-07) |
+| HQ (pantalla de asignación, desde el Salón) | I (v9) | `scripts/ui/hq_screen.gd` | Usa las mismas reglas (`assign_work`, un día por turno). Duplica en parte el panel del Salón |
 | Animaciones en código (D-020) | I | `scripts/sandbox/hero_anim.gd`, `sprite_composer.gd` | No verificadas visualmente |
 | Sprites de enemigos y tiles (Pixel Crawler) | I | `enemy_sprites.gd`, `map_tiles.gd` | — |
 | VFX de combate | I (v3) | `combat_vfx.gd` | F-012 reparado; efectos SpritePilot en ataques, habilidades y golpes enemigos |

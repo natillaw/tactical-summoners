@@ -29,6 +29,10 @@ func _ready() -> void:
     if town != null:
         town.call("select_building", "tower_gate")
         await _shot("01b_town_tower_gate", 0.5)
+        town.call("select_building", "town_hall")
+        await _shot("01e_town_hall_panel", 0.5)
+        town.call("select_building", "blacksmith")
+        await _shot("01f_town_blacksmith_panel", 0.5)
         town.call("select_building", "")
         var th_list: Array = town.get("heroes")
         if not th_list.is_empty():
