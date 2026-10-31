@@ -12,12 +12,20 @@ func _init(m: NavMap = null) -> void:
 	map = m
 
 
+## Master prompt I: tower floors held by the bandits show their camps.
+static func has_camps(m: NavMap) -> bool:
+	if not (m is ProceduralMap) or (m as ProceduralMap).floor_number <= 0:
+		return false
+	var foes: Array = TowerExpedition.get_floor_config((m as ProceduralMap).floor_number).get("foes", [])
+	return foes.any(func(id): return BanditArt.has(String(id)))
+
+
 func _draw() -> void:
 	if map == null:
 		return
 	if not _tried:
 		_tried = true
-		_baked = ForestArt.bake(map, (map as ProceduralMap).seed_value) if map is ProceduralMap else MapTiles.bake(map)
+		_baked = ForestArt.bake(map, (map as ProceduralMap).seed_value, has_camps(map)) if map is ProceduralMap else MapTiles.bake(map)
 	if _baked != null:
 		draw_texture(_baked, Vector2.ZERO)
 	else:
