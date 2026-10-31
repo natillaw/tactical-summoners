@@ -55,3 +55,28 @@ static func get_entry_line(hero: HeroData) -> String:
             var lines: Array = ENTRY_LINES[t]
             return String(lines[randi() % lines.size()])
     return String(DEFAULT_ENTRY[randi() % DEFAULT_ENTRY.size()])
+
+
+## Short lines heroes say to each other while living in the town (visual only).
+const TOWN_LINES := {
+    "trait.brave": ["Next floor, I lead the way.", "Anyone up for sparring?"],
+    "trait.cautious": ["Did you check your gear twice?", "Quiet days are the best days."],
+    "trait.greedy": ["Heard the tower hides gold...", "Who owes me coins again?"],
+    "trait.arrogant": ["Watch and learn.", "This town needs a statue. Of me."],
+    "trait.gloomy": ["The forest was too quiet.", "Enjoy the sun while it lasts."],
+    "trait.cheerful": ["What a lovely day!", "Let's grab food at the tavern!"],
+    "trait.hot_headed": ["I'm bored. Where's the fight?", "Those goblins won't know what hit them."],
+    "trait.kind": ["Are you hurt? Let me see.", "Rest well, friend."],
+    "trait.curious": ["What's behind the tower gate?", "I found a strange mushroom!"],
+    "trait.lazy": ["Five more minutes...", "Is it lunch yet?"],
+}
+const TOWN_DEFAULT := ["Nice weather.", "How was the last floor?", "I could use a drink.", "The blacksmith is busy today."]
+
+
+static func town_line(hero: HeroData, rng: RandomNumberGenerator) -> String:
+    var options: Array = []
+    for t in hero.traits:
+        options.append_array(TOWN_LINES.get(t, []))
+    if options.is_empty() or rng.randf() < 0.3:
+        options = TOWN_DEFAULT
+    return String(options[rng.randi() % options.size()])

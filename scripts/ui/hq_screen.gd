@@ -27,7 +27,7 @@ func _ready() -> void:
 	header.add_child(spacer)
 	_res_label = UIKit.label("", 18, UIKit.ACCENT)
 	header.add_child(_res_label)
-	header.add_child(UIKit.button("Explore Base", func(): explore_requested.emit(), Vector2(130, 40)))
+	header.add_child(UIKit.button("To the town", func(): explore_requested.emit(), Vector2(130, 40)))
 	header.add_child(UIKit.button("Process HQ Turn", _on_process_turn, Vector2(170, 40)))
 	root.add_child(header)
 
@@ -36,12 +36,12 @@ func _ready() -> void:
 
 	var body := HBoxContainer.new()
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	body.add_theme_constant_override("separation", 20)
+	body.add_theme_constant_override("separation", 10)  # px
 	root.add_child(body)
 
 	# Left: Facilities
 	var left_panel := PanelContainer.new()
-	left_panel.custom_minimum_size = Vector2(500, 0)
+	left_panel.custom_minimum_size = Vector2(250, 0)  # px
 	left_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	body.add_child(left_panel)
 	var lscroll := ScrollContainer.new()
@@ -49,7 +49,7 @@ func _ready() -> void:
 	left_panel.add_child(lscroll)
 	_facility_container = VBoxContainer.new()
 	_facility_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_facility_container.add_theme_constant_override("separation", 15)
+	_facility_container.add_theme_constant_override("separation", 8)  # px
 	lscroll.add_child(_facility_container)
 
 	# Right: Unassigned / All Roster
@@ -62,7 +62,7 @@ func _ready() -> void:
 	right_panel.add_child(rscroll)
 	_roster_container = VBoxContainer.new()
 	_roster_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_roster_container.add_theme_constant_override("separation", 10)
+	_roster_container.add_theme_constant_override("separation", 5)  # px
 	rscroll.add_child(_roster_container)
 
 	Game.changed.connect(_rebuild)
@@ -84,12 +84,12 @@ func _rebuild() -> void:
 	for c in _roster_container.get_children():
 		c.queue_free()
 
-	var facilities := [
-		{"id": "kitchen", "name": "Kitchen", "desc": "Produces food & provisions (Chef / Farmer bonus)."},
-		{"id": "workshop", "name": "Workshop", "desc": "Produces materials & gear upkeep (Blacksmith / Builder bonus)."},
-		{"id": "infirmary", "name": "Infirmary", "desc": "Produces medicine & recovery (Medic / Apothecary bonus)."},
-		{"id": "common", "name": "Common Room", "desc": "Socializing & relationship building."},
-	]
+	# every built workplace (TownTables) + the construction crew (D-048); same data as the town panels
+	var facilities: Array = [{"id": "construction", "name": "Construction crew", "desc": "Builders raise and upgrade buildings (needs the Builder profession)."}]
+	for bid in TownTables.ids():
+		if TownTables.worker_slots(bid, Game.building_level(bid)) > 0:
+			facilities.append({"id": bid, "name": "%s (%d/%d)" % [TownTables.info(bid)["name"], Game.workers_at(bid).size(), TownTables.worker_slots(bid, Game.building_level(bid))],
+				"desc": "Needs: %s. %s" % [ProfessionDefs.info(Game.workplace_prof(bid)).get("name", "-"), TownTables.info(bid)["desc"]]})
 
 	for fac in facilities:
 		var fid: String = fac["id"]
@@ -104,7 +104,8 @@ func _rebuild() -> void:
 			if h.hq_assignment == fid:
 				has_workers = true
 				var row := HBoxContainer.new()
-				var name_lbl := UIKit.label("• %s (%s)" % [h.display_name(), h.profession if h.profession != "" else "Citizen"], 15, UIKit.ACCENT)
+				var prof := Game.workplace_prof(fid)
+				var name_lbl := UIKit.label("• %s (%s Lv %d, %s)" % [h.display_name(), ProfessionDefs.info(prof).get("name", prof), h.prof_level(prof), h.activity_state], 15, UIKit.ACCENT)
 				row.add_child(name_lbl)
 				var sp := Control.new()
 				sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -118,8 +119,10 @@ func _rebuild() -> void:
 
 		# Facility target button for selected hero
 		var assign_here := UIKit.button("Assign Selected Here", func(): 
-			if _selected_hero_id != "":
-				Game.assign_hq(_selected_hero_id, fid)
+			if _selected_hero_id != "" and Game.heroes.has(_selected_hero_id):
+				var why := Game.assign_work(Game.heroes[_selected_hero_id], fid)
+				_status_label.text = ("Assigned." if why == "" else "Cannot assign: " + why)
+				_rebuild()
 		, Vector2(180, 35))
 		fbox.add_child(assign_here)
 
@@ -148,7 +151,9 @@ func _rebuild() -> void:
 
 func _on_process_turn() -> void:
 	var summary: Dictionary = Game.process_headquarters_turn()
-	_status_label.text = "HQ Turn Processed! Produced +%d Food, +%d Materials, +%d Medicine across %d facility actions." % [
-		summary["food_produced"], summary["materials_produced"], summary["medicine_produced"], summary["events"]
-	]
+	var parts: Array = []
+	for k in summary:
+		if String(k).ends_with("_produced"):
+			parts.append("+%d %s" % [int(summary[k]), String(k).trim_suffix("_produced")])
+	_status_label.text = "A day passed (%s). Produced: %s. Events: %d (see the Summoner's Hall log)." % [Game.town_time_text(), ", ".join(parts) if not parts.is_empty() else "nothing", int(summary.get("events", 0))]
 	_rebuild()

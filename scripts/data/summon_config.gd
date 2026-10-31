@@ -5,6 +5,11 @@ extends RefCounted
 ## Rates are percentages and must sum to 100 (validate() checks it, Game refuses a bad banner).
 
 const DEFAULT_BANNER := "standard"
+## The ten free summons of a new account: early-game odds (1-star common, 2-star sometimes, 3-star very
+## rare), no 4-5 stars. Viability and a guaranteed builder are enforced by Game.starter_summons().
+const STARTER_BANNER := "starter"
+const STARTER_COUNT := 10
+const STARTER_MIN_FIGHTERS := 4      # at least this many combat classes among the ten
 const LOG_CAP := 200   # how many past summons are kept in the save (reproducibility log)
 
 const BANNERS := {
@@ -18,6 +23,17 @@ const BANNERS := {
         "cost_single": 10,
         "multi_count": 10,
         "cost_multi": 100,
+    },
+    "starter": {
+        "name": "First Summoning",
+        "version": 1,
+        "currency": "gems",
+        "rates": [72.0, 26.0, 2.0, 0.0, 0.0],
+        "pity4": 9999,      # no pity on the free summons (they never touch the account's pity either)
+        "pity5": 9999,
+        "cost_single": 0,
+        "multi_count": 10,
+        "cost_multi": 0,
     },
 }
 

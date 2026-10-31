@@ -24,7 +24,7 @@ func _ready() -> void:
     add_child(m)
     UIKit.fill(m)
     var vb := VBoxContainer.new()
-    vb.add_theme_constant_override("separation", 10)
+    vb.add_theme_constant_override("separation", 5)  # px
     m.add_child(vb)
     var top := HBoxContainer.new()
     vb.add_child(top)
@@ -35,7 +35,7 @@ func _ready() -> void:
     vb.add_child(scroll)
     var list := VBoxContainer.new()
     list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    list.add_theme_constant_override("separation", 12)
+    list.add_theme_constant_override("separation", 6)  # px
     scroll.add_child(list)
     if Game.memorial.is_empty():
         list.add_child(UIKit.label("No hero has fallen yet.", 16, UIKit.MUTED))
@@ -43,5 +43,5 @@ func _ready() -> void:
     for i in range(Game.memorial.size() - 1, -1, -1):        # newest first
         var l := UIKit.label(entry_text(Game.memorial[i]), 15, UIKit.TEXT)
         l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-        l.custom_minimum_size = Vector2(700, 0)
+        l.custom_minimum_size = Vector2(350, 0)  # px
         list.add_child(l)

@@ -63,6 +63,23 @@ const CLASSES := {
         "desc": "Master of arcane destruction and elemental magic.",
         "base": {"hp": 70, "atk": 3, "mag": 17, "def": 4, "spd": 9}},
 }
+## D-035: attribute profile per class. attrs/growth order = ATTR_KEYS (FUE, AGI, VIT, INT, TEM).
+## weapon/focus = flat physical/magic power of the class kit until real equipment exists (D-039);
+## armor/mres = flat class defences; kind = damage type of the basic attack. Tuning placeholders.
+const ATTR_KEYS := ["fue", "agi", "vit", "int", "tem"]
+const ATTR_NAMES := {"fue": "FUE", "agi": "AGI", "vit": "VIT", "int": "INT", "tem": "TEM"}
+## legacy stat key each attribute inherits its personal variance / trait modifier from
+const ATTR_LEGACY := {"fue": "atk", "agi": "spd", "vit": "hp", "int": "mag", "tem": "def"}
+const CLASS_COMBAT := {
+    "class.none": {"attrs": [4, 4, 5, 3, 4], "growth": [0.5, 0.5, 0.5, 0.4, 0.4], "weapon": 2, "focus": 1, "armor": 1, "mres": 0, "kind": "physical"},
+    "class.commoner": {"attrs": [5, 5, 6, 3, 5], "growth": [0.6, 0.6, 0.7, 0.3, 0.5], "weapon": 3, "focus": 1, "armor": 2, "mres": 0, "kind": "physical"},
+    "class.warrior": {"attrs": [8, 4, 9, 2, 6], "growth": [1.0, 0.4, 1.1, 0.2, 0.6], "weapon": 6, "focus": 0, "armor": 6, "mres": 1, "kind": "physical"},
+    "class.rogue": {"attrs": [6, 9, 5, 3, 4], "growth": [0.8, 1.1, 0.6, 0.3, 0.4], "weapon": 5, "focus": 0, "armor": 1, "mres": 0, "kind": "physical"},
+    "class.ranger": {"attrs": [6, 8, 5, 4, 5], "growth": [0.8, 1.0, 0.6, 0.4, 0.5], "weapon": 5, "focus": 1, "armor": 1, "mres": 1, "kind": "physical"},
+    "class.cleric": {"attrs": [4, 4, 7, 7, 8], "growth": [0.4, 0.4, 0.8, 0.9, 1.0], "weapon": 2, "focus": 5, "armor": 3, "mres": 3, "kind": "magical"},
+    "class.mage": {"attrs": [2, 5, 4, 10, 6], "growth": [0.2, 0.5, 0.5, 1.2, 0.7], "weapon": 1, "focus": 6, "armor": 0, "mres": 2, "kind": "magical"},
+}
+
 const BIRTH_CLASS_WEIGHTS := {
     "class.commoner": 35, "class.warrior": 15, "class.rogue": 15, "class.ranger": 15, "class.cleric": 10, "class.mage": 10,
 }
@@ -161,6 +178,21 @@ const EPITHETS_5 := ["the Radiant", "Dawnbringer", "the Undying", "Stormcaller",
 
 ## Obedience (command discipline) modifier per trait. Separate from Trust on purpose
 ## (spec sec 7): the trait "loyalty" field above is the TRUST modifier. Placeholders.
+## Expedition temperament (D-056 autonomy): how far a trait pushes the hero toward risk. The sum over the
+## hero's traits (clamped -3..3) sets how far it strays from the driven hero, how far it chases, and when
+## it falls back hurt. Curious heroes (and scout classes) explore the fog nearby when nothing happens.
+const AGGRESSION := {
+    "trait.brave": 1, "trait.reckless": 2, "trait.hot_headed": 1, "trait.arrogant": 1,
+    "trait.cautious": -2, "trait.gloomy": -1, "trait.lazy": -1, "trait.loyal": -1,
+}
+const EXPLORER_TRAITS := ["trait.curious"]
+const LEASH_BASE := 150.0
+const LEASH_PER_AGGRESSION := 50.0
+const CHASE_PER_AGGRESSION := 30.0
+const FALLBACK_HP := 0.35              # falls back below this HP fraction (cautious earlier, reckless later)
+const FALLBACK_PER_AGGRESSION := 0.08
+
+
 const OBEDIENCE_MODS := {
     "trait.brave": 3, "trait.cautious": 5, "trait.greedy": -6, "trait.loyal": 8,
     "trait.arrogant": -10, "trait.kind": 2, "trait.reckless": -8, "trait.stoic": 6,

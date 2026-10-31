@@ -52,14 +52,14 @@ func _ready() -> void:
     vb.add_child(center)
     _grid = GridContainer.new()
     _grid.columns = 5
-    _grid.add_theme_constant_override("h_separation", 12)
-    _grid.add_theme_constant_override("v_separation", 12)
+    _grid.add_theme_constant_override("h_separation", 6)  # px
+    _grid.add_theme_constant_override("v_separation", 6)  # px
     center.add_child(_grid)
 
     _result = UIKit.label("", 15, UIKit.TEXT)
     _result.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     _result.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    _result.custom_minimum_size = Vector2(900, 0)
+    _result.custom_minimum_size = Vector2(450, 0)  # px
     vb.add_child(_result)
 
     _flash = ColorRect.new()
@@ -73,8 +73,8 @@ func _ready() -> void:
 
 
 func _refresh() -> void:
-    _pity.text = "4-star or better guaranteed in %d pulls   |   5-star guaranteed in %d pulls   |   Gems: %d" % [
-        int(_banner["pity4"]) - Game.pity4, int(_banner["pity5"]) - Game.pity5, Game.gems]
+    _pity.text = "4-star or better guaranteed in %d pulls   |   5-star guaranteed in %d pulls   |   Gems: %d   |   Beds free: %d" % [
+        int(_banner["pity4"]) - Game.pity4, int(_banner["pity5"]) - Game.pity5, Game.gems, maxi(0, Game.max_hero_capacity() - Game.heroes.size())]
     _btn1.disabled = _busy or Game.gems < SummonConfig.cost_for(_banner, 1)
     _btn10.disabled = _busy or Game.gems < SummonConfig.cost_for(_banner, int(_banner["multi_count"]))
 
@@ -84,24 +84,22 @@ func _pull(n: int) -> void:
         return
     var results: Array = Game.pull(n)
     if results.is_empty():
-        _msg.text = "Not enough gems."
+        var why := Game.housing_block(n)
+        _msg.text = ("Cannot summon: " + why) if why != "" else "Not enough gems."
         return
     _msg.text = ""
     _busy = true
     _refresh()
     for c in _grid.get_children():
         c.queue_free()
-    var cards: Array = []
+    # D-063: the kit reveal (circle -> beam -> card -> hero), skippable, summary grid at the end
+    var reveal := SummonReveal.new(results)
+    add_child(reveal)
+    await reveal.finished
+    if not is_inside_tree():
+        return
     for h in results:
-        var card := HeroCard.new(h)
-        card.modulate.a = 0.0
-        _grid.add_child(card)
-        cards.append(card)
-    await get_tree().process_frame
-    for i in cards.size():
-        if not is_inside_tree():
-            return
-        await _reveal(cards[i], results[i])
+        _grid.add_child(HeroCard.new(h))
     _busy = false
     _show_result(results)
     _refresh()

@@ -29,7 +29,11 @@ func _ready() -> void:
         for id in EnemySprites.IDS:
             var f := EnemySprites.build_frames(id)
             check(f != null and f.has_animation("idle") and f.has_animation("run") and f.has_animation("death"), "%s has idle/run/death" % id)
-            if f != null:
+            if f != null and EnemySprites.has_processed(id):
+                # D-063: drawn from the Enemy Animations Set strips (complete idle / move / attack / hurt / death)
+                check(f.get_frame_count("idle") >= 4 and f.get_frame_count("run") >= 6 and f.get_frame_count("death") >= 6
+                    and f.has_animation("attack") and f.has_animation("hurt"), "%s frame counts (new strips: idle, run, death, attack, hurt)" % id)
+            elif f != null:
                 check(f.get_frame_count("idle") == 4 and f.get_frame_count("run") == 6 and f.get_frame_count("death") >= 6, "%s frame counts (4 idle, 6 run, >=6 death)" % id)
         var foe: SandboxEnemy = sb.enemies[0]
         check(foe._sprite != null and foe.type_id == "orc", "spawned enemy uses the mob sprite")
