@@ -17,11 +17,19 @@ Las pruebas automáticas se ejecutan en GitHub (Godot 4.7.1 Linux) con cada push
 | **v9** | `6558c35` | [ZIP](https://github.com/natillaw/tactical-summoners/archive/6558c35.zip) | **Cuartel general vivo:** reloj del pueblo, profesiones con nivel, trabajo con recetas (granja, tala, mina, cocina, taller, herrería, alquimia), almacén, camas reales, hambre/fatiga/estrés, hospital con médicos y enfermedades, taberna, obras por constructores con techo del Salón, mover edificios; **equipo** con rarezas, afijos, únicos y sets, botín y forja; guardado v9 | **20/20 PASS** — [ejecución](https://github.com/natillaw/tactical-summoners/actions/runs/41150421537) |
 | **v10** | `7bd7712` | [ZIP](https://github.com/natillaw/tactical-summoners/archive/7bd7712.zip) | **Animaciones de combate con los packs:** ataques por arma (tajos, flechas y bolas que vuelan), círculo mágico al lanzar, impactos y áreas propios de cada habilidad, auras de estado, zonas de humo/trampa/santuario, criaturas que atacan y se encogen con sus animaciones reales; arreglo del recorte de criaturas pequeñas y grandes; orcos voxel en los pisos 7-10 | **21/21 PASS** — [ejecución](https://github.com/natillaw/tactical-summoners/actions/runs/41152812930) |
 | **v11** | rama `feat/ui-and-art-unification` | [ZIP de la rama](https://github.com/natillaw/tactical-summoners/archive/refs/heads/feat/ui-and-art-unification.zip) | **UI y arte unificados:** pantalla de título, base 640×360 pixel-perfect, fuentes pixel, paneles y botones del kit, música y sonidos, HUD de expedición con minimapa, menú Esc sin pausa, revelación de invocación, ficha con pestañas, inventario, 8 ranuras de equipo, síntesis y sacrificio, criaturas normalizadas y jefe Grove Warlord (piso 5). Historia de Git nueva (repo v10) | **24/24 PASS** en local (Godot 4.7.2, `tools/last_test_run.txt`) |
+| **v12** | rama `ccr-cb2bbfa2-cg889y` | [ZIP de la rama](https://github.com/natillaw/tactical-summoners/archive/refs/heads/ccr-cb2bbfa2-cg889y.zip) | v11 unido a la historia de `main` + **playtest automático de 5 pisos** y arreglos: héroes atrapados (B1), CI en Linux (B2), minimapa (B3), errores de consola (B4), últimos enemigos marcados (B6), nombre del jefe (B7), pistas repartidas, **pisos ~1,7× más grandes** para una primera partida de 10-15 min. Informe: `docs/reports/PLAYTEST_5_FLOORS_REPORT.md` | **25/25 PASS** — [ejecución](https://github.com/natillaw/tactical-summoners/actions/runs/41224031814) (Godot 4.7.2) |
 
 ## Qué probar a mano en cada versión (en Windows, con el editor o F5)
 ### v1 (estado original, como referencia)
 - Al abrir el Sandbox **no aparecen héroes** y sale un error en la consola (F-038, confirmado en GitHub).
 - "Living Headquarters → Explore Base" da error (F-001).
+
+### v12
+1. Empieza una partida nueva y entra al piso 1 sin mirar nada más: la primera vez debería durar unos 10-15 min explorando con niebla.
+2. Piso 2: las 3 pistas están en salas distintas y alejadas.
+3. Piso 1 o 4: cuando quedan 3 enemigos (o solo emboscados dormidos), aparecen marcados con un cuadrado rojo en el minimapa y el objetivo dice "marked on the map".
+4. Piso 5: el objetivo dice "defeat Grove Warlord".
+5. Mira si el juego va más fluido en tu Ryzen (el minimapa ya no recalcula todo el mapa en cada fotograma).
 
 ### v11
 1. Abre el juego: pantalla de título con el portal. **New game** → bienvenida → la invocación se revela carta a carta (clic salta una, Skip todas) → resumen → Done.

@@ -53,3 +53,18 @@ Rama: `ccr-cb2bbfa2-cg889y` (contenido de `feat/ui-and-art-unification`). Godot 
 - Clics reales en la UI de construcción, del inventario y de la ficha (solo las suites `ui full` y `boot`).
 - FPS en el PC del dueño.
 - Cuánto tarda un jugador humano explorando con niebla.
+
+## Arreglos (2026-10-31, misma rama)
+| # | Arreglo | Commit | Verificación |
+|---|---|---|---|
+| B2 | `.gitattributes` (LF en el repo) y archivos normalizados. El CI se activa en todas las ramas (salvo `ci-screenshots`) y usa Godot 4.7.2. | `95b5de3` | CI de esta rama: **25/25 PASS** ([ejecución 41224031814](https://github.com/natillaw/tactical-summoners/actions/runs/41224031814)), la primera vez que esta rama pasa por el CI. |
+| B1 | `NavMap.seal_unreachable` convierte en muro toda celda a la que no se llega desde la entrada; se aplica al generar y al cargar un snapshot (los pisos guardados se arreglan sin cambiar nada alcanzable). `NavMap.can_step`: un empujón, un dash, una esquiva o el paso de una criatura no puede pasar por una esquina cerrada. | `d166e27`, `1f0db57` | Suite nueva `map safety`. `diag_pockets`: los mapas con bolsillos pasaron de 30/30 a 0/30. `diag_trap`: ya no queda ningún bolsillo donde probar. La primera versión de `can_step` era demasiado estricta y trababa a las criaturas en las curvas (0 de daño recibido en los pisos 1-4); se corrigió en `1f0db57`. |
+| B3 | El terreno del minimapa es una imagen creada una vez por misión. | `d166e27` | `diag_perf` (piso 5): antes 6,6 ms en cada fotograma; ahora 2,9-4,9 ms una sola vez. La niebla solo repinta las celdas que cambian: 1,7 → 0,9-1,0 ms cada 0,15 s. |
+| B4 | Los efectos con retraso usan tweens del propio nodo, que mueren con él. | `d166e27` | 0 líneas `Lambda capture` en 16 cuentas jugadas después del arreglo. |
+| B5 | No se reprodujo en 8 intentos directos al piso 5 tras B1. La causa probable era un punto de recolección dentro de un bolsillo junto a la entrada, sumado a que el bot no lo descartaba. El bot ya descarta puntos inalcanzables. | — | 8/8 intentos con movimiento y combate normales. |
+| B6 (nuevo) | En "Clear the floor", los últimos enemigos podían ser emboscados dormidos, invisibles incluso en salas exploradas, y el piso no se podía terminar. Ahora se marcan en el minimapa cuando quedan 3 o menos, o cuando todos los que quedan están dormidos. | `36c76c5` + siguiente | `map safety`. En el modo a ciegas desaparecieron los bloqueos por emboscados. |
+| B7 (nuevo) | El objetivo del jefe decía "Orc Chieftain" también en el piso 5; ahora nombra al jefe del piso (Grove Warlord). | `36c76c5` | `map safety`. |
+| D4 | Las 3 pistas de exploración van a 3 salas distintas, lo más lejos posible de la entrada y entre sí. | `36c76c5` | `map safety`: 81 celdas de separación mínima en el piso de prueba. |
+| D1 | Pisos 1-10 un ~30 % más grandes por lado (~1,7× el área), con criaturas y puntos de recolección en la misma proporción. | `36c76c5` | Modo a ciegas del bot (`PT_BLIND=1`: solo sabe lo que reveló la niebla), 4 cuentas. Antes: P1 4,5-7 min, P2 6-7, P3 6-7, P4 7-8, P5 3,5-5,5. Después: P1 10-11,5, P2 8-13, P3 9-14, P4 9,5-15, P5 3,5-7. Una persona tardará algo más que el bot. Ir directo en una repetición sigue siendo corto (2-4 min). |
+
+Sin cambiar (decisiones de balance pendientes del dueño): D2, D3, D5-D12.
