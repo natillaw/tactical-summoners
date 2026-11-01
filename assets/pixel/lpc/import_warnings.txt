@@ -1,0 +1,8 @@
+weapon_dagger layer_1: no idle,combat_idle,run,shoot,spellcast (falls back in LpcComposer)
+weapon_dagger layer_2: no idle,combat_idle,run,thrust,shoot,spellcast,hurt (falls back in LpcComposer)
+weapon_arming layer_1: no run,slash,thrust,shoot,spellcast (falls back in LpcComposer)
+weapon_arming layer_2: no run,slash,thrust,shoot,spellcast (falls back in LpcComposer)
+weapon_staff layer_1: no idle,combat_idle,run,slash,shoot (falls back in LpcComposer)
+weapon_staff layer_2: no idle,combat_idle,run,slash,shoot (falls back in LpcComposer)
+weapon_bow layer_1: no idle,combat_idle,walk,run,slash,thrust,spellcast (falls back in LpcComposer)
+weapon_bow layer_2: no idle,combat_idle,walk,run,slash,thrust,spellcast (falls back in LpcComposer)
