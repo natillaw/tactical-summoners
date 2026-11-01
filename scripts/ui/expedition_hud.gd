@@ -285,7 +285,7 @@ class PartyCell extends Control:
         if full != null:
             var at := AtlasTexture.new()
             at.atlas = full
-            at.region = Rect2(16, 10, 15, 15)            # the head of the 48 px frame
+            at.region = SpriteComposer.face_region(h.hero)   # the head (LPC 64 px / TPF 48 px frame)
             _face.texture = at
         add_child(_face)
         _frame = TextureRect.new()

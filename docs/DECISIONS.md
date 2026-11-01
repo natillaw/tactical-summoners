@@ -338,6 +338,14 @@ Rejilla lógica de 32 px. Todo el arte se dibuja a ×1: personajes LPC (frame de
 ### D-073 — Overhaul LPC: atuendo inicial único (D-C, 2026-10-31, aprobado en el prompt del overhaul)
 `LpcWardrobe.STARTER_OUTFIT`: camisa de manga larga `tan`, pantalón `brown`, zapatos básicos `leather` (sin cinturón: la pieza de LPC no trae animaciones). Arma visual por clase en `STARTER_WEAPON_BY_CLASS` (espada arming de acero, daga, bastón simple, arco normal), sin stats. Los héroes usan los cuerpos adultos `male` y `female` (la camisa no existe para `muscular`).
 
+### D-074 — Overhaul LPC: personajes en LPC (D-A) y razas de héroe (D-F) (2026-10-31, prompt del overhaul aprobado por el dueño)
+- Los héroes se dibujan con LPC (`LpcComposer`). Sustituye D-023 para héroes y el "Master prompt H" (ya no todo humano es TPF). Los PNG de Caz no se borran ni se modifican: quedan como respaldo y el aspecto TPF se guarda en `appearance` (legado).
+- `HeroGenerator.VERSION = 4`: `look` LPC desde `hero_seed ^ 0x4C5043`; nombre, clase, rasgos, pasivas y Trust de las semillas viejas no cambian (fixture de 200 semillas). Guardado v13: héroes del roster y del memorial reciben su `look` desde la semilla.
+- Razas de héroe: humano y elfo (`SummonConfig.RACE_WEIGHTS`, **80/20 provisional** hasta que el dueño lo confirme).
+
+### D-075 — Overhaul LPC: estilo de UI (2026-10-31, dueño: "B: CraftPix basic")
+Se adopta el pack CraftPix "basic pixel art UI for RPG" como el único estilo de UI; Dragon Regalia se retira cuando se haga el cambio (fase 6). No se mezclan los dos.
+
 ## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)
 
 | ID | Tema | Lo que existe / origen | Pregunta abierta |

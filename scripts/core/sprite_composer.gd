@@ -91,6 +91,8 @@ static func compose_sheet(appearance: Dictionary) -> Image:
 
 ## Cheap single-pose texture (used by cards and portraits). Cached per hero + animation.
 static func pose_texture(hero: HeroData, anim: String = "idle") -> Texture2D:
+    if uses_lpc(hero):                                     # overhaul LPC (D-A)
+        return LpcComposer.pose_texture_for(hero.look, hero.hero_class)
     var key := hero.id + "/" + anim
     if _tex_cache.has(key):
         return _tex_cache[key]
@@ -103,7 +105,24 @@ static func pose_texture(hero: HeroData, anim: String = "idle") -> Texture2D:
 
 
 ## Full animation set for a hero (used by the battle scene in the next drop).
+## Overhaul LPC (D-A): heroes with an LPC look are drawn by LpcComposer; TPF stays as a fallback.
+static func uses_lpc(hero: HeroData) -> bool:
+    return hero != null and not hero.look.is_empty() and LpcComposer.available()
+
+
+## The face inside a pose_texture() frame (HUD portraits crop it): LPC 64 px or TPF 48 px.
+static func face_region(hero: HeroData) -> Rect2:
+    return Rect2(20, 17, 24, 24) if uses_lpc(hero) else Rect2(16, 10, 15, 15)
+
+
+## Where the feet are, for a centred sprite of this hero (LPC frames are 64 px, TPF 48 px).
+static func feet_offset(hero: HeroData) -> Vector2:
+    return LpcComposer.FEET_OFFSET if uses_lpc(hero) else Vector2(0, -16)
+
+
 static func build_frames(hero: HeroData) -> SpriteFrames:
+    if uses_lpc(hero):
+        return LpcComposer.build_frames_legacy(hero.look, hero.hero_class)
     var key := hero.id + "/sheet"
     var sheet: ImageTexture
     if _tex_cache.has(key):

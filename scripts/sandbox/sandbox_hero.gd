@@ -136,7 +136,7 @@ func _ready() -> void:
 	_setup_skills()
 	_sprite = AnimatedSprite2D.new()
 	_sprite.sprite_frames = SpriteComposer.build_frames(hero)
-	_sprite.offset = Vector2(0, -16)            # feet at the node origin
+	_sprite.offset = SpriteComposer.feet_offset(hero)   # feet at the node origin (LPC 64 px / TPF 48 px)
 	_sprite.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF   # pose tweens run in idle
 	add_child(_sprite)
 	_play("idle_down")

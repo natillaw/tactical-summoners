@@ -11,6 +11,7 @@ var stars: int = 1
 var level: int = 1
 var xp: int = 0
 var hero_class: String = "class.none"
+var look: Dictionary = {}         # overhaul LPC (D-A): race, body, skin, eyes, head, ears, hair, beard (LpcWardrobe)
 var appearance: Dictionary = {}   # layer key -> "Folder/style_color" ("" = layer not used)
 var traits: Array = []            # trait ids
 var passives: Array = []          # passive ids
@@ -470,6 +471,7 @@ func to_dict() -> Dictionary:
         "xp": xp,
         "class": hero_class,
         "appearance": appearance.duplicate(),
+        "look": look.duplicate(),
         "traits": traits.duplicate(),
         "passives": passives.duplicate(),
         "background_id": background_id,
@@ -521,6 +523,9 @@ static func from_dict(d: Dictionary) -> HeroData:
     if not HeroTables.CLASSES.has(h.hero_class):
         h.hero_class = "class.none"
     h.appearance = (d.get("appearance", {}) as Dictionary).duplicate()
+    h.look = (d.get("look", {}) as Dictionary).duplicate()
+    if h.look.is_empty():
+        h.look = HeroGenerator.lpc_look(h.hero_seed)  # TPF heroes become LPC deterministically
     h.traits = (d.get("traits", []) as Array).duplicate()
     h.passives = (d.get("passives", []) as Array).duplicate()
     h.background_id = str(d.get("background_id", ""))

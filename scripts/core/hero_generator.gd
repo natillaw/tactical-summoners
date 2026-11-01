@@ -5,7 +5,7 @@ extends RefCounted
 ## more traits/passives and a higher level cap - all of it procedural.
 
 
-const VERSION := 3   # 1 = Drop A. 2 adds Trust/Obedience/Composure. 3 adds the starting active skill (D-044) and the first profession from the past life (D-049, no new rolls); look/class/traits are unchanged
+const VERSION := 4   # 1 = Drop A. 2 adds Trust/Obedience/Composure. 3 adds the starting active skill (D-044) and the first profession from the past life (D-049, no new rolls); look/class/traits are unchanged
 
 
 static func generate(hero_seed: int, stars: int) -> HeroData:
@@ -17,7 +17,8 @@ static func generate(hero_seed: int, stars: int) -> HeroData:
 	h.stars = clampi(stars, 1, HeroTables.MAX_STARS)
 	var sd: Dictionary = HeroTables.STAR_DATA[h.stars]
 
-	h.appearance = _make_appearance(rng, sd)
+	h.appearance = _make_appearance(rng, sd)       # v3 TPF look: kept as the legacy appearance
+	h.look = lpc_look(hero_seed)
 	h.hero_class = _roll_birth_class(rng, h.stars)
 	h.hero_name = _make_name(rng)
 	if h.stars == 4:
@@ -178,3 +179,21 @@ static func _shuffle(rng: RandomNumberGenerator, arr: Array) -> void:
 		var tmp = arr[i]
 		arr[i] = arr[j]
 		arr[j] = tmp
+
+
+## Overhaul LPC (v4): the LPC look comes from its own RNG (hero_seed ^ 0x4C5043), so name, class,
+## traits, passives and Trust of every old seed stay exactly as they were (tests/test_hero_fixture.gd).
+static func lpc_look(hero_seed: int) -> Dictionary:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hero_seed ^ 0x4C5043
+	var total := 0
+	for r in SummonConfig.RACE_WEIGHTS:
+		total += int(SummonConfig.RACE_WEIGHTS[r])
+	var roll := rng.randi() % maxi(1, total)
+	var race := "human"
+	for r in SummonConfig.RACE_WEIGHTS:
+		roll -= int(SummonConfig.RACE_WEIGHTS[r])
+		if roll < 0:
+			race = String(r)
+			break
+	return LpcWardrobe.random_look(rng, race)

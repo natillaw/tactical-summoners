@@ -5,7 +5,7 @@ extends Node
 signal changed
 
 const DEFAULT_SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 12
+const SAVE_VERSION := 13
 const PARTY_SIZE := 5            # slots 0-2 = front row, slots 3-4 = back row
 const XP_PER_BOOK := 100
 
@@ -1535,6 +1535,15 @@ func _migrate(data: Dictionary) -> Dictionary:
         data["exp_charges"] = ExpeditionDefs.CHARGES_MAX
         data["exp_charge_t"] = 0.0
         data["portal_upgrades"] = {}
+    if v < 13:
+        # v12 -> v13 (overhaul LPC, D-A): every hero and memorial snapshot gets its LPC look from its
+        # seed; the TPF look stays in "appearance" as the legacy one.
+        for hd in data.get("heroes", []):
+            if hd is Dictionary and not (hd as Dictionary).has("look"):
+                hd["look"] = HeroGenerator.lpc_look(int(hd.get("hero_seed", 0)))
+        for m in data.get("memorial", []):
+            if m is Dictionary and m.has("snapshot") and not (m["snapshot"] as Dictionary).has("look"):
+                m["snapshot"]["look"] = HeroGenerator.lpc_look(int(m["snapshot"].get("hero_seed", 0)))
     if v < 12:
         # v11 -> v12 (master prompt D, owner 2026-10-31): the tower changed hands (bandits, new missions,
         # threat budgets). Floors saved before keep their old creatures in the snapshot, so they are
