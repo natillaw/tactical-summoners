@@ -143,6 +143,8 @@ const SKILLS := {
         "dmg_mult": 2.6, "desc": "Falls on the hero furthest away (the backline): move, and do not stack behind."},
     "doom": {"name": "Mark of Doom", "cast": 4.0, "cd": 17.0, "range": 460.0, "target": "doom_hero", "radius": 90.0, "min_floor": 1,
         "follow": true, "dmg_mult": 3.0, "target_mult": 0.5, "desc": "Marks a hero (not the tank); it explodes on everyone near that hero: the marked one must leave the group."},
+    "crimson_wave": {"name": "Crimson Wave", "cast": 1.6, "cd": 0.0, "range": 9999.0, "target": "hero_area", "radius": 80.0, "min_floor": 99,
+        "dmg_mult": 2.4, "desc": "The unshielded Baron strikes at his altar (AltarDefs): hold him, or leave the altar."},
     "blood_ritual": {"name": "Blood Ritual", "cast": 3.0, "cd": 18.0, "range": 0.0, "target": "self_heal", "below": 0.8, "min_floor": 1,
         "heal_self_pct": 0.12, "desc": "Heals itself a lot: interrupt or stun it."},
 }
@@ -155,7 +157,7 @@ const BOSS_SKILLS := {"warlord": ["whirlwind", "meteor", "blood_ritual"],
 const BOSS_HP_MULT := 11
 ## Hard enrage (a DPS check): this many seconds after the boss joins the fight it hits BOSS_ENRAGE_ATK
 ## times harder and winds up faster. A squad that cannot kill it in time (no gear, no focus) is wiped.
-const BOSS_ENRAGE_AFTER := {5: 100.0, 10: 130.0}
+const BOSS_ENRAGE_AFTER := {5: 100.0, 10: 420.0}   # floor 10: the altar is the check; the enrage only ends a stalled fight
 const BOSS_ENRAGE_ATK := 3.0
 const BOSS_ENRAGE_WINDUP := 0.6
 const SCOUT_ALARM_RADIUS := 140.0  # a fleeing lookout raises the alarm on reaching this close to another group
