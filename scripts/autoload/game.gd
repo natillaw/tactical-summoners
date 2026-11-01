@@ -30,7 +30,7 @@ var onboarded: bool = false          # the welcome and the first ten summons hap
 var skill_books: Dictionary = {}     # skill id -> copies owned (D-046)
 var tower_cleared: Dictionary = {}   # floor (str) -> times completed (D-031: every floor is unlocked) # floor_num (str) -> {"seed": int, "width": int, "height": int, "grid_rows": Array}
 # Town simulation state (HQ Phase 1, save v9). Rules live in TownSim / EconomyDefs.
-const START_STOCK := {"materials": 60, "food": 120, "grain": 20, "herb": 6, "wood": 20, "stone": 20, "ore": 6, "ingot": 0,
+const START_STOCK := {"materials": 60, "food": 120, "grain": 20, "herb": 6, "wood": 20, "stone": 20, "ore": 20, "ingot": 0,   # beta: enough ore for a first T1 set
     "medicine": 4, "potion": 2, "antidote": 1}
 var town_clock: int = 8              # town hours since the first day (starts at 08:00)
 var town_seed: int = 1
