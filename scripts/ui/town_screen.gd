@@ -561,6 +561,46 @@ Warning: " + Game.floor_advice(f)
         warn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
         warn.custom_minimum_size = Vector2(150, 0)  # px
         _panel_box.add_child(warn)
+    _add_expedition_buttons()
+    _add_merchant_buttons()
+
+
+## Master prompt C: offline expeditions (idle heroes outside the squad go back to a cleared floor).
+func _add_expedition_buttons() -> void:
+    var now := Time.get_unix_time_from_system()
+    for r in OfflineExpeditions.claim(Game, now):
+        _panel_box.add_child(_wrap("Back from floor %d: %s" % [int(r["floor"]), _res_text(r["loot"])], 12, Color(0.7, 1.0, 0.7)))
+    OfflineExpeditions.refresh_charges(Game, now)
+    _panel_box.add_child(UIKit.label("Offline expeditions  ·  charges %d/%d  ·  away %d" % [Game.exp_charges, OfflineExpeditions.charges_max(Game), Game.expeditions.size()], 13))
+    var idle: Array = Game.heroes.values().filter(func(h): return (h as HeroData).hq_assignment == "" and Game.party_slot_of((h as HeroData).id) < 0)
+    for f in range(1, 11):
+        if int(Game.tower_cleared.get(str(f), 0)) <= 0:
+            continue
+        var n := mini(idle.size(), TowerExpedition.party_max(f))
+        var ids: Array = idle.slice(0, n).map(func(h): return (h as HeroData).id)
+        var floor_num := f
+        var btn := _small_btn("F%d (%d min)" % [f, roundi(float(f) * ExpeditionDefs.MINUTES_PER_FLOOR)], func():
+            var why := OfflineExpeditions.start(Game, floor_num, ids, Time.get_unix_time_from_system())
+            if why != "":
+                UIKit.toast(self, why)
+            Game._commit()
+            rebuild(), 90.0)
+        btn.tooltip_text = OfflineExpeditions.block(Game, f, ids, now)
+        btn.disabled = btn.tooltip_text != ""
+        _panel_box.add_child(btn)
+
+
+## Master prompt B: the merchant's offers of the day.
+func _add_merchant_buttons() -> void:
+    _panel_box.add_child(UIKit.label("Merchant (today)", 13))
+    for i in Game.merchant_offers():
+        var o: Dictionary = MerchantDefs.OFFERS[int(i)]
+        var offer := int(i)
+        _panel_box.add_child(_small_btn("%s -> %s" % [_res_text(o["give"]), _res_text(o["get"])], func():
+            var why := Game.merchant_trade(offer)
+            if why != "":
+                UIKit.toast(self, why)
+            rebuild(), 220.0))
 
 
 # --- input -----------------------------------------------------------------------------
