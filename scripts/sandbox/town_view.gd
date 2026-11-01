@@ -85,6 +85,8 @@ func _load_prop(key: String) -> void:
 
 
 func _bake_ground() -> Texture2D:
+    if BosqueArt.available() and map != null:
+        return _bake_ground_bosque()
     if CazArt.available() and map != null:
         return _bake_ground_caz()
     var floors := _tex(TILE_DIR + "Floors_Tiles.png")
@@ -144,6 +146,35 @@ func _bake_ground() -> Texture2D:
 
 ## Town ground with Caz tiles: grass, cobbled roads, stone plaza with a fountain, dirt plots,
 ## flowers/bushes/rocks on the grass, lamp posts at the crossroads and a ring of Caz trees.
+## Overhaul: the owner's forest tileset for the town too (grass with organic dirt paths and a dirt
+## plaza), decor in clusters and a ring of mixed trees; the fountain and lamps stay (Caz features).
+func _bake_ground_bosque() -> Texture2D:
+    var cell := NavMap.CELL
+    var kind := func(x: int, y: int) -> int:
+        var ch := String(map.ground[y])[x]
+        return 1 if ch in ["p", "B", "w", "d"] else 0
+    var out := BosqueArt.ground_image(map.width, map.height, kind, 7331)
+    var r := RandomNumberGenerator.new()
+    r.seed = 7331
+    for y in map.height:
+        var row: String = map.ground[y]
+        for x in map.width:
+            var o := Vector2i(x, y) * cell
+            if row[x] == "." and r.randf() < 0.07:
+                BosqueArt.decor_cluster(out, o + Vector2i(24, 30), r)
+            elif row[x] == "w":
+                CazArt.blit_feet(out, CazArt.image("ExteriorFeatures/ExteriorFeatures_7_2"), o + Vector2i(24, 46))
+    for c in [Vector2i(9, 8), Vector2i(18, 8), Vector2i(24, 8), Vector2i(9, 12), Vector2i(18, 12), Vector2i(24, 12)]:
+        if map.ground[c.y][c.x] == ".":
+            CazArt.blit_feet(out, CazArt.image("ExteriorFeatures/ExteriorFeatures_1_1"), c * cell + Vector2i(24, 30))
+    for y in range(-1, map.height + 1):                 # the forest around the town
+        for x in range(-1, map.width + 1):
+            if x <= 0 or y <= 0 or x >= map.width - 1 or y >= map.height - 1:
+                for k in 2:
+                    BosqueArt.tree(out, Vector2i(x, y) * cell + Vector2i(r.randi_range(4, 44), r.randi_range(20, 46) - k * 16), r)
+    return ImageTexture.create_from_image(out)
+
+
 func _bake_ground_caz() -> Texture2D:
     var cell := NavMap.CELL
     var out := Image.create(map.width * cell, map.height * cell, false, Image.FORMAT_RGBA8)
