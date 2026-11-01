@@ -5,7 +5,7 @@ extends Node
 signal changed
 
 const DEFAULT_SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 14
+const SAVE_VERSION := 15
 const PARTY_SIZE := 5            # slots 0-2 = front row, slots 3-4 = back row
 const XP_PER_BOOK := 100
 
@@ -954,7 +954,11 @@ func assign_work(h: HeroData, bid: String) -> String:
             elif h.professions.size() >= ProfessionDefs.MAX_KNOWN:
                 last_reason = "already knows %d professions: forget one first" % ProfessionDefs.MAX_KNOWN
             else:
-                h.apprenticeship[prof] = float(h.apprenticeship.get(prof, 0.0))
+                if String(h.aptitude_known.get(prof, "")) == "incompatible":
+                    last_reason = "%s has no talent for this trade" % h.display_name()
+                    return last_reason
+                if not (h.apprenticeship.get(prof) is Dictionary):
+                    h.apprenticeship[prof] = {"hours": 0.0, "progress": 0.0}
                 h.hq_assignment = bid
                 h.add_memory("hq_assign", "Became an apprentice at the %s." % TownTables.info(bid).get("name", bid), "", 2)
         else:
@@ -1641,6 +1645,8 @@ func _migrate(data: Dictionary) -> Dictionary:
         data["exp_charges"] = ExpeditionDefs.CHARGES_MAX
         data["exp_charge_t"] = 0.0
         data["portal_upgrades"] = {}
+    if v < 15:
+        pass                              # v14 -> v15: apprenticeship becomes {hours, progress}; aptitude_known (defaults {})
     if v < 14:
         pass                              # v13 -> v14: heroes gain "apprenticeship" (defaults to {} on load)
     if v < 13:

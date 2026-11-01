@@ -72,7 +72,9 @@ func _initialize() -> void:
     check(g2.heroes.values().any(func(x): return (x as HeroData).knows_prof("blacksmith")), "the first ten summons always bring a smith")
     g2.town_buildings["blacksmith"] = 2
     var smiths: Array = g2.heroes.values().filter(func(x): return (x as HeroData).knows_prof("blacksmith"))
-    var pupil: HeroData = g2.heroes.values().filter(func(x): return not (x as HeroData).knows_prof("blacksmith") and (x as HeroData).professions.size() < ProfessionDefs.MAX_KNOWN)[0]
+    var cands: Array = g2.heroes.values().filter(func(x): return not (x as HeroData).knows_prof("blacksmith") and (x as HeroData).professions.size() < ProfessionDefs.MAX_KNOWN)
+    var good: Array = cands.filter(func(x): return AptitudeDefs.tier(x, "blacksmith") in ["normal", "talented", "prodigy"])
+    var pupil: HeroData = good[0] if not good.is_empty() else cands[0]
     for x in g2.heroes.values():
         (x as HeroData).hq_assignment = ""
     for i in 5:
@@ -86,9 +88,27 @@ func _initialize() -> void:
     g2.hq_outputs["ore"] = 300
     g2.hq_outputs["materials"] = 300
     g2.set_job("blacksmith", "smelt_iron")
-    for d in 8:
+    for d in 14:
         g2.pass_time(24)
-    check(pupil.knows_prof("blacksmith"), "after %d hours beside the master the apprentice is a smith (%s)" % [TownTables.APPRENTICE_HOURS, str(pupil.apprenticeship)])
+    check(pupil.knows_prof("blacksmith") and pupil.aptitude_known.has("blacksmith"), "a %s apprentice beside a master becomes a smith (level %d) and its talent is known" % [AptitudeDefs.tier(pupil, "blacksmith"), pupil.prof_level("blacksmith")])
+    # an incompatible apprentice gives up after a few hours (sampled: some hero is incompatible)
+    var dud := HeroData.new()
+    var k := 0
+    while true:
+        k += 1
+        dud = HeroGenerator.generate(5000 + k, 1)
+        if AptitudeDefs.tier(dud, "blacksmith") == "incompatible" and dud.professions.size() < ProfessionDefs.MAX_KNOWN and not dud.knows_prof("blacksmith"):
+            break
+    g2.heroes[dud.id] = dud
+    check(g2.assign_work(dud, "blacksmith") == "", "an untested hero may try the apprenticeship")
+    for d in 3:
+        g2.pass_time(24)
+    check(dud.hq_assignment == "" and String(dud.aptitude_known.get("blacksmith", "")) == "incompatible" and g2.assign_work(dud, "blacksmith") != "", "an incompatible apprentice leaves, and the town remembers it")
+    var counts := {}
+    for i in 500:
+        var t := AptitudeDefs.tier(HeroGenerator.generate(i * 31 + 7, 1 + i % 3), "blacksmith")
+        counts[t] = int(counts.get(t, 0)) + 1
+    check(int(counts.get("incompatible", 0)) > 20 and int(counts.get("prodigy", 0)) > 20 and int(counts.get("normal", 0)) > int(counts.get("prodigy", 0)), "aptitudes vary between heroes: %s" % str(counts))
     if OS.get_environment("SIM_DAYS") != "":
         _simulate(int(OS.get_environment("SIM_DAYS")))
     print("== %s ==" % ("ALL PASSED" if fails == 0 else "%d FAILED" % fails))

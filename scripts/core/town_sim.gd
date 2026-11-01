@@ -27,18 +27,49 @@ static func _apprentices(g: Object, bid: String, workers: Array, report: Diction
     if not TownTables.SPECIALIST_ONLY.has(bid):
         return workers
     var prof := String(g.workplace_prof(bid))
-    var master := workers.any(func(w): return (w as HeroData).prof_level(prof) >= TownTables.MASTER_MIN_LVL)
+    var best := 0
+    for w in workers:
+        best = maxi(best, (w as HeroData).prof_level(prof))
+    var master := best >= TownTables.MASTER_MIN_LVL
     var out: Array = []
+    var rng := RandomNumberGenerator.new()
+    rng.seed = int(g.town_seed) ^ (int(g.town_clock) * 7919) ^ hash(bid)
+    var pname := String(ProfessionDefs.info(prof)["name"]).to_lower()
     for w in workers:
         var h: HeroData = w
         if h.knows_prof(prof):
             out.append(h)
             continue
-        if master:
-            h.apprenticeship[prof] = float(h.apprenticeship.get(prof, 0.0)) + 1.0
-            if float(h.apprenticeship[prof]) >= TownTables.APPRENTICE_HOURS and h.learn_prof(prof) == "":
-                h.apprenticeship.erase(prof)
-                (report["events"] as Array).append("%s finished the apprenticeship: now a %s" % [h.display_name(), String(ProfessionDefs.info(prof)["name"]).to_lower()])
+        if not master:
+            continue
+        # AptitudeDefs: progress (0..1) = base x tier x master x roll; daily surprises; incompatible quits
+        var tier := AptitudeDefs.tier(h, prof)
+        var p: Dictionary = h.apprenticeship.get(prof, {}) if h.apprenticeship.get(prof) is Dictionary else {}
+        var hours := float(p.get("hours", 0.0)) + 1.0
+        var prog := float(p.get("progress", 0.0))
+        prog += AptitudeDefs.BASE_PER_HOUR * float(AptitudeDefs.TIER_MULT[tier]) * (1.0 + AptitudeDefs.MASTER_PER_LVL * float(best - 1)) * rng.randf_range(0.7, 1.3)
+        if int(hours) % 24 == 0:
+            if rng.randf() < float(AptitudeDefs.BREAKTHROUGH.get(tier, 0.0)):
+                prog += AptitudeDefs.BREAKTHROUGH_GAIN
+                (report["events"] as Array).append("%s had a breakthrough at the %s" % [h.display_name(), TownTables.info(bid)["name"]])
+            elif rng.randf() < float(AptitudeDefs.FRUSTRATION.get(tier, 0.0)):
+                prog = maxf(0.0, prog - AptitudeDefs.FRUSTRATION_LOSS)
+                (report["events"] as Array).append("%s is frustrated at the %s" % [h.display_name(), TownTables.info(bid)["name"]])
+        if hours >= AptitudeDefs.REVEAL_HOURS and not h.aptitude_known.has(prof):
+            h.aptitude_known[prof] = tier                # the master's opinion
+        if tier == "incompatible" and hours >= AptitudeDefs.INCOMPATIBLE_HOURS:
+            h.apprenticeship.erase(prof)
+            h.aptitude_known[prof] = tier
+            h.hq_assignment = ""
+            (report["events"] as Array).append("%s has no talent for this: leaves the %s apprenticeship" % [h.display_name(), pname])
+            continue
+        if prog >= 1.0 and h.learn_prof(prof) == "":
+            h.apprenticeship.erase(prof)
+            var lvl := int(AptitudeDefs.GRAD_LEVEL.get(tier, 0)) + (1 if rng.randf() < AptitudeDefs.GRAD_BONUS_CHANCE else 0)
+            h.professions[prof]["lvl"] = lvl
+            (report["events"] as Array).append("%s finished the apprenticeship: now a %s (level %d)" % [h.display_name(), pname, lvl])
+            continue
+        h.apprenticeship[prof] = {"hours": hours, "progress": prog}
     return out
 
 
