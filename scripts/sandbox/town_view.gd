@@ -289,7 +289,7 @@ func _draw() -> void:
         var tw := font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
         var tp := Vector2(r.get_center().x - tw * 0.5, r.position.y - 6)
         draw_rect(Rect2(tp + Vector2(-4, -14), Vector2(tw + 8, 18)), Color(0.08, 0.07, 0.12, 0.75))
-        draw_string(font, tp, title, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(1, 0.95, 0.8) if level > 0 else Color(0.8, 0.8, 0.8))
+        draw_string(font, tp, StringsEs.tx(title), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(1, 0.95, 0.8) if level > 0 else Color(0.8, 0.8, 0.8))
     _draw_ghost(cell)
     _draw_occupancy(cell)
     if empty_hint != "":
