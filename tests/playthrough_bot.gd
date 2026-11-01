@@ -27,6 +27,9 @@ var LOCO := false
 var QUIET := false
 const MATRIX_CONTENT := [0, 1, 3, 5, 10]          # 0 = the Wilds (tier 1)
 const MATRIX_SQUAD := ["class.warrior", "class.warrior", "class.ranger", "class.mage", "class.cleric"]
+## D-080: the Master the bot creates; it drives the Master like a player (the other four act on their own).
+const BOT_MASTER := {"first": "Bot", "last": "Master", "class": "class.warrior", "trait": "trait.stubborn",
+    "look": {"race": "human", "body": "male", "skin": "light", "eyes": "blue", "hair": "hair_plain", "hair_color": "black", "beard": ""}}
 var _dodging: Dictionary = {}           # hero -> seconds left of a dodge step ordered by the tactical player
 
 
@@ -45,6 +48,7 @@ func _ready() -> void:
         get_tree().quit(0)
         return
     Game.new_game()
+    Game.create_master(BOT_MASTER)                  # D-080: a new account starts with the creator
     var first: Array = Game.starter_summons()
     say("== STYLE %s%s" % ["tactical" if TACTICAL else "naive", " (blind)" if BLIND else ""])
     say("== NEW ACCOUNT: %d starter heroes, gems %d, capacity %d" % [first.size(), Game.gems, Game.max_hero_capacity()])
@@ -285,19 +289,20 @@ func _party_score(h: HeroData) -> int:
 
 
 func _pick_party() -> void:
-    Game.clear_party()
-    var pool: Array = Game.heroes.values().filter(func(h): return h.hq_assignment != "construction")
+    Game.clear_party()                              # keeps the Master in slot 1 (D-080)
+    var first := 1 if Game.master() != null else 0
+    var pool: Array = Game.heroes.values().filter(func(h): return h.hq_assignment != "construction" and not h.is_master)
     # beta pass: only as many as the floor lets in, and town workers (the smith first) stay home when
     # others can go; a player keeps the forge running
     var need := TowerExpedition.party_max(_next_floor) if _next_floor > 0 else Game.PARTY_SIZE - 1
     pool.sort_custom(func(a, b): return _party_score(a) > _party_score(b))
     if pool.size() < need:
         pool = Game.heroes.values()
-    for i in mini(need, pool.size()):
+    for i in mini(need - first, pool.size()):
         var h: HeroData = pool[i]
         if h.hq_assignment != "" and h.hq_assignment != "construction":
             Game.assign_work(h, "")
-        Game.assign_party(i, h.id)
+        Game.assign_party(first + i, h.id)
 
 
 # --- expedition ---------------------------------------------------------------------------------
@@ -400,6 +405,27 @@ func _frontier(sb: SandboxScreen, from: Vector2i) -> Vector2:
                 return m.center_of(cc)
             queue.append(n)
     return Vector2.INF
+
+
+## D-080: the driven Master has no autonomy of its own (D-053), so the bot plays it like a player: it
+## attacks the nearest foe it sees and fires every ready skill at it. Returns the skills used.
+func _drive_master(sb: SandboxScreen, foes: Array) -> int:
+    var m: SandboxHero = sb.master_hero
+    if m == null or not m.alive or not m.is_controlled() or m.order == "retreat" or m.order == "rescue":
+        return 0
+    var near: SandboxEnemy = null
+    for e in foes:
+        if e.alive and e.position.distance_to(m.position) < 320.0 and (near == null or e.position.distance_to(m.position) < near.position.distance_to(m.position)):
+            near = e
+    if near == null:
+        return 0
+    if m.target != near and m.order != "move":
+        m.order_attack(near)
+    var used := 0
+    for i in m.slots.size():
+        if m.skill_ready(i) and m.use_skill_slot(i, foes, sb.heroes, near.position):
+            used += 1
+    return used
 
 
 # --- the tactical player -------------------------------------------------------------------------
@@ -569,6 +595,11 @@ func _matrix_squad(seed_base: int, lvl: int, upgraded: bool) -> void:
     for cls in MATRIX_SQUAD:
         var h: HeroData = null
         var k := 0
+        if n == 0:                                    # D-080: the first warrior is the Master
+            var mc: Dictionary = BOT_MASTER.duplicate(true)
+            mc["seed"] = seed_base * 131 + 7
+            mc["class"] = cls
+            h = Game.create_master(mc)
         while h == null or String(h.hero_class) != cls:
             k += 1
             h = HeroGenerator.generate(seed_base * 131 + k * 7 + n, 3)
@@ -576,7 +607,8 @@ func _matrix_squad(seed_base: int, lvl: int, upgraded: bool) -> void:
                 break
         h.level = mini(lvl, h.level_cap())
         Game.heroes[h.id] = h
-        Game.assign_party(n, h.id)
+        if not h.is_master:
+            Game.assign_party(n, h.id)
         n += 1
         if upgraded:
             _matrix_gear(h, lvl)
@@ -718,6 +750,7 @@ func _play_floor(floor_num: int, attempt: int) -> Dictionary:
         # a thinking player does: break casts, step out of marked areas, kill healers / shamans / lookouts first.
         if TACTICAL:
             skills_used += _tactical_micro(sb, standing, foes)
+        skills_used += _drive_master(sb, foes)
         # rescue downed allies
         for d in sb.heroes:
             if d.downed and not d.dead:

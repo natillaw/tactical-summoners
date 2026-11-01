@@ -17,6 +17,9 @@ var iframe_t: float = 0.0            # dash invulnerability left (CombatRules.DA
 var immune: bool = false             # Crimson Baron's altar shield (master prompt E): every hit does 0
 signal immune_hit
 var heal_block: bool = false         # floor modifier "no_heal" (master prompt D)
+var no_death: bool = false           # D-080: the Master never dies; when they would, they are "lost" instead
+var lost: bool = false               # D-080: the Master's agony ran out (or they were left behind): stays down
+signal lost_down(c: Combatant)
 var heal_mult: float = 1.0           # D-079: "no_heal" partly countered (heavy armour, Regeneration gift)
 var poison_mult: float = 1.0         # D-079: "hazard" countered (antidote, Poison-proof gift): poison strength
 var soft_in: float = 1.0             # D-079 soft block: damage taken x (PowerCalc.floor_effect, set once per floor)
@@ -134,7 +137,7 @@ func go_down() -> void:
 
 
 func revive(hp_fraction: float) -> void:
-    if dead or not downed:
+    if dead or lost or not downed:
         return
     downed = false
     alive = true
@@ -145,7 +148,15 @@ func revive(hp_fraction: float) -> void:
 
 
 func die() -> void:
-    if dead:
+    if dead or lost:
+        return
+    if no_death:                          # D-080: stays down (no memorial); the screen ends the expedition
+        lost = true
+        downed = true
+        alive = false
+        hp = 0
+        agony = 0.0
+        lost_down.emit(self)
         return
     dead = true
     downed = false
@@ -261,6 +272,8 @@ func tick_combat(delta: float) -> void:
     if dead:
         return
     if downed:
+        if lost:
+            return
         agony -= delta
         if agony <= 0.0:
             die()

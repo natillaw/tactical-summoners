@@ -109,21 +109,23 @@ const PROFESSIONS := {
 }
 
 ## Traits: personality. "mods" multiply stats, "passive" is the combat passive it can grant.
+## D-080: no trait is free. Every trait has a downside (a mod below 1 or negative loyalty); the seven
+## that had none got a -3% (placeholder) and tests/test_master.gd keeps it that way.
 const TRAITS := {
-    "trait.brave": {"name": "Brave", "desc": "Faces danger head-on.", "mods": {"atk": 1.05}, "passive": "passive.vanguard", "loyalty": 5},
-    "trait.cautious": {"name": "Cautious", "desc": "Never takes a step without looking first.", "mods": {"def": 1.06}, "passive": "passive.evasive", "loyalty": 0},
+    "trait.brave": {"name": "Brave", "desc": "Faces danger head-on.", "mods": {"atk": 1.05, "def": 0.97}, "passive": "passive.vanguard", "loyalty": 5},
+    "trait.cautious": {"name": "Cautious", "desc": "Never takes a step without looking first.", "mods": {"def": 1.06, "spd": 0.97}, "passive": "passive.evasive", "loyalty": 0},
     "trait.greedy": {"name": "Greedy", "desc": "Always eyeing the loot.", "mods": {"spd": 1.04}, "passive": "passive.fortune", "loyalty": -8},
-    "trait.loyal": {"name": "Loyal", "desc": "Sticks with the party to the end.", "mods": {"hp": 1.05}, "passive": "passive.bodyguard", "loyalty": 15},
+    "trait.loyal": {"name": "Loyal", "desc": "Sticks with the party to the end.", "mods": {"hp": 1.05, "atk": 0.97}, "passive": "passive.bodyguard", "loyalty": 15},
     "trait.arrogant": {"name": "Arrogant", "desc": "Believes they are the best in the room.", "mods": {"atk": 1.06, "def": 0.97}, "passive": "passive.showoff", "loyalty": -10},
-    "trait.kind": {"name": "Kind", "desc": "Cannot leave anyone behind.", "mods": {"hp": 1.04}, "passive": "passive.field_medic", "loyalty": 10},
+    "trait.kind": {"name": "Kind", "desc": "Cannot leave anyone behind.", "mods": {"hp": 1.04, "atk": 0.97}, "passive": "passive.field_medic", "loyalty": 10},
     "trait.reckless": {"name": "Reckless", "desc": "Acts first, thinks later.", "mods": {"atk": 1.08, "def": 0.94}, "passive": "passive.berserk", "loyalty": -3},
     "trait.stoic": {"name": "Stoic", "desc": "Shows no fear and little emotion.", "mods": {"def": 1.04, "spd": 0.97}, "passive": "passive.resolute", "loyalty": 3},
-    "trait.curious": {"name": "Curious", "desc": "Always poking at things.", "mods": {"mag": 1.06}, "passive": "passive.analyst", "loyalty": 0},
+    "trait.curious": {"name": "Curious", "desc": "Always poking at things.", "mods": {"mag": 1.06, "def": 0.97}, "passive": "passive.analyst", "loyalty": 0},
     "trait.lazy": {"name": "Lazy", "desc": "Does exactly what is needed, no more.", "mods": {"hp": 1.05, "spd": 0.95}, "passive": "passive.second_wind", "loyalty": -5},
     "trait.cunning": {"name": "Cunning", "desc": "Always has a trick up their sleeve.", "mods": {"spd": 1.05}, "passive": "passive.opportunist", "loyalty": -2},
-    "trait.honorable": {"name": "Honorable", "desc": "Fights fair, keeps promises.", "mods": {"atk": 1.03, "def": 1.03}, "passive": "passive.duelist", "loyalty": 12},
+    "trait.honorable": {"name": "Honorable", "desc": "Fights fair, keeps promises.", "mods": {"atk": 1.03, "def": 1.03, "spd": 0.97}, "passive": "passive.duelist", "loyalty": 12},
     "trait.hot_headed": {"name": "Hot-headed", "desc": "Quick to anger, quicker to move.", "mods": {"spd": 1.07, "def": 0.96}, "passive": "passive.first_strike", "loyalty": -4},
-    "trait.cheerful": {"name": "Cheerful", "desc": "Keeps morale up no matter what.", "mods": {"hp": 1.03}, "passive": "passive.inspiring", "loyalty": 8},
+    "trait.cheerful": {"name": "Cheerful", "desc": "Keeps morale up no matter what.", "mods": {"hp": 1.03, "def": 0.97}, "passive": "passive.inspiring", "loyalty": 8},
     "trait.gloomy": {"name": "Gloomy", "desc": "Expects the worst, is rarely surprised.", "mods": {"def": 1.05}, "passive": "passive.pessimist", "loyalty": -3},
     "trait.stubborn": {"name": "Stubborn", "desc": "Refuses to go down.", "mods": {"hp": 1.06, "spd": 0.96}, "passive": "passive.iron_will", "loyalty": 2},
 }

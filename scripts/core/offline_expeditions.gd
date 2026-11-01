@@ -36,6 +36,8 @@ static func block(g, floor_num: int, ids: Array, now: float) -> String:
         if not g.heroes.has(id):
             return "unknown hero"
         var h: HeroData = g.heroes[id]
+        if h.is_master:
+            return "the Master does not go on offline expeditions"
         if h.hq_assignment == "expedition":
             return "%s is already away" % h.display_name()
     return ""

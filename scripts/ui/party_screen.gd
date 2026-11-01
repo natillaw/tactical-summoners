@@ -1,6 +1,7 @@
 class_name PartyScreen
 extends Control
 ## Formation editor: 3 front-row slots, 2 back-row slots. Pick a slot, then click a hero.
+## D-080: slot 1 is always the Master (crowned, cannot be changed); the party is the Master + 4.
 
 signal back_requested
 
@@ -8,7 +9,7 @@ var _slot_box: HBoxContainer
 var _grid: GridContainer
 var _power: Label
 var _hint: Label
-var _selected_slot: int = 0
+var _selected_slot: int = 1 if Game.master() != null else 0
 var _group := ButtonGroup.new()
 
 
@@ -82,6 +83,8 @@ func _rebuild() -> void:
         var card := HeroCard.new(h)
         if Game.party_slot_of(h.id) >= 0:
             card.modulate = Color(1, 1, 1, 0.45)
+        if h.is_master:
+            continue                              # always in slot 1
         card.card_pressed.connect(_on_hero)
         _grid.add_child(card)
 
@@ -94,20 +97,29 @@ func _column(title: String, slots: Array) -> VBoxContainer:
         var id: String = Game.party[i]
         var h: HeroData = Game.heroes[id] if Game.heroes.has(id) else null
         var slot := PartySlot.new(i, h, title.capitalize())
+        slot.locked = i == 0 and h != null and h.is_master
         slot.button_group = _group
         slot.button_pressed = (i == _selected_slot)
-        slot.pressed.connect(func(): _selected_slot = i)
+        if slot.locked:
+            slot.toggle_mode = false
+            slot.button_group = null
+        else:
+            slot.pressed.connect(func(): _selected_slot = i)
         slot.clear_requested.connect(func(idx): Game.clear_slot(idx))
         col.add_child(slot)
     return col
 
 
 func _on_hero(h: HeroData) -> void:
+    Game.last_reason = ""
     Game.assign_party(_selected_slot, h.id)
+    if Game.last_reason != "":
+        UIKit.toast(self, tr(Game.last_reason))
+        return
     # move on to the next empty slot, if any
     for step in range(1, Game.PARTY_SIZE + 1):
         var nxt := (_selected_slot + step) % Game.PARTY_SIZE
-        if Game.party[nxt] == "":
+        if Game.party[nxt] == "" and not (nxt == 0 and Game.master() != null):
             _selected_slot = nxt
             break
     _rebuild()

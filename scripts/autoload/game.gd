@@ -5,8 +5,9 @@ extends Node
 signal changed
 
 const DEFAULT_SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 16
-const PARTY_SIZE := 5            # slots 0-2 = front row, slots 3-4 = back row
+const SAVE_VERSION := 17
+const PARTY_SIZE := 5            # slots 0-2 = front row, slots 3-4 = back row; D-080: slot 0 is the Master
+const MASTER_BED := "town_hall"   # D-080: the Master sleeps in the Hall (no dorm bed)
 const XP_PER_BOOK := 100
 
 var gems: int = SummonConfig.START_GEMS
@@ -105,7 +106,7 @@ static func is_fighter(h: HeroData) -> bool:
 ## (2) if nobody knows the builder profession, the hero with the fewest professions learns it (a common
 ## person can be the builder). Only for an account with no heroes that has not been onboarded.
 func starter_summons() -> Array:
-    if onboarded or not heroes.is_empty():
+    if onboarded or heroes.values().any(func(x): return not (x as HeroData).is_master):
         return []
     var banner := SummonConfig.get_banner(SummonConfig.STARTER_BANNER)
     var out: Array = []
@@ -149,13 +150,15 @@ func starter_summons() -> Array:
                 break
         if not out.any(func(x): return (x as HeroData).knows_prof("blacksmith")):
             (pick[0] as HeroData).learn_prof("blacksmith")
-    # a first squad of five is ready to go (fighters first): the player can change it in Menu -> Party
+    # a first squad of five is ready to go (fighters first): the player can change it in Menu -> Party.
+    # D-080: slot 1 is the Master's; the summons fill the others.
+    var first := 1 if master() != null else 0
     var squad: Array = out.filter(func(x): return is_fighter(x))
     for x in out:
-        if squad.size() < PARTY_SIZE and not squad.has(x):
+        if squad.size() < PARTY_SIZE - first and not squad.has(x):
             squad.append(x)
-    for i in mini(PARTY_SIZE, squad.size()):
-        party[i] = (squad[i] as HeroData).id
+    for i in mini(PARTY_SIZE - first, squad.size()):
+        party[first + i] = (squad[i] as HeroData).id
     onboarded = true
     assign_beds()
     _commit()
@@ -292,6 +295,8 @@ func attempt_promotion(h: HeroData) -> Dictionary:
 func consumable_block(h: HeroData) -> String:
     if h == null or not heroes.has(h.id):
         return "not in the roster"
+    if h.is_master:
+        return "the Master cannot be sacrificed, absorbed or sold"
     if party.has(h.id):
         return "%s is in the party: take them out first" % h.display_name()
     return ""
@@ -424,6 +429,9 @@ func train_skill(h: HeroData, skill_id: String) -> String:
 func assign_party(slot: int, hero_id: String) -> void:
     if slot < 0 or slot >= PARTY_SIZE or not heroes.has(hero_id):
         return
+    if master() != null and (slot == 0 or hero_id == master().id):
+        last_reason = "slot 1 is always the Master"
+        return
     for i in PARTY_SIZE:
         if party[i] == hero_id:
             party[i] = ""
@@ -434,13 +442,59 @@ func assign_party(slot: int, hero_id: String) -> void:
 func clear_slot(slot: int) -> void:
     if slot < 0 or slot >= PARTY_SIZE:
         return
+    if slot == 0 and master() != null:
+        last_reason = "slot 1 is always the Master"
+        return
     party[slot] = ""
     _commit()
 
 
 func clear_party() -> void:
     party = ["", "", "", "", ""]
+    if master() != null:
+        party[0] = master().id
     _commit()
+
+
+# --- the Master (D-080) ---------------------------------------------------------------------------
+
+## The player's own character, or null (a new account before the creator, or a save from before D-080).
+func master() -> HeroData:
+    for id in heroes:
+        if (heroes[id] as HeroData).is_master:
+            return heroes[id]
+    return null
+
+
+## True when the character creator must open: an account that exists (or is being started) with no Master.
+func needs_master() -> bool:
+    return master() == null
+
+
+## Makes the Master from the creator's choices (HeroGenerator.create_master) and puts them in slot 1.
+## Whoever had slot 1 moves to the first empty slot, or out of the party if it is full. Nobody is removed
+## from the roster (an old save keeps every hero).
+func create_master(choices: Dictionary) -> HeroData:
+    if master() != null:
+        return master()
+    var h: HeroData = null
+    for i in 50:                                  # the creator's seed first (its preview showed that starter skill)
+        h = HeroGenerator.create_master(int(choices["seed"]) if i == 0 and choices.has("seed") else rng.randi(), choices)
+        if not heroes.has(h.id) and not _signatures.has(h.signature()):
+            break
+    heroes[h.id] = h
+    _signatures[h.signature()] = true
+    var old := String(party[0])
+    party[0] = h.id
+    if old != "" and old != h.id:
+        for i in range(1, PARTY_SIZE):
+            if party[i] == "":
+                party[i] = old
+                break
+    h.add_memory("master", "Stood in the circle again and called out: this time, someone answered.", "", 3)
+    assign_beds()
+    _commit()
+    return h
 
 
 func party_slot_of(hero_id: String) -> int:
@@ -511,6 +565,8 @@ func merchant_trade(offer: int) -> String:
 ## memorial. Returns false if the hero is not on the roster (e.g. a sandbox test hero).
 ## Survivors in the party lose a little Trust (deterministic, never a refused order: D-016).
 func record_death(h: HeroData, cause: String = "", mission: String = "") -> bool:
+    if h != null and h.is_master:
+        return false                  # D-080: the Master never dies (comes home wounded instead)
     if h == null or not heroes.has(h.id):
         return false
     h.add_event("died", {"cause": cause, "mission": mission})
@@ -556,7 +612,7 @@ func unassign_hq(hero_id: String) -> void:
 
 ## Total beds of the built dormitories: the town can house this many heroes (no beds, no summons).
 func max_hero_capacity() -> int:
-    var cap := 0
+    var cap := 1 if master() != null else 0         # D-080: the Master's own room in the Hall
     for bid in TownTables.ids():
         if TownTables.is_dorm(bid):
             cap += TownTables.beds_at(bid, building_level(bid))
@@ -581,6 +637,9 @@ func assign_beds() -> void:
     var homeless: Array = []
     for id in heroes:
         var h: HeroData = heroes[id]
+        if h.is_master:
+            h.bed = MASTER_BED                      # D-080: the Master sleeps in the Hall, not in a dorm bed
+            continue
         if h.bed != "" and int(free.get(h.bed, 0)) > 0:
             free[h.bed] = int(free[h.bed]) - 1
         else:
@@ -936,6 +995,8 @@ func assign_work(h: HeroData, bid: String) -> String:
     last_reason = ""
     if h == null or not heroes.has(h.id):
         last_reason = "unknown hero"
+    elif h.is_master and bid != "":
+        last_reason = "the Master leads the village: no job for them"
     elif bid == "":
         h.hq_assignment = ""
     elif bid != "construction" and building_level(bid) <= 0:
@@ -1351,6 +1412,8 @@ func after_expedition(results: Array, floor_num: int, died: int, hours: int = Ec
         h.fatigue = clampi(h.fatigue + int(EconomyDefs.AFTER_MISSION["fatigue"]), 0, 100)
         h.stress = clampi(h.stress + int(EconomyDefs.AFTER_MISSION["stress"]) + died * int(EconomyDefs.AFTER_MISSION["stress_death"]), 0, 100)
         var ch: Dictionary = EconomyDefs.DISEASE_CHANCE
+        if bool(r.get("master_lost", false)) and h.is_master and h.catch_disease(MasterDefs.WOUND_DISEASE, "fell on floor %d" % floor_num):
+            (rep["events"] as Array).append("%s was carried home wounded." % h.hero_name)
         if bool(r.get("downed", false)) and rng.randf() < float(ch["downed"]) and h.catch_disease("infected_wound", "downed on floor %d" % floor_num):
             (rep["events"] as Array).append("%s's wound got infected." % h.hero_name)
         if bool(r.get("poisoned", false)) and rng.randf() < float(ch["poisoned"]) and h.catch_disease("toxin", "poisoned on floor %d" % floor_num):
@@ -1645,6 +1708,8 @@ func _migrate(data: Dictionary) -> Dictionary:
         data["exp_charges"] = ExpeditionDefs.CHARGES_MAX
         data["exp_charge_t"] = 0.0
         data["portal_upgrades"] = {}
+    if v < 17:
+        pass                              # v16 -> v17 (D-080): heroes gain is_master/first_name/surname (false/""); a save without a Master opens the creator once, the roster stays
     if v < 16:
         pass                              # v15 -> v16 (D-079): heroes gain "innate" summon gifts; old heroes get [] on load (never rolled)
     if v < 15:

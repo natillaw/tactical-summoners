@@ -79,6 +79,10 @@ func show_screen(screen: String, arg: int = 0) -> void:
         "inventory":
             s = InventoryScreen.new()
             s.back_requested.connect(back)
+        "master":
+            var mc := MasterCreator.new()        # D-080: new account -> welcome; old save without a Master -> town
+            mc.finished.connect(func(): show_screen("town" if Game.onboarded else "welcome", 0))
+            s = mc
         "welcome":
             var w := WelcomeScreen.new()
             w.finished.connect(back)

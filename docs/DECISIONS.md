@@ -39,6 +39,7 @@ Probar primero un héroe, enemigo, arma, prop, tile e icono: estilo, escala, ani
 Escenas, nodos, configuración, setup de assets y pruebas se automatizan con scripts/CLI siempre que sea práctico. Generadores idempotentes; inspeccionar y preservar trabajo existente; verificar resultados.
 
 ### D-011 — Muerte permanente (2026-10-28)
+> Excepción: el Máster (D-080) no muere; vuelve herido.
 Un héroe que llega a 0 PV en misión muere para siempre en esa partida. Se preservan su registro, historia, destino del equipo y entrada en el memorial; nunca se re-genera ni se borra en silencio. Sin resurrección en el primer prototipo. Avisar antes del despliegue y definir resultados de retirada/derrota.
 
 ### D-012 — Atributos iniciales; fórmulas provisionales (2026-10-28)
@@ -52,6 +53,7 @@ Tiempo real **sin pausa ni cámara lenta**. Héroes autónomos (navegan y atacan
 > La cláusula de D-014 "generación de mundo diferida, mapa fijo" queda **sustituida por D-026** (2026-10-30).
 
 ### D-015 — Foco de cámara con 1–5 y panel contextual (2026-10-28)
+> El cambio de héroe con 1-5 queda **sustituido por D-080** (2026-11-01): solo se controla al Máster.
 1–5 selecciona al héroe desplegado y la cámara lo sigue suavemente; aparecen su retrato, vitales, habilidades y órdenes. La simulación nunca se pausa. `Tab` vuelve a vista de grupo; `G` selecciona el escuadrón. Ranura vacía o muerta = mensaje claro, nunca seleccionar otro héroe en silencio.
 
 ### D-016 — Trust, Obedience y Composure separados (2026-10-28)
@@ -179,6 +181,7 @@ Un héroe con **Obediencia por debajo de un umbral** (dato: `CombatRules.OBEY_MI
 La IA ya no sale siempre de los círculos telegrafiados. Por cada golpe telegrafiado que le apunta, el héroe autónomo tira **una vez** contra una probabilidad derivada de AGI y nivel (`CombatRules.auto_dodge_chance`), que es **≈0 a nivel 1** y baja en el early game. Si falla, recibe el golpe. Mover al héroe a mano sigue siendo la forma fiable de esquivar. No contradice D-037: un golpe que alcanza siempre conecta; lo que se tira es si el héroe reacciona.
 
 ### D-053 — Enfocar es controlar (2026-10-30, dueño; matiza D-015)
+> Sustituida en cuanto a 1-5 por D-080 (2026-11-01): el único héroe que se toma bajo control es el Máster.
 1-5 (y Shift+1-5 para 6-10 en raids) enfoca **y toma el control directo** de ese héroe: el clic derecho mueve o ataca solo con él, Q/W/E/R usan sus habilidades apuntadas al cursor y su autonomía deja de contradecir al jugador (no esquiva ni se aparta por su cuenta). Los demás siguen en autónomo. Tab devuelve la vista de grupo y la autonomía. Con D-051, un héroe sin obediencia no se puede controlar. Las reglas del héroe (alcance, arma, habilidades) son las mismas para el jugador y la IA.
 
 ### D-054 — El daño de los proyectiles se aplica al impactar (2026-10-30, dueño)
@@ -370,6 +373,17 @@ Los bandidos son humanos LPC con un atuendo fijo por tipo (`LpcFactions.BANDIT`)
 - La aptitud se ve como "???" hasta que el maestro lo observa 6 h. Las 10 primeras invocaciones traen siempre un herrero. Guardado v15.
 - Para una segunda pasada: orientador para evaluar talentos, perks de oficio, "buen mentor" y compatibilidad de personalidades.
 
+### D-080 — El Máster: personaje del jugador y único héroe controlado (2026-11-01, dueño; sustituye el cambio de héroe con 1-5 de D-015/D-017/D-053)
+(D-079 queda reservado para el soft block de la torre, que sigue en propuesta.)
+- **Control:** el jugador ya no cambia de héroe con 1-5. Controla solo a su personaje, el **Máster**; los otros 4 del escuadrón van en autónomo (se guiarán con pings en una tarea posterior). Tab da la vista de grupo sin soltar al Máster; G sigue seleccionando el escuadrón para órdenes de grupo. El cambio 1-5 queda aislado tras `MasterDefs.DEBUG_HERO_SWITCH` (apagado) y sigue funcionando en escuadrones sin Máster (escuadrón de prueba, tests).
+- **Creación:** Título → Nueva partida → **Crear personaje** (`MasterCreator`) → bienvenida y las 10 invocaciones. "Continuar" con un guardado sin Máster abre el creador una vez, sin tocar el roster. Pestañas: identidad (nombre + apellido, máx. 16; trasfondo fijo "Antiguo Máster"), apariencia (solo opciones LPC que existen: raza humano/elfo, cuerpo, piel, ojos, peinado, color de pelo, barba; hay una sola cabeza por cuerpo), clase (las 6 clases de nacimiento con rol y habilidad inicial) y un rasgo.
+- **Ropa:** la misma ropa sencilla de cualquier invocado (`LpcWardrobe.STARTER_OUTFIT`); luego cambia con el equipo.
+- **Datos:** el Máster es un `HeroData` con `is_master = true` (no hay sistema paralelo), de 3★ (rareza media, `MasterDefs.STARS`), con Confianza y Obediencia 100 y sin dones de invocación. Crece con los mismos niveles, ascensiones y síntesis (puede absorber a otros, nunca ser absorbido).
+- **Reglas:** no se puede sacrificar, absorber, vender, poner a trabajar ni mandar a expediciones offline. Siempre ocupa el hueco 1 del escuadrón (Máster + 4). Duerme en el Salón (no ocupa cama de dormitorio). En los pisos de 1 héroe entra solo él.
+- **Muerte (excepción a D-011):** el Máster no muere. Cae y se le puede rescatar (D-036); si se agota su agonía o el escuadrón sale sin él, la expedición fracasa y vuelve **herido** (`master_wounded`: −15 % a todos los atributos durante 24 h del pueblo, `EconomyDefs.DISEASES`). Los demás vuelven con él; si no queda nadie en pie, D-036 se aplica a los demás caídos.
+- **Rasgos (dueño, 2026-11-01):** ningún rasgo es gratis. Los 7 que solo tenían ventaja (valiente, prudente, leal, bondadoso, curioso, honorable, alegre) reciben un −3 % (placeholder). Como los atributos se calculan desde los rasgos, también afecta a los héroes que ya tienen esos rasgos.
+- Guardado v17 (`is_master`, `first_name`, `surname`). Pruebas: `tests/smoke_master.gd`.
+
 ## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)
 
 | ID | Tema | Lo que existe / origen | Pregunta abierta |
@@ -436,5 +450,6 @@ De `docs/specs/REFERENCE_INSPIRATION.md`: clase exclusiva de invocación / clase
 | Escala 5★ / niveles 10-20-40-60-80 (código) | D-029 | Pendiente de migrar en la Fase 5 |
 | Clases Thief / Spearman / Archer (biblioteca de skills) | D-028 | Sus habilidades se conservan como ideas en `docs/specs/SKILLS.md` |
 | "El repo/ZIP es solo documentación; no hay proyecto Godot" | Estado real del repo | — |
+| Teclas 1-5 para cambiar de héroe controlado (D-015, D-017, D-053) | D-080 | Solo se controla al Máster; el código queda tras `MasterDefs.DEBUG_HERO_SWITCH` |
 | Protocolo multiagente con claims, STATE_HASH, CONTEXT_BUNDLE/LITE | Ramas + PR + evidencia (P-28) | Archivado en `docs/archive/infos/` |
 | Instalación por "drops" ZIP (`Apply-DropD.ps1`, `Update-Project.ps1`) | Git | Archivado |
