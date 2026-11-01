@@ -168,6 +168,16 @@ func _log_pull(h: HeroData, banner_id: String, banner_version: int, before4: int
         summon_log.pop_front()
 
 
+## TownSim's safety net: a free 1-star hero joins when the roster is short (permadeath stays).
+func recruit_wanderer() -> String:
+    var h := _generate_unique(1)
+    heroes[h.id] = h
+    _signatures[h.signature()] = true
+    h.add_memory("joined", "Arrived at the town as a wanderer looking for work.", "", 2)
+    _commit()
+    return h.display_name()
+
+
 func _generate_unique(stars: int) -> HeroData:
     var h: HeroData = null
     for attempt in 100:

@@ -8,6 +8,19 @@ extends RefCounted
 
 ## Advances `hours` town hours. `deployed` = hero ids away in the tower (keep their bed, do nothing).
 ## Returns a report: {"hours", "produced": {res: n}, "events": [String]}.
+## Beta safety net (2026-11-01): permadeath stays, but the account never gets stuck. Every morning,
+## while fewer than RECRUIT_BELOW heroes live, a 1-star wanderer joins the town for free.
+const RECRUIT_BELOW := 5
+
+
+static func _recruit(g: Object, report: Dictionary) -> void:
+    if (g.heroes as Dictionary).size() >= RECRUIT_BELOW or not g.has_method("recruit_wanderer"):
+        return
+    var name: String = g.recruit_wanderer()
+    if name != "":
+        (report["events"] as Array).append("%s, a wanderer, joined the town" % name)
+
+
 static func advance(g: Object, hours: int, deployed: Array = []) -> Dictionary:
     var report := {"hours": hours, "produced": {}, "events": []}
     for i in hours:
@@ -26,6 +39,8 @@ static func _hour(g: Object, deployed: Array, report: Dictionary) -> void:
         if bid != "infirmary" and (g.workers_at(bid) as Array).is_empty():
             g.town_problems.erase(bid)
     _admit_patients(g, deployed)
+    if hour == 7:
+        _recruit(g, report)
     var at_work := {}           # building id -> [HeroData]
     var builders: Array = []
     var social: Array = []
