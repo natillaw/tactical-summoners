@@ -3,7 +3,7 @@ extends RefCounted
 ## Overhaul LPC phase 4 (D-E): the bandit band drawn with LPC (LpcFactions: one outfit per type in the
 ## faction colour; body, skin, hair and beard vary in LpcFactions.VARIANTS looks). Same interface as
 ## the TPF version it replaces (EnemySprites: has, build_frames, totem_frames, BARON_ID). The old TPF
-## presets (assets/pixel/tpf_bandidos/) stay on disk, unused.
+## presets were deleted in the beta cleanup (owner-approved; history keeps them).
 ## Enemy sheets face right: the LPC right-facing row (3) is used; "attack" is the type's attack anim,
 ## "hurt" the first frames of LPC hurt and "death" the whole hurt row (LPC has no separate death).
 
