@@ -167,6 +167,7 @@ func _ready() -> void:
 	_spawn_nodes()
 	_setup_mission()
 	_apply_modifier()
+	_place_secret()
 	_build_ui()
 	update_fog()
 	select_all()
@@ -702,6 +703,52 @@ func _revive_tick(delta: float) -> void:
 				break
 
 
+## D-077 secret objective: a hidden cache in the room furthest from the goal and the entrance. It is
+## invisible until a hero walks close; taking it and then completing the floor counts as the secret
+## (bonus XP, ProgressionDefs.SECRET_MULT, and a tiny chance at a unique, ItemLibrary.UNIQUE_CHANCE).
+var secret_done := false
+var secret: SandboxRelic = null
+const SECRET_SEE := 70.0
+
+
+func _place_secret() -> void:
+	if floor_number <= 0 or not (map is ProceduralMap):
+		return
+	var best := Vector2.INF
+	var best_s := -INF
+	var start := map.center_of(map.spawn_cells[0]) if not map.spawn_cells.is_empty() else Vector2.ZERO
+	var goal := map.center_of(map.relic_cell)
+	for z in (map as ProceduralMap).room_zones:
+		var c := map.center_of((z["rect"] as Rect2i).position + Vector2i(1, 1))
+		if map.is_blocked_cell(map.cell_of(c)):
+			continue
+		var s := minf(c.distance_to(start), c.distance_to(goal))
+		if s > best_s:
+			best_s = s
+			best = c
+	if best == Vector2.INF:
+		return
+	secret = SandboxRelic.new("relic")
+	secret.position = best
+	secret.visible = false
+	secret.modulate = Color(1.0, 0.85, 0.4)
+	_world.add_child(secret)
+
+
+func _secret_tick() -> void:
+	if secret == null or secret_done:
+		return
+	for h in heroes:
+		if h.alive and h.position.distance_to(secret.position) <= SECRET_SEE:
+			if not secret.visible:
+				secret.visible = true
+			elif h.position.distance_to(secret.position) <= PICKUP_RADIUS:
+				secret_done = true
+				secret.visible = false
+				h.credit("objective", 2.0)
+				FloatingText.spawn(h, "A secret!", Color(1.0, 0.85, 0.4), true, 2.0)
+
+
 ## Defense: seconds at the shrine (a floor may set "hold_time"; else HOLD_TIME).
 func hold_time() -> float:
 	return float(TowerExpedition.get_floor_config(floor_number).get("hold_time", HOLD_TIME)) if floor_number > 0 else HOLD_TIME
@@ -1232,6 +1279,7 @@ func tick(delta: float) -> void:
 		_scout_t = SCOUT_EVERY
 		_direct_autonomy()
 	_altar_tick(delta)
+	_secret_tick()
 	_update_mission(delta)
 
 
@@ -1372,7 +1420,7 @@ func _end_mission(state: Mission) -> void:
 		if floor_number < 0:
 			results = Game.finish_wilds(-floor_number, outcome, ledger, entries, kill_xp)
 		elif floor_number > 0:
-			results = Game.finish_expedition(floor_number, outcome, ledger, entries, kill_xp, mission_type)
+			results = Game.finish_expedition(floor_number, outcome, ledger, entries, kill_xp, mission_type, secret_done)
 			reward = results.get("reward", {})
 		elif state == Mission.SUCCESS:
 			Game.grant(REWARD_GEMS, REWARD_STONES, 0)

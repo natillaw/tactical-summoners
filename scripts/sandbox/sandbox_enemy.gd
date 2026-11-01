@@ -100,7 +100,7 @@ func setup_type(id: String, floor_num: int = 0) -> void:
     _sprite.sprite_frames = f
     _sprite.centered = false
     _sprite.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF   # lunge/slide tweens run in idle
-    _sprite.scale = Vector2.ONE * EnemySprites.scale_for(id)
+    _sprite.scale = Vector2.ONE * EnemySprites.scale_for(id) * (SpriteComposer.LPC_WORLD_SCALE if BanditArt.has(id) else 1.0)
     add_child(_sprite)
     _sprite.play("idle")
     _fit("idle")

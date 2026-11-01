@@ -115,6 +115,16 @@ static func face_region(hero: HeroData) -> Rect2:
     return Rect2(20, 17, 24, 24) if uses_lpc(hero) else Rect2(16, 10, 15, 15)
 
 
+## D-072 revision (owner 2026-10-31): LPC characters are drawn at half size in the world, so the 16 px
+## packs look x2 against them (proportions of the interiors). The base canvas is 640x360 stretched x2,
+## so 0.5 is still one source pixel per screen pixel at 1280x720. Logic distances do not change.
+const LPC_WORLD_SCALE := 0.5
+
+
+static func world_scale(hero: HeroData) -> float:
+    return LPC_WORLD_SCALE if uses_lpc(hero) else 1.0
+
+
 ## Where the feet are, for a centred sprite of this hero (LPC frames are 64 px, TPF 48 px).
 static func feet_offset(hero: HeroData) -> Vector2:
     return LpcComposer.FEET_OFFSET if uses_lpc(hero) else Vector2(0, -16)
