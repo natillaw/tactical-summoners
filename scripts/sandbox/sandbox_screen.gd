@@ -534,6 +534,7 @@ func _on_boss_phase(b: SandboxEnemy, phase: int) -> void:
 ## --- master prompt E: the Crimson Baron's altar (numbers in AltarDefs) ----------------------------
 var altars: Array[BaronAltar] = []
 var vuln_t: float = 0.0              # seconds of vulnerability left (0 = shielded)
+var shield_breaks: int = 0
 var _altar_adds_t: float = 0.0
 var _altar_slam_t: float = 0.0
 var _hint_said: bool = false
@@ -618,6 +619,7 @@ func _altar_tick(delta: float) -> void:
 		var need := altars.size() if AltarDefs.BOTH_REQUIRED else 1
 		if altars.filter(func(a): return a.done).size() >= need:
 			vuln_t = AltarDefs.VULN_TIME
+			shield_breaks += 1
 			_altar_slam_t = 1.5
 			boss.immune = false
 			FloatingText.spawn(boss, "The shield breaks!", Color(1.0, 0.85, 0.4), true, 2.0)

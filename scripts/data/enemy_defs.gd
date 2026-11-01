@@ -144,7 +144,7 @@ const SKILLS := {
     "doom": {"name": "Mark of Doom", "cast": 4.0, "cd": 17.0, "range": 460.0, "target": "doom_hero", "radius": 90.0, "min_floor": 1,
         "follow": true, "dmg_mult": 3.0, "target_mult": 0.5, "desc": "Marks a hero (not the tank); it explodes on everyone near that hero: the marked one must leave the group."},
     "crimson_wave": {"name": "Crimson Wave", "cast": 1.6, "cd": 0.0, "range": 9999.0, "target": "hero_area", "radius": 80.0, "min_floor": 99,
-        "dmg_mult": 2.4, "desc": "The unshielded Baron strikes at his altar (AltarDefs): hold him, or leave the altar."},
+        "dmg_mult": 1.8, "desc": "The unshielded Baron strikes at his altar (AltarDefs): hold him, or leave the altar."},
     "blood_ritual": {"name": "Blood Ritual", "cast": 3.0, "cd": 18.0, "range": 0.0, "target": "self_heal", "below": 0.8, "min_floor": 1,
         "heal_self_pct": 0.12, "desc": "Heals itself a lot: interrupt or stun it."},
 }
