@@ -316,7 +316,7 @@ Respuestas del dueño: el freno es el nivel del pueblo más la dificultad; **cam
 ### D-068 — Prompt maestro: bandidos, party por piso, amenaza, modificadores (2026-10-31, dueño)
 - **Party por piso** (1-5; nunca más de 5; raids de 10 héroes = backlog). Sustituye la regla fija de 5 de D-017 dentro de la torre: el escuadrón sigue teniendo 5 plazas y entran las primeras N.
 - La banda de **bandidos** (Tiny Pixel Fantasy + capas `accessory`/`mask`) ocupa los pisos 1-10 en lugar de las criaturas del bosque de D-031. Las Wilds conservan sus criaturas.
-- Presupuesto de **amenaza** por piso (`EnemyDefs.THREAT`), un **modificador** por piso desde el 3 (`FloorMods`), misión **escape** (piso 4) y rescate con tiempo (piso 6). El sabotaje con tótems (piso 7) queda pendiente.
+- Presupuesto de **amenaza** por piso (`EnemyDefs.THREAT`), un **modificador** por piso desde el 3 (`FloorMods`), misión **escape** (piso 4) y rescate con tiempo (piso 6). Sabotaje en el piso 7: 3 tótems con guardia que reviven a los caídos (`FloorMods`).
 
 ### D-069 — El Barón Carmesí y el altar (2026-10-31, dueño; resuelve P-25)
 Inmune mientras dura su escudo; 2 héroes canalizan 8 s en un altar del mismo mapa → 20 s vulnerable. Fases: 1 altar; 2 altares (ambos); el altar cambia de sitio tras cada ventana. Adds hacia el altar, onda carmesí hacia el altar al caer el escudo, pistas sutiles. Números en `AltarDefs`. El Barón usa la hoja ya escalada ×2 (`BanditArt`).
