@@ -34,6 +34,35 @@ const CAMP_SET := ["tienda", "empalizada", "empalizada", "caja", "barril", "esta
 const MAX_CAMPS := 2
 
 static var _defs: Dictionary = {}
+## Overhaul (owner: mix the packs): CraftPix trees, bushes and rocks join the owner's props, at x1
+## (the LPC characters are drawn at half size, so all of these read x2 against them). Shadows included.
+const PACK_TREES := ["res://assets/pixel/packs/trees/PNG/Assets_separately/Trees/", "^(Tree|Moss_tree|Fruit_tree)"]
+const PACK_BUSHES := ["res://assets/pixel/packs/bushes/PNG/Assets_shadow/", "^(Bush|Fern|Leaf|Grass|Flower)"]
+const PACK_ROCKS := ["res://assets/pixel/packs/rocks2/PNG/Objects_separately/", "^Rock[0-9]+_[0-9]+[.]png$"]
+const PACK_TREE_P := 0.3                 # share of forest trees taken from the packs
+const PACK_DECOR_P := 0.35               # share of decor clusters made of pack bushes / rocks
+static var _pack_cache: Dictionary = {}
+
+
+static func pack_images(spec: Array) -> Array:
+    var key := String(spec[0]) + String(spec[1])
+    if _pack_cache.has(key):
+        return _pack_cache[key]
+    var out: Array = []
+    var re := RegEx.create_from_string(String(spec[1]))
+    for f in DirAccess.get_files_at(String(spec[0])):
+        if f.ends_with(".png") and re.search(f) != null:
+            var img := _img(String(spec[0]) + f)
+            if img != null:
+                out.append(img)
+    _pack_cache[key] = out
+    return out
+
+
+## A pack sprite with its bottom-centre on feet (their shadows are part of the picture).
+static func blit_pack(dst: Image, img: Image, feet: Vector2i) -> void:
+    var used := img.get_used_rect()
+    dst.blend_rect(img, used, feet - Vector2i(used.size.x / 2, used.size.y - 2))
 
 
 static func available() -> bool:
@@ -173,6 +202,10 @@ static func bake(map: NavMap, art_seed: int, camps: bool = false) -> Texture2D:
                     continue
                 var edge := map.in_bounds(c + Vector2i.DOWN) and not map.is_blocked_cell(c + Vector2i.DOWN)
                 for k in (2 if not edge else 1 + int(r.randf() < 0.5)):
+                    var pack_trees := pack_images(PACK_TREES)
+                    if not pack_trees.is_empty() and r.randf() < PACK_TREE_P:
+                        draw.append([c.y * cs + 40 - k * 16, "", c * cs + Vector2i(r.randi_range(4, 44), r.randi_range(16, 46) - k * 16), "pack", "", pack_trees[r.randi() % pack_trees.size()]])
+                        continue
                     var big := r.randf() < 0.6
                     var tree: String = (BIG_TREES if big else MID_TREES)[r.randi() % 3]
                     var lean := r.randi_range(0, 18) if edge else 0      # the edge invades the clearing
@@ -180,7 +213,13 @@ static func bake(map: NavMap, art_seed: int, camps: bool = false) -> Texture2D:
                 continue
             if ForestArt.is_trail(map, c):
                 continue
-            if r.randf() < CLUSTER_P:
+            if r.randf() < CLUSTER_P and r.randf() < PACK_DECOR_P:
+                var pool: Array = pack_images(PACK_BUSHES) if r.randf() < 0.6 else pack_images(PACK_ROCKS)
+                if not pool.is_empty():
+                    for i in r.randi_range(1, 3):
+                        var p := c * cs + Vector2i(24 + r.randi_range(-18, 18), 34 + r.randi_range(-10, 10))
+                        draw.append([p.y, "", p, "pack", "", pool[r.randi() % pool.size()]])
+            elif r.randf() < CLUSTER_P:
                 var fam: Array = CLUSTERS[r.randi() % CLUSTERS.size()]
                 var centre := c * cs + Vector2i(24, 30)
                 for i in r.randi_range(3, 6):
@@ -204,6 +243,9 @@ static func bake(map: NavMap, art_seed: int, camps: bool = false) -> Texture2D:
     for e in draw:
         if String(e[4]) != "":
             _blit(out, props, defs()["props"], String(e[4]), e[2])
+        if String(e[3]) == "pack":
+            blit_pack(out, e[5], e[2])
+            continue
         if String(e[3]) == "camp":
             if camp_src != null:
                 _blit(out, camp_src, defs()["camp"], String(e[1]), e[2])

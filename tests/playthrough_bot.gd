@@ -55,7 +55,8 @@ func _ready() -> void:
     var from_floor := int(OS.get_environment("PT_FROM")) if OS.get_environment("PT_FROM") != "" else 1
     for f0 in range(1, from_floor):
         Game.tower_cleared[str(f0)] = 1
-    for floor_num in range(from_floor, 6):
+    var to_floor := int(OS.get_environment("PT_TO")) if OS.get_environment("PT_TO") != "" else 10
+    for floor_num in range(from_floor, to_floor + 1):
         var done := false
         _next_floor = floor_num
         # D-066: a floor opens only with the town grown enough; materials come from the Wilds
