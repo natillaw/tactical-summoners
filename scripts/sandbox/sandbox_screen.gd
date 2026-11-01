@@ -102,6 +102,21 @@ var _rmb_t: float = 0.0
 var _aim_view: SkillAimView = null
 const RMB_REPEAT := 0.12                  # holding right click keeps steering the driven hero
 var _dragging: bool = false
+## D-082 pings (AiDefs.PINGS): Shift + click = quick contextual ping; hold it = the wheel. The ping goes to
+## the whole party, or only to `ping_to` (picked by clicking a hero's portrait, then cleared).
+var ping_to: SandboxHero = null
+var spam_penalty: float = 0.0                 # Obedience lost for spamming pings (fades)
+var pings_sent: int = 0
+var _ping_times: Array = []                   # recent ping times (anti-spam)
+var _ping_queue: Array = []                   # [{t, hero, kind, point, foe, ally}] answers on their way
+var _ping_press: Vector2 = Vector2.INF        # Shift + click held here (screen), waiting to be a wheel
+var _ping_hold: float = 0.0
+var _wheel: PingWheel = null
+var _arming_ping: String = ""                 # A in a Master squad: the next click is an "attack" ping
+var markers: Array = []                       # PingMarker on the map (tests read them)
+## D-082 interaction is F (QWER = combat only): held next to a fallen ally lifts them (RESCUE_TIME s),
+## next to a gathering spot gathers it, at the extraction point escapes.
+var interact_held: bool = false
 
 
 func _init(p_floor: int = 0) -> void:
@@ -254,6 +269,10 @@ func _add_loot(res: String, n: int, at: Node2D) -> void:
 
 func _on_enemy_died(e: SandboxEnemy) -> void:
 	defeated += 1
+	if e.ai_role == "leader":                   # D-082 morale: the bandits around a fallen leader may run
+		for o in living_enemies():
+			if o.position.distance_to(e.position) <= AiDefs.MORALE_RADIUS:
+				o.morale_check()
 	if mission_type == "sabotage" and e.job != "totem":
 		_fallen_foes.append({"type": e.type_id, "pos": e.position})
 	kill_xp += roundi(float(e.base_max_hp) * EnemyDefs.XP_PER_HP)
@@ -300,7 +319,8 @@ func _tick_gathering(delta: float) -> void:
 		g.visible = fog == null or fog.is_explored(map.cell_of(g.position))
 		var who: SandboxHero = null
 		for h in heroes:
-			if h.alive and h.target == null and not h.is_casting() and h.position.distance_to(g.position) <= GatherNode.RANGE:
+			if h.alive and h.target == null and not h.is_casting() and h.position.distance_to(g.position) <= GatherNode.RANGE \
+					and (not h.is_controlled() or not _locked() or interact_held):   # D-082: the Master gathers with F
 				who = h
 				break
 		if who == null:
@@ -371,6 +391,13 @@ func _spawn_encounter(enc: Dictionary) -> void:
 			objective_enemies.append(e)
 	for e in group:
 		e.group_mates = group
+	# D-082: a bandit group (not an ambush) has a horn: one bandit wakes every sleeping camp nearby
+	if String(enc["kind"]) != "ambush" and group.size() >= 2:
+		for e in group:
+			var se := e as SandboxEnemy
+			if se.ai_role != "" and se.ai_role != "leader" and se.job == "":
+				se.job = "horn"
+				break
 	# 2026-10-31: in a tactics area every awake pack of CALLER_MIN_PACK+ has a caller (its support, else
 	# its last member) that howls for reinforcements unless it dies first
 	if tactics and String(enc["kind"]) != "ambush" and String(enc["zone"]) != "objective" and group.size() >= 3:
@@ -955,7 +982,7 @@ func update_fog() -> void:
 		lookers[i].credit("explored", float(found[i]))
 	for e in enemies:
 		if e.alive:
-			e.visible = not e.dormant and fog.is_visible(map.cell_of(e.position))
+			e.visible = not e.dormant and (fog.is_visible(map.cell_of(e.position)) or e.spotted_t > 0.0)   # D-082 spotted
 	if _fog_view != null:
 		_fog_view.refresh()
 
@@ -1009,6 +1036,8 @@ func look_at_world(p: Vector2) -> void:
 # --- selection / camera commands (public so tests and a future HUD can call them) ----------
 
 func select_only(list: Array) -> void:
+	if _locked():
+		list = [master_hero]                     # D-082: with a Master only the Master takes direct orders
 	selected.clear()
 	for h in heroes:
 		h.selected = h.alive and list.has(h) and h.obeys()      # D-051: no obedience, no orders
@@ -1059,6 +1088,7 @@ func select_slot(i: int) -> void:
 		return
 	var h := heroes[i]
 	if _locked() and h != master_hero:
+		set_ping_target(h)                       # D-082: a portrait click picks who the next ping is for
 		return                                   # D-080: with a Master in the squad only the Master is driven
 	if not h.alive:
 		if h.downed or h.dead:
@@ -1195,6 +1225,8 @@ func retreat_selected() -> void:
 			continue                              # already picking someone up on the way out (X pressed again)
 		var fallen_ally: SandboxHero = null
 		for d in heroes:
+			if _locked() and h == master_hero:
+				break                                # D-082: the Master lifts allies with F, never on its own
 			if d.downed and not d.dead and not taken.has(d) and d.position.distance_to(h.position) <= RETREAT_PICKUP \
 					and (fallen_ally == null or d.position.distance_to(h.position) < fallen_ally.position.distance_to(h.position)):
 				fallen_ally = d
@@ -1268,6 +1300,243 @@ func order_context(world_point: Vector2) -> String:
 	return "move"
 
 
+# --- D-082 pings ----------------------------------------------------------------------------------
+
+## The next ping goes only to `h` (clicking the same portrait again: back to the whole party).
+func set_ping_target(h: SandboxHero) -> void:
+	ping_to = null if ping_to == h or h == null or not h.alive else h
+	if ping_to != null:
+		FloatingText.spawn(ping_to, "listening", Color(0.8, 0.95, 1.0), false, 1.0)
+
+
+## Shift + click: what the click is on decides the ping (enemy = attack, gathering spot = gather, fallen
+## ally = help, anything else = go there).
+func quick_ping(world_point: Vector2) -> int:
+	var foe := _foe_at(world_point)
+	if foe != null:
+		return ping("attack", world_point, foe)
+	if _downed_at(world_point) != null:
+		return ping("help", world_point)
+	if _node_at(world_point) != null:
+		return ping("gather", world_point)
+	return ping("move", world_point)
+
+
+func _foe_at(p: Vector2) -> SandboxEnemy:
+	var foe: SandboxEnemy = null
+	for e in visible_enemies():
+		if e.pick_distance(p) <= 0.0 and (foe == null or e.position.distance_to(p) < foe.position.distance_to(p)):
+			foe = e
+	return foe
+
+
+func _downed_at(p: Vector2) -> SandboxHero:
+	for h in heroes:
+		if h.downed and not h.dead and not h.lost and h.position.distance_to(p) <= 34.0:
+			return h
+	return null
+
+
+func _node_at(p: Vector2) -> GatherNode:
+	var best: GatherNode = null
+	for g in nodes:
+		if is_instance_valid(g) and not g.taken and g.visible and g.position.distance_to(p) <= 48.0 \
+				and (best == null or g.position.distance_to(p) < best.position.distance_to(p)):
+			best = g
+	return best
+
+
+## Sends a ping (AiDefs.PINGS) to the party, or to ping_to only. Each recipient answers with a short line
+## and obeys after a delay (personality, inside/outside the Master's Leadership radius), or says no when its
+## Obedience (effective, minus the spam penalty) is below CombatRules.OBEY_MIN. Deterministic, never a roll
+## (D-016). Spamming pings lowers everyone's Obedience for a while. Returns how many will obey.
+func ping(kind: String, world_point: Vector2, foe: SandboxEnemy = null) -> int:
+	if not AiDefs.PINGS.has(kind) or mission_state != Mission.ACTIVE:
+		return 0
+	if kind in ["attack", "spotted"] and foe == null:
+		foe = _foe_at(world_point)
+	var ally: SandboxHero = _downed_at(world_point) if kind == "help" else null
+	_count_ping()
+	pings_sent += 1
+	var marker := PingMarker.make(kind, foe.position if foe != null else world_point, foe)
+	_world.add_child(marker)
+	markers.append(marker)
+	markers = markers.filter(func(m): return is_instance_valid(m))
+	if kind == "spotted" and foe != null:
+		foe.spotted_t = AiDefs.SPOTTED_TIME                  # everyone sees it through the fog for a while
+		foe.visible = true
+	var to: Array = [ping_to] if ping_to != null and ping_to.alive else heroes.filter(func(x): return x.alive and x != master_hero)
+	ping_to = null
+	var obeyed := 0
+	for h in to:
+		if h == master_hero or not h.alive:
+			continue
+		var ans := ping_answer(h, kind)
+		h.say(HeroChatter.ping_line(h.hero, kind, bool(ans["obeys"]), h.combat_rng), 2.2)
+		if not bool(ans["obeys"]):
+			continue
+		obeyed += 1
+		_ping_queue.append({"t": float(ans["delay"]), "hero": h, "kind": kind, "point": world_point, "foe": foe, "ally": ally})
+	return obeyed
+
+
+## How `h` answers a ping: {"obeys": bool, "delay": seconds}. Deterministic (D-016).
+func ping_answer(h: SandboxHero, kind: String) -> Dictionary:
+	if h.has_status("panicked"):
+		return {"obeys": false, "delay": 0.0}
+	if float(h.effective_obedience()) - spam_penalty < float(CombatRules.OBEY_MIN):
+		return {"obeys": false, "delay": 0.0}
+	if kind == "danger" and float(h.hp) > float(h.max_hp) * float(h.persona.get("ignore_retreat_hp", 2.0)):
+		return {"obeys": false, "delay": 0.0}           # a reckless hero with health to spare ignores the retreat
+	var delay := AiDefs.REACT_BASE + float(h.persona.get("delay", 0.0))
+	if kind == "attack":
+		delay += float(h.persona.get("attack_delay", 0.0))
+	if not h.in_master_radius():
+		delay += AiDefs.OUT_OF_RADIUS_DELAY
+	return {"obeys": true, "delay": maxf(0.0, delay)}
+
+
+func _count_ping() -> void:
+	_ping_times.append(elapsed)
+	_ping_times = _ping_times.filter(func(t): return elapsed - float(t) <= AiDefs.SPAM_WINDOW)
+	if _ping_times.size() > AiDefs.SPAM_COUNT:
+		spam_penalty = minf(AiDefs.SPAM_MAX, spam_penalty + AiDefs.SPAM_PENALTY)
+
+
+func _tick_pings(delta: float) -> void:
+	spam_penalty = maxf(0.0, spam_penalty - AiDefs.SPAM_DECAY * delta)
+	if _ping_queue.is_empty():
+		return
+	var due: Array = []
+	for q in _ping_queue:
+		q["t"] = float(q["t"]) - delta
+		if float(q["t"]) <= 0.0:
+			due.append(q)
+	for q in due:
+		_ping_queue.erase(q)
+		var h: SandboxHero = q["hero"]
+		if is_instance_valid(h) and h.alive and not h.has_status("panicked"):
+			_apply_ping(h, String(q["kind"]), q["point"], q["foe"], q["ally"])
+
+
+## What an obeyed ping makes the hero do. Every ping order ends after AiDefs.PING_ORDER_TIME (back to Auto).
+func _apply_ping(h: SandboxHero, kind: String, point: Vector2, foe, ally) -> void:
+	var m := master_hero
+	match kind:
+		"regroup":
+			if m != null and m.alive:
+				h.order_move(map.find_path(h.position, map.nearest_walkable(m.position + Vector2.RIGHT.rotated(float(h.slot) * 1.3) * 36.0)))
+		"attack":
+			if foe != null and is_instance_valid(foe) and foe.alive:
+				h.order_attack(foe)
+				h.focus_hint = foe
+			else:
+				h.order_attack_move(map.nearest_walkable(point), map)
+		"defend":
+			h.stop()
+			h.order = "defend"
+			h.defend_point = map.nearest_walkable(point)
+			h.path = map.find_path(h.position, h.defend_point)
+		"explore", "move":
+			h.order_move(map.find_path(h.position, map.nearest_walkable(point)))
+		"gather":
+			var g := _node_at(point)
+			h.order_move(map.find_path(h.position, map.nearest_walkable(g.position if g != null else point)))
+		"danger":
+			var away := (h.position - point).normalized() if h.position.distance_to(point) > 1.0 else Vector2.DOWN
+			var to := h.position + away * AiDefs.DANGER_DIST
+			if m != null and m.alive and m.position.distance_to(point) > AiDefs.DANGER_DIST * 0.6:
+				to = m.position
+			h.order_move(map.find_path(h.position, map.nearest_walkable(to)))
+		"spotted":
+			if foe != null and is_instance_valid(foe):
+				h.focus_hint = foe                  # a hint, not an order: the role decides when
+			return
+		"help":
+			if ally != null and is_instance_valid(ally) and ally.downed:
+				h.order_rescue(ally)
+				return                               # a rescue ends on its own
+			h.order_move(map.find_path(h.position, map.nearest_walkable(point)))
+	h.order_left = AiDefs.PING_ORDER_TIME
+
+
+## The wheel: opened after holding Shift + click AiDefs.PING_WHEEL_HOLD s (screen position).
+func open_wheel(at: Vector2) -> void:
+	close_wheel()
+	_wheel = PingWheel.new()
+	_wheel.centre = at
+	for cid in MasterDefs.COMMANDS:
+		var c: Dictionary = MasterDefs.COMMANDS[cid]
+		var learned := master_hero != null and MasterRules.commands(master_hero.hero).has(cid)
+		_wheel.command_names[int(c["slot"])] = String(c["name"]) if learned else ""
+		_wheel.command_cd[int(c["slot"])] = float(command_cd.get(cid, 0.0))
+	add_child(_wheel)
+
+
+func close_wheel() -> void:
+	if _wheel != null and is_instance_valid(_wheel):
+		_wheel.queue_free()
+	_wheel = null
+
+
+## Releasing the wheel at screen point `at`: a ping (at the world point under where it opened) or a
+## Command (same effect and cooldown as keys 1 2 3).
+func release_wheel(at: Vector2) -> String:
+	if _wheel == null:
+		return ""
+	var choice := PingWheel.pick_at(_wheel.centre, at)
+	var world := screen_to_world(_wheel.centre)
+	close_wheel()
+	if choice.has("ping"):
+		ping(String(choice["ping"]), world)
+		return String(choice["ping"])
+	if choice.has("command"):
+		use_command(int(choice["command"]), world)
+		return "command"
+	return ""
+
+
+# --- D-082 interaction (F) ------------------------------------------------------------------------
+
+## F held: the Master lifts the fallen ally next to them (a hit resets it), else gathers the spot next to
+## them; pressing F at the extraction point escapes. Also marks who shows the "Hold F" prompt.
+func _tick_interact(delta: float) -> void:
+	var m := master_hero
+	for h in heroes:
+		h.revive_prompt = m != null and m.alive and h.downed and not h.dead and not h.lost \
+				and m.position.distance_to(h.position) <= AiDefs.REVIVE_PROMPT_RANGE
+	if m == null or not m.alive or not m.is_controlled():
+		return
+	var lifting: SandboxHero = null
+	if interact_held:
+		for h in heroes:
+			if h.revive_prompt and (lifting == null or m.position.distance_to(h.position) < m.position.distance_to(lifting.position)):
+				lifting = h
+	if lifting != null:
+		if m.rescue_target != lifting:
+			m.rescue_progress = 0.0
+		if m.channel_revive(lifting, delta):
+			m.rescue_target = null
+	elif m.rescue_progress > 0.0 or m.rescue_target != null:
+		m.rescue_progress = 0.0                   # let go of F or walked away: start again
+		if m.order != "rescue":
+			m.rescue_target = null
+
+
+## F pressed (not held): escape when the squad stands at the extraction point.
+func interact_press() -> void:
+	interact_held = true
+	if master_hero == null or not master_hero.alive:
+		return
+	if master_hero.position.distance_to(map.center_of(map.extract_cell)) <= EXTRACT_RADIUS * EXTRACT_GATHER \
+			and not heroes.any(func(h): return h.revive_prompt):
+		extract()
+
+
+func interact_release() -> void:
+	interact_held = false
+
+
 ## Small fading ring where an order was given (order feedback).
 func _mark(at: Vector2, color: Color) -> void:
 	var m := OrderMarker.new()
@@ -1334,6 +1603,8 @@ func tick(delta: float) -> void:
 	if _locked() and master_hero.alive and not master_hero.is_controlled():
 		_set_controlled(master_hero)             # D-080: a rescued Master takes the lead again
 	_tick_leadership(delta)
+	_tick_pings(delta)
+	_tick_interact(delta)
 	_separate()
 	_separate_enemies()
 	_tick_boss_wards()
@@ -1817,6 +2088,10 @@ func _process(delta: float) -> void:
 		_aim_view.slot = aiming_slot if aiming_slot >= 0 else _preview_slot
 		_aim_view.cursor = screen_to_world(get_local_mouse_position())
 		_aim_view.queue_redraw()
+	if _ping_press != Vector2.INF and _wheel == null:
+		_ping_hold += delta                       # Shift + click held: it becomes the wheel
+		if _ping_hold >= AiDefs.PING_WHEEL_HOLD:
+			open_wheel(_ping_press)
 	if _dragging:
 		var m := get_local_mouse_position()
 		_band.position = _drag_start.min(m)
@@ -1829,6 +2104,24 @@ func _process(delta: float) -> void:
 
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_LEFT and _locked():
+			# D-082: in a Master squad the left click pings (Shift + click quick, held = the wheel; A then click = attack)
+			if event.pressed and _arming_ping != "":
+				ping(_arming_ping, screen_to_world(event.position))
+				_arming_ping = ""
+				return
+			if event.pressed and Input.is_key_pressed(AiDefs.PING_MODIFIER):
+				_ping_press = event.position
+				_ping_hold = 0.0
+				return
+			if not event.pressed and _wheel != null:
+				release_wheel(event.position)
+				_ping_press = Vector2.INF
+				return
+			if not event.pressed and _ping_press != Vector2.INF:
+				quick_ping(screen_to_world(_ping_press))
+				_ping_press = Vector2.INF
+				return
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			if event.pressed and _arming_attack_move:
 				_arming_attack_move = false
@@ -1923,6 +2216,40 @@ func _skill_key(i: int, pressed: bool) -> void:
 		use_skill_selected(i, screen_to_world(get_local_mouse_position()))
 
 
+## Squad order keys (also the HUD buttons). D-082: in a Master squad they become pings to the party
+## (H defend here, C regroup, X the Master retreats and the squad comes, A then click = attack ping,
+## S lifts every ping order); V = follow (F is interaction now).
+func squad_key(key: int) -> void:
+	match key:
+		KEY_S:
+			if _locked():
+				for h in heroes:                     # D-082: every ping order is lifted, all back to Auto
+					if h != master_hero and h.alive and h.order != "rescue":
+						h.stop()
+			stop_selected()
+		KEY_A:
+			if _locked():
+				_arming_ping = "attack"              # D-082: the next click pings "attack here"
+			else:
+				arm_attack_move()
+		KEY_H:
+			if _locked():
+				ping("defend", master_hero.position)  # D-082: squad orders are pings in a Master squad
+			else:
+				hold_selected()
+		KEY_V:
+			follow_selected()                      # D-082: F is interaction now; follow moved to V
+		KEY_C:
+			if _locked():
+				ping("regroup", master_hero.position)
+			else:
+				regroup_selected()
+		KEY_X:
+			if _locked():
+				ping("regroup", master_hero.position) # the squad comes along with the Master
+			retreat_selected()
+
+
 func _input(event: InputEvent) -> void:
 	if not (event is InputEventKey) or event.echo:
 		return
@@ -1930,6 +2257,13 @@ func _input(event: InputEvent) -> void:
 		_q_held = event.pressed
 		if event.pressed:
 			attack_at_cursor()
+		get_viewport().set_input_as_handled()
+		return
+	if event.keycode == KEY_F:
+		if event.pressed:                        # D-082: interaction (lift a fallen ally, gather, escape)
+			interact_press()
+		else:
+			interact_release()
 		get_viewport().set_input_as_handled()
 		return
 	if event.keycode == KEY_SPACE and event.pressed:
@@ -1958,22 +2292,17 @@ func _input(event: InputEvent) -> void:
 			overview = not overview
 		KEY_G:
 			select_all()
-		KEY_S:
-			stop_selected()
-		KEY_A:
-			arm_attack_move()
-		KEY_H:
-			hold_selected()
-		KEY_F:
-			follow_selected()
-		KEY_C:
-			regroup_selected()
-		KEY_X:
-			retreat_selected()
+		KEY_S, KEY_A, KEY_H, KEY_V, KEY_C, KEY_X:
+			squad_key(event.keycode)
 		KEY_T:
 			toggle_auto_skills()
 		KEY_ESCAPE:
-			if _arming_attack_move:
+			if _wheel != null:
+				close_wheel()
+				_ping_press = Vector2.INF
+			elif _arming_ping != "":
+				_arming_ping = ""
+			elif _arming_attack_move:
 				_arming_attack_move = false
 			else:
 				open_menu()
@@ -2034,7 +2363,7 @@ func _refresh_info() -> void:
 			rows.append("%d %s  HP %d/%d  %s %d  %s · %s%s" % [i + 1, nm, hh.hp, hh.max_hp, String(SkillDefs.RESOURCES[hh.res_kind]["name"]).left(1), roundi(hh.res), hh.order_label(),
 				("ready " + "".join(ready)) if not ready.is_empty() else "no skill ready", "  [RELIC]" if hh.carrying else ""])
 		elif hh.downed:
-			rows.append("%d %s  DOWN %ds — right-click to rescue" % [i + 1, nm, ceili(hh.agony)])
+			rows.append("%d %s  DOWN %s — hold F next to them" % [i + 1, nm, hh.agony_text()])
 		else:
 			rows.append("%d %s  FALLEN" % [i + 1, nm])
 	_squad_label.text = "\n".join(rows)

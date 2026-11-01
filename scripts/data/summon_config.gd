@@ -5,8 +5,9 @@ extends RefCounted
 ## Rates are percentages and must sum to 100 (validate() checks it, Game refuses a bad banner).
 
 const DEFAULT_BANNER := "standard"
-## Overhaul LPC (D-F): hero races and their weights (provisional 80/20 until the owner confirms).
-const RACE_WEIGHTS := {"human": 80, "elf": 20}
+## Overhaul LPC (D-F): hero races and their weights. D-082: no more elves among the summoned (the Master
+## lost them in D-081); elves already in a save keep their look (it is saved, D-004).
+const RACE_WEIGHTS := {"human": 100}
 ## The ten free summons of a new account: early-game odds (1-star common, 2-star sometimes, 3-star very
 ## rare), no 4-5 stars. Viability and a guaranteed builder are enforced by Game.starter_summons().
 const STARTER_BANNER := "starter"

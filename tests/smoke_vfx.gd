@@ -86,8 +86,10 @@ func _ready() -> void:
     n0 = _fx_count(world)
     e1.position = base + Vector2(160, 0)
     h._basic_attack(e1)
-    var flying := world.get_children().filter(func(c): return c is AnimatedSprite2D and c.position.distance_to(h.position + Vector2(0, -16)) < 30.0)
-    check(_fx_count(world) > n0 and not flying.is_empty(), "a ranged attack launches a projectile from the hero")
+    for i in 12:                                     # D-082: the bow is drawn ~0.3 s, then the arrow leaves
+        h.tick(1.0 / 30.0)
+    var flying := world.get_children().filter(func(c): return c is ArrowShot and not c.done and c.position.distance_to(h.position) < 120.0)
+    check(not flying.is_empty(), "a ranged attack launches a real projectile from the hero (after drawing the bow)")
     await get_tree().create_timer(0.5).timeout
     check(world.get_children().filter(func(c): return c is AnimatedSprite2D and c.position.distance_to(h.position + Vector2(0, -16)) < 30.0).is_empty(), "the projectile flies off and lands")
 

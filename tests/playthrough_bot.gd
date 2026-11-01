@@ -1,7 +1,8 @@
 extends Control
 ## Automated playthrough (not a pass/fail suite): a scripted "player" starts a new account, builds the
-## village, and plays floors 1-5 for real with player-level orders only (attack-move, W/E/R skills,
-## rescue, gather, carry the relic, extract). No damage cheats. Prints a report for balance review.
+## village, and plays floors 1-5 for real. D-082: in the field it is a MasterBot (tests/master_bot.gd): it
+## drives ONLY the Master and leads the other four with pings, Commands and skills, like a player (no
+## direct orders to the other heroes). No damage cheats. Prints a report for balance review.
 ##   godot --headless --path . res://tests/playthrough_bot.tscn
 const DT := 1.0 / 30.0
 const THINK := 0.25
@@ -30,7 +31,6 @@ const MATRIX_SQUAD := ["class.warrior", "class.warrior", "class.ranger", "class.
 ## D-080: the Master the bot creates; it drives the Master like a player (the other four act on their own).
 const BOT_MASTER := {"first": "Bot", "last": "Master", "class": "class.warrior", "trait": "trait.stubborn",
     "look": {"race": "human", "body": "male", "skin": "light", "eyes": "blue", "hair": "hair_plain", "hair_color": "black", "beard": ""}}
-var _dodging: Dictionary = {}           # hero -> seconds left of a dodge step ordered by the tactical player
 
 
 func say(s: String) -> void:
@@ -407,190 +407,6 @@ func _frontier(sb: SandboxScreen, from: Vector2i) -> Vector2:
     return Vector2.INF
 
 
-## D-080: the driven Master has no autonomy of its own (D-053), so the bot plays it like a player: it
-## walks to the nearest foe it sees, attacks with Q, fires every ready skill at it and (D-081) calls
-## "focus fire" when it is ready. Returns the skills and commands used.
-func _drive_master(sb: SandboxScreen, foes: Array) -> int:
-    var m: SandboxHero = sb.master_hero
-    if m == null or not m.alive or not m.is_controlled() or m.order == "retreat" or m.order == "rescue":
-        return 0
-    var near: SandboxEnemy = null
-    for e in foes:
-        if e.alive and e.position.distance_to(m.position) < 320.0 and (near == null or e.position.distance_to(m.position) < near.position.distance_to(m.position)):
-            near = e
-    if near == null:
-        return 0
-    if m.position.distance_to(near.position) > m.attack_range():
-        if m.order != "move" or m.path.is_empty():
-            m.order_move(sb.map.find_path(m.position, near.position))       # walks up like a player
-    else:
-        m.aimed_attack(near.position, foes, sb.map)                       # Q at the foe (D-059)
-    var used := 0
-    if sb.use_command(0, near.position) > 0:                              # D-081: focus fire when ready
-        used += 1
-    for i in m.slots.size():
-        if m.skill_ready(i) and m.use_skill_slot(i, foes, sb.heroes, near.position):
-            used += 1
-    return used
-
-
-# --- the tactical player -------------------------------------------------------------------------
-
-## Breaks creature casts with a ready stun/interrupt and steps heroes out of marked areas. Returns how
-## many skills it used.
-func _tactical_micro(sb: SandboxScreen, standing: Array, foes: Array) -> int:
-    var used := 0
-    for h in _dodging.keys():
-        _dodging[h] = float(_dodging[h]) - THINK
-        if float(_dodging[h]) <= 0.0:
-            _dodging.erase(h)
-    for e in foes:
-        if not e.alive or not e.is_telegraphing():
-            continue
-        # interrupt a help spell or a big blow
-        if e.casting_skill != "" or e.is_boss:
-            for h in standing:
-                if h.carrying or h.is_casting():
-                    continue
-                var done := false
-                for i in h.slots.size():
-                    var sk: Dictionary = h.slot_skill(i)
-                    if sk.is_empty() or h._auto_kind(sk) != "interrupt" or h.skill_cd(i) > 0.0 or h.res < float(sk["cost"]):
-                        continue
-                    if h.position.distance_to(e.position) > maxf(float(sk["range"]), 75.0):
-                        continue
-                    if h.use_skill_slot(i, [e], sb.heroes, e.position):
-                        used += 1
-                        done = true
-                        break
-                if done:
-                    break
-        # step out of the marked area
-        var r: float = e.telegraph_radius()
-        if r <= 0.0:
-            continue
-        var aim: Vector2 = e.aim_point()
-        for h in standing:
-            if h.position.distance_to(aim) <= r + 12.0 and not _dodging.has(h):
-                var away: Vector2 = (h.position - aim).normalized() if h.position.distance_to(aim) > 1.0 else Vector2.RIGHT.rotated(float(h.slot))
-                if e.windup_left() < 0.35 and h.dash(away):     # a good player dashes through on timing
-                    _dodging[h] = 0.4
-                    continue
-                var spot: Vector2 = sb.map.nearest_walkable(aim + away * (r + 45.0))
-                var p := sb.map.find_path(h.position, spot)
-                if not p.is_empty():
-                    h.order_move(p)
-                    _dodging[h] = 1.2
-    return used
-
-
-## Kill first what makes the fight longer or bigger: healers and shamans, lookouts running for help.
-func _tactical_focus(sb: SandboxScreen, standing: Array, near: Array) -> bool:
-    var key: SandboxEnemy = null
-    var best := INF
-    for e in near:
-        var pri := 0
-        if e.job == "scout" and e.alerted:
-            pri = 3
-        elif e.job == "shaman" or e.skills.has("mend") or e.skills.has("ward"):
-            pri = 2
-        elif e.skills.has("rally"):
-            pri = 1
-        if pri == 0:
-            continue
-        var score: float = -float(pri) * 1000.0 + e.position.distance_to(_centre(standing))
-        if score < best:
-            best = score
-            key = e
-    if key == null:
-        return false
-    for h in standing:
-        if not _dodging.has(h) and h.rescue_target == null and not h.carrying and h.target != key:
-            h.order_attack(key)
-    return true
-
-
-## The relic: the toughest hero carries it (slow, cannot fight) and the rest escort and fight around it.
-func _tactical_relic(sb: SandboxScreen, standing: Array, goal: Vector2) -> void:
-    var carrier: SandboxHero = sb.carrier
-    if carrier == null:
-        var tank: SandboxHero = null
-        for h in standing:
-            if tank == null or h.max_hp > tank.max_hp:
-                tank = h
-        sb.select_only(standing)
-        sb.attack_move_selected(goal)                 # everyone goes, the tank leads the way to the relic
-        var p := sb.map.find_path(tank.position, goal)
-        if not p.is_empty():
-            tank.order_move(p)
-        return
-    var p2 := sb.map.find_path(carrier.position, goal)
-    if not p2.is_empty():
-        carrier.order_move(p2)
-    for h in standing:
-        if h != carrier and not _dodging.has(h) and h.rescue_target == null and h.target == null:
-            h.order_follow(carrier)
-
-
-## Master prompt E: while the Baron is shielded, the two sturdiest heroes channel on the altar(s) and
-## the rest guard them (attack-move around the altar); once the shield falls everyone hits the Baron.
-func _tactical_altar(sb: SandboxScreen, standing: Array) -> bool:
-    if not sb.boss.immune:
-        _tactical_formation(sb, standing, [sb.boss], _centre(standing))   # spread: backline at range
-        return true
-    var pool: Array = standing.duplicate()
-    pool.sort_custom(func(a, b): return a.max_hp > b.max_hp)
-    var used: Array = []
-    for alt in sb.altars:
-        if alt.done:
-            continue
-        for i in AltarDefs.CHANNEL_HEROES:
-            if pool.is_empty():
-                return true
-            var h = pool.pop_front()
-            used.append(h)
-            sb.select_only([h])
-            if h.position.distance_to(alt.position) > AltarDefs.RADIUS * 0.6:
-                sb.order_move_selected(alt.position + Vector2.RIGHT.rotated(float(i) * PI) * 14.0)
-    if not pool.is_empty():
-        var guard_at: Vector2 = sb.altars[0].position
-        var threat = null
-        for e in sb.living_enemies():
-            if e != sb.boss and e.position.distance_to(guard_at) < 300.0 and (threat == null or e.position.distance_to(guard_at) < threat.position.distance_to(guard_at)):
-                threat = e
-        sb.select_only(pool)
-        sb.attack_move_selected(threat.position if threat != null else guard_at + Vector2(0, 60))
-    return true
-
-
-## Matrix TACTICO: the frontline attack-moves on the nearest creature; ranged heroes and the cleric
-## hold behind the frontline at their range; a hero under 35% falls back behind the tank to heal/kite.
-func _tactical_formation(sb: SandboxScreen, standing: Array, near: Array, c: Vector2) -> void:
-    var front: Array = standing.filter(func(h): return not h.is_ranged() and String(h.hero.hero_class) != "class.cleric" and h.rescue_target == null and not _dodging.has(h))
-    var back: Array = standing.filter(func(h): return not front.has(h) and h.rescue_target == null and not _dodging.has(h))
-    var anchor: Vector2 = _centre(front) if not front.is_empty() else c
-    var tgt = near[0]
-    for e in near:
-        if e.position.distance_to(anchor) < tgt.position.distance_to(anchor):
-            tgt = e
-    var away: Vector2 = (anchor - tgt.position).normalized() if anchor != tgt.position else Vector2.DOWN
-    var hurt: Array = standing.filter(func(h): return float(h.hp) / float(h.max_hp) < 0.35 and front.size() > 1)
-    if not front.is_empty():
-        sb.select_only(front.filter(func(h): return not hurt.has(h)))
-        sb.attack_move_selected(tgt.position)
-    for h in back:
-        if hurt.has(h):
-            continue
-        sb.select_only([h])
-        if h.position.distance_to(tgt.position) < h.attack_range() * 0.6:
-            sb.order_move_selected(sb.map.nearest_walkable(anchor + away * h.attack_range() * 0.8))
-        else:
-            sb.attack_move_selected(tgt.position)
-    for h in hurt:
-        sb.select_only([h])
-        sb.order_move_selected(sb.map.nearest_walkable(anchor + away * 170.0))
-
-
 # --- balance matrix (PT_MATRIX) -----------------------------------------------------------------
 
 func _matrix_squad(seed_base: int, lvl: int, upgraded: bool) -> void:
@@ -709,6 +525,7 @@ func _play_floor(floor_num: int, attempt: int) -> Dictionary:
     var skip_nodes: Array = []
     var first_full_explore := -1.0
     var hurt_by := {}
+    var bot := MasterBot.new("tactical" if TACTICAL and not LOCO else "loco")   # D-082: Master + pings only
     while sb.mission_state == SandboxScreen.Mission.ACTIVE and t < MAX_SIM:
         sb.tick(DT)
         t += DT
@@ -752,22 +569,8 @@ func _play_floor(floor_num: int, attempt: int) -> Dictionary:
         var near_foes: Array = foes.filter(func(e): return e.position.distance_to(c) < 380.0)
         if not near_foes.is_empty() and first_contact < 0.0:
             first_contact = t
-        # D-065: both styles rely on the heroes' own autonomy (auto skills). The tactical player adds what
-        # a thinking player does: break casts, step out of marked areas, kill healers / shamans / lookouts first.
-        if TACTICAL:
-            skills_used += _tactical_micro(sb, standing, foes)
-        skills_used += _drive_master(sb, foes)
-        # rescue downed allies
-        for d in sb.heroes:
-            if d.downed and not d.dead:
-                var busy: bool = sb.heroes.any(func(x): return x.rescue_target == d)
-                if not busy:
-                    var best = null
-                    for h in standing:
-                        if best == null or h.position.distance_to(d.position) < best.position.distance_to(d.position):
-                            best = h
-                    if best != null:
-                        best.order_rescue(d)
+        # D-065 / D-082: both styles rely on the heroes' own autonomy; the bot only plays the Master and
+        # leads with pings and Commands (MasterBot). It lifts the fallen itself by holding F (tactical).
         # D-066 Wilds: head home with the haul after a while, when everything is taken, or when hurt
         if sb.is_wilds() and not retreating:
             var hurt := 0.0
@@ -777,42 +580,18 @@ func _play_floor(floor_num: int, attempt: int) -> Dictionary:
             var left: int = sb.nodes.filter(func(g): return is_instance_valid(g) and not g.taken).size()
             if t > FARM_TIME or left == 0 or (not LOCO and (hurt < 0.4 or standing.size() <= 3)):
                 retreating = true
-                sb.select_only(standing)
-                sb.retreat_selected()
+                bot.retreat(sb)
                 say("  t=%.0fs Wilds: heading home (spots left %d, squad health %.0f%%, standing %d)" % [t, left, hurt * 100.0, standing.size()])
         # retreat when the squad is broken
         if not retreating and not LOCO and standing.size() <= 2 and sb.heroes.size() >= 4:
             retreating = true
-            sb.select_only(standing)
-            sb.retreat_selected()
+            bot.retreat(sb)
             say("  t=%.0fs squad broken (%d standing): retreat" % [t, standing.size()])
         if retreating:
-            if sb.extract_block() == "":
-                sb.extract()
-            elif order_t <= 0.0:
-                order_t = 4.0
-                sb.select_only(standing)
-                sb.retreat_selected()
+            bot.retreat(sb)
             continue
-        if TACTICAL and not sb.altars.is_empty() and sb.boss != null and sb.boss.alive and order_t <= 0.0:
-            order_t = 1.0
-            if _tactical_altar(sb, standing):
-                continue
         if not near_foes.is_empty():
-            if TACTICAL and _tactical_focus(sb, standing, near_foes):
-                continue
-            if TACTICAL and MATRIX and order_t <= 0.0:
-                order_t = 1.0
-                _tactical_formation(sb, standing, near_foes, c)
-                continue
-            if order_t <= 0.0:
-                order_t = 1.5
-                var tgt = near_foes[0]
-                for e in near_foes:
-                    if e.position.distance_to(c) < tgt.position.distance_to(c):
-                        tgt = e
-                sb.select_only(standing.filter(func(h): return h.rescue_target == null and not _dodging.has(h)))
-                sb.attack_move_selected(tgt.position)
+            skills_used += bot.think(sb, Vector2.INF, THINK)
             continue
         # objective
         var goal := _known_goal(sb, c, skip_targets, seen) if BLIND else _goal(sb, c, skip_targets)
@@ -844,6 +623,7 @@ func _play_floor(floor_num: int, attempt: int) -> Dictionary:
             Game.save_game()
             DirAccess.copy_absolute(ProjectSettings.globalize_path(Game.save_path), ProjectSettings.globalize_path("user://stuck_floor%d_%d.json" % [floor_num, OS.get_process_id()]))
         if goal == Vector2.INF:
+            skills_used += bot.think(sb, Vector2.INF, THINK)
             continue
         if c.distance_to(stuck_ref) < 24.0:
             stuck_t += THINK
@@ -856,16 +636,8 @@ func _play_floor(floor_num: int, attempt: int) -> Dictionary:
             for e in sb.living_enemies():
                 if e.position.distance_to(goal) < 10.0:
                     skip_targets.append(e)
-        if order_t <= 0.0 or goal.distance_to(last_goal) > 80.0:
-            order_t = 3.0
-            last_goal = goal
-            sb.select_only(standing)
-            if TACTICAL and sb.mission_type in ["retrieval", "rescue"]:
-                _tactical_relic(sb, standing, goal)
-            elif sb.carrier != null and sb.mission_type in ["retrieval", "rescue"]:
-                sb.order_move_selected(goal)
-            else:
-                sb.attack_move_selected(goal)
+        last_goal = goal
+        skills_used += bot.think(sb, goal, THINK)
     var outcome: String = SandboxScreen.Mission.keys()[sb.mission_state]
     if sb.mission_state == SandboxScreen.Mission.ACTIVE:
         outcome = "TIMEOUT"
@@ -884,8 +656,8 @@ func _play_floor(floor_num: int, attempt: int) -> Dictionary:
             say("    left: %s at %s dormant=%s visible=%s" % [e.type_id, str(sb.map.cell_of(e.position)), str(e.dormant), str(e.visible)])
     if BLIND:
         say("  explored %.0f%% of the floor" % (sb.fog.explored_fraction() * 100.0))
-    say("  RESULT %s in %d:%02d (first contact %.0fs), killed %d/%d, downs %d, fallen %s, min hp %.0f%%, skills used %d" % [outcome,
-        int(t) / 60, int(t) % 60, first_contact, sb.defeated, sb.enemies.size(), downs, str(sb.fallen), min_hp_frac * 100.0, skills_used])
+    say("  RESULT %s in %d:%02d (first contact %.0fs), killed %d/%d, downs %d, fallen %s, min hp %.0f%%, skills used %d, bot %s" % [outcome,
+        int(t) / 60, int(t) % 60, first_contact, sb.defeated, sb.enemies.size(), downs, str(sb.fallen), min_hp_frac * 100.0, skills_used, str(bot.stats)])
     say("  damage taken by nearest source: %s" % str(hurt_by))
     for h in sb.heroes:
         if h.dead:

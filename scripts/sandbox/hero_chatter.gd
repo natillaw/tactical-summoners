@@ -80,3 +80,38 @@ static func town_line(hero: HeroData, rng: RandomNumberGenerator) -> String:
     if options.is_empty() or rng.randf() < 0.3:
         options = TOWN_DEFAULT
     return String(options[rng.randi() % options.size()])
+
+
+## D-082: short answers to a ping (and to ignoring it). Picked with the hero's seeded combat_rng.
+const PING_REPLIES := {
+    "regroup": ["Coming!", "On my way.", "Right behind you."],
+    "attack": ["On it!", "Target sighted.", "Going in!"],
+    "defend": ["I'll hold here.", "Nobody gets past.", "Holding."],
+    "explore": ["I'll take a look.", "Scouting ahead.", "Let's see..."],
+    "gather": ["I'll grab it.", "Gathering.", "Mine!"],
+    "danger": ["Falling back!", "Pulling out!", "Careful!"],
+    "spotted": ["I see it.", "Marked.", "Got eyes on it."],
+    "help": ["I've got them!", "Hang on!", "Coming to help!"],
+    "move": ["Moving.", "Going.", "Right."],
+}
+const PING_REFUSALS := ["Not now!", "I don't take orders like that.", "Hmph.", "Stop shouting at me."]
+## Personality overrides: trait -> {ping kind or "ignore_danger"} -> line.
+const PING_TRAIT_LINES := {
+    "trait.reckless": {"ignore_danger": "Run? Never!", "attack": "Finally!"},
+    "trait.hot_headed": {"ignore_danger": "Not while I can swing!", "attack": "Let me at them!"},
+    "trait.cautious": {"attack": "...if you say so.", "danger": "I knew it!"},
+    "trait.loyal": {"regroup": "Always at your side.", "help": "I won't leave anyone!"},
+    "trait.lazy": {"explore": "Do I have to?"},
+}
+
+
+static func ping_line(hero: HeroData, kind: String, obeyed: bool, rng: RandomNumberGenerator) -> String:
+    if hero != null:
+        for t in hero.traits:
+            var d: Dictionary = PING_TRAIT_LINES.get(t, {})
+            if not obeyed and kind == "danger" and d.has("ignore_danger"):
+                return String(d["ignore_danger"])
+            if obeyed and d.has(kind):
+                return String(d[kind])
+    var pool: Array = PING_REPLIES.get(kind, ["Right."]) if obeyed else PING_REFUSALS
+    return String(pool[rng.randi() % pool.size()])

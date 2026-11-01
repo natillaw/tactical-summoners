@@ -37,8 +37,8 @@ func _init() -> void:
     var elves := 0
     for i in 1000:
         elves += 1 if String(HeroGenerator.lpc_look(i)["race"]) == "elf" else 0
-    print("  %s  LPC look deterministic in 1000 seeds; elves %d/1000 (weight %d%%)" % ["PASS" if looks_ok and elves > 100 and elves < 300 else "FAIL", elves, int(SummonConfig.RACE_WEIGHTS["elf"])])
-    if not (looks_ok and elves > 100 and elves < 300):
+    print("  %s  LPC look deterministic in 1000 seeds; elves %d/1000 (D-082: none are summoned)" % ["PASS" if looks_ok and elves == 0 else "FAIL", elves])
+    if not (looks_ok and elves == 0):
         bad += 1
     print("  %s  %d seeds keep name, class, traits, passives and Trust/Obedience/Composure" % ["PASS" if bad == 0 else "FAIL", data.size()])
     print("== %s ==" % ("ALL PASSED" if bad == 0 else "%d FAILED" % bad))

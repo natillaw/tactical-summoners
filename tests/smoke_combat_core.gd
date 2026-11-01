@@ -91,7 +91,7 @@ func _ready() -> void:
 
     # --- downed / agony / rescue (D-036)
     h0.take_damage(999999, foe)
-    check(h0.downed and not h0.alive and not h0.dead and is_equal_approx(h0.agony, CombatRules.AGONY_TIME), "0 HP: the hero falls with a 20 s agony")
+    check(h0.downed and not h0.alive and not h0.dead and is_equal_approx(h0.agony, CombatRules.AGONY_TIME), "0 HP: the hero falls with a %d s agony" % int(CombatRules.AGONY_TIME))
     h1.position = h0.position + Vector2(120, 0)
     sb.select_only([h1])
     check(sb.order_context(h0.position) == "rescue" and h1.order == "rescue", "right-click on a fallen ally gives a rescue order")

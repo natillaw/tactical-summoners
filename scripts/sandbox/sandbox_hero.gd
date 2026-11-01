@@ -55,8 +55,28 @@ var _pending: Array = []             # [{"t": seconds, "f": Callable}]: hits in 
 var _side: String = "right"          # last horizontal facing (up/down attacks reuse it)
 var chatter_text: String = ""
 var chatter_timer: float = 0.0
+## D-082 layered autonomy (AiDefs): 1 survival > 2 orders (pings, Commands) > 3 role > 4 personality.
+## The hero re-decides every AiDefs.decide_interval(Composure) seconds, not every frame.
+var role: String = "support"              # AiDefs.ROLE_BY_CLASS
+var persona: Dictionary = {}              # AiDefs.personality(traits)
+var ai_layer: String = ""                 # layer that made the last decision (debug overlay, tests)
+var decisions: int = 0                    # how many times it decided (tests: not every frame)
+var _think_t: float = 0.0
+var order_left: float = 0.0               # a ping order ends after this many seconds (0 = no limit)
+var focus_hint: SandboxEnemy = null       # the squad's focus (pinged / spotted), set by the screen
+var defend_point: Vector2 = Vector2.INF   # "defend this area" ping
+var revive_prompt: bool = false           # the Master stands next to this downed hero: "Hold F" (screen)
+var _last_foes: Array = []                # what it saw last tick (its shots hit these)
+var _shots: Array = []                    # ArrowShot in flight (D-082 real projectiles)
+var _draw_t: float = -1.0                 # bow drawn: releases in this many seconds (-1 = not drawing)
+var _draw_target: SandboxEnemy = null
+var _draw_point: Vector2 = Vector2.INF    # player-aimed shot: released toward this point
+var basic_attacks: int = 0                # stats (tests): basic attacks started / blows landed
+var blows: int = 0
+var shots_fired: int = 0
+var shots_hit: int = 0
 
-## Order state (D-040): "auto" | "move" | "attack" | "attack_move" | "hold" | "follow" | "retreat" | "rescue".
+## Order state (D-040, D-082): "auto" | "move" | "attack" | "attack_move" | "hold" | "follow" | "retreat" | "rescue" | "defend".
 var order: String = "auto"
 var order_point: Vector2 = Vector2.ZERO     # attack-move destination / hold spot
 var follow_leader: SandboxHero = null
@@ -65,7 +85,7 @@ const KITE_DISTANCE := 70.0
 const FOLLOW_DISTANCE := 90.0
 const FOLLOW_LEASH := 170.0
 const ORDER_LABELS := {"auto": "Auto", "move": "Moving", "attack": "Attacking", "attack_move": "Attack-moving",
-	"hold": "Holding", "follow": "Following", "retreat": "Retreating", "rescue": "Rescuing"}
+	"hold": "Holding", "follow": "Following", "retreat": "Retreating", "rescue": "Rescuing", "defend": "Defending"}
 var auto_path: bool = false         # true while walking toward a target on its own
 var target: SandboxEnemy = null
 var rescue_target: SandboxHero = null
@@ -74,8 +94,6 @@ var squad: Array = []                     # every hero of the mission (set by th
 ## D-065: an autonomous hero uses its skills on its own (heal a hurt ally, break a creature's cast,
 ## draw blows off a fragile ally, shield, attack). T toggles it; a driven hero never auto-casts.
 var auto_skills: bool = true
-var _auto_t: float = 0.0
-const AUTO_EVERY := 0.4
 const AUTO_HEAL_BELOW := 0.6              # heals an ally under this fraction of its health
 const CARRY_MOVE := 0.6                   # the relic carrier walks slower and cannot fight   # #14: a retreat that first picks up a fallen ally on the way out
 var rescue_progress: float = 0.0
@@ -137,6 +155,9 @@ func _ready() -> void:
 	can_be_downed = true
 	item_mods = stats.get("mods", {})
 	_setup_skills()
+	role = AiDefs.role_of(hero.hero_class)
+	persona = AiDefs.personality(hero.traits)
+	_think_t = combat_rng.randf() * AiDefs.DECIDE_JITTER * 3.0     # five heroes never think on the same tick
 	_sprite = AnimatedSprite2D.new()
 	_sprite.sprite_frames = SpriteComposer.build_frames(hero)
 	_sprite.offset = SpriteComposer.feet_offset(hero)   # feet at the node origin (LPC 64 px / TPF 48 px)
@@ -328,6 +349,13 @@ func tick(delta: float) -> void:
 	_last_delta = delta
 	tick_combat(delta)
 	_tick_pending(delta)
+	_tick_shots(delta)
+	if order_left > 0.0:
+		order_left -= delta
+		if order_left <= 0.0:
+			order_left = 0.0
+			if order != "auto" and order != "rescue":
+				stop()                               # D-082: a ping order ends; the hero decides again
 	if not alive:
 		if downed:
 			queue_redraw()
@@ -355,6 +383,13 @@ func tick(delta: float) -> void:
 	if casting != "":
 		_tick_cast(delta)
 		return
+	if _draw_t >= 0.0:
+		_draw_t -= delta
+		if not can_act():
+			_draw_t = -1.0                           # a stun breaks the draw
+		elif _draw_t < 0.0:
+			_release_shot()
+		return                                       # standing still while the bow is drawn
 	_walk(delta)
 
 
@@ -404,41 +439,69 @@ func is_ranged() -> bool:
 
 
 func attack_range() -> float:
+	if uses_bow():                                   # D-082: longer, never beyond what the hero sees
+		return minf(AiDefs.BOW_RANGE, float(vision_cells() * NavMap.CELL) * 0.9)
 	return CombatRules.HERO_RANGED_RANGE if is_ranged() else CombatRules.HERO_MELEE_RANGE
+
+
+func uses_bow() -> bool:
+	return is_ranged() and String(CombatVFX.WEAPON_FX.get(weapon_id(), {}).get("proj", "")) == "arrow"
+
+
+func is_drawing() -> bool:
+	return _draw_t >= 0.0
 
 
 func attack_interval() -> float:
 	return float(stats.get("interval", CombatRules.hero_interval(int(stats.get("spd", 5)))))
 
 
-## Autonomy + order execution for one step. Explicit orders come first (D-016); within an order
-## the hero still fights sensibly: keeps range by role, needs line of sight to shoot, steps out of
-## telegraphed strikes (bounded autonomy, D-014) and never chases while holding or following.
+## Autonomy + order execution for one step, in layers (D-082, AiDefs.LAYERS):
+##   1 survival: panic (D-081), dodging telegraphed blows, potions (_use_consumables), falling back hurt;
+##   2 orders: pings and Commands (the order state; explicit orders always come first, D-016);
+##   3 role: the class's job (tank peels for the weak, DPS focus, the healer stays back, the scout leads,
+##     support helps and avoids the front), lifting fallen allies, using skills (D-065);
+##   4 personality: nudges on top (reckless ahead, cautious behind, loyal close to the Master).
+## Decisions (targets, skills, positions) are taken every AiDefs.decide_interval(Composure) seconds; in
+## between the hero keeps doing what it decided (walking, swinging, drawing the bow).
 func combat_tick(enemies: Array, map: NavMap) -> void:
 	_map = map
-	if not alive or casting != "":
+	_last_foes = enemies
+	if not alive or casting != "" or _draw_t >= 0.0:
 		return
 	if dash_t > 0.0:
 		return                                   # mid-dash: nothing else moves the hero
 	if _dodge_t > 0.0 and not path.is_empty():
 		return                                   # finishing a dodge step
+	var think := false
+	if not is_controlled():
+		_think_t -= _last_delta
+		if _think_t <= 0.0:
+			think = true
+			decisions += 1
+			_think_t = AiDefs.decide_interval(hero.composure if hero != null else 100) + combat_rng.randf() * AiDefs.DECIDE_JITTER
 	if has_status("panicked"):
+		ai_layer = "survival"
 		_panic_tick(map)
 		return
 	if order != "move" and order != "retreat" and order != "rescue" and can_move() and not is_controlled():
 		if _try_dodge(enemies, map):
+			ai_layer = "survival"
 			return
 	match order:
 		"rescue":
+			ai_layer = "orders" if order_left > 0.0 else "role"
 			_rescue_tick(map)
 			return
 		"move":
 			if not path.is_empty():
+				ai_layer = "orders"
 				return                               # obeying a direct move
 			order = "auto"
 		"retreat":
 			if path.is_empty():
 				order_hold()
+			ai_layer = "orders"
 			return                                   # no fighting while retreating
 		"follow":
 			if follow_leader == null or not is_instance_valid(follow_leader) or not follow_leader.alive:
@@ -451,26 +514,37 @@ func combat_tick(enemies: Array, map: NavMap) -> void:
 	if carrying:
 		target = null                            # D-065: both hands on the relic; the others must protect them
 		return
-	if auto_skills and not is_controlled() and order != "move" and order != "retreat":
-		_auto_t -= _last_delta
-		if _auto_t <= 0.0:
-			_auto_t = AUTO_EVERY
-			if _auto_skill(enemies):
-				return
+	if auto_skills and not is_controlled() and order != "move" and order != "retreat" and think:
+		if _auto_skill(enemies):
+			ai_layer = "role"
+			return
 	if _maybe_fall_back(map):
+		ai_layer = "survival"
 		return
 	if is_controlled():
 		target = null                            # D-059: the player attacks with Q, aimed at the cursor
+		return
+	if think and order == "auto" and _try_revive(enemies, map):
+		ai_layer = "role"
 		return
 	if target != null and (not is_instance_valid(target) or not target.alive):
 		target = null
 		if order == "attack":
 			order = "auto"
 			FloatingText.spawn(self, "target down", Color(0.8, 0.8, 0.8), false)
+	if order == "auto" and think and target != null:
+		var better := _pick_target(enemies, chase_radius())   # role re-evaluation (tank peels, DPS focus)
+		if better != null and better != target and _target_score(better) + 25.0 < _target_score(target):
+			target = better
 	if target == null:
-		var radius := attack_range() if order == "hold" or (is_controlled() and order == "auto") else chase_radius()
-		target = _nearest(enemies, radius)
+		if not think and order != "attack_move" and order != "defend":
+			return                                   # nothing decided yet: keeps walking where it was going
+		var radius := attack_range() if order == "hold" else chase_radius()
+		if order == "defend":
+			radius = AiDefs.DEFEND_RADIUS
+		target = _pick_target(enemies, radius, defend_point if order == "defend" else Vector2.INF)
 		if target == null:
+			ai_layer = "orders" if order != "auto" else "role"
 			match order:
 				"attack_move":
 					if path.is_empty():
@@ -478,6 +552,10 @@ func combat_tick(enemies: Array, map: NavMap) -> void:
 							order = "auto"
 						else:
 							path = map.find_path(position, order_point)
+				"defend":
+					if position.distance_to(defend_point) > 40.0 and (path.is_empty() or _repath <= 0.0):
+						_repath = REPATH_EVERY
+						path = map.find_path(position, defend_point)
 				"follow", "hold":
 					pass
 				_:
@@ -486,23 +564,29 @@ func combat_tick(enemies: Array, map: NavMap) -> void:
 						auto_path = false
 					_stay_near_anchor(map)
 			return
+	ai_layer = "orders" if order != "auto" else "role"
 	var d := position.distance_to(target.position)
 	var sees := not is_ranged() or map.has_line_of_sight(position + Vector2(0, -12), target.position + Vector2(0, -12))
 	if d <= attack_range() and sees:
-		if is_ranged() and d < KITE_DISTANCE and order != "hold" and not is_controlled() and _kite(target, map):
+		if is_ranged() and d < keep_distance() and order != "hold" and order != "defend" and _kite(target, map):
 			return
+		if role == "healer" and order == "auto" and d < AiDefs.HEALER_SAFE and _kite(target, map):
+			return                                   # the healer keeps out of the melee
 		path.clear()
 		auto_path = false
 		_face(target.position - position)
 		if _cooldown <= 0.0:
 			_cooldown = attack_interval()
 			_basic_attack(target)
-		elif _cooldown <= ATTACK_LEAD and not _prerolled:
+		elif _cooldown <= ATTACK_LEAD and not _prerolled and not is_ranged():
 			_prerolled = true                    # anticipation: the swing starts, the blow lands on time
 			_anim_lock = HeroAnim.play_attack(_sprite, facing, _side, is_ranged(), true)
 		return
-	if order == "hold" or (is_controlled() and order == "auto"):
-		target = null                            # out of reach: holding (or a player-driven hero) does not chase
+	if order == "hold":
+		target = null                            # out of reach: holding does not chase
+		return
+	if order == "defend" and target.position.distance_to(defend_point) > AiDefs.DEFEND_RADIUS * 1.3:
+		target = null                            # defending: does not chase out of the area
 		return
 	if order == "follow" and follow_leader != null and target.position.distance_to(follow_leader.position) > FOLLOW_LEASH:
 		target = null
@@ -515,17 +599,115 @@ func combat_tick(enemies: Array, map: NavMap) -> void:
 			auto_path = true
 
 
+## Distance a ranged hero keeps from the foe it shoots (the scout keeps more).
+func keep_distance() -> float:
+	return AiDefs.SCOUT_KEEP if role == "scout" else KITE_DISTANCE
+
+
+## Layer 3 target choice. Lower score = better: distance, minus what the role wants. Imperfection: now and
+## then (AiDefs.WRONG_TARGET_CHANCE, seeded) it takes any foe in reach instead of the best one.
+## around = only foes within `radius` of this point (defend ping); INF = around the hero.
+func _pick_target(enemies: Array, radius: float, around: Vector2 = Vector2.INF) -> SandboxEnemy:
+	var pool: Array = []
+	var centre := position if around == Vector2.INF else around
+	for e in enemies:
+		if is_instance_valid(e) and e.alive and centre.distance_to(e.position) < radius:
+			pool.append(e)
+	if pool.is_empty():
+		return null
+	if pool.size() > 1 and combat_rng.randf() < AiDefs.WRONG_TARGET_CHANCE:
+		return pool[combat_rng.randi() % pool.size()]
+	var best: SandboxEnemy = null
+	var best_s := INF
+	for e in pool:
+		var sc := _target_score(e)
+		if sc < best_s:
+			best_s = sc
+			best = e
+	return best
+
+
+func _target_score(e: SandboxEnemy) -> float:
+	var sc := position.distance_to(e.position)
+	if focus_hint != null and e == focus_hint:
+		sc -= 140.0 if role == "dps" or role == "scout" else 70.0
+	match role:
+		"tank":
+			# peel: the foe going for the weakest ally near the tank is worth the most
+			if e.focus != null and is_instance_valid(e.focus) and e.focus != self and e.focus.alive \
+					and position.distance_to(e.focus.position) <= AiDefs.PROTECT_RADIUS:
+				sc -= 80.0 + 80.0 * (1.0 - float(e.focus.hp) / float(maxi(1, e.focus.max_hp)))
+		"dps":
+			sc -= 60.0 * (1.0 - float(e.hp) / float(maxi(1, e.max_hp)))   # finish the hurt one
+			for a in squad:                          # stick to what the others already hit
+				if is_instance_valid(a) and a != self and a.alive and a.target == e:
+					sc -= 25.0
+		"support":
+			for a in squad:
+				if is_instance_valid(a) and a != self and a.alive and a.target == e:
+					sc -= 35.0
+	return sc
+
+
+## Layer 3: an autonomous hero lifts a fallen ally on its own when its score (role + bond with the fallen
+## + personality, AiDefs.REVIVE_*) is high enough and no foe stands over the fallen. One helper per ally.
+func _try_revive(enemies: Array, _map_ref: NavMap) -> bool:
+	if hero == null or has_status("panicked"):
+		return false
+	var best: SandboxHero = null
+	var best_s := -INF
+	for d in squad:
+		if not is_instance_valid(d) or d == self or not d.downed or d.dead or d.lost:
+			continue
+		if position.distance_to(d.position) > AiDefs.REVIVE_RADIUS:
+			continue
+		var taken := false
+		for x in squad:
+			if is_instance_valid(x) and x != self and x.rescue_target == d:
+				taken = true
+		if taken:
+			continue
+		var unsafe := false
+		for e in enemies:
+			if e.alive and e.position.distance_to(d.position) < AiDefs.REVIVE_SAFE:
+				unsafe = true
+				break
+		if unsafe:
+			continue
+		var s := revive_score(d) - position.distance_to(d.position) / AiDefs.REVIVE_RADIUS * 0.5   # closer first
+		if s >= AiDefs.REVIVE_MIN_SCORE and s > best_s:
+			best_s = s
+			best = d
+	if best == null:
+		return false
+	order_rescue(best)
+	say("Hang on!", 2.0)
+	return true
+
+
+## How much this hero wants to lift `d` (role, relationship level with them, traits; the Master always).
+func revive_score(d: SandboxHero) -> float:
+	var s := float(AiDefs.REVIVE_ROLE_SCORE.get(role, 0.6))
+	if d.hero != null and hero.relationships.has(d.hero.id):
+		if int((hero.relationships[d.hero.id] as Dictionary).get("level", 0)) >= AiDefs.REVIVE_BOND_LEVEL:
+			s += AiDefs.REVIVE_BOND_SCORE
+	if d.hero != null and d.hero.is_master:
+		s += 1.0
+	for t in hero.traits:
+		s += float(AiDefs.REVIVE_TRAIT_SCORE.get(t, 0.0))
+	return s
+
+
 ## D-059: the driven hero's basic attack, aimed at a world point (Q). Same weapon, reach, interval,
 ## damage and projectile as the autonomous attack; only the aim is the player's.
-## Ranged: the shot flies toward the cursor up to its reach and hits the FIRST visible foe on its line
-## (trees stop it). Melee: a swing in a cone toward the cursor hits the closest foe in reach; it can miss.
+## Ranged (D-082): a real shot (ArrowShot) flies toward the cursor up to its reach and hits the FIRST
+## visible foe it touches (trees stop it); a bow is drawn AiDefs.BOW_DRAW s first. Melee: a swing in a cone toward the cursor hits the closest foe in reach; it can miss.
 ## Returns false only when the attack is not ready (interval, stun, casting, down).
 const AIM_CONE := 0.9             # radians either side of the aim for a melee swing
-const SHOT_WIDTH := 10.0          # half-width of a shot's lane, added to the foe's body
 
 
 func aimed_attack(point: Vector2, enemies: Array, map: NavMap) -> bool:
-	if not alive or not can_act() or casting != "" or _cooldown > 0.0:
+	if not alive or not can_act() or casting != "" or _cooldown > 0.0 or _draw_t >= 0.0:
 		return false
 	var dir := point - position
 	if dir.length() < 1.0:
@@ -535,37 +717,21 @@ func aimed_attack(point: Vector2, enemies: Array, map: NavMap) -> bool:
 	_cooldown = attack_interval()
 	_anim_lock = HeroAnim.play_attack(_sprite, facing, _side, is_ranged())
 	var reach := attack_range()
-	var from := position + Vector2(0, -16)
 	var wf: Dictionary = CombatVFX.WEAPON_FX.get(weapon_id(), CombatVFX.WEAPON_FX["fist"])
 	var hit: SandboxEnemy = null
+	_map = map
+	_last_foes = enemies
 	if is_ranged():
-		var end := position + dir * reach
-		if map != null:                          # the shot stops at the first tree / wall
-			var steps := ceili(reach / 12.0)
-			for k in range(1, steps + 1):
-				var p := position + dir * minf(reach, 12.0 * float(k))
-				if map.is_blocked(p):
-					end = position + dir * maxf(0.0, 12.0 * float(k - 1))
-					break
-		var best_t := INF
-		for e in enemies:
-			if not e.alive or not e.visible:
-				continue
-			var t: float = (e.position - position).dot(dir)
-			if t < 0.0 or t > position.distance_to(end) + e.body_radius:
-				continue
-			var off: float = (position + dir * t).distance_to(e.position)
-			if off <= e.body_radius + SHOT_WIDTH and t < best_t:
-				best_t = t
-				hit = e
-		var to := (hit.position + Vector2(0, -12)) if hit != null else end + Vector2(0, -16)
-		CombatVFX.projectile(get_parent(), from, to, String(wf.get("proj", "arrow")), String(wf["hit"]) if hit != null else "", CombatRules.PROJECTILE_SPEED, 1.0, float(wf.get("scale", 1.0)))
-		if hit != null:
-			var info := DamageInfo.make(float(power()) * _busy_mult(hit), String(stats.get("kind", "physical")), self, crit_chance, combat_rng)
-			var aim_at := to
-			var target_e := hit
-			_later(from.distance_to(to) / CombatRules.PROJECTILE_SPEED, func(): _land_basic(target_e, info, aim_at))
+		# D-082: a real shot toward the cursor (no aim error: the player aims). A bow is drawn first.
+		basic_attacks += 1
+		_draw_target = null
+		_draw_point = position + dir * reach
+		if uses_bow():
+			_draw_t = AiDefs.BOW_DRAW
+		else:
+			_release_shot()
 		return true
+	basic_attacks += 1
 	var best_d := INF
 	for e in enemies:
 		if not e.alive or not e.visible:
@@ -583,12 +749,12 @@ func aimed_attack(point: Vector2, enemies: Array, map: NavMap) -> bool:
 	if hit != null:
 		if wf.has("extra"):
 			CombatVFX.play(get_parent(), hit.position, String(wf["extra"]), 0.8)
-		_land_basic(hit, DamageInfo.make(float(power()) * _busy_mult(hit), String(stats.get("kind", "physical")), self, crit_chance, combat_rng), swing_at)
+		_melee_blows(hit, swing_at)
 	return true
 
 
 func attack_ready() -> bool:
-	return alive and can_act() and casting == "" and _cooldown <= 0.0
+	return alive and can_act() and casting == "" and _cooldown <= 0.0 and _draw_t < 0.0
 
 
 ## Autonomous reaction to a telegraphed strike (D-052): one roll per strike against a small chance
@@ -746,13 +912,37 @@ func _stay_near_anchor(map: NavMap) -> void:
 			return
 	if anchor == null or not is_instance_valid(anchor) or not anchor.alive:
 		return
-	if position.distance_to(anchor.position) > leash() and (path.is_empty() or _repath <= 0.0):
+	# D-082 layers 3-4: where the role wants to stand around the Master, nudged by personality.
+	var spot := role_spot()
+	var slack := 40.0 if bool(persona.get("follows_master", false)) else leash() * 0.5
+	if position.distance_to(spot) > slack and (path.is_empty() or _repath <= 0.0):
 		_repath = REPATH_EVERY * 2.0
-		var side := Vector2.RIGHT.rotated(float(slot) * 1.3) * 40.0
-		var p := map.find_path(position, anchor.position + side)
+		var p := map.find_path(position, map.nearest_walkable(spot))
 		if not p.is_empty():
 			path = p
 			auto_path = true
+
+
+## Where this hero wants to stand when nothing is happening (D-082, roles + personality): the scout ahead
+## of the Master (the way they walk), the healer and support behind, the tank in front, loyal ones close.
+func role_spot() -> Vector2:
+	if anchor == null or not is_instance_valid(anchor):
+		return position
+	var fwd := anchor.velocity.normalized() if anchor.velocity.length() > 5.0 else HeroAnim.dir_vec(anchor.facing)
+	var ahead := float(persona.get("ahead", 0.0))
+	match role:
+		"scout":
+			ahead += AiDefs.SCOUT_AHEAD
+		"tank":
+			ahead += 30.0
+		"healer":
+			ahead -= AiDefs.HEALER_BACK * 0.6
+		"support":
+			ahead -= AiDefs.SUPPORT_BACK * 0.6
+	var side := fwd.orthogonal() * (40.0 if slot % 2 == 0 else -40.0)
+	if bool(persona.get("follows_master", false)):
+		side *= 0.6
+	return anchor.position + fwd * ahead + side
 
 
 ## Temperament from traits (HeroTables.AGGRESSION), -3 (very cautious) .. 3 (reckless).
@@ -874,28 +1064,114 @@ func weapon_id() -> String:
 
 
 func _basic_attack(t: SandboxEnemy) -> void:
-	if not _prerolled:
-		_anim_lock = HeroAnim.play_attack(_sprite, facing, _side, is_ranged())
-	_prerolled = false
+	basic_attacks += 1
 	var wf: Dictionary = CombatVFX.WEAPON_FX.get(weapon_id(), CombatVFX.WEAPON_FX["fist"])
+	if is_ranged():
+		# D-082: a real shot. A bow is drawn AiDefs.BOW_DRAW s first (the pose shows it); the arrow leaves
+		# toward where the target is at the release, with the shooter's aim error, and can miss.
+		_prerolled = false
+		_draw_target = t
+		_draw_point = Vector2.INF
+		if uses_bow():
+			_draw_t = AiDefs.BOW_DRAW
+			_anim_lock = HeroAnim.play_attack(_sprite, facing, _side, true, true)
+		else:
+			_release_shot()
+		return
+	if not _prerolled:
+		_anim_lock = HeroAnim.play_attack(_sprite, facing, _side, false)
+	_prerolled = false
 	var aim := t.position + Vector2(0, -12)
-	var sc := float(wf.get("scale", 1.0))
-	var travel := 0.0
-	if wf.has("proj"):
-		var from := position + Vector2(0, -16)
-		CombatVFX.projectile(get_parent(), from, aim, String(wf["proj"]), String(wf["hit"]), CombatRules.PROJECTILE_SPEED, 1.0, sc)
-		travel = from.distance_to(aim) / CombatRules.PROJECTILE_SPEED
-	else:
-		CombatVFX.play(get_parent(), aim, String(wf["hit"]), sc, t.position.x < position.x)
-		if wf.has("extra"):
-			CombatVFX.play(get_parent(), t.position, String(wf["extra"]), 0.8)
-	var info := DamageInfo.make(float(power()) * _busy_mult(t), String(stats.get("kind", "physical")), self, crit_chance, combat_rng)
-	_later(travel, func(): _land_basic(t, info, aim))     # D-054: an arrow hurts when it arrives
+	CombatVFX.play(get_parent(), aim, String(wf["hit"]), float(wf.get("scale", 1.0)), t.position.x < position.x)
+	if wf.has("extra"):
+		CombatVFX.play(get_parent(), t.position, String(wf["extra"]), 0.8)
+	_melee_blows(t, aim)
+
+
+## D-082 weapon pattern (AiDefs.WEAPON_PATTERN): one blow, or several (two daggers: left, then right
+## `gap` s later), each `mult` of the hero's power. On-hit effects and flat armour apply to every blow.
+func _melee_blows(t: SandboxEnemy, aim: Vector2) -> void:
+	var pat: Dictionary = AiDefs.WEAPON_PATTERN.get(weapon_id(), {})
+	var hits := int(pat.get("hits", 1))
+	var mult := float(pat.get("mult", 1.0))
+	for k in hits:
+		if k == 0:
+			_land_basic(t, DamageInfo.make(float(power()) * mult * _busy_mult(t), String(stats.get("kind", "physical")), self, crit_chance, combat_rng), aim)
+			continue
+		_later(float(pat["gap"]) * float(k), func():
+			if not alive or not is_instance_valid(t) or not t.alive or position.distance_to(t.position) > attack_range() + t.body_radius + 10.0:
+				return                               # the second dagger finds nothing within reach
+			_side = "left" if _side == "right" else "right"
+			_anim_lock = HeroAnim.play_attack(_sprite, facing, _side, false)
+			var wf2: Dictionary = CombatVFX.WEAPON_FX.get(weapon_id(), CombatVFX.WEAPON_FX["fist"])
+			CombatVFX.play(get_parent(), t.position + Vector2(0, -12), String(wf2["hit"]), float(wf2.get("scale", 1.0)), _side == "left")
+			_land_basic(t, DamageInfo.make(float(power()) * mult * _busy_mult(t), String(stats.get("kind", "physical")), self, crit_chance, combat_rng), t.position + Vector2(0, -12)))
+
+
+## Releases the drawn shot (D-082): toward the target's position now (autonomy, with aim error by AGI,
+## Composure and panic) or toward the point the player aimed at. The arrow is simulated in _tick_shots.
+func _release_shot() -> void:
+	_draw_t = -1.0
+	var to := _draw_point
+	var autonomous := _draw_target != null
+	if autonomous:
+		if not is_instance_valid(_draw_target) or not _draw_target.alive:
+			_draw_target = null
+			return                                   # nothing to loose at
+		to = _draw_target.position
+	_draw_target = null
+	if to == Vector2.INF:
+		return
+	var dir := to - position
+	if dir.length() < 1.0:
+		dir = HeroAnim.dir_vec(facing)
+	dir = dir.normalized()
+	if autonomous:
+		var err := deg_to_rad(AiDefs.aim_error_deg(int(stats.get("spd", 5)), hero.composure if hero != null else 100, has_status("panicked")))
+		dir = dir.rotated(combat_rng.randf_range(-err, err))
+	_face(dir)
+	if not uses_bow():
+		_anim_lock = HeroAnim.play_attack(_sprite, facing, _side, true)
+	var wf: Dictionary = CombatVFX.WEAPON_FX.get(weapon_id(), CombatVFX.WEAPON_FX["fist"])
+	var shot := ArrowShot.make(position, dir, attack_range() + 30.0, String(wf.get("proj", "arrow")))
+	shot.set_meta("info", DamageInfo.make(float(power()), String(stats.get("kind", "physical")), self, crit_chance, combat_rng))
+	var parent := get_parent()
+	if parent != null:
+		parent.add_child(shot)
+	_shots.append(shot)
+	shots_fired += 1
+
+
+## Moves every shot in flight one tick; a shot that touches a foe lands its blow there (D-054 on arrival).
+func _tick_shots(delta: float) -> void:
+	if _shots.is_empty():
+		return
+	var still: Array = []
+	for s in _shots:
+		if not is_instance_valid(s):
+			continue
+		var was_done: bool = s.done
+		var hit: Node2D = s.step(delta, _last_foes, _map)
+		if hit != null:
+			shots_hit += 1
+			var info: DamageInfo = s.get_meta("info")
+			info.amount *= _busy_mult(hit)
+			_land_basic(hit as SandboxEnemy, info, hit.position + Vector2(0, -12))
+			var wf: Dictionary = CombatVFX.WEAPON_FX.get(weapon_id(), CombatVFX.WEAPON_FX["fist"])
+			CombatVFX.play(get_parent(), hit.position + Vector2(0, -12), String(wf["hit"]), float(wf.get("scale", 1.0)))
+		if s.done and not s.is_inside_tree():
+			if was_done or s.stuck_t <= 0.0:
+				s.free()                             # never added to a tree (headless unit tests)
+				continue
+		if is_instance_valid(s) and (not s.done or s.stuck_t > 0.0):
+			still.append(s)
+	_shots = still
 
 
 func _land_basic(t: SandboxEnemy, info: DamageInfo, aim: Vector2) -> void:
 	if not is_instance_valid(t) or not t.alive:
 		return                                   # the target died while the shot was in flight
+	blows += 1
 	var dealt := t.take_hit(info)
 	if info.crit:
 		CombatVFX.play(get_parent(), aim + Vector2(0, -8), "crit", 0.8)
@@ -925,24 +1201,37 @@ func _rescue_tick(map: NavMap) -> void:
 		return
 	if position.distance_to(rescue_target.position) <= CombatRules.RESCUE_RANGE:
 		path.clear()
-		_face(rescue_target.position - position)
-		_play("ready_" + _side)
-		rescue_progress += _last_delta
-		if rescue_progress >= CombatRules.RESCUE_TIME:
-			rescue_target.revive(CombatRules.RESCUE_HP)
-			CombatVFX.play(get_parent(), rescue_target.position + Vector2(0, -16), "level_up", 1.0)
-			credit("rescues", 1.0)
-			if hero != null and rescue_target.hero != null:
-				hero.rescue_hero(rescue_target.hero)          # memory, bond and Trust (Phase 3 data)
-				if hero.is_master:
-					MasterRules.bond_event(rescue_target.hero, "rescued_by_master")   # D-081
-			FloatingText.spawn(rescue_target, "Rescued!", Color(0.5, 1.0, 0.6), true)
+		if channel_revive(rescue_target, _last_delta):
 			if then_retreat != Vector2.INF:
 				rescue_target.order_retreat(then_retreat + Vector2(18, 0), map)   # both head for the exit
 			_after_rescue(map)
 	elif path.is_empty() or _repath <= 0.0:
 		_repath = REPATH_EVERY
 		path = map.find_path(position, rescue_target.position)
+
+
+## One tick of lifting `ally` (D-036, D-082: RESCUE_TIME s next to them; a hit resets it, see _on_hit).
+## Used by the AI's rescue order and by the Master holding F. Returns true when the ally is up.
+func channel_revive(ally: SandboxHero, delta: float) -> bool:
+	if ally == null or not is_instance_valid(ally) or not ally.downed or ally.dead or ally.lost:
+		rescue_progress = 0.0
+		return false
+	_face(ally.position - position)
+	_play("ready_" + _side)
+	rescue_target = ally
+	rescue_progress += delta
+	if rescue_progress < CombatRules.RESCUE_TIME:
+		return false
+	rescue_progress = 0.0
+	ally.revive(CombatRules.RESCUE_HP)
+	CombatVFX.play(get_parent(), ally.position + Vector2(0, -16), "level_up", 1.0)
+	credit("rescues", 1.0)
+	if hero != null and ally.hero != null:
+		hero.rescue_hero(ally.hero)          # memory, bond and Trust (Phase 3 data)
+		if hero.is_master:
+			MasterRules.bond_event(ally.hero, "rescued_by_master")   # D-081
+	FloatingText.spawn(ally, "Rescued!", Color(0.5, 1.0, 0.6), true)
+	return true
 
 
 ## D-065 autonomy: one skill per check, in this order: heal a hurt ally, break a creature's cast, draw
@@ -1540,8 +1829,8 @@ func _on_hit(info: DamageInfo, dmg: int) -> void:
 	if dmg > 0 and item_mods.has("thorns") and info.source is SandboxEnemy and info.kind == "physical" and is_instance_valid(info.source):
 		(info.source as Combatant).take_hit(DamageInfo.make(float(dmg) * float(item_mods["thorns"]), "true", self))
 	gain_resource(float(SkillDefs.RESOURCES[res_kind]["on_hurt"]))
-	if order == "rescue" and rescue_progress > 0.0:
-		rescue_progress = 0.0                         # D-036: taking damage interrupts the rescue
+	if rescue_progress > 0.0:
+		rescue_progress = 0.0                         # D-036: taking damage interrupts the rescue (AI or held F)
 		FloatingText.spawn(self, "interrupted", Color(1.0, 0.6, 0.4), false)
 	if hp > 0 and info.source != null and is_instance_valid(info.source):
 		HeroAnim.play_hit(_sprite, (position - info.source.position).normalized())
@@ -1551,6 +1840,9 @@ func _on_down() -> void:
 	was_downed = true
 	CombatFeel.shake(self, "medium")
 	casting = ""
+	_draw_t = -1.0
+	_draw_target = null
+	rescue_progress = 0.0
 	_clear_cast_fx()
 	CombatVFX.play(get_parent(), position, "blood", 1.0)
 	cast_target = null
@@ -1616,7 +1908,16 @@ func _draw() -> void:
 	if downed:
 		var k := clampf(agony / CombatRules.AGONY_TIME, 0.0, 1.0)
 		draw_arc(Vector2(0, -12), 18.0, -PI / 2.0, -PI / 2.0 + TAU * k, 32, Color(1.0, 0.35, 0.3), 3.0)
-		draw_string(ThemeDB.fallback_font, Vector2(-30, -36), "DOWN %ds" % ceili(agony), HORIZONTAL_ALIGNMENT_CENTER, 60, 16, Color(1.0, 0.5, 0.45))
+		draw_string(ThemeDB.fallback_font, Vector2(-40, -36), "DOWN %s" % agony_text(), HORIZONTAL_ALIGNMENT_CENTER, 80, 16, Color(1.0, 0.5, 0.45))
+		var lifter: SandboxHero = null
+		for x in squad:
+			if is_instance_valid(x) and x.rescue_target == self and x.rescue_progress > 0.0:
+				lifter = x
+		if lifter != null:
+			draw_rect(Rect2(-18, -58, 36, 4), Color(0.1, 0.1, 0.1, 0.85))
+			draw_rect(Rect2(-18, -58, 36.0 * lifter.rescue_progress / CombatRules.RESCUE_TIME, 4), Color(0.5, 1.0, 0.6))
+		elif revive_prompt and not lost:
+			UIKit.draw_bubble(self, tr("Hold F"), Vector2(0, -58))   # D-082: interaction is F (QWER = combat)
 		return
 	if rescue_progress > 0.0:
 		draw_rect(Rect2(-15, -52, 30.0 * rescue_progress / CombatRules.RESCUE_TIME, 3), Color(0.5, 1.0, 0.6))
@@ -1653,6 +1954,12 @@ func _draw() -> void:
 	draw_string(font, Vector2(-4, -52), str(slot + 1), HORIZONTAL_ALIGNMENT_CENTER, -1, 16, col)
 	if chatter_timer > 0.0 and chatter_text != "":
 		UIKit.draw_bubble(self, chatter_text, Vector2(0, -58))
+
+
+## Agony left as m:ss (D-082: two minutes), for the hero and its portrait.
+func agony_text() -> String:
+	var s := ceili(agony)
+	return "%d:%02d" % [s / 60, s % 60]
 
 
 static func _wrap_words(text: String, width: int) -> Array:

@@ -179,12 +179,12 @@ func _build_orders() -> void:
     grid.add_theme_constant_override("v_separation", 2)
     pc.add_child(grid)
     var orders := [
-        ["order_attack_move", "Attack-move (A, then click)", func(): sb.arm_attack_move()],
-        ["order_hold", "Hold position (H)", func(): sb.hold_selected()],
-        ["order_follow", "Follow the first selected (F)", func(): sb.follow_selected()],
-        ["order_move", "Regroup (C)", func(): sb.regroup_selected()],
-        ["order_invalid", "Stop (S)", func(): sb.stop_selected()],
-        ["order_retreat", "Retreat to the exit (X)", func(): sb.retreat_selected()],
+        ["order_attack_move", "Attack here (A, then click) · Shift+click: quick ping · hold: ping wheel", func(): sb.squad_key(KEY_A)],
+        ["order_hold", "Defend this area (H)", func(): sb.squad_key(KEY_H)],
+        ["order_follow", "Follow (V)", func(): sb.squad_key(KEY_V)],
+        ["order_move", "Regroup (C)", func(): sb.squad_key(KEY_C)],
+        ["order_invalid", "Stop: everyone back to their own judgement (S)", func(): sb.squad_key(KEY_S)],
+        ["order_retreat", "Retreat to the exit (X)", func(): sb.squad_key(KEY_X)],
         ["order_explore", "Extract: escape with what you carry (all standing heroes at the exit)", func(): sb.extract()],
         ["order_attack", "Attack at the mouse (Q) with the hero you drive", func(): sb.attack_at_cursor()],
     ]
@@ -306,6 +306,7 @@ class PartyCell extends Control:
     var _hp: ProgressBar
     var _res: ProgressBar
     var _marks: HBoxContainer
+    var _down: Label
     var _state: String = ""
 
     func _init(screen: SandboxScreen, i: int) -> void:
@@ -336,6 +337,10 @@ class PartyCell extends Control:
         _marks.position = Vector2(2, 2)
         _marks.add_theme_constant_override("separation", 1)
         add_child(_marks)
+        _down = UIKit.label("", 11, UIKit.BAD)          # D-082: agony left (m:ss) on a downed hero's portrait
+        _down.position = Vector2(2, ExpeditionHud.SLOT * 0.4)
+        _down.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        add_child(_down)
         tooltip_text = "%d · %s" % [index + 1, h.hero.display_name()]
         mouse_filter = Control.MOUSE_FILTER_STOP
         refresh()
@@ -354,7 +359,7 @@ class PartyCell extends Control:
 
     func _gui_input(e: InputEvent) -> void:
         if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
-            sb.select_slot(index)
+            sb.select_slot(index)                # D-082: in a Master squad, picks who the next ping is for
             UIKit.sound("click")
             accept_event()
 

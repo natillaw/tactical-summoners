@@ -54,7 +54,9 @@ $suites = @(
   @{ name = "map safety";    args = @("res://tests/smoke_map_safety.tscn", "--quit-after", "3000");     ok = "ALL PASSED" },
   @{ name = "tactics";       args = @("res://tests/smoke_tactics.tscn", "--quit-after", "3000");       ok = "ALL PASSED" },
   @{ name = "wilds";         args = @("res://tests/smoke_wilds.tscn", "--quit-after", "3000");         ok = "ALL PASSED" },
-  @{ name = "master";        args = @("res://tests/smoke_master.tscn", "--quit-after", "3000");        ok = "ALL PASSED" }
+  @{ name = "master";        args = @("res://tests/smoke_master.tscn", "--quit-after", "3000");        ok = "ALL PASSED" },
+  @{ name = "combat ai";     args = @("res://tests/smoke_ai.tscn");                                    ok = "ALL PASSED" },
+  @{ name = "bots";          args = @("res://tests/smoke_bots.tscn");                                  ok = "ALL PASSED" }
 )
 $bad = 0
 foreach ($s in $suites) {
