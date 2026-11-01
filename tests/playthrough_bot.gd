@@ -435,8 +435,7 @@ func _tactical_relic(sb: SandboxScreen, standing: Array, goal: Vector2) -> void:
 ## the rest guard them (attack-move around the altar); once the shield falls everyone hits the Baron.
 func _tactical_altar(sb: SandboxScreen, standing: Array) -> bool:
     if not sb.boss.immune:
-        sb.select_only(standing)
-        sb.attack_move_selected(sb.boss.position)
+        _tactical_formation(sb, standing, [sb.boss], _centre(standing))   # spread: backline at range
         return true
     var pool: Array = standing.duplicate()
     pool.sort_custom(func(a, b): return a.max_hp > b.max_hp)

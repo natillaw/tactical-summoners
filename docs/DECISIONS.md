@@ -327,6 +327,11 @@ Inmune mientras dura su escudo; 2 héroes canalizan 8 s en un altar del mismo ma
 - **Expediciones offline** desde el piso 5 (`ExpeditionDefs`): 3 cargas al día, 55% del botín, nunca `key_` ni primer clear, duración piso × 20 min, héroes ocupados. `FLOOR_GAP`, `RISK` y `STORAGE_LIMIT` existen pero desactivadas.
 - **Mercader** con 3 ofertas que rotan cada día (`MerchantDefs`). Pity: se mantiene el del repo (4★ en 10, 5★ en 80). Sueldo de héroes: no implementado (pregunta abierta).
 
+### D-071 — Ir "a lo loco" no debe ganar; dash tipo Souls (2026-10-31, dueño)
+- Lo telegrafiado es letal y **perfora armadura** (`EnemyDefs.TELEGRAPH_MULT/KIND`): el gear no sustituye a esquivar. Golpe lento y legible ×1,6 (`HEAVY_*`), AoE contra grupos ×2,0, sanadores enemigos más rápidos.
+- **Dash** (Espacio; `CombatRules.DASH_*`): 92 px, i-frames 0,26 s, enfriamiento 1,6 s. Animación sin frames nuevos: estirado e inclinación, estelas del propio frame que se desvanecen, polvo y aplastado al aterrizar. Un buen jugador puede esquivarlo todo; la IA autónoma solo a veces (12-55 %, a veces hacia un lado malo).
+- Guerreros: intervalo de ataque básico ×0,7. Piso 3: oleadas que marchan al santuario y crecen.
+
 ## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)
 
 | ID | Tema | Lo que existe / origen | Pregunta abierta |

@@ -113,7 +113,7 @@ const BLOB_MULT := 2.0
 ## 2026-10-31 (owner: "a lo loco no debe tener chance"): what is telegraphed must be lethal, so reading
 ## and dodging is the skill. Every creature skill that hits an area multiplies its dmg_mult by
 ## TELEGRAPH_MULT; a slow basic strike (wind-up >= HEAVY_WINDUP, a readable blow) hits HEAVY_MULT harder.
-const TELEGRAPH_MULT := 1.5
+const TELEGRAPH_MULT := 1.35
 const HEAVY_WINDUP := 0.9
 const HEAVY_MULT := 1.6
 ## Telegraphed area hits pierce armour (gear does not replace dodging): damage kind of creature area skills.
