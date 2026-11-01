@@ -996,6 +996,8 @@ func dash_selected() -> void:
 	var who: Array = [c] if c != null else heroes.filter(func(h): return h.selected and h.alive)
 	for h in who:
 		var dir: Vector2 = h.velocity if h.velocity.length() > 5.0 else cursor - h.position
+		if dir.length() < 4.0:                       # cursor on the hero: dash the way it faces
+			dir = {"up": Vector2.UP, "down": Vector2.DOWN, "left": Vector2.LEFT, "right": Vector2.RIGHT}.get(h.facing, Vector2.DOWN)
 		h.dash(dir)
 
 

@@ -60,11 +60,47 @@ const ES := {
     "falling back": "me repliego", "greater potion": "poción mayor", "interrupted": "interrumpido", "no one to follow": "nadie a quien seguir",
     "no way out": "sin salida", "potion": "poción", "shield broken!": "¡escudo roto!", "stagger": "aturdido", "target down": "objetivo abatido",
     "target lost": "objetivo perdido", "won't obey": "no obedece",
+    # buildings, classes, missions, floors (data names shown inside composed texts)
+    "Alchemy Lab": "Laboratorio de alquimia", "Barracks": "Cuartel", "Blacksmith": "Herrería", "Dormitory": "Dormitorio", "Farm": "Granja",
+    "Hospital": "Hospital", "Jeweller": "Joyería", "Kitchen": "Cocina", "Library": "Biblioteca", "Lumber Camp": "Aserradero", "Memorial": "Memorial",
+    "Mine": "Mina", "Sanctuary of Ascension": "Santuario de Ascensión", "Summoner's Hall": "Salón del Invocador", "Summoning Circle": "Círculo de invocación",
+    "Tavern": "Taberna", "Tower Gate": "Puerta de la Torre", "War Room": "Sala de guerra", "Warehouse": "Almacén", "Workshop": "Taller",
+    "Novice": "Novato", "Commoner": "Plebeyo", "Warrior": "Guerrero", "Rogue": "Pícaro", "Ranger": "Explorador", "Cleric": "Clérigo", "Mage": "Mago",
+    "Recover the relic": "Recupera la reliquia", "Clear the floor": "Limpia el piso", "Rescue the villager": "Rescata al aldeano",
+    "Explore the forest": "Explora el bosque", "Survive the onslaught": "Sobrevive a la embestida", "Hold the shrine": "Defiende el santuario",
+    "Defeat the chieftain": "Derrota al jefe", "Cross to the far side": "Cruza al otro lado", "Destroy the totems": "Destruye los tótems",
+    "Gather in the Wilds": "Recolecta en las Tierras Salvajes",
+    "Floor 1: Forest Edge": "Piso 1: Linde del bosque", "Floor 2: Mossy Trail": "Piso 2: Sendero musgoso", "Floor 3: Mushroom Hollow": "Piso 3: Hondonada de setas",
+    "Floor 4: Bandit Pass": "Piso 4: Paso de los bandidos", "Floor 5: The Captain's Camp": "Piso 5: El campamento del capitán", "Floor 6: Tangled Thicket": "Piso 6: Matorral enredado",
+    "Floor 7: Raider Woods": "Piso 7: Bosque de saqueadores", "Floor 8: Stone Circle": "Piso 8: Círculo de piedra", "Floor 9: Warband Clearing": "Piso 9: Claro de la banda",
+    "Floor 10: The Crimson Baron": "Piso 10: El Barón Carmesí", "The Overgrown Wilds": "Las Tierras Salvajes", "Auto": "Auto",
     # frequent screen words and labels built in code
     "Workers": "Trabajadores", "Level": "Nivel", "Not built yet": "Aún sin construir", "Day": "Día", "Beds": "Camas",
     "Upgrade": "Mejorar", "Heroes": "Héroes", "Summary": "Resumen", "Skills": "Habilidades", "Equipment": "Equipo", "Progression": "Progresión",
-    "Newest": "Más nuevos", "Tower": "Torre", "Floor": "Piso", "Gems": "Gemas", "Stones": "Piedras", "Books": "Libros",
+    "Newest": "Más nuevos", "Lv": "Nv", "Tower": "Torre", "Floor": "Piso", "Gems": "Gemas", "Stones": "Piedras", "Books": "Libros",
 }
+
+
+## A composed text ("Floor 1 · Clear the floor", "Blacksmith  Lv 1", "Cook meals: 2 grain -> 4 meals"):
+## the whole phrase if it has a translation, else each piece between separators.
+static func tx(text: String) -> String:
+    if not TranslationServer.get_locale().begins_with("es") or text.is_empty():
+        return text
+    var whole := TranslationServer.translate(text)
+    if whole != text:
+        return whole
+    for sep in [" · ", "  ·  ", ": ", "  ", " - ", " -> "]:
+        if text.contains(sep):
+            var parts := text.split(sep)
+            for i in parts.size():
+                parts[i] = tx(parts[i])
+            return sep.join(parts)
+    var sp := text.find(" ")                          # "Floor 3", "Level 2 / 5", "Workers 1 / 2"
+    if sp > 0 and text.substr(sp + 1).left(1).is_valid_int():
+        var w := TranslationServer.translate(text.left(sp))
+        if w != text.left(sp):
+            return w + text.substr(sp)
+    return text
 
 
 ## Registers the Spanish translation and picks the locale (saved in Options; Spanish by default).
