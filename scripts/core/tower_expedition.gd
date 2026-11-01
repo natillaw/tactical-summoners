@@ -26,7 +26,7 @@ const FLOORS := {
         "foes": ["bandido_maton", "bandido_maton", "bandido_arquero"], "nodes": 0, "intro": "A lone scout against a few bandits on the forest edge."},
     2: {"name": "Floor 2: Mossy Trail", "hall": 1, "difficulty": "Easy", "mission": "exploration", "party": 2, "threat": 48, "width": 124, "height": 110,
         "foes": ["bandido_maton", "bandido_arquero", "bandido_bruto"], "nodes": 0, "intro": "Find the three old markers. A bandit elite patrols the trail."},
-    3: {"name": "Floor 3: Mushroom Hollow", "hall": 2, "difficulty": "Normal", "mission": "defense", "party": 3, "threat": 56, "hold_time": 150.0, "wave_base": 4, "wave_growth": 1.0, "modifier": "fog", "width": 130, "height": 112,
+    3: {"name": "Floor 3: Mushroom Hollow", "hall": 2, "difficulty": "Normal", "mission": "defense", "party": 3, "threat": 56, "hold_time": 150.0, "wave_base": 2, "wave_growth": 0.4, "wave_cap": 6, "modifier": "fog", "width": 130, "height": 112,
         "foes": ["bandido_maton", "bandido_arquero", "bandido_degollador", "bandido_mago"], "nodes": 0, "intro": "Hold the shrine while the bandits come in waves. Mist hides them until they are close."},
     4: {"name": "Floor 4: Bandit Pass", "hall": 2, "difficulty": "Hard", "mission": "escape", "party": 2, "threat": 70, "modifier": "hazard", "lookouts": true, "tactics": true, "width": 136, "height": 116,
         "foes": ["bandido_bruto", "bandido_maton", "bandido_arquero", "bandido_degollador", "bandido_chaman"], "nodes": 0, "intro": "Cross the pass to the far side. Fighting them all is losing."},

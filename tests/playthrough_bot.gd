@@ -282,6 +282,8 @@ func _goal(sb: SandboxScreen, c: Vector2, skip_targets: Array) -> Vector2:
             return goal
         "escape":
             return sb.map.center_of(sb.map.relic_cell)
+        "defense":
+            return sb.shrine.position if sb.shrine != null else goal
         "combat":
             var best_d := INF
             for e in sb.living_enemies():
