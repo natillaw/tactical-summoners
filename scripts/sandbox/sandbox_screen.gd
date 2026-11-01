@@ -35,7 +35,7 @@ const WAVE_EVERY := 12.0
 const WAVE_MAX_ALIVE := 14
 const CLUE_RADIUS := 56.0
 const MISSION_TITLES := {"retrieval": "Recover the relic", "combat": "Clear the floor", "rescue": "Rescue the villager",
-	"exploration": "Explore the forest", "survival": "Survive the onslaught", "defense": "Hold the shrine", "boss": "Defeat the chieftain", "escape": "Cross to the far side",
+	"exploration": "Explore the forest", "survival": "Survive the onslaught", "defense": "Hold the shrine", "boss": "Defeat the chieftain", "escape": "Cross to the far side", "sabotage": "Destroy the totems",
 	"farm": "Gather in the Wilds"}
 
 var floor_number: int = 0
@@ -239,6 +239,8 @@ func _add_loot(res: String, n: int, at: Node2D) -> void:
 
 func _on_enemy_died(e: SandboxEnemy) -> void:
 	defeated += 1
+	if mission_type == "sabotage" and e.job != "totem":
+		_fallen_foes.append({"type": e.type_id, "pos": e.position})
 	kill_xp += roundi(float(e.base_max_hp) * EnemyDefs.XP_PER_HP)
 	var killer = e.get_meta("last_hitter") if e.has_meta("last_hitter") else null
 	if killer != null and is_instance_valid(killer) and killer.has_method("credit"):
@@ -446,6 +448,14 @@ func _setup_mission() -> void:
 				clue.position = map.center_of(spots[spots.size() - 1 - i])
 				_world.add_child(clue)
 				clues.append(clue)
+		"sabotage":
+			var spots := _clue_rooms()
+			for c in spots.slice(0, FloorMods.TOTEMS):
+				var t := _spawn_enemy(c, FloorMods.TOTEM_ID)
+				t.job = "totem"
+				t.enemy_name = "Bandit Totem"
+				t.home = t.position
+				totems.append(t)
 		"defense":
 			shrine = SandboxRelic.new("shrine")
 			shrine.position = map.center_of(map.extract_cell) + Vector2(0, -40)
@@ -655,6 +665,32 @@ func _on_immune_hit() -> void:
 			line = String(AltarDefs.HERO_LINES[String(t)])
 			break
 	h.say(line, 4.5)
+
+
+## --- master prompt D: sabotage (FloorMods) --------------------------------------------------
+var totems: Array[SandboxEnemy] = []
+var _fallen_foes: Array = []         # [{type, pos}] bandits that died (a totem can raise them)
+var _revive_t: float = FloorMods.REVIVE_EVERY
+
+
+func _revive_tick(delta: float) -> void:
+	_revive_t -= delta
+	if _revive_t > 0.0:
+		return
+	_revive_t = FloorMods.REVIVE_EVERY
+	for t in totems:
+		if not t.alive:
+			continue
+		for i in _fallen_foes.size():
+			var f: Dictionary = _fallen_foes[i]
+			if (f["pos"] as Vector2).distance_to(t.position) <= FloorMods.REVIVE_RADIUS:
+				_fallen_foes.remove_at(i)
+				var e := _spawn_enemy(map.cell_of(f["pos"]), String(f["type"]))
+				e.tactical = tactics_on()
+				e.alert()
+				e.visible = fog == null or fog.is_visible(map.cell_of(e.position))
+				FloatingText.spawn(e, "Risen by the totem!", Color(0.9, 0.4, 1.0), false, 1.4)
+				break
 
 
 ## Defense: seconds at the shrine (a floor may set "hold_time"; else HOLD_TIME).
@@ -1170,6 +1206,11 @@ func _update_mission(delta: float) -> void:
 				return
 		"boss":
 			if boss != null and not boss.alive:
+				_end_mission(Mission.SUCCESS)
+				return
+		"sabotage":
+			_revive_tick(delta)
+			if not totems.is_empty() and totems.all(func(t): return not t.alive):
 				_end_mission(Mission.SUCCESS)
 				return
 		"escape":

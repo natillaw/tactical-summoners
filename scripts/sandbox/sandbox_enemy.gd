@@ -295,6 +295,9 @@ func tick(delta: float, heroes: Array, map: NavMap) -> void:
     tick_combat(delta)
     if not alive:
         return
+    if job == "totem":                     # sabotage: a totem never moves nor strikes (the screen revives)
+        queue_redraw()
+        return
     _repath = maxf(0.0, _repath - delta)
     taunt_t = maxf(0.0, taunt_t - delta)
     _support_cd = maxf(0.0, _support_cd - delta)

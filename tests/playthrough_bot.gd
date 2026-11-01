@@ -246,6 +246,13 @@ func _centre(list: Array) -> Vector2:
 func _goal(sb: SandboxScreen, c: Vector2, skip_targets: Array) -> Vector2:
     var goal := Vector2.INF
     match sb.mission_type:
+        "sabotage":
+            for t in sb.totems:
+                if t.alive and (goal == Vector2.INF or t.position.distance_to(c) < goal.distance_to(c)):
+                    goal = t.position
+            return goal
+        "escape":
+            return sb.map.center_of(sb.map.relic_cell)
         "combat":
             var best_d := INF
             for e in sb.living_enemies():
@@ -532,9 +539,8 @@ func _run_matrix() -> void:
         TACTICAL = profile == "TACTICO"
         LOCO = profile == "LOCO"
         for upgraded in [false, true]:
-            for content in MATRIX_CONTENT:
-                if only != "" and not Array(only.split(",")).has(str(content)):
-                    continue
+            var contents: Array = MATRIX_CONTENT if only == "" else Array(only.split(",")).map(func(x): return int(x))
+            for content in contents:
                 var wins := 0
                 var t_sum := 0.0
                 var d_sum := 0

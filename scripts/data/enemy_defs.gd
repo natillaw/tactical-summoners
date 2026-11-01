@@ -40,6 +40,7 @@ const TYPES := {
     "bandido_mago": {"hp": 40, "atk": 8, "armor": 0, "mres": 4, "speed": 56.0, "role": "ranged", "skills": ["fireball"]},
     "bandido_chaman": {"hp": 50, "atk": 4, "armor": 1, "mres": 4, "speed": 50.0, "role": "support", "skills": ["mend", "ward"]},
     "capitan_bandido": {"hp": 140, "atk": 15, "armor": 6, "mres": 3, "speed": 60.0, "role": "brute", "skills": ["slam", "rally"]},
+    "totem_bandido": {"hp": 160, "atk": 0, "armor": 4, "mres": 4, "speed": 0.0, "role": "guard", "threat": 0},   # sabotage (FloorMods)
     "jefe_baron_carmesi": {"hp": 220, "atk": 18, "armor": 8, "mres": 5, "speed": 58.0, "role": "brute", "skills": ["slam"]},
     # training ground (Pixel Crawler mobs): the old shared numbers, with roles
     "orc": {"role": "melee"},

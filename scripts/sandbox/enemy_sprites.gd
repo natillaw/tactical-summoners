@@ -57,7 +57,7 @@ static func art_height(id: String) -> int:
 
 
 static func is_voxel(id: String) -> bool:
-    return not IDS.has(id) and not has_processed(id) and not BanditArt.has(id)
+    return not IDS.has(id) and not has_processed(id) and not BanditArt.has(id) and id != FloorMods.TOTEM_ID
 
 
 ## D-063: creature drawn from the normalised strips of the new packs (tools/art_cohesion.gd --creatures).
@@ -104,7 +104,9 @@ static func build_frames(id: String) -> SpriteFrames:
     if _cache.has(id):
         return _cache[id]
     var sf: SpriteFrames = null
-    if BanditArt.has(id):
+    if id == FloorMods.TOTEM_ID:
+        sf = BanditArt.totem_frames()
+    elif BanditArt.has(id):
         sf = BanditArt.build_frames(id)
     elif has_processed(id):
         sf = SpriteFrames.new()

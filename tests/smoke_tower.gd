@@ -156,6 +156,25 @@ func _ready() -> void:
             sm.tick(0.05)
             check(sm.mission_state == SandboxScreen.Mission.SUCCESS, "floor 4 escape: reaching the far side wins")
         sm.queue_free()
+    # --- master prompt D: sabotage (floor 7) ---------------------------------------------------------
+    var s7 := _make(7)
+    await get_tree().process_frame
+    check(s7.mission_type == "sabotage" and s7.totems.size() == FloorMods.TOTEMS, "floor 7: %d bandit totems to destroy" % s7.totems.size())
+    var foe: SandboxEnemy = null
+    for e in s7.enemies:
+        if e.job != "totem":
+            foe = e
+            break
+    foe.position = s7.totems[0].position + Vector2(60, 0)
+    foe.take_damage(999999)
+    var n_before := s7.living_enemies().size()
+    s7._revive_tick(FloorMods.REVIVE_EVERY + 0.1)
+    check(s7.living_enemies().size() == n_before + 1, "a standing totem raises a fallen bandit")
+    for t in s7.totems:
+        t.take_damage(999999)
+    s7.tick(0.05)
+    check(s7.mission_state == SandboxScreen.Mission.SUCCESS, "destroying every totem wins")
+    s7.queue_free()
     # --- master prompt E: the Crimson Baron and his altar ----------------------------------------
     var sbb := _make(10)
     await get_tree().process_frame

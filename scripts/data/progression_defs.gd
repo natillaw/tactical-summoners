@@ -43,6 +43,13 @@ const CONTRIB_LABELS := {"damage": "dealt the most damage", "kills": "struck the
 ## stones, gear (Game.complete_floor) and the tower-only rarities: starsteel (TOWER_STARSTEEL_BASE + floor/2)
 ## and spirit essence (1 + floor/3). The old FLOOR_MATERIALS_* (D-064) are gone.
 const TOWER_STARSTEEL_BASE := 1
+## Master prompt B pacing (2026-10-31): about one summon (100 gems) every ~2 runs. A first clear pays
+## FIRST_GEMS_BASE + FIRST_GEMS_PER_FLOOR x floor (~1 summon while climbing); a replay pays
+## REPLAY_GEMS_BASE + REPLAY_GEMS_PER_FLOOR x floor (~half a summon at floor 10): small but predictable.
+const FIRST_GEMS_BASE := 60
+const FIRST_GEMS_PER_FLOOR := 15
+const REPLAY_GEMS_BASE := 30
+const REPLAY_GEMS_PER_FLOOR := 2
 
 # --- ascension (promotion) -----------------------------------------------------------------------
 ## Materials per target star (tower drops make the player explore and hunt specific creatures).

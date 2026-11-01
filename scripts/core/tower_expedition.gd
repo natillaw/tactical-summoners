@@ -20,7 +20,7 @@ const THEME_NAME := "Whispering Forest"
 ## sets its own squad size ("party", never above 5; 10-hero raids are backlog), its mission, a threat
 ## budget ("threat", spent by ProceduralMap on creatures by EnemyDefs.THREAT so roles mix) and, from
 ## floor 3, one modifier (FloorMods: fog, hazard, enrage, no_heal). Every 5th floor is a spike, the 10th
-## a major boss. Floor 7 "sabotage" (totems that revive) is not built yet: it plays as "combat" for now.
+## a major boss. Floor 7 "sabotage": destroy the totems that raise the fallen (FloorMods).
 const FLOORS := {
     1: {"name": "Floor 1: Forest Edge", "hall": 1, "difficulty": "Tutorial", "mission": "combat", "party": 1, "threat": 6, "width": 96, "height": 84,
         "foes": ["bandido_maton", "bandido_maton", "bandido_arquero"], "nodes": 0, "intro": "A lone scout against a few bandits on the forest edge."},
@@ -34,7 +34,7 @@ const FLOORS := {
         "foes": ["capitan_bandido", "bandido_bruto", "bandido_maton", "bandido_arquero", "bandido_mago", "bandido_degollador"], "nodes": 0, "intro": "The first great challenge: the Bandit Captain and the healers who keep him standing."},
     6: {"name": "Floor 6: Tangled Thicket", "hall": 3, "difficulty": "Hard", "mission": "rescue", "party": 3, "threat": 36, "modifier": "no_heal", "time_limit": 420.0, "tactics": true, "width": 146, "height": 124,
         "foes": ["bandido_bruto", "bandido_degollador", "bandido_arquero", "bandido_mago", "bandido_chaman"], "nodes": 0, "intro": "A villager is caged in the thicket. Six guards, and not much time."},
-    7: {"name": "Floor 7: Raider Woods", "hall": 4, "difficulty": "Hard", "mission": "combat", "party": 4, "threat": 44, "modifier": "fog", "tactics": true, "width": 150, "height": 130,
+    7: {"name": "Floor 7: Raider Woods", "hall": 4, "difficulty": "Hard", "mission": "sabotage", "party": 4, "threat": 44, "modifier": "fog", "tactics": true, "width": 150, "height": 130,
         "foes": ["bandido_maton", "bandido_mago", "bandido_degollador", "bandido_chaman", "bandido_arquero"], "nodes": 0},
     8: {"name": "Floor 8: Stone Circle", "hall": 4, "difficulty": "Hard", "mission": "combat", "party": 1, "threat": 7, "modifier": "enrage", "tactics": true, "width": 96, "height": 84,
         "foes": ["bandido_bruto", "bandido_degollador"], "nodes": 0, "intro": "A duel: one hero against a bandit elite and its two cutthroats."},
