@@ -46,7 +46,7 @@ const CACHE := {"materials": [10, 18], "ingot": [0, 1]}
 const TIER_STRENGTH := {1: 1.0, 2: 1.9}
 ## 2026-10-31: Wilds creatures hit like a floor 4 (tier 1) / floor 10 (tier 2) on top of depth: farming is
 ## not free; a careless squad loses heroes in the deep rooms.
-const TIER_ATK := {1: 2.0, 2: 2.8}
+const TIER_ATK := {1: 1.4, 2: 2.8}   # beta: tier 1 is where fresh heroes farm; depth still scales
 const TIER_RICHNESS := {1: 1.0, 2: 1.6}
 
 

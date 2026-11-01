@@ -791,7 +791,11 @@ func mission_title() -> String:
 
 
 func _spawn_wave() -> void:
-	if living_enemies().size() >= WAVE_MAX_ALIVE or map.enemy_spawn_cells.is_empty():
+	# bug fix (full playthrough): the cap counted the floor's own creatures too, so a floor with 40 of
+	# them never got a wave; it now counts only the living wave creatures
+	_wave_live = _wave_live.filter(func(e): return is_instance_valid(e) and e.alive)
+	var cap := int(TowerExpedition.get_floor_config(floor_number).get("wave_cap", WAVE_MAX_ALIVE)) if floor_number > 0 else WAVE_MAX_ALIVE
+	if _wave_live.size() >= cap or map.enemy_spawn_cells.is_empty():
 		return
 	# master prompt D (protection): waves grow and march on the objective (the shrine, else the squad)
 	_wave_n += 1
@@ -807,6 +811,7 @@ func _spawn_wave() -> void:
 	for i in size:
 		var c: Vector2i = near[_rng.randi() % near.size()]
 		var e := _spawn_enemy(c, TowerExpedition.foe_for(floor_number, _rng.randi()))
+		_wave_live.append(e)
 		if cfg.has("wave_base"):
 			e.tactical = true
 			e.home = target
@@ -814,6 +819,7 @@ func _spawn_wave() -> void:
 
 
 var _wave_n: int = 0
+var _wave_live: Array = []
 const WAVE_NEAR := 8.0                           # cells
 const WAVE_FAR := 20.0
 
