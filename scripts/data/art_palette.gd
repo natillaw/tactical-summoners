@@ -5,12 +5,13 @@ extends RefCounted
 ## from here, so every screen speaks the same visual language.
 
 const OUTLINE := Color("190657")          # every contour (heroes, kit, processed creatures)
-const INK := Color("0e0828")              # darkest fill (deep panels, shadows behind text)
+const INK := Color("1e130b")              # darkest fill (deep panels, shadows behind text); D-075 wood UI
 
-# UI surfaces (kit panel is navy with a lighter rim)
-const PANEL := Color("231a4a")
-const PANEL_LIGHT := Color("33296a")
-const PANEL_RIM := Color("4a3f8c")
+# UI surfaces (D-075, CraftPix basic UI: dark wood panels, parchment insets, green buttons)
+const PANEL := Color("5a3a22")
+const PANEL_LIGHT := Color("7a5130")
+const PANEL_RIM := Color("2e1b0e")
+const PARCHMENT := Color("e8d3a2")
 
 # ramps (dark -> light)
 const BLUE := [Color("1b2a6b"), Color("2f4fb0"), Color("4a86e8"), Color("8fc4ff")]
@@ -22,7 +23,7 @@ const RED := [Color("4a0f1c"), Color("9e2a2b"), Color("e04a3f"), Color("ff9b8a")
 
 # text
 const TEXT := Color("f4ecd8")
-const TEXT_MUTED := Color("a79fc4")
+const TEXT_MUTED := Color("d6c4a0")
 const TEXT_ACCENT := GOLD[3]
 const TEXT_BAD := RED[3]
 const TEXT_GOOD := GREEN[3]

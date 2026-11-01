@@ -17,6 +17,7 @@ func _ready() -> void:
 
     var bar := PanelContainer.new()
     bar.custom_minimum_size = Vector2(0, 20)       # 640x360 base (D-063)
+    bar.add_theme_stylebox_override("panel", UIKit.box(ArtPalette.PANEL, ArtPalette.PANEL_RIM, 1, 0, 2))   # thin wood bar (D-075)
     add_child(bar)
     bar.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
     var hb := HBoxContainer.new()
