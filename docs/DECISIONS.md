@@ -308,6 +308,25 @@ Respuestas del dueño: el freno es el nivel del pueblo más la dificultad; **cam
 
   El pueblo crece con lo que se saca de los Wilds, así que la torre se sube entre salidas a farmear, no en un día.
 
+### D-067 — Balance desafiante: IA táctica, jefes de raid, XP lenta, sin llaves de edificio (2026-10-31, dueño)
+- Wilds y pisos 4-10 con IA táctica (foco en healer/backline/aislado, AoE contra grupos, "caller" que trae refuerzos). Jefes con torbellino, meteoro, Marca de Condena, Ritual interrumpible y enrage duro (`EnemyDefs`).
+- XP medida contra el nivel del héroe (`ProgressionDefs`): piso normal ≈ 0,5 nivel; MVP + secreto ≈ 1; Wilds ×0,4.
+- Los pisos no se bloquean por edificios (nota en D-066). Hook de resistencias: P-29.
+
+### D-068 — Prompt maestro: bandidos, party por piso, amenaza, modificadores (2026-10-31, dueño)
+- **Party por piso** (1-5; nunca más de 5; raids de 10 héroes = backlog). Sustituye la regla fija de 5 de D-017 dentro de la torre: el escuadrón sigue teniendo 5 plazas y entran las primeras N.
+- La banda de **bandidos** (Tiny Pixel Fantasy + capas `accessory`/`mask`) ocupa los pisos 1-10 en lugar de las criaturas del bosque de D-031. Las Wilds conservan sus criaturas.
+- Presupuesto de **amenaza** por piso (`EnemyDefs.THREAT`), un **modificador** por piso desde el 3 (`FloorMods`), misión **escape** (piso 4) y rescate con tiempo (piso 6). El sabotaje con tótems (piso 7) queda pendiente.
+
+### D-069 — El Barón Carmesí y el altar (2026-10-31, dueño; resuelve P-25)
+Inmune mientras dura su escudo; 2 héroes canalizan 8 s en un altar del mismo mapa → 20 s vulnerable. Fases: 1 altar; 2 altares (ambos); el altar cambia de sitio tras cada ventana. Adds hacia el altar, onda carmesí hacia el altar al caer el escudo, pistas sutiles. Números en `AltarDefs`. El Barón usa la hoja ya escalada ×2 (`BanditArt`).
+
+### D-070 — Botín, economía y expediciones offline (2026-10-31, dueño; resuelve P-17)
+- Los pisos sueltan **pocos materiales raros** (T2), llaves `key_`, equipo procedural y cofre de misión (`LootDefs`, `LootService` con semilla). Los materiales del pueblo siguen saliendo de las Wilds (D-066). **Se conservan las gemas** como moneda de invocación; no hay oro todavía.
+- IDs del prompt mapeados a los del repo: `cur_mana_shard`→gemas, `mat_wild_herb`→`herb`, `mat_old_bone`→`bone`, `mat_worn_leather`→`hide`, `mat_copper_ore`→`ore`, `mat_weak_essence`→`essence`, `key_guardian_core`→`core`, `con_potion_minor`→`potion`.
+- **Expediciones offline** desde el piso 5 (`ExpeditionDefs`): 3 cargas al día, 55% del botín, nunca `key_` ni primer clear, duración piso × 20 min, héroes ocupados. `FLOOR_GAP`, `RISK` y `STORAGE_LIMIT` existen pero desactivadas.
+- **Mercader** con 3 ofertas que rotan cada día (`MerchantDefs`). Pity: se mantiene el del repo (4★ en 10, 5★ en 80). Sueldo de héroes: no implementado (pregunta abierta).
+
 ## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)
 
 | ID | Tema | Lo que existe / origen | Pregunta abierta |
@@ -329,7 +348,7 @@ Respuestas del dueño: el freno es el nivel del pueblo más la dificultad; **cam
 | P-14 | **Ropa interior por defecto vs cuerpo base** al equipar armaduras | D-021 | Elegir |
 | P-15 | **Secretos y cadenas de descubrimiento** | `discover_secret()` idempotente, no heredable tras la muerte (solo datos + test) | Alcance y fuentes de secretos |
 | P-16 | **Legado tras la muerte** | Prompt 2026-10-30; memorial existente | Definir qué deja un héroe muerto (reliquias, archivo, recuerdos en otros héroes…) |
-| P-17 | **Expediciones** | Bible pilar 4 ("base, economía, equipo y expediciones se refuerzan"); prompt 2026-10-30 | ¿Son las misiones de torre o envíos sin control directo? |
+| P-17 | ~~**Expediciones**~~ **RESUELTA → D-070** (offline) | Bible pilar 4 ("base, economía, equipo y expediciones se refuerzan"); prompt 2026-10-30 | ¿Son las misiones de torre o envíos sin control directo? |
 | P-18 | **Eventos de misión / objetivos que cambian** | REFERENCE #9 (explorar → exterminar → escapar), prompt | Alcance |
 | P-19 | **Inventario, loot procedural, afijos, sets** | Prompt 2026-10-30; Bible exige guardar inventario/equipo | Necesita spec: `docs/specs/ITEMS_AND_LOOT.md` |
 | P-20 | **Crafting** | Bible "Base/economy: training, crafting, research, storage, production"; prompt | Recetas, estaciones, relación con profesiones |
@@ -337,7 +356,7 @@ Respuestas del dueño: el freno es el nivel del pueblo más la dificultad; **cam
 | P-22 | **Construcción e instalaciones** | Código: cocina/taller/enfermería/sala común con niveles; edificios de pueblo (ayuntamiento, 2 dormitorios, herrería, cocina, enfermería) donde cada dormitorio da +5 de capacidad; REFERENCE #8 (estación de promoción, casa de conversión, archivo de reliquias de caídos) | ¿Un único modelo? ¿Qué instalaciones? |
 | P-23 | **Producción** | Código: cantidades fijas por trabajador; se pretendía bonificar por profesión | Reglas |
 | P-24 | **Diálogo de personalidad ("chatter")** | `HeroChatter` (frases por rasgo al entrar al piso); Roadmap: plantillas deterministas por evento; LLM solo opcional para verbalizar (Bible) | ¿Plantillas por evento? |
-| P-25 | **Jefe del piso 10** | Principios confirmados en D-014; fases genéricas de llamada y furia en D-064 | Mecánicas propias del jefe del piso 10 y de la arena |
+| P-25 | ~~**Jefe del piso 10**~~ **RESUELTA → D-069** | Principios confirmados en D-014; fases genéricas de llamada y furia en D-064 | Mecánicas propias del jefe del piso 10 y de la arena |
 | P-26 | **Política de duplicados, renombrar y liberar héroes** | Spec §9: recomendado = cada tirada es un héroe distinto, nombres repetidos con callsign (implementado) | Decidir si hay conversión en fragmentos, renombrado o liberación |
 | P-27 | **Pasivas en tiempo real** | 16 pasivas con texto heredado de turnos/filas | Reescribir para tiempo real |
 | P-28 | **Protocolo de agentes** | Antes: claims + STATE_HASH + `ts_sync.py` (archivado 2026-10-30). Ahora: ramas + PRs + evidencia | Confirmar el nuevo flujo |

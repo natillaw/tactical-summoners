@@ -150,7 +150,7 @@ const SKILLS := {
 }
 ## Bosses get these on top of their own skills (make_boss). Each floor boss teaches a few mechanics.
 const BOSS_SKILLS := {"warlord": ["whirlwind", "meteor", "blood_ritual"],
-    "capitan_bandido": ["whirlwind", "blood_ritual"], "jefe_baron_carmesi": ["whirlwind", "meteor", "doom"],
+    "capitan_bandido": ["whirlwind", "blood_ritual"], "jefe_baron_carmesi": ["whirlwind"],   # the altar is his fight (AltarDefs)
     "orc_chieftain": ["whirlwind", "meteor", "doom", "blood_ritual"]}
 ## A boss lives long enough to cycle its mechanics (whirlwind, meteor, doom, ritual): its health is
 ## BOSS_HP_MULT x its type's (it was 8; a 30 s fight never showed them). The enrage keeps it a DPS check.
