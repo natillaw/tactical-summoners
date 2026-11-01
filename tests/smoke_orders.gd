@@ -84,8 +84,8 @@ func _ready() -> void:
     sb.select_only([h1])
     sb.select_slot(0)
     sb.select_only([h1])
-    _key(sb, KEY_F)
-    check(h1.order == "follow" and h1.follow_leader == h0, "F makes the selection follow the focused hero")
+    _key(sb, KEY_V)
+    check(h1.order == "follow" and h1.follow_leader == h0, "V makes the selection follow the focused hero (D-082: F is interaction)")
     _run(sb, 8.0)
     check(h1.position.distance_to(h0.position) < 140.0, "a following hero stays near the leader (%.0f px)" % h1.position.distance_to(h0.position))
 

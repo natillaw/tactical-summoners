@@ -77,6 +77,15 @@ var _skill_hero: SandboxHero = null # target of a skill that follows a hero (Mar
 signal called_reinforcements(e)
 var hero_list: Array = []           # every hero of the mission (live array, for lasting zones)
 var _alarm_to: SandboxEnemy = null
+## D-082 bandit AI by role (AiDefs.BANDIT_AI): brute | assassin | archer | caster | leader | support | "".
+var ai_role: String = ""
+var threat: Dictionary = {}         # hero -> threat (damage it dealt to this creature); hook for the full aggro
+var flee_t: float = 0.0             # running away (low health or broken morale)
+var _flee_rolled: bool = false
+var _leader_cd: float = 0.0
+var horn_t: float = -1.0            # job "horn": seconds until it sounds (-1 = not counting, -2 = done)
+var spotted_t: float = 0.0          # D-082 "enemy spotted" ping: visible to the whole squad for a while
+signal horn_blown(e)
 
 
 func _init() -> void:
@@ -122,6 +131,7 @@ func _apply_def(id: String, floor_num: int) -> void:
     windup_time = float(d.get("windup", windup_time))
     recover_time = float(d.get("recover", recover_time))
     on_hit_status = d.get("status", {})
+    ai_role = String(AiDefs.BANDIT_AI.get(id, ""))
     skills.clear()
     for sid in d.get("skills", []):
         var skill_floor := floor_num if floor_num >= 0 else DungeonDefs.skill_floor(-floor_num)   # D-066 Wilds tiers
@@ -332,6 +342,12 @@ func tick(delta: float, heroes: Array, map: NavMap) -> void:
     for sid in skill_cd:
         skill_cd[sid] = maxf(0.0, float(skill_cd[sid]) - delta)
     _back_cd = maxf(0.0, _back_cd - delta)
+    spotted_t = maxf(0.0, spotted_t - delta)
+    _tick_threat(delta)
+    if ai_role == "leader" and alerted:
+        _leader_tick(delta)
+    if job == "horn" and alerted and not dormant:
+        _horn_tick(delta)
     if is_boss and alerted and enrage_after > 0.0 and not hard_enraged:
         fight_t += delta
         if fight_t >= enrage_after:
@@ -387,6 +403,12 @@ func tick(delta: float, heroes: Array, map: NavMap) -> void:
                 if dormant:
                     _update_sprite()
                     return
+            if flee_t > 0.0:
+                flee_t -= delta
+                _flee_step(heroes, delta, map)     # D-082: running away, no fighting
+                _update_sprite()
+                queue_redraw()
+                return
             var t := _nearest_hero(heroes)
             if t != null and not alerted:
                 alert()                           # it saw you: so does its group
@@ -400,8 +422,8 @@ func tick(delta: float, heroes: Array, map: NavMap) -> void:
             elif t == null:
                 state = State.IDLE
                 _wander(delta, map)
-            elif (role == "ranged" or role == "support") and position.distance_to(t.position) < EnemyDefs.BACK_OFF and _back_cd <= 0.0:
-                _back_cd = 2.0                    # keep the distance its role wants, but not every tick
+            elif (role == "ranged" or role == "support") and position.distance_to(t.position) < keep_distance() and _back_cd <= 0.0:
+                _back_cd = AiDefs.CASTER_BACK_CD if ai_role == "caster" else 2.0   # keep its distance, not every tick
                 var away := position + (position - t.position).normalized() * 90.0
                 if not map.is_blocked(away):
                     _path = map.find_path(position, away)
@@ -411,6 +433,10 @@ func tick(delta: float, heroes: Array, map: NavMap) -> void:
                 _step_toward(_path[_path.size() - 1], delta, map)     # finishing the step back
             elif role == "support" and position.distance_to(t.position) > strike_range:
                 state = State.IDLE                # healers stay behind the fight
+            elif ai_role == "archer" and position.distance_to(t.position) <= strike_range \
+                    and not map.has_line_of_sight(position + Vector2(0, -12), t.position + Vector2(0, -12)):
+                state = State.CHASE                   # D-082: no clear shot: walk to a spot that has one
+                _step_toward(_los_spot(t, map), delta, map)
             elif position.distance_to(t.position) <= strike_range and (role != "ranged" or map.has_line_of_sight(position + Vector2(0, -12), t.position + Vector2(0, -12))):
                 state = State.WINDUP
                 strike_seq += 1
@@ -477,6 +503,21 @@ func _wander(delta: float, map: NavMap) -> void:
 func _nearest_hero(heroes: Array) -> SandboxHero:
     if taunt_t > 0.0 and taunted_by != null and is_instance_valid(taunted_by) and taunted_by.alive:
         return taunted_by
+    var reach0 := perception * (EnemyDefs.ALERT_PERCEPTION if alerted else 1.0)
+    match ai_role:
+        "brute":                              # D-082: the highest threat it has taken (hook for the full aggro)
+            var top := threat_target(reach0)
+            if top != null:
+                return top
+        "assassin":                           # D-082: the cleric or the mage first, from further away
+            var prey: SandboxHero = null
+            for h in heroes:
+                if h.alive and h.hero != null and AiDefs.ASSASSIN_PREY.has(h.hero.hero_class) \
+                        and position.distance_to(h.position) <= reach0 * AiDefs.ASSASSIN_REACH \
+                        and (prey == null or position.distance_to(h.position) < position.distance_to(prey.position)):
+                    prey = h
+            if prey != null:
+                return prey
     # D-065 relic: the carrier draws every creature that notices it, from much further away
     for h in heroes:
         if h.alive and h.carrying and position.distance_to(h.position) <= perception * EnemyDefs.CARRIER_HUNT:
@@ -499,6 +540,135 @@ func _nearest_hero(heroes: Array) -> SandboxHero:
             best_d = d
             best = h
     return best
+
+
+# --- D-082 bandit roles ------------------------------------------------------------------------------
+
+## Threat (hook for the full aggro system, not built yet): damage a hero dealt to this creature, fading.
+func add_threat(h: Node, amount: float) -> void:
+    if h == null or not is_instance_valid(h) or amount <= 0.0:
+        return
+    threat[h] = float(threat.get(h, 0.0)) + amount
+
+
+func _tick_threat(delta: float) -> void:
+    if threat.is_empty():
+        return
+    for h in threat.keys():
+        if not is_instance_valid(h) or not h.alive:
+            threat.erase(h)
+            continue
+        threat[h] = float(threat[h]) * (1.0 - AiDefs.THREAT_DECAY * delta)
+
+
+## The standing hero with the most threat within `reach` (null when nobody has hurt it yet).
+func threat_target(reach: float) -> SandboxHero:
+    var best: SandboxHero = null
+    var best_v := 0.5
+    for h in threat:
+        if is_instance_valid(h) and h.alive and position.distance_to(h.position) <= reach and float(threat[h]) > best_v:
+            best_v = float(threat[h])
+            best = h
+    return best
+
+
+## Distance a ranged / support creature keeps from the nearest hero (archers more, casters when pressed).
+func keep_distance() -> float:
+    match ai_role:
+        "archer":
+            return AiDefs.ARCHER_KEEP
+        "caster":
+            return AiDefs.CASTER_PRESSED
+    return EnemyDefs.BACK_OFF
+
+
+## Archer: a nearby spot (around the target, at strike range) with a clear line to it. Tried in a fixed
+## order (deterministic); the target itself when none is found.
+func _los_spot(t: SandboxHero, map: NavMap) -> Vector2:
+    var base := (position - t.position).angle()
+    var r := clampf(position.distance_to(t.position), AiDefs.ARCHER_KEEP, strike_range * 0.9)
+    for i in AiDefs.ARCHER_LOS_TRIES:
+        var a := base + (float((i + 1) >> 1) * 0.5 * (1.0 if i % 2 == 0 else -1.0))
+        var p := t.position + Vector2.RIGHT.rotated(a) * r
+        if not map.is_blocked(p) and map.has_line_of_sight(p + Vector2(0, -12), t.position + Vector2(0, -12)):
+            return p
+    return t.position
+
+
+## Leader: every LEADER_EVERY s the bandits around it are inspired (+15 % damage for a while).
+func _leader_tick(delta: float) -> void:
+    _leader_cd -= delta
+    if _leader_cd > 0.0:
+        return
+    _leader_cd = AiDefs.LEADER_EVERY
+    var n := 0
+    for a in _allies:
+        if is_instance_valid(a) and a.alive and a != self and a.ai_role != "" and a.position.distance_to(position) <= AiDefs.LEADER_RADIUS:
+            a.apply_status("inspired", AiDefs.LEADER_BUFF_TIME, 0.0, self)
+            n += 1
+    if n > 0:
+        apply_status("inspired", AiDefs.LEADER_BUFF_TIME, 0.0, self)
+        FloatingText.spawn(self, "Hold the line!", Color(1.0, 0.6, 0.3), false, 1.0)
+
+
+## Horn: once alerted (or badly hurt) it sounds a horn: every sleeping creature nearby wakes and comes.
+func _horn_tick(delta: float) -> void:
+    if horn_t == -2.0:
+        return
+    if horn_t == -1.0:
+        horn_t = AiDefs.HORN_DELAY
+    horn_t -= delta
+    if horn_t > 0.0 and float(hp) > float(max_hp) * AiDefs.HORN_HP:
+        return
+    horn_t = -2.0
+    var woke := 0
+    for a in _allies:
+        if is_instance_valid(a) and a.alive and not a.alerted and a.position.distance_to(position) <= AiDefs.HORN_RADIUS:
+            a.alert()
+            woke += 1
+    FloatingText.spawn(self, "Horn!", Color(1.0, 0.45, 0.35), true, 1.4)
+    horn_blown.emit(self)
+
+
+## Low health: rolls once (seeded) to run away for a while.
+func _check_flee() -> void:
+    if _flee_rolled or ai_role == "" or is_boss or not alive or float(hp) > float(max_hp) * AiDefs.FLEE_HP:
+        return
+    _flee_rolled = true
+    if combat_rng.randf() < AiDefs.FLEE_CHANCE:
+        start_flee()
+
+
+## Morale (D-082): the leader died nearby; this bandit rolls (seeded) to run.
+func morale_check() -> bool:
+    if not alive or is_boss or ai_role == "" or ai_role == "leader":
+        return false
+    if combat_rng.randf() < AiDefs.MORALE_FLEE:
+        start_flee()
+        return true
+    return false
+
+
+func start_flee() -> void:
+    if state == State.WINDUP:
+        interrupt()
+    casting_skill = ""
+    flee_t = AiDefs.FLEE_TIME
+    FloatingText.spawn(self, "flees!", Color(0.9, 0.9, 0.6), false, 1.2)
+
+
+func _flee_step(heroes: Array, delta: float, map: NavMap) -> void:
+    var near: SandboxHero = null
+    for h in heroes:
+        if h.alive and (near == null or position.distance_to(h.position) < position.distance_to(near.position)):
+            near = h
+    state = State.CHASE
+    if near == null:
+        return
+    var away := position + (position - near.position).normalized() * 120.0
+    if map.is_blocked(away):
+        away = map.nearest_walkable(away)
+    _step_toward(away, delta * 1.1, map)
 
 
 ## Tactical targeting: how much more a hero is worth than its distance says (EnemyDefs.FOCUS_*).
@@ -762,9 +932,12 @@ func _land_strike(heroes: Array) -> void:
 const STAGGER_PCT := 0.06
 
 
-func _on_hit(_info: DamageInfo, dmg: int) -> void:
+func _on_hit(info: DamageInfo, dmg: int) -> void:
     _flash = 0.12
     alert()                                       # hurting one wakes its whole encounter
+    if info != null and info.source is SandboxHero:
+        add_threat(info.source, float(dmg))
+    _check_flee()
     if is_boss and hp > 0:
         _check_boss_phase()
     if enrage_low and not _low_raged and hp > 0 and float(hp) < float(max_hp) * FloorMods.ENRAGE_BELOW:

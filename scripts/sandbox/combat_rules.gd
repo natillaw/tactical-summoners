@@ -8,11 +8,14 @@ const HERO_MELEE_RANGE := 52.0
 const HERO_RANGED_RANGE := 165.0   # #13 playtest: 190 out-ranged every creature by 40 px (ranged foes strike at 150) and won alone
 const HERO_PERCEPTION := 260.0
 const ARMOR_K := 5.0              # mitigation = 100 / (100 + ARMOR_K * armor)
+## D-082: on top of the share, physical armour takes a flat ARMOR_FLAT x armor off EVERY blow (never
+## below 1), so many light blows (two daggers) lose more against heavy armour than one big blow.
+const ARMOR_FLAT := 0.25
 const CRIT_MULT := 1.5
-const AGONY_TIME := 20.0          # D-036
+const AGONY_TIME := 120.0         # D-036, D-082: two minutes to lift a downed hero before they die
 const AGONY_HIT_PENALTY := 5.0
-const RESCUE_TIME := 2.5
-const RESCUE_RANGE := 40.0
+const RESCUE_TIME := 4.0          # D-082: hold F (the Master) or channel (the AI) next to the fallen
+const RESCUE_RANGE := 44.0
 const RESCUE_HP := 0.25
 const WOUNDED_MAX_HP := 0.8
 const STATUS_TICK := 0.5
@@ -52,6 +55,10 @@ const AI_DASH_MAX := 0.55
 const AI_DASH_WRONG := 0.2        # share of AI dashes that pick a poor direction (sideways, still caught)
 ## Warriors swing faster (owner: "se siente eterno"): basic attack interval multiplier per class.
 const CLASS_INTERVAL_MULT := {"class.warrior": 0.7}
+## D-082: the rogue's two daggers keep a quicker rhythm, applied BEFORE the 0.6 s floor every class shares
+## (so a high-AGI rogue is not faster than the floor). With AiDefs.WEAPON_PATTERN it keeps the rogue's damage
+## per second within ~15 % of a warrior's of the same level.
+const CLASS_RHYTHM := {"class.rogue": 0.88}
 
 
 static func ai_dash_chance(agi: int, level: int) -> float:
@@ -104,6 +111,7 @@ const STATUS := {
     "wounded": {"name": "Wounded", "max_hp": WOUNDED_MAX_HP, "no_resist": true, "color": Color(0.8, 0.3, 0.3)},
     "focused": {"name": "Focusing fire", "out_dmg": MasterDefs.FOCUS_OUT_DMG, "no_resist": true, "color": Color(1.0, 0.75, 0.3)},   # D-081 command
     "rallied": {"name": "Rallied", "in_dmg": MasterDefs.RALLY_IN_DMG, "no_resist": true, "color": Color(0.6, 0.9, 1.0)},              # D-081 command
+    "inspired": {"name": "Inspired", "out_dmg": 1.15, "no_resist": true, "color": Color(1.0, 0.6, 0.3)},       # D-082 bandit leader
     "panicked": {"name": "Panicking", "blocks": ["act"], "debuff": true, "no_resist": true, "color": Color(0.95, 0.95, 0.5)},     # D-081 panic
 }
 
@@ -124,7 +132,7 @@ static func derive(attrs: Dictionary, class_id: String) -> Dictionary:
         "mres": tem / 2 + int(c["mres"]),
         "spd": agi,
         "move": 70.0 + float(agi) * 3.0,
-        "interval": clampf(1.6 - float(agi) * 0.04, 0.6, 1.6) * float(CLASS_INTERVAL_MULT.get(class_id, 1.0)),
+        "interval": clampf((1.6 - float(agi) * 0.04) * float(CLASS_RHYTHM.get(class_id, 1.0)), 0.6, 1.6) * float(CLASS_INTERVAL_MULT.get(class_id, 1.0)),
         "crit": clampf(0.05 + float(agi) * 0.005, 0.0, 0.35),
         "energy": 3 + tem / 3,
         "status_resist": clampf(float(tem) * 0.01, 0.0, 0.5),
@@ -171,4 +179,6 @@ static func resolve(info: DamageInfo, target: Combatant) -> int:
     if info.element != "":
         amount *= 1.0 - clampf(float(target.resistances.get(info.element, 0.0)), 0.0, 0.9)   # P-29 hook
     info.final = mitigate(amount, info.kind, target.armor, target.mres)
+    if info.kind == "physical" and target.armor > 0:
+        info.final = maxi(1, info.final - floori(float(target.armor) * ARMOR_FLAT))   # D-082 flat armour per blow
     return info.final
