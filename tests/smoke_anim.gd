@@ -39,7 +39,7 @@ func _ready() -> void:
     h0._anim_lock = 0.0
     h0._play("walk_left")
     check(h0._sprite.animation == "walk_left", "walk plays again once the lock ends")
-    check(HeroAnim.play_attack(h0._sprite, "up", "left", true) > 0.0 and h0._sprite.animation == "ready_left", "ranged attack uses the ready pose")
+    check(HeroAnim.play_attack(h0._sprite, "up", "left", true) > 0.0 and h0._sprite.animation == HeroAnim.dir_anim(h0._sprite, "ready_", "up", "left"), "ranged attack uses the ready pose, facing up when the sheet has it (%s)" % h0._sprite.animation)
     check(HeroAnim.play_cast(h0._sprite, "right") > 0.0, "cast returns a pose lock")
     HeroAnim.play_hit(h0._sprite, Vector2.LEFT)
     check(h0._sprite.has_meta("anim_tween"), "hit reaction tween created")

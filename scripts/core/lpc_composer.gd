@@ -150,7 +150,7 @@ static func build_frames_legacy(look: Dictionary, hero_class: String, equipment:
     for d in DIRS:
         alias["idle_" + d] = "idle_" + d
         alias["walk_" + d] = "walk_" + d
-    for side in ["left", "right"]:
+    for side in DIRS:                                 # all four directions (HeroAnim.dir_anim)
         alias["ready_" + side] = "combat_idle_" + side
         alias["attack_" + side] = attack + "_" + side
         alias["down_" + side] = "hurt_" + side
