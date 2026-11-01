@@ -156,6 +156,7 @@ func _town_turn(why: String) -> void:
                 say("  build %s -> %d (materials left %d)" % [bid, lvl + 1, int(Game.hq_outputs.get("materials", 0))])
             else:
                 say("  build %s refused: %s" % [bid, Game.last_reason])
+    _gear_up()
     # jobs for everyone not in the party
     var party_ids: Array = Game.party.duplicate()
     for h in Game.heroes.values():
@@ -236,6 +237,13 @@ func _town_turn(why: String) -> void:
 ## may use (ItemLibrary.equip_block) for every slot.
 func _gear_up() -> void:
     var tier := ItemLibrary.tier_of_floor(maxi(1, _next_floor))
+    if Game.building_level("blacksmith") > 0 and Game.workers_at("blacksmith").is_empty():
+        # the smith fell or was drafted: the best free hero takes the forge (a player would)
+        var free: Array = Game.heroes.values().filter(func(h): return (h as HeroData).hq_assignment == "" and Game.party_slot_of((h as HeroData).id) < 0)
+        free.sort_custom(func(a, b): return (a as HeroData).prof_level("blacksmith") > (b as HeroData).prof_level("blacksmith"))
+        if not free.is_empty():
+            Game.assign_work(free[0], "blacksmith")
+            say("  smith: %s takes the forge" % (free[0] as HeroData).display_name())
     if Game.building_level("blacksmith") > 0:
         var want := ""
         for base in ["mail", "helm", "greaves", "boots", "gloves", "sword", "shield"]:
