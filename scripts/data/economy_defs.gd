@@ -60,6 +60,9 @@ const RESOURCES := {
     "key_guardian_heart": {"name": "Guardian's heart", "cat": "key"},
     "key_legendary_fragment": {"name": "Legendary fragment", "cat": "key"},
     "con_potion_major": {"name": "Greater potions", "cat": "consumable"},
+    "elixir_strength": {"name": "Elixirs of strength", "cat": "consumable"},
+    "elixir_speed": {"name": "Elixirs of speed", "cat": "consumable"},
+    "elixir_defense": {"name": "Elixirs of defence", "cat": "consumable"},
 }
 
 ## Gathering spots in tower floors (ProceduralMap v2 "nodes"): what a hero collects in GATHER_TIME.
@@ -101,6 +104,9 @@ const RECIPES := {
     "forge_fine_armor": {"name": "Forge starsteel armor", "building": "blacksmith", "prof": "blacksmith", "min": 3, "work": 12.0,
         "in": {"ingot": 4, "starsteel": 2}, "out": {}, "item": "armor", "min_rarity": "rare", "ilvl_bonus": 3},
     "brew_medicine": {"name": "Brew medicine", "building": "alchemy", "prof": "alchemist", "min": 0, "work": 3.0, "in": {"herb": 2}, "out": {"medicine": 1}},
+    "brew_elixir_strength": {"name": "Brew elixir of strength", "building": "alchemy", "prof": "alchemist", "min": 2, "work": 5.0, "in": {"herb": 3, "fang": 1}, "out": {"elixir_strength": 1}, "category": "Elixirs"},
+    "brew_elixir_speed": {"name": "Brew elixir of speed", "building": "alchemy", "prof": "alchemist", "min": 2, "work": 5.0, "in": {"herb": 3, "silk": 1}, "out": {"elixir_speed": 1}, "category": "Elixirs"},
+    "brew_elixir_defense": {"name": "Brew elixir of defence", "building": "alchemy", "prof": "alchemist", "min": 3, "work": 5.0, "in": {"herb": 3, "hide": 1}, "out": {"elixir_defense": 1}, "category": "Elixirs"},
     "brew_potion_major": {"name": "Brew greater potions", "building": "alchemy", "prof": "alchemist", "min": 2, "work": 5.0, "in": {"mat_moon_flower": 2, "potion": 1}, "out": {"con_potion_major": 1}},
     "brew_potion": {"name": "Brew healing potions", "building": "alchemy", "prof": "alchemist", "min": 1, "work": 4.0, "in": {"herb": 2, "grain": 1}, "out": {"potion": 1}},
     "brew_antidote": {"name": "Brew antidotes", "building": "alchemy", "prof": "alchemist", "min": 1, "work": 4.0, "in": {"herb": 3}, "out": {"antidote": 1}},

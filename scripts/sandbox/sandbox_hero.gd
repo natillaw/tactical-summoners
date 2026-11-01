@@ -18,6 +18,7 @@ const ATTACK_LEAD := 0.12           # the attack pose starts this early so the b
 
 var hero: HeroData
 var vision_mod: int = 0
+var art_scale: float = 1.0           # LPC heroes are drawn at half size (SpriteComposer.LPC_WORLD_SCALE)
 var dash_cd: float = 0.0             # CombatRules.DASH_*
 var dash_t: float = 0.0
 var _dash_end: Vector2 = Vector2.ZERO
@@ -137,6 +138,8 @@ func _ready() -> void:
 	_sprite = AnimatedSprite2D.new()
 	_sprite.sprite_frames = SpriteComposer.build_frames(hero)
 	_sprite.offset = SpriteComposer.feet_offset(hero)   # feet at the node origin (LPC 64 px / TPF 48 px)
+	art_scale = SpriteComposer.world_scale(hero)
+	_sprite.scale = Vector2.ONE * art_scale
 	_sprite.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF   # pose tweens run in idle
 	add_child(_sprite)
 	_play("idle_down")
@@ -614,10 +617,10 @@ func dash(dir: Vector2) -> bool:
 	_ghost_t = 0.0
 	if _sprite != null:
 		var tw := create_tween()
-		_sprite.scale = Vector2(1.25, 0.82)                       # stretch along the burst
+		_sprite.scale = Vector2(1.25, 0.82) * art_scale           # stretch along the burst
 		_sprite.rotation = dir.x * 0.18                           # lean into it
-		tw.tween_property(_sprite, "scale", Vector2(0.9, 1.1), CombatRules.DASH_TIME)   # squash on landing
-		tw.tween_property(_sprite, "scale", Vector2.ONE, 0.12)
+		tw.tween_property(_sprite, "scale", Vector2(0.9, 1.1) * art_scale, CombatRules.DASH_TIME)   # squash on landing
+		tw.tween_property(_sprite, "scale", Vector2.ONE * art_scale, 0.12)
 		tw.parallel().tween_property(_sprite, "rotation", 0.0, 0.12)
 	var parent := get_parent()
 	if parent != null and is_inside_tree():
@@ -753,6 +756,9 @@ func _kite(foe: SandboxEnemy, map: NavMap) -> bool:
 
 
 ## Carried potions and antidotes are used on their own (bounded autonomy, never instead of an order).
+const ELIXIR_DUR := 60.0
+
+
 func _use_consumables(delta: float) -> void:
 	if has_status("poison"):
 		was_poisoned = true
@@ -761,7 +767,20 @@ func _use_consumables(delta: float) -> void:
 	_potion_cd = maxf(0.0, _potion_cd - delta)
 	if _potion_cd > 0.0:
 		return
-	if float(hp) < float(max_hp) * POTION_AT and int(hero.bag.get("potion", 0)) > 0:
+	# D-077 elixirs: drunk when the hero first fights (target in sight), last ELIXIR_DUR seconds
+	if target != null:
+		for ex in [["elixir_strength", "empowered"], ["elixir_speed", "hasted"], ["elixir_defense", "fortified"]]:
+			if int(hero.bag.get(ex[0], 0)) > 0 and not has_status(String(ex[1])):
+				_spend(String(ex[0]))
+				apply_status(String(ex[1]), ELIXIR_DUR, 0.0, self)
+				FloatingText.spawn(self, String(ex[0]).replace("_", " "), Color(0.9, 0.8, 1.0), false)
+				_potion_cd = 0.5
+				return
+	if float(hp) < float(max_hp) * POTION_AT and int(hero.bag.get("con_potion_major", 0)) > 0:
+		_spend("con_potion_major")
+		heal(roundi(float(max_hp) * 0.6))
+		FloatingText.spawn(self, "greater potion", Color(0.5, 1.0, 0.6), false)
+	elif float(hp) < float(max_hp) * POTION_AT and int(hero.bag.get("potion", 0)) > 0:
 		_spend("potion")
 		heal(roundi(float(max_hp) * POTION_HEAL))
 		CombatVFX.play(get_parent(), position + Vector2(0, -14), "heal", 1.0)

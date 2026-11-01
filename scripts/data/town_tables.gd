@@ -59,7 +59,7 @@ const BUILDINGS := {
         "jobs": [], "slots": 1, "hall": 0, "desc": "Jewellers cut gems and set rings, amulets and trinkets (D-077)."},
     "alchemy": {"name": "Alchemy Lab", "plot": Rect2i(9, 15, 4, 2), "start": 0, "max": 5, "cost": 60,
         "open": "", "roof": Color(0.45, 0.85, 0.65), "props": ["voxel:crystal_deco", "caz:OutsideFeatures/OutsideFeatures_12_1"], "look": {"roof": "thatch", "wall": "plaster", "tint": Color(0.8, 1.0, 0.8)},
-        "jobs": ["brew_medicine", "brew_potion", "brew_antidote"], "slots": 1, "hall": 1, "desc": "Alchemists brew medicine, healing potions and antidotes from herbs."},
+        "jobs": ["brew_medicine", "brew_potion", "brew_antidote", "brew_elixir_strength", "brew_elixir_speed", "brew_elixir_defense", "brew_potion_major"], "slots": 1, "hall": 1, "desc": "Alchemists brew medicine, healing potions and antidotes from herbs."},
     "common": {"name": "Tavern", "plot": Rect2i(21, 15, 4, 2), "start": 0, "max": 5, "cost": 30,
         "open": "", "experts": ["occupation.entertainer", "occupation.merchant"], "roof": Color(0.85, 0.55, 0.30), "props": ["caz:ExteriorFeatures/ExteriorFeatures_3_2", "caz:ExteriorFeatures/ExteriorFeatures_6_1"], "look": {"roof": "tile", "wall": "timber", "tint": Color(1, 0.9, 0.8)},
         "jobs": ["serve"], "slots": 1, "hall": 1, "desc": "Stressed heroes unwind and talk here; friendships and quarrels happen. A tavern keeper helps."},

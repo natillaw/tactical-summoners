@@ -435,6 +435,22 @@ func party_heroes() -> Array:
     return out
 
 
+## D-077: a secret objective may give a unique (red), never one this account already found.
+func roll_unique(chance: float = ItemLibrary.UNIQUE_CHANCE) -> String:
+    var left: Array = ItemDefs.UNIQUES.keys().filter(func(u): return not uniques_found.has(u))
+    if left.is_empty() or rng.randf() >= chance or stash.size() >= stash_cap():
+        return ""
+    left.sort()
+    var uid := String(left[rng.randi() % left.size()])
+    var it := ItemGen.generate(rng, _next_uid(), 10, "unique", String(ItemDefs.UNIQUES[uid]["base"]))
+    it["unique"] = uid
+    it["name"] = String(ItemDefs.UNIQUES[uid]["name"])
+    it["power"] = (ItemDefs.UNIQUES[uid]["power"] as Dictionary).duplicate()
+    stash.append(it)
+    uniques_found.append(uid)
+    return String(it["name"])
+
+
 # --- master prompt B: the merchant (MerchantDefs) ---------------------------------------------
 
 var merchant_used: Dictionary = {}   # "day:offer" -> trades done (not saved: resets with the day)
@@ -1138,7 +1154,7 @@ const BAG_STACK := 3                 # of each
 
 ## Moves one consumable from town storage into the hero's bag (carried into the tower).
 func pack_consumable(h: HeroData, res: String) -> String:
-    if not (res in ["potion", "antidote"]):
+    if not (res in ["potion", "antidote", "con_potion_major", "elixir_strength", "elixir_speed", "elixir_defense"]):
         return "cannot be carried"
     if int(hq_outputs.get(res, 0)) <= 0:
         return "none in storage"
@@ -1250,6 +1266,8 @@ func finish_expedition(floor_num: int, outcome: String, loot: Dictionary, entrie
             rep["loot"][res] = int(hq_outputs[res]) - before
     if outcome == "success" and floor_num > 0:
         rep["reward"] = complete_floor(floor_num, mission)
+        if secret_done:
+            rep["unique"] = roll_unique()
     var res := ExpeditionResults.compute(entries, outcome, floor_num, kill_xp, secret_done)
     if res["mvp"] != null:
         rep["mvp"] = (res["mvp"] as HeroData).display_name()
