@@ -1,6 +1,6 @@
 # Handoff del overhaul LPC
 
-**Fase actual: 3 terminada.** Escala (D-072), UI B (D-075) aprobadas; pesos humano/elfo 80/20 provisionales (D-074). Siguiente: fase 4 (bandidos y Barón en LPC; puerta: tamaño del Barón). Rama `feat/overhaul-lpc` (local, sin remoto).
+**Fase actual: 4 terminada salvo la puerta del tamaño del Barón** (`baron_opciones.png`; `BanditArt.BARON_SCALE`, hoy 2). Siguiente: fase 5 (catálogo de vestuario, `item_visuals`, razas; puerta: emparejamientos `visual_id`).
 
 Hecho:
 - Fase 0: `.gdignore` y `.gitignore` para `assets/nuevos assets/` (sacados del índice), prompt viejo marcado SUSTITUIDO, inventario `USO_ASSETS_ANTES.md`, fixture de 200 semillas (`tests/test_hero_fixture.gd`), línea base `BASELINE.md` (25 suites en verde).
@@ -20,3 +20,6 @@ Siguiente paso exacto (fase 3): `HeroGenerator.VERSION = 4` con `appearance_lpc`
 
 Fase 3 (hecha): generador v4 (`HeroGenerator.lpc_look`), `HeroData.look`, guardado v13 con migración (roster y memorial), `SpriteComposer` delega en `LpcComposer` (`uses_lpc`, `feet_offset`, `face_region`, `build_frames_legacy` con los nombres viejos de animación). Capturas en `docs/reports/overhaul/fase3/`.
 Pendiente: `HeroAnim` en 4 direcciones reales (hoy los alias usan izquierda/derecha para atacar y caer), el ataque por arma (`ItemDefs.BASES[*].attack_anim`), la tarjeta del pueblo y del título se ven con LPC pero sin revisar en detalle.
+
+Fase 4 (hecha): piezas bandidas importadas (pañuelo, capucha, capa, cuero, placas, cascos, parche, hacha, maza, bastones, mandoble), `scripts/data/lpc_factions.gd`, `BanditArt` reescrito sobre LPC (misma interfaz, 4 caras por tipo), test de facción en `smoke_bandits`.
+Pendiente: armas con frames sobredimensionados (el bastón de cristal y el mandoble solo tienen walk/hurt a 64 px); las animaciones de enemigo usan la fila derecha y `hurt` como muerte.

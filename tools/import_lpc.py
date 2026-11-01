@@ -61,7 +61,8 @@ def main():
             continue
         colors = spec.get('colors')
         colors = man[colors] if isinstance(colors, str) else colors
-        colors2 = man[spec['colors2']] if 'colors2' in spec else [None]
+        colors2 = spec.get('colors2', [None])
+        colors2 = man[colors2] if isinstance(colors2, str) else colors2
         pal = palette(spec['palette']) if 'palette' in spec else None
         pal2 = palette(spec['palette2']) if 'palette2' in spec else None
         entry = {'name': defn.get('name', pid), 'licenses': lics, 'authors': sorted(set(a for c in defn.get('credits', []) for a in c.get('authors', []))), 'layers': []}
@@ -97,9 +98,9 @@ def main():
                         for c2 in colors2:
                             arr = base
                             if pal:
-                                arr = recolor(arr, pal[0][pal[1]], pal[0][c1])
+                                arr = recolor(arr, pal[0][spec.get('base', pal[1])], pal[0][c1])
                             if pal2 and c2:
-                                arr = recolor(arr, pal2[0][pal2[1]], pal2[0][c2])
+                                arr = recolor(arr, pal2[0][spec.get('base2', pal2[1])], pal2[0][c2])
                             var = c1 + ('_' + c2 if c2 else '')
                             dst_rel = '%s/%s/%s/%s/%s.png' % (pid, lk, body, var, anim)
                             os.makedirs(os.path.dirname(os.path.join(OUT, dst_rel)), exist_ok=True)

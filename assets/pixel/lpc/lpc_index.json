@@ -3720,6 +3720,17 @@
         "shoot": "pants/layer_1/male/brown/shoot.png",
         "spellcast": "pants/layer_1/male/brown/spellcast.png",
         "hurt": "pants/layer_1/male/brown/hurt.png"
+       },
+       "charcoal": {
+        "idle": "pants/layer_1/male/charcoal/idle.png",
+        "combat_idle": "pants/layer_1/male/charcoal/combat_idle.png",
+        "walk": "pants/layer_1/male/charcoal/walk.png",
+        "run": "pants/layer_1/male/charcoal/run.png",
+        "slash": "pants/layer_1/male/charcoal/slash.png",
+        "thrust": "pants/layer_1/male/charcoal/thrust.png",
+        "shoot": "pants/layer_1/male/charcoal/shoot.png",
+        "spellcast": "pants/layer_1/male/charcoal/spellcast.png",
+        "hurt": "pants/layer_1/male/charcoal/hurt.png"
        }
       },
       "female": {
@@ -3733,6 +3744,17 @@
         "shoot": "pants/layer_1/female/brown/shoot.png",
         "spellcast": "pants/layer_1/female/brown/spellcast.png",
         "hurt": "pants/layer_1/female/brown/hurt.png"
+       },
+       "charcoal": {
+        "idle": "pants/layer_1/female/charcoal/idle.png",
+        "combat_idle": "pants/layer_1/female/charcoal/combat_idle.png",
+        "walk": "pants/layer_1/female/charcoal/walk.png",
+        "run": "pants/layer_1/female/charcoal/run.png",
+        "slash": "pants/layer_1/female/charcoal/slash.png",
+        "thrust": "pants/layer_1/female/charcoal/thrust.png",
+        "shoot": "pants/layer_1/female/charcoal/shoot.png",
+        "spellcast": "pants/layer_1/female/charcoal/spellcast.png",
+        "hurt": "pants/layer_1/female/charcoal/hurt.png"
        }
       }
      }
@@ -3988,6 +4010,701 @@
        "default": {
         "shoot": "weapon_bow/layer_2/female/shoot.png",
         "hurt": "weapon_bow/layer_2/female/hurt.png"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "bandana": {
+   "name": "Bandana",
+   "licenses": [
+    "CC-BY-SA 3.0",
+    "OGA-BY 3.0"
+   ],
+   "authors": [
+    "JaidynReiman",
+    "Marcel van de Steeg (MadMarcel)",
+    "Matthew Krohn (makrohn)"
+   ],
+   "layers": [
+    {
+     "z": 120,
+     "files": {
+      "male": {
+       "maroon": {
+        "idle": "bandana/layer_1/male/maroon/idle.png",
+        "combat_idle": "bandana/layer_1/male/maroon/combat_idle.png",
+        "walk": "bandana/layer_1/male/maroon/walk.png",
+        "run": "bandana/layer_1/male/maroon/run.png",
+        "slash": "bandana/layer_1/male/maroon/slash.png",
+        "thrust": "bandana/layer_1/male/maroon/thrust.png",
+        "shoot": "bandana/layer_1/male/maroon/shoot.png",
+        "spellcast": "bandana/layer_1/male/maroon/spellcast.png",
+        "hurt": "bandana/layer_1/male/maroon/hurt.png"
+       }
+      },
+      "female": {
+       "maroon": {
+        "idle": "bandana/layer_1/female/maroon/idle.png",
+        "combat_idle": "bandana/layer_1/female/maroon/combat_idle.png",
+        "walk": "bandana/layer_1/female/maroon/walk.png",
+        "run": "bandana/layer_1/female/maroon/run.png",
+        "slash": "bandana/layer_1/female/maroon/slash.png",
+        "thrust": "bandana/layer_1/female/maroon/thrust.png",
+        "shoot": "bandana/layer_1/female/maroon/shoot.png",
+        "spellcast": "bandana/layer_1/female/maroon/spellcast.png",
+        "hurt": "bandana/layer_1/female/maroon/hurt.png"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "hood": {
+   "name": "Hood",
+   "licenses": [
+    "CC-BY-SA 3.0",
+    "GPL 3.0",
+    "OGA-BY 3.0"
+   ],
+   "authors": [
+    "JaidynReiman",
+    "Johannes Sj\u00f6lund (wulax)"
+   ],
+   "layers": [
+    {
+     "z": 130,
+     "files": {
+      "male": {
+       "maroon": {
+        "idle": "hood/layer_1/male/maroon/idle.png",
+        "combat_idle": "hood/layer_1/male/maroon/combat_idle.png",
+        "walk": "hood/layer_1/male/maroon/walk.png",
+        "run": "hood/layer_1/male/maroon/run.png",
+        "slash": "hood/layer_1/male/maroon/slash.png",
+        "thrust": "hood/layer_1/male/maroon/thrust.png",
+        "shoot": "hood/layer_1/male/maroon/shoot.png",
+        "spellcast": "hood/layer_1/male/maroon/spellcast.png",
+        "hurt": "hood/layer_1/male/maroon/hurt.png"
+       }
+      },
+      "female": {
+       "maroon": {
+        "idle": "hood/layer_1/female/maroon/idle.png",
+        "combat_idle": "hood/layer_1/female/maroon/combat_idle.png",
+        "walk": "hood/layer_1/female/maroon/walk.png",
+        "run": "hood/layer_1/female/maroon/run.png",
+        "slash": "hood/layer_1/female/maroon/slash.png",
+        "thrust": "hood/layer_1/female/maroon/thrust.png",
+        "shoot": "hood/layer_1/female/maroon/shoot.png",
+        "spellcast": "hood/layer_1/female/maroon/spellcast.png",
+        "hurt": "hood/layer_1/female/maroon/hurt.png"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "shirt_sleeveless": {
+   "name": "Sleeveless 2",
+   "licenses": [
+    "OGA-BY 3.0"
+   ],
+   "authors": [
+    "ElizaWy",
+    "JaidynReiman",
+    "Johannes Sj\u00f6lund (wulax)",
+    "Stephen Challener (Redshrike)"
+   ],
+   "layers": [
+    {
+     "z": 35,
+     "files": {
+      "male": {
+       "charcoal": {
+        "idle": "shirt_sleeveless/layer_1/male/charcoal/idle.png",
+        "combat_idle": "shirt_sleeveless/layer_1/male/charcoal/combat_idle.png",
+        "walk": "shirt_sleeveless/layer_1/male/charcoal/walk.png",
+        "run": "shirt_sleeveless/layer_1/male/charcoal/run.png",
+        "slash": "shirt_sleeveless/layer_1/male/charcoal/slash.png",
+        "thrust": "shirt_sleeveless/layer_1/male/charcoal/thrust.png",
+        "shoot": "shirt_sleeveless/layer_1/male/charcoal/shoot.png",
+        "spellcast": "shirt_sleeveless/layer_1/male/charcoal/spellcast.png",
+        "hurt": "shirt_sleeveless/layer_1/male/charcoal/hurt.png"
+       }
+      },
+      "female": {
+       "charcoal": {
+        "idle": "shirt_sleeveless/layer_1/female/charcoal/idle.png",
+        "combat_idle": "shirt_sleeveless/layer_1/female/charcoal/combat_idle.png",
+        "walk": "shirt_sleeveless/layer_1/female/charcoal/walk.png",
+        "run": "shirt_sleeveless/layer_1/female/charcoal/run.png",
+        "slash": "shirt_sleeveless/layer_1/female/charcoal/slash.png",
+        "thrust": "shirt_sleeveless/layer_1/female/charcoal/thrust.png",
+        "shoot": "shirt_sleeveless/layer_1/female/charcoal/shoot.png",
+        "spellcast": "shirt_sleeveless/layer_1/female/charcoal/spellcast.png",
+        "hurt": "shirt_sleeveless/layer_1/female/charcoal/hurt.png"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "armour_leather": {
+   "name": "Leather",
+   "licenses": [
+    "CC-BY-SA 3.0",
+    "GPL 3.0",
+    "OGA-BY 3.0"
+   ],
+   "authors": [
+    "JaidynReiman",
+    "Johannes Sj\u00f6lund (wulax)",
+    "Matthew Krohn (makrohn)",
+    "Michael Whitlock (bigbeargames)",
+    "bluecarrot16"
+   ],
+   "layers": [
+    {
+     "z": 60,
+     "files": {
+      "male": {
+       "walnut_iron": {
+        "idle": "armour_leather/layer_1/male/walnut_iron/idle.png",
+        "walk": "armour_leather/layer_1/male/walnut_iron/walk.png",
+        "run": "armour_leather/layer_1/male/walnut_iron/run.png",
+        "slash": "armour_leather/layer_1/male/walnut_iron/slash.png",
+        "thrust": "armour_leather/layer_1/male/walnut_iron/thrust.png",
+        "shoot": "armour_leather/layer_1/male/walnut_iron/shoot.png",
+        "spellcast": "armour_leather/layer_1/male/walnut_iron/spellcast.png",
+        "hurt": "armour_leather/layer_1/male/walnut_iron/hurt.png"
+       },
+       "black_iron": {
+        "idle": "armour_leather/layer_1/male/black_iron/idle.png",
+        "walk": "armour_leather/layer_1/male/black_iron/walk.png",
+        "run": "armour_leather/layer_1/male/black_iron/run.png",
+        "slash": "armour_leather/layer_1/male/black_iron/slash.png",
+        "thrust": "armour_leather/layer_1/male/black_iron/thrust.png",
+        "shoot": "armour_leather/layer_1/male/black_iron/shoot.png",
+        "spellcast": "armour_leather/layer_1/male/black_iron/spellcast.png",
+        "hurt": "armour_leather/layer_1/male/black_iron/hurt.png"
+       }
+      },
+      "female": {
+       "walnut_iron": {
+        "idle": "armour_leather/layer_1/female/walnut_iron/idle.png",
+        "walk": "armour_leather/layer_1/female/walnut_iron/walk.png",
+        "run": "armour_leather/layer_1/female/walnut_iron/run.png",
+        "slash": "armour_leather/layer_1/female/walnut_iron/slash.png",
+        "thrust": "armour_leather/layer_1/female/walnut_iron/thrust.png",
+        "shoot": "armour_leather/layer_1/female/walnut_iron/shoot.png",
+        "spellcast": "armour_leather/layer_1/female/walnut_iron/spellcast.png",
+        "hurt": "armour_leather/layer_1/female/walnut_iron/hurt.png"
+       },
+       "black_iron": {
+        "idle": "armour_leather/layer_1/female/black_iron/idle.png",
+        "walk": "armour_leather/layer_1/female/black_iron/walk.png",
+        "run": "armour_leather/layer_1/female/black_iron/run.png",
+        "slash": "armour_leather/layer_1/female/black_iron/slash.png",
+        "thrust": "armour_leather/layer_1/female/black_iron/thrust.png",
+        "shoot": "armour_leather/layer_1/female/black_iron/shoot.png",
+        "spellcast": "armour_leather/layer_1/female/black_iron/spellcast.png",
+        "hurt": "armour_leather/layer_1/female/black_iron/hurt.png"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "armour_plate": {
+   "name": "Plate",
+   "licenses": [
+    "CC-BY-SA 3.0",
+    "GPL 3.0",
+    "OGA-BY 3.0"
+   ],
+   "authors": [
+    "JaidynReiman",
+    "Johannes Sj\u00f6lund (wulax)",
+    "Matthew Krohn (makrohn)",
+    "Michael Whitlock (bigbeargames)",
+    "Napsio (Vitruvian Studio)",
+    "bluecarrot16"
+   ],
+   "layers": [
+    {
+     "z": 60,
+     "files": {
+      "male": {
+       "iron": {
+        "idle": "armour_plate/layer_1/male/iron/idle.png",
+        "combat_idle": "armour_plate/layer_1/male/iron/combat_idle.png",
+        "walk": "armour_plate/layer_1/male/iron/walk.png",
+        "run": "armour_plate/layer_1/male/iron/run.png",
+        "slash": "armour_plate/layer_1/male/iron/slash.png",
+        "thrust": "armour_plate/layer_1/male/iron/thrust.png",
+        "shoot": "armour_plate/layer_1/male/iron/shoot.png",
+        "spellcast": "armour_plate/layer_1/male/iron/spellcast.png",
+        "hurt": "armour_plate/layer_1/male/iron/hurt.png"
+       }
+      },
+      "female": {
+       "iron": {
+        "idle": "armour_plate/layer_1/female/iron/idle.png",
+        "combat_idle": "armour_plate/layer_1/female/iron/combat_idle.png",
+        "walk": "armour_plate/layer_1/female/iron/walk.png",
+        "run": "armour_plate/layer_1/female/iron/run.png",
+        "slash": "armour_plate/layer_1/female/iron/slash.png",
+        "thrust": "armour_plate/layer_1/female/iron/thrust.png",
+        "shoot": "armour_plate/layer_1/female/iron/shoot.png",
+        "spellcast": "armour_plate/layer_1/female/iron/spellcast.png",
+        "hurt": "armour_plate/layer_1/female/iron/hurt.png"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "cape": {
+   "name": "Solid",
+   "licenses": [
+    "CC-BY-SA 3.0",
+    "GPL 3.0",
+    "OGA-BY 3.0"
+   ],
+   "authors": [
+    "JaidynReiman",
+    "Nila122",
+    "bluecarrot16"
+   ],
+   "layers": [
+    {
+     "z": 85,
+     "files": {
+      "male": {
+       "maroon": {
+        "idle": "cape/layer_1/male/maroon/idle.png",
+        "walk": "cape/layer_1/male/maroon/walk.png",
+        "slash": "cape/layer_1/male/maroon/slash.png",
+        "thrust": "cape/layer_1/male/maroon/thrust.png",
+        "shoot": "cape/layer_1/male/maroon/shoot.png",
+        "spellcast": "cape/layer_1/male/maroon/spellcast.png",
+        "hurt": "cape/layer_1/male/maroon/hurt.png"
+       }
+      },
+      "female": {
+       "maroon": {
+        "idle": "cape/layer_1/female/maroon/idle.png",
+        "walk": "cape/layer_1/female/maroon/walk.png",
+        "slash": "cape/layer_1/female/maroon/slash.png",
+        "thrust": "cape/layer_1/female/maroon/thrust.png",
+        "shoot": "cape/layer_1/female/maroon/shoot.png",
+        "spellcast": "cape/layer_1/female/maroon/spellcast.png",
+        "hurt": "cape/layer_1/female/maroon/hurt.png"
+       }
+      }
+     }
+    },
+    {
+     "z": 5,
+     "files": {
+      "male": {
+       "maroon": {
+        "idle": "cape/layer_2/male/maroon/idle.png",
+        "walk": "cape/layer_2/male/maroon/walk.png",
+        "slash": "cape/layer_2/male/maroon/slash.png",
+        "thrust": "cape/layer_2/male/maroon/thrust.png",
+        "shoot": "cape/layer_2/male/maroon/shoot.png",
+        "spellcast": "cape/layer_2/male/maroon/spellcast.png",
+        "hurt": "cape/layer_2/male/maroon/hurt.png"
+       }
+      },
+      "female": {
+       "maroon": {
+        "idle": "cape/layer_2/female/maroon/idle.png",
+        "walk": "cape/layer_2/female/maroon/walk.png",
+        "slash": "cape/layer_2/female/maroon/slash.png",
+        "thrust": "cape/layer_2/female/maroon/thrust.png",
+        "shoot": "cape/layer_2/female/maroon/shoot.png",
+        "spellcast": "cape/layer_2/female/maroon/spellcast.png",
+        "hurt": "cape/layer_2/female/maroon/hurt.png"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "helmet_barbarian": {
+   "name": "Barbarian",
+   "licenses": [
+    "CC-BY 3.0",
+    "CC-BY 4.0",
+    "GPL 2.0",
+    "GPL 3.0",
+    "OGA-BY 3.0"
+   ],
+   "authors": [
+    "JaidynReiman",
+    "Napsio (Vitruvian Studio)",
+    "bluecarrot16"
+   ],
+   "layers": [
+    {
+     "z": 130,
+     "files": {
+      "male": {
+       "iron_maroon": {
+        "idle": "helmet_barbarian/layer_1/male/iron_maroon/idle.png",
+        "combat_idle": "helmet_barbarian/layer_1/male/iron_maroon/combat_idle.png",
+        "walk": "helmet_barbarian/layer_1/male/iron_maroon/walk.png",
+        "run": "helmet_barbarian/layer_1/male/iron_maroon/run.png",
+        "slash": "helmet_barbarian/layer_1/male/iron_maroon/slash.png",
+        "thrust": "helmet_barbarian/layer_1/male/iron_maroon/thrust.png",
+        "shoot": "helmet_barbarian/layer_1/male/iron_maroon/shoot.png",
+        "spellcast": "helmet_barbarian/layer_1/male/iron_maroon/spellcast.png",
+        "hurt": "helmet_barbarian/layer_1/male/iron_maroon/hurt.png"
+       }
+      },
+      "female": {
+       "iron_maroon": {
+        "idle": "helmet_barbarian/layer_1/female/iron_maroon/idle.png",
+        "combat_idle": "helmet_barbarian/layer_1/female/iron_maroon/combat_idle.png",
+        "walk": "helmet_barbarian/layer_1/female/iron_maroon/walk.png",
+        "run": "helmet_barbarian/layer_1/female/iron_maroon/run.png",
+        "slash": "helmet_barbarian/layer_1/female/iron_maroon/slash.png",
+        "thrust": "helmet_barbarian/layer_1/female/iron_maroon/thrust.png",
+        "shoot": "helmet_barbarian/layer_1/female/iron_maroon/shoot.png",
+        "spellcast": "helmet_barbarian/layer_1/female/iron_maroon/spellcast.png",
+        "hurt": "helmet_barbarian/layer_1/female/iron_maroon/hurt.png"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "helmet_horned": {
+   "name": "Horned helmet",
+   "licenses": [
+    "CC-BY-SA 3.0",
+    "GPL 3.0"
+   ],
+   "authors": [
+    "Johannes Sj\u00f6lund (wulax)",
+    "Matthew Krohn (makrohn)",
+    "Sander Frenken (castelonia)",
+    "Shaun Williams",
+    "bluecarrot16"
+   ],
+   "layers": [
+    {
+     "z": 130,
+     "files": {
+      "male": {
+       "gold": {
+        "idle": "helmet_horned/layer_1/male/gold/idle.png",
+        "combat_idle": "helmet_horned/layer_1/male/gold/combat_idle.png",
+        "walk": "helmet_horned/layer_1/male/gold/walk.png",
+        "run": "helmet_horned/layer_1/male/gold/run.png",
+        "slash": "helmet_horned/layer_1/male/gold/slash.png",
+        "thrust": "helmet_horned/layer_1/male/gold/thrust.png",
+        "shoot": "helmet_horned/layer_1/male/gold/shoot.png",
+        "spellcast": "helmet_horned/layer_1/male/gold/spellcast.png",
+        "hurt": "helmet_horned/layer_1/male/gold/hurt.png"
+       }
+      },
+      "female": {
+       "gold": {
+        "idle": "helmet_horned/layer_1/female/gold/idle.png",
+        "combat_idle": "helmet_horned/layer_1/female/gold/combat_idle.png",
+        "walk": "helmet_horned/layer_1/female/gold/walk.png",
+        "run": "helmet_horned/layer_1/female/gold/run.png",
+        "slash": "helmet_horned/layer_1/female/gold/slash.png",
+        "thrust": "helmet_horned/layer_1/female/gold/thrust.png",
+        "shoot": "helmet_horned/layer_1/female/gold/shoot.png",
+        "spellcast": "helmet_horned/layer_1/female/gold/spellcast.png",
+        "hurt": "helmet_horned/layer_1/female/gold/hurt.png"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "eyepatch": {
+   "name": "Small Eyepatch Left",
+   "licenses": [
+    "CC-BY-SA 3.0",
+    "GPL 3.0"
+   ],
+   "authors": [
+    "Michael Whitlock (bigbeargames)",
+    "Thane Brimhall (pennomi)",
+    "laetissima"
+   ],
+   "layers": [
+    {
+     "z": 115,
+     "files": {
+      "male": {
+       "default": {
+        "idle": "eyepatch/layer_1/male/idle.png",
+        "combat_idle": "eyepatch/layer_1/male/combat_idle.png",
+        "walk": "eyepatch/layer_1/male/walk.png",
+        "run": "eyepatch/layer_1/male/run.png",
+        "slash": "eyepatch/layer_1/male/slash.png",
+        "thrust": "eyepatch/layer_1/male/thrust.png",
+        "shoot": "eyepatch/layer_1/male/shoot.png",
+        "spellcast": "eyepatch/layer_1/male/spellcast.png",
+        "hurt": "eyepatch/layer_1/male/hurt.png"
+       }
+      },
+      "female": {
+       "default": {
+        "idle": "eyepatch/layer_1/female/idle.png",
+        "combat_idle": "eyepatch/layer_1/female/combat_idle.png",
+        "walk": "eyepatch/layer_1/female/walk.png",
+        "run": "eyepatch/layer_1/female/run.png",
+        "slash": "eyepatch/layer_1/female/slash.png",
+        "thrust": "eyepatch/layer_1/female/thrust.png",
+        "shoot": "eyepatch/layer_1/female/shoot.png",
+        "spellcast": "eyepatch/layer_1/female/spellcast.png",
+        "hurt": "eyepatch/layer_1/female/hurt.png"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "weapon_waraxe": {
+   "name": "Waraxe",
+   "licenses": [
+    "CC-BY-SA 3.0",
+    "GPL 3.0"
+   ],
+   "authors": [
+    "Benjamin K. Smith (BenCreating)",
+    "Sander Frenken (castelonia)",
+    "bluecarrot16"
+   ],
+   "layers": [
+    {
+     "z": 9,
+     "files": {
+      "male": {
+       "default": {
+        "walk": "weapon_waraxe/layer_1/male/walk.png"
+       }
+      },
+      "female": {
+       "default": {
+        "walk": "weapon_waraxe/layer_1/female/walk.png"
+       }
+      }
+     }
+    },
+    {
+     "z": 140,
+     "files": {
+      "male": {
+       "default": {
+        "walk": "weapon_waraxe/layer_2/male/walk.png",
+        "hurt": "weapon_waraxe/layer_2/male/hurt.png"
+       }
+      },
+      "female": {
+       "default": {
+        "walk": "weapon_waraxe/layer_2/female/walk.png",
+        "hurt": "weapon_waraxe/layer_2/female/hurt.png"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "weapon_mace": {
+   "name": "Mace",
+   "licenses": [
+    "CC-BY-SA 3.0",
+    "OGA-BY 3.0"
+   ],
+   "authors": [
+    "Johannes Sj\u00f6lund (wulax)",
+    "bluecarrot16"
+   ],
+   "layers": [
+    {
+     "z": 140,
+     "files": {
+      "male": {
+       "default": {
+        "walk": "weapon_mace/layer_1/male/walk.png",
+        "thrust": "weapon_mace/layer_1/male/thrust.png",
+        "hurt": "weapon_mace/layer_1/male/hurt.png"
+       }
+      },
+      "female": {
+       "default": {
+        "walk": "weapon_mace/layer_1/female/walk.png",
+        "thrust": "weapon_mace/layer_1/female/thrust.png",
+        "hurt": "weapon_mace/layer_1/female/hurt.png"
+       }
+      }
+     }
+    },
+    {
+     "z": 9,
+     "files": {
+      "male": {
+       "default": {
+        "walk": "weapon_mace/layer_2/male/walk.png",
+        "hurt": "weapon_mace/layer_2/male/hurt.png"
+       }
+      },
+      "female": {
+       "default": {
+        "walk": "weapon_mace/layer_2/female/walk.png",
+        "hurt": "weapon_mace/layer_2/female/hurt.png"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "weapon_staff_red": {
+   "name": "Crystal",
+   "licenses": [
+    "CC-BY 4.0",
+    "GPL 3.0",
+    "OGA-BY 3.0+"
+   ],
+   "authors": [
+    "bluecarrot16"
+   ],
+   "layers": [
+    {
+     "z": 140,
+     "files": {
+      "male": {
+       "default": {
+        "walk": "weapon_staff_red/layer_1/male/walk.png",
+        "hurt": "weapon_staff_red/layer_1/male/hurt.png"
+       }
+      },
+      "female": {
+       "default": {
+        "walk": "weapon_staff_red/layer_1/female/walk.png",
+        "hurt": "weapon_staff_red/layer_1/female/hurt.png"
+       }
+      }
+     }
+    },
+    {
+     "z": 9,
+     "files": {
+      "male": {
+       "default": {
+        "walk": "weapon_staff_red/layer_2/male/walk.png",
+        "hurt": "weapon_staff_red/layer_2/male/hurt.png"
+       }
+      },
+      "female": {
+       "default": {
+        "walk": "weapon_staff_red/layer_2/female/walk.png",
+        "hurt": "weapon_staff_red/layer_2/female/hurt.png"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "weapon_staff_green": {
+   "name": "Crystal",
+   "licenses": [
+    "CC-BY 4.0",
+    "GPL 3.0",
+    "OGA-BY 3.0+"
+   ],
+   "authors": [
+    "bluecarrot16"
+   ],
+   "layers": [
+    {
+     "z": 140,
+     "files": {
+      "male": {
+       "default": {
+        "walk": "weapon_staff_green/layer_1/male/walk.png",
+        "hurt": "weapon_staff_green/layer_1/male/hurt.png"
+       }
+      },
+      "female": {
+       "default": {
+        "walk": "weapon_staff_green/layer_1/female/walk.png",
+        "hurt": "weapon_staff_green/layer_1/female/hurt.png"
+       }
+      }
+     }
+    },
+    {
+     "z": 9,
+     "files": {
+      "male": {
+       "default": {
+        "walk": "weapon_staff_green/layer_2/male/walk.png",
+        "hurt": "weapon_staff_green/layer_2/male/hurt.png"
+       }
+      },
+      "female": {
+       "default": {
+        "walk": "weapon_staff_green/layer_2/female/walk.png",
+        "hurt": "weapon_staff_green/layer_2/female/hurt.png"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "weapon_longsword": {
+   "name": "Longsword",
+   "licenses": [
+    "CC-BY-SA 3.0",
+    "OGA-BY 3.0"
+   ],
+   "authors": [
+    "Johannes Sj\u00f6lund (wulax)",
+    "bluecarrot16"
+   ],
+   "layers": [
+    {
+     "z": 140,
+     "files": {
+      "male": {
+       "default": {
+        "walk": "weapon_longsword/layer_1/male/walk.png",
+        "hurt": "weapon_longsword/layer_1/male/hurt.png"
+       }
+      },
+      "female": {
+       "default": {
+        "walk": "weapon_longsword/layer_1/female/walk.png",
+        "hurt": "weapon_longsword/layer_1/female/hurt.png"
+       }
+      }
+     }
+    },
+    {
+     "z": 9,
+     "files": {
+      "male": {
+       "default": {
+        "walk": "weapon_longsword/layer_2/male/walk.png",
+        "hurt": "weapon_longsword/layer_2/male/hurt.png"
+       }
+      },
+      "female": {
+       "default": {
+        "walk": "weapon_longsword/layer_2/female/walk.png",
+        "hurt": "weapon_longsword/layer_2/female/hurt.png"
        }
       }
      }

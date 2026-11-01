@@ -1,59 +1,69 @@
 class_name BanditArt
 extends RefCounted
-## Master prompt H (2026-10-31): every human (heroes, bandits, future NPCs) is built from the Tiny
-## Pixel Fantasy layers. Bandits read their layer lists from the owner's presets file; "orig:" is a
-## layer of the original pack (SpriteComposer.ROOT), "new:" a bandit layer in tpf_bandidos/Sprite/.
-## The Crimson Baron uses the ready-made ×2 sheet (96 px cells, aura included): decision recorded in
-## DECISIONS (D-070) so his size, hitbox and aura come from one picture instead of a scaled node.
+## Overhaul LPC phase 4 (D-E): the bandit band drawn with LPC (LpcFactions: one outfit per type in the
+## faction colour; body, skin, hair and beard vary in LpcFactions.VARIANTS looks). Same interface as
+## the TPF version it replaces (EnemySprites: has, build_frames, totem_frames, BARON_ID). The old TPF
+## presets (assets/pixel/tpf_bandidos/) stay on disk, unused.
+## Enemy sheets face right: the LPC right-facing row (3) is used; "attack" is the type's attack anim,
+## "hurt" the first frames of LPC hurt and "death" the whole hurt row (LPC has no separate death).
 
-const ROOT := "res://assets/pixel/tpf_bandidos/"
-const PRESETS := ROOT + "presets/bandidos_presets.json"
-const BARON_X2 := ROOT + "presets/jefe_baron_carmesi_x2.png"
 const BARON_ID := "jefe_baron_carmesi"
-## Preset layer name -> SpriteComposer appearance key.
-const KEYS := {"Rear_Hair": "rear_hair", "Body": "body", "Eyes": "eyes", "Shoes": "shoes", "Bottom": "bottom",
-    "Top": "top", "Accesorio": "accessory", "Facial_Hair": "facial_hair", "Mascara": "mask",
-    "Front_Hair": "front_hair", "Hat": "hat", "Held_Item": "held"}
-## Creature animations from the TPF sheet (rows/cols as SpriteComposer.ANIMS; all art faces right).
-const ANIMS := {
-    "idle": {"row": 1, "cols": [4], "fps": 2.0, "loop": true},
-    "run": {"row": 1, "cols": [0, 1, 2, 3], "fps": 8.0, "loop": true},
-    "attack": {"row": 5, "cols": [2, 3, 4, 5], "fps": 10.0, "loop": false},
-    "hurt": {"row": 5, "cols": [0], "fps": 10.0, "loop": false},
-    "death": {"row": 5, "cols": [0, 1], "fps": 4.0, "loop": false},
-}
-
-static var _presets: Dictionary = {}
-
-
-static func presets() -> Dictionary:
-    if _presets.is_empty():
-        var f := FileAccess.open(PRESETS, FileAccess.READ)
-        if f != null:
-            var d = JSON.parse_string(f.get_as_text())
-            if d is Dictionary:
-                _presets = (d as Dictionary).get("presets", {})
-    return _presets
+## The Baron's size (owner's gate): 2 = his composed sheet doubled with nearest (integer), 1 = normal
+## size with a red aura and FX. Both are drawn in docs/reports/overhaul/baron_opciones.png.
+const BARON_SCALE := 2
+const FPS := {"idle": 3.0, "run": 12.0, "attack": 12.0, "hurt": 10.0, "death": 8.0}
+static var _next := {}             # type -> next look variant (round-robin, deterministic per run)
+static var _cache := {}
 
 
 static func has(id: String) -> bool:
-    return presets().has(id)
+    return LpcFactions.has(id) and LpcComposer.available()
 
 
-## SpriteComposer appearance of a bandit ({} if unknown).
-static func appearance(id: String) -> Dictionary:
-    var out := {}
-    var p: Dictionary = presets().get(id, {})
-    for layer in p:
-        var key := String(KEYS.get(layer, ""))
-        var v := String(p[layer])
-        if key == "" or v == "":
+static func appearance(id: String, n: int = 0) -> Dictionary:
+    return LpcFactions.look(id, n)
+
+
+## The n-th look of a bandit type (n < 0: the next one in turn, so a group mixes faces).
+static func build_frames(id: String, n: int = -1) -> SpriteFrames:
+    if n < 0:
+        n = int(_next.get(id, 0))
+        _next[id] = (n + 1) % LpcFactions.VARIANTS
+    var key := "%s/%d" % [id, n]
+    if _cache.has(key):
+        return _cache[key]
+    var lk := LpcFactions.look(id, n)
+    var layers := LpcComposer.layers_from(LpcFactions.layers(id, n), String(lk["body"]))
+    var attack := String(LpcFactions.BANDIT[id].get("attack", "slash"))
+    var src := {"idle": "idle", "run": "run", "attack": attack, "hurt": "hurt", "death": "hurt"}
+    var scale := BARON_SCALE if id == BARON_ID else 1
+    var sf := SpriteFrames.new()
+    sf.remove_animation("default")
+    for anim in src:
+        var img := LpcComposer.compose_anim(layers, String(src[anim]))
+        if img == null:
+            img = LpcComposer.compose_anim(layers, "walk")
+        if img == null:
             continue
-        if v.begins_with("orig:"):
-            out[key] = v.substr(5).trim_suffix(".png")
-        elif v.begins_with("new:"):
-            out[key] = ROOT + "Sprite/" + v.substr(4)
-    return out
+        var row := 3 if img.get_height() >= 4 * LpcComposer.FRAME else 0
+        var strip := img.get_region(Rect2i(0, row * LpcComposer.FRAME, img.get_width(), LpcComposer.FRAME))
+        if scale != 1:
+            strip.resize(strip.get_width() * scale, strip.get_height() * scale, Image.INTERPOLATE_NEAREST)
+        var tex := ImageTexture.create_from_image(strip)
+        var cell := LpcComposer.FRAME * scale
+        var cols := strip.get_width() / cell
+        if anim == "hurt":
+            cols = mini(cols, 2)
+        sf.add_animation(anim)
+        sf.set_animation_speed(anim, float(FPS[anim]))
+        sf.set_animation_loop(anim, anim == "idle" or anim == "run")
+        for c in cols:
+            var at := AtlasTexture.new()
+            at.atlas = tex
+            at.region = Rect2(c * cell, 0, cell, cell)
+            sf.add_frame(anim, at)
+    _cache[key] = sf
+    return sf
 
 
 ## Sabotage totem: the band's banner from the camp props, doubled (one still frame for every animation).
@@ -68,30 +78,7 @@ static func totem_frames() -> SpriteFrames:
     var tex := ImageTexture.create_from_image(part)
     var sf := SpriteFrames.new()
     sf.remove_animation("default")
-    for anim in ANIMS:
+    for anim in FPS:
         sf.add_animation(anim)
         sf.add_frame(anim, tex)
-    return sf
-
-
-static func build_frames(id: String) -> SpriteFrames:
-    var sheet: Texture2D = null
-    var cell := SpriteComposer.FRAME
-    if id == BARON_ID and ResourceLoader.exists(BARON_X2):
-        sheet = load(BARON_X2) as Texture2D
-        cell *= 2
-    else:
-        sheet = ImageTexture.create_from_image(SpriteComposer.compose_sheet(appearance(id)))
-    var sf := SpriteFrames.new()
-    sf.remove_animation("default")
-    for anim in ANIMS:
-        var def: Dictionary = ANIMS[anim]
-        sf.add_animation(anim)
-        sf.set_animation_speed(anim, float(def["fps"]))
-        sf.set_animation_loop(anim, bool(def["loop"]))
-        for c in def["cols"]:
-            var at := AtlasTexture.new()
-            at.atlas = sheet
-            at.region = Rect2(int(c) * cell, int(def["row"]) * cell, cell, cell)
-            sf.add_frame(anim, at)
     return sf
