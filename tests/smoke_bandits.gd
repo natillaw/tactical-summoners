@@ -24,9 +24,8 @@ func _ready() -> void:
     for r in IDS.size():
         var id: String = IDS[r]
         check(EnemyDefs.TYPES.has(id) and BanditArt.has(id), "%s has stats (%s) and a layer preset" % [id, EnemyDefs.role_of(id)])
-        if id != BanditArt.BARON_ID:
-            var app := BanditArt.appearance(id)
-            check(app.has("mask") or app.has("hat"), "%s wears the band's mark (mask: %s)" % [id, str(app.get("mask", "-"))])
+        var faction := LpcFactions.layers(id, 0).any(func(p): return String(p[1]).contains(LpcFactions.COLOR))
+        check(faction, "%s wears the faction colour '%s'" % [id, LpcFactions.COLOR])
         var sf := EnemySprites.build_frames(id)
         check(sf != null, "%s builds its animations" % id)
         if sf == null:
@@ -54,6 +53,12 @@ func _ready() -> void:
                     spr.play(a)
                     break
             check(ok and opaque, "%s: animation %s has visible frames" % [id, a])
+    # D-E: no hero (1000 seeds) wears the faction colour; every bandit does
+    var hero_clean := true
+    for i in 1000:
+        for p in LpcWardrobe.layers_for(HeroGenerator.lpc_look(i * 13 + 1), "class.warrior"):
+            hero_clean = hero_clean and not String(p[1]).contains(LpcFactions.COLOR)
+    check(hero_clean, "no hero in 1000 seeds wears the bandit colour")
     var e := SandboxEnemy.new()
     e.setup_type("bandido_degollador", 3)
     check(e.role == "assassin" and e.skills.has("leap"), "the cutthroat is an assassin that leaps to the backline")

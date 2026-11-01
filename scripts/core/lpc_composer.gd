@@ -45,9 +45,13 @@ static func _img(rel: String) -> Image:
 
 ## The look's layers (piece, variant, z), sorted bottom to top.
 static func visual_layers(look: Dictionary, hero_class: String = "", equipment: Dictionary = {}) -> Array:
-    var body := String(look.get("body", "male"))
+    return layers_from(LpcWardrobe.layers_for(look, hero_class, equipment), String(look.get("body", "male")))
+
+
+## Same, from an explicit [[piece, variant], ...] list (bandits, races).
+static func layers_from(pairs: Array, body: String) -> Array:
     var out: Array = []
-    for pv in LpcWardrobe.layers_for(look, hero_class, equipment):
+    for pv in pairs:
         var piece: Dictionary = index()["pieces"].get(String(pv[0]), {})
         for layer in piece.get("layers", []):
             var files: Dictionary = (layer["files"] as Dictionary).get(body, {})

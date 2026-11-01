@@ -101,6 +101,8 @@ static func _add(sf: SpriteFrames, anim: String, tex: Texture2D, fw: int, fps: f
 
 ## Null when the art is not installed.
 static func build_frames(id: String) -> SpriteFrames:
+    if BanditArt.has(id):
+        return BanditArt.build_frames(id)          # overhaul LPC: a new face per bandit (BanditArt caches each)
     if _cache.has(id):
         return _cache[id]
     var sf: SpriteFrames = null

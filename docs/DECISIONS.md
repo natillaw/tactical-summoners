@@ -346,6 +346,9 @@ Rejilla lógica de 32 px. Todo el arte se dibuja a ×1: personajes LPC (frame de
 ### D-075 — Overhaul LPC: estilo de UI (2026-10-31, dueño: "B: CraftPix basic")
 Se adopta el pack CraftPix "basic pixel art UI for RPG" como el único estilo de UI; Dragon Regalia se retira cuando se haga el cambio (fase 6). No se mezclan los dos.
 
+### D-076 — Overhaul LPC: bandidos en LPC (D-E, 2026-10-31, prompt del overhaul)
+Los bandidos son humanos LPC con un atuendo fijo por tipo (`LpcFactions.BANDIT`) y el color de facción **maroon** (pañuelo, capucha o capa) sobre cuero oscuro. Dentro de un tipo solo varían cuerpo, piel, pelo y barba (4 variantes). Ningún héroe lleva ese color (test con 1000 semillas). Sustituye el arte TPF de los bandidos (D-070 en cuanto al arte); los presets TPF quedan sin uso. Tamaño del Barón: **pendiente** (puerta; por defecto ×2, `BanditArt.BARON_SCALE`).
+
 ## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)
 
 | ID | Tema | Lo que existe / origen | Pregunta abierta |
