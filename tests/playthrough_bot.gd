@@ -114,9 +114,10 @@ func _hero_line(h: HeroData) -> String:
 
 # --- town ---------------------------------------------------------------------------------------
 
-const BUILD_ORDER := ["workshop", "lumber_camp", "mine", "kitchen", "farm", "town_hall", "warehouse", "ascension", "dorm_3",
-    "training_grounds", "infirmary", "blacksmith", "alchemy", "common", "library", "barracks", "war_room", "memorial"]
-const WORK_ORDER := ["workshop", "workshop", "lumber_camp", "mine", "lumber_camp", "kitchen", "farm", "infirmary", "blacksmith", "alchemy", "mine", "farm"]
+# beta pass: a player who uses the town builds the forge early and keeps a smith at it (gear for floor 5)
+const BUILD_ORDER := ["workshop", "blacksmith", "mine", "lumber_camp", "kitchen", "farm", "alchemy", "town_hall", "warehouse", "ascension", "dorm_3",
+    "training_grounds", "infirmary", "common", "library", "barracks", "war_room", "memorial"]
+const WORK_ORDER := ["workshop", "blacksmith", "mine", "lumber_camp", "mine", "kitchen", "farm", "alchemy", "infirmary", "workshop", "blacksmith", "farm"]
 
 
 func _town_turn(why: String) -> void:
