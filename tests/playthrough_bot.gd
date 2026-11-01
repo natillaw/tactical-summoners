@@ -74,6 +74,7 @@ func _ready() -> void:
         say("  floor %d open after %d Wilds runs (town day %d)" % [floor_num, farm_runs, Game.town_day()])
         for attempt in range(1, ATTEMPTS + 1):
             _pick_party()
+            _gear_up()
             var r: Dictionary = await _play_floor(floor_num, attempt)
             _town_turn("after floor %d attempt %d" % [floor_num, attempt])
             if r["outcome"] == "SUCCESS":
@@ -219,6 +220,33 @@ func _town_turn(why: String) -> void:
     say("  stock: %s" % str(Game.hq_outputs))
     say("  problems: %s" % str(Game.town_problems))
     say("  construction: %s  builders %d" % [str(Game.construction), Game.builders().size()])
+
+
+## Like a player who uses the town (beta pass, 2026-11-01): the smith works on the missing piece of the
+## current tier (armour first), and before every outing each squad hero wears the best stash item it
+## may use (ItemLibrary.equip_block) for every slot.
+func _gear_up() -> void:
+    var tier := ItemLibrary.tier_of_floor(maxi(1, _next_floor))
+    if Game.building_level("blacksmith") > 0:
+        var want := ""
+        for base in ["mail", "helm", "greaves", "boots", "gloves", "sword", "shield"]:
+            var have := Game.stash.any(func(it): return String(it.get("base", "")) == base) or Game.party_heroes().any(func(h): return (h as HeroData).equipment.values().any(func(it): return it is Dictionary and String(it.get("base", "")) == base))
+            if not have:
+                want = base
+                break
+        if want != "":
+            Game.set_job("blacksmith", ItemLibrary.recipe_id("blacksmith", want, tier))
+    for h in Game.party_heroes():
+        var hd: HeroData = h
+        for it in Game.stash.duplicate():
+            if ItemLibrary.equip_block(hd, it) != "":
+                continue
+            var slots := ItemDefs.slots_for(String(it["base"]))
+            if slots.is_empty():
+                continue
+            var cur = hd.equipment.get(String(slots[0]), null)
+            if cur == null or int(it.get("ilvl", 0)) * 10 + ItemDefs.RARITY_ORDER.find(String(it.get("rarity", "common"))) > int(cur.get("ilvl", 0)) * 10 + ItemDefs.RARITY_ORDER.find(String(cur.get("rarity", "common"))):
+                Game.equip(hd, int(it["uid"]), String(slots[0]))
 
 
 func _pick_party() -> void:

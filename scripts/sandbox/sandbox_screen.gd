@@ -798,8 +798,14 @@ func _spawn_wave() -> void:
 	var cfg := TowerExpedition.get_floor_config(floor_number) if floor_number > 0 else {}
 	var size := int(cfg.get("wave_base", 2)) + int(float(_wave_n) * float(cfg.get("wave_growth", 0.0)))
 	var target := shrine.position if shrine != null else _centre_of_squad()
+	# bug fix (full playthrough): waves came from the far end and never reached the shrine in time;
+	# they now enter from spawn spots WAVE_NEAR..WAVE_FAR cells away from what they attack
+	var tc := map.cell_of(target)
+	var near: Array = map.enemy_spawn_cells.filter(func(c): var d := Vector2(c).distance_to(Vector2(tc)); return d >= WAVE_NEAR and d <= WAVE_FAR)
+	if near.is_empty():
+		near = map.enemy_spawn_cells
 	for i in size:
-		var c: Vector2i = map.enemy_spawn_cells[_rng.randi() % map.enemy_spawn_cells.size()]
+		var c: Vector2i = near[_rng.randi() % near.size()]
 		var e := _spawn_enemy(c, TowerExpedition.foe_for(floor_number, _rng.randi()))
 		if cfg.has("wave_base"):
 			e.tactical = true
@@ -808,6 +814,8 @@ func _spawn_wave() -> void:
 
 
 var _wave_n: int = 0
+const WAVE_NEAR := 8.0                           # cells
+const WAVE_FAR := 20.0
 
 
 func _centre_of_squad() -> Vector2:
