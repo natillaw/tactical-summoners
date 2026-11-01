@@ -683,7 +683,8 @@ func complete_floor(floor_num: int, mission: String = "") -> Dictionary:
     # first clear of a floor pays in full; later clears pay much less (the tower is not a farm).
     var key := str(floor_num)
     var first := int(tower_cleared.get(key, 0)) == 0
-    var r := {"gems": (50 * floor_num) if first else 10, "stones": (1 + floor_num / 4) if first else 0,
+    var r := {"gems": (ProgressionDefs.FIRST_GEMS_BASE + ProgressionDefs.FIRST_GEMS_PER_FLOOR * floor_num) if first
+            else ProgressionDefs.REPLAY_GEMS_BASE + ProgressionDefs.REPLAY_GEMS_PER_FLOOR * floor_num, "stones": (1 + floor_num / 4) if first else 0,
         "books": (1 if floor_num % 2 == 0 else 0) if first else 0, "skill_books": [], "materials": 0, "food": 0,
         "starsteel": ProgressionDefs.TOWER_STARSTEEL_BASE + floor_num / 2 if first else 0, "essence": 1 + floor_num / 3 if first else 0, "first": first}
     # master prompt A: the mission chest (always something; full on the first clear) and first-clear keys

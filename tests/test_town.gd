@@ -88,7 +88,7 @@ func _init() -> void:
     var gems0: int = g.gems
     var steel0 := int(g.hq_outputs.get("starsteel", 0))
     var r: Dictionary = g.complete_floor(4)
-    check(int(r["materials"]) == 0 and int(r["starsteel"]) > 0 and int(g.hq_outputs["starsteel"]) == steel0 + int(r["starsteel"]) and g.gems == gems0 + 200
+    check(int(r["materials"]) == 0 and int(r["starsteel"]) > 0 and int(g.hq_outputs["starsteel"]) == steel0 + int(r["starsteel"]) and g.gems == gems0 + ProgressionDefs.FIRST_GEMS_BASE + ProgressionDefs.FIRST_GEMS_PER_FLOOR * 4
         and int(g.tower_cleared["4"]) == 1, "D-066: completing floor 4 pays gems and starsteel, no town materials, and is recorded")
     check(TowerExpedition.floor_block(3, 1) == "" and TowerExpedition.floor_block(10, 1) == "" and TowerExpedition.floor_advice(3, 1) != ""
         and TowerExpedition.floor_advice(3, 2) == "", "2026-10-31: no building lock on floors; the Hall level is only advice")

@@ -56,6 +56,24 @@ static func appearance(id: String) -> Dictionary:
     return out
 
 
+## Sabotage totem: the band's banner from the camp props, doubled (one still frame for every animation).
+static func totem_frames() -> SpriteFrames:
+    var d: Dictionary = BosqueArt.defs()["camp"].get("estandarte", {})
+    var img := BosqueArt._img(BosqueArt.CAMP)
+    if d.is_empty() or img == null:
+        return null
+    var rc: Array = d["rect"]
+    var part := img.get_region(Rect2i(int(rc[0]), int(rc[1]), int(rc[2]), int(rc[3])))
+    part.resize(part.get_width() * 2, part.get_height() * 2, Image.INTERPOLATE_NEAREST)
+    var tex := ImageTexture.create_from_image(part)
+    var sf := SpriteFrames.new()
+    sf.remove_animation("default")
+    for anim in ANIMS:
+        sf.add_animation(anim)
+        sf.add_frame(anim, tex)
+    return sf
+
+
 static func build_frames(id: String) -> SpriteFrames:
     var sheet: Texture2D = null
     var cell := SpriteComposer.FRAME

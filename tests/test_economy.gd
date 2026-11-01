@@ -76,7 +76,7 @@ func _simulate(days: int) -> void:
     var record := 0
     var t := 0.0
     var ids: Array = g.heroes.keys().slice(0, 5)
-    print("RESULT day gems summons(10 each) cores stones mats_T2 record")
+    print("RESULT day gems summons(100 each) cores stones mats_T2 record")
     for d in range(1, days + 1):
         t += 86400.0
         var f := record + 1 if d % 2 == 1 and record < 10 else maxi(1, record)
