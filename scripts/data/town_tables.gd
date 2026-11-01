@@ -160,6 +160,14 @@ static func pre_slice_start(id: String) -> int:
 ## Free placement (owner, 2026-10-31): a new building may go anywhere in the town as long as it stays
 ## within NEAR_CELLS of another building (it is a village, not scattered huts).
 const NEAR_CELLS := 3
+## Owner 2026-11-01: only a smith works the forge as a worker. Others can learn the trade as an
+## APPRENTICE: only while a master (knows the profession at MASTER_MIN_LVL+) works there, an apprentice
+## makes nothing and learns it after APPRENTICE_HOURS of work beside the master. Add building ids here
+## to make them specialist-only too.
+const SPECIALIST_ONLY := ["blacksmith"]
+const MASTER_MIN_LVL := 1
+const APPRENTICE_HOURS := 48
+const APPRENTICE_SLOTS := 1             # apprentices per building, on top of its worker places
 
 
 ## Cells no building may cover: the plaza and its well.

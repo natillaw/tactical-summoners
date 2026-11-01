@@ -21,6 +21,27 @@ static func _recruit(g: Object, report: Dictionary) -> void:
         (report["events"] as Array).append("%s, a wanderer, joined the town" % name)
 
 
+## Apprentices (TownTables.SPECIALIST_ONLY): an hour beside a master teaches them; they make nothing
+## until they learn the trade. Returns the workers who actually produce this hour.
+static func _apprentices(g: Object, bid: String, workers: Array, report: Dictionary) -> Array:
+    if not TownTables.SPECIALIST_ONLY.has(bid):
+        return workers
+    var prof := String(g.workplace_prof(bid))
+    var master := workers.any(func(w): return (w as HeroData).prof_level(prof) >= TownTables.MASTER_MIN_LVL)
+    var out: Array = []
+    for w in workers:
+        var h: HeroData = w
+        if h.knows_prof(prof):
+            out.append(h)
+            continue
+        if master:
+            h.apprenticeship[prof] = float(h.apprenticeship.get(prof, 0.0)) + 1.0
+            if float(h.apprenticeship[prof]) >= TownTables.APPRENTICE_HOURS and h.learn_prof(prof) == "":
+                h.apprenticeship.erase(prof)
+                (report["events"] as Array).append("%s finished the apprenticeship: now a %s" % [h.display_name(), String(ProfessionDefs.info(prof)["name"]).to_lower()])
+    return out
+
+
 static func advance(g: Object, hours: int, deployed: Array = []) -> Dictionary:
     var report := {"hours": hours, "produced": {}, "events": []}
     for i in hours:
@@ -64,6 +85,8 @@ static func _hour(g: Object, deployed: Array, report: Dictionary) -> void:
             "eating":
                 g.hq_outputs["food"] = int(g.hq_outputs.get("food", 0)) - 1
         _needs(g, h, a)
+    for bid in at_work:
+        at_work[bid] = _apprentices(g, String(bid), at_work[bid], report)
     for bid in at_work:
         if bid != "infirmary" and bid != "common":
             _work_building(g, String(bid), at_work[bid], rng, report)

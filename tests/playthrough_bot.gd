@@ -239,7 +239,7 @@ func _gear_up() -> void:
     var tier := ItemLibrary.tier_of_floor(maxi(1, _next_floor))
     if Game.building_level("blacksmith") > 0 and Game.workers_at("blacksmith").is_empty():
         # the smith fell or was drafted: the best free hero takes the forge (a player would)
-        var free: Array = Game.heroes.values().filter(func(h): return (h as HeroData).hq_assignment == "" and Game.party_slot_of((h as HeroData).id) < 0)
+        var free: Array = Game.heroes.values().filter(func(h): return (h as HeroData).knows_prof("blacksmith") and Game.party_slot_of((h as HeroData).id) < 0)
         free.sort_custom(func(a, b): return (a as HeroData).prof_level("blacksmith") > (b as HeroData).prof_level("blacksmith"))
         if not free.is_empty():
             Game.assign_work(free[0], "blacksmith")

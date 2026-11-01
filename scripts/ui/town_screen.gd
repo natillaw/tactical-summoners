@@ -474,7 +474,7 @@ func _panel_workers(id: String, slots: int) -> void:
     for i in mini(5, cands.size()):
         var hd := cands[i] as HeroData
         var lvl := hd.prof_level(prof)
-        var note := ("%s Lv %d" % [ProfessionDefs.info(prof).get("name", prof), lvl]) if lvl >= 0 else ("can learn it" if hd.professions.size() < ProfessionDefs.MAX_KNOWN else "knows 2 professions")
+        var note := ("%s Lv %d" % [ProfessionDefs.info(prof).get("name", prof), lvl]) if lvl >= 0 else (("apprentice: needs a master here, learns in %d h" % TownTables.APPRENTICE_HOURS if TownTables.SPECIALIST_ONLY.has(id) else "can learn it") if hd.professions.size() < ProfessionDefs.MAX_KNOWN else "knows 2 professions")
         var row := HBoxContainer.new()
         row.add_child(_wrap("%s (%s)%s" % [hd.hero_name.split(" ")[0], note, " · now: " + hd.hq_assignment if hd.hq_assignment != "" else ""], 13, UIKit.MUTED))
         (row.get_child(0) as Label).custom_minimum_size = Vector2(125, 0)  # px
