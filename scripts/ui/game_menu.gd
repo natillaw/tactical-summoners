@@ -29,6 +29,7 @@ static func load_settings() -> void:
         UIKit.set_volume(bus, float(cf.get_value("audio", bus, 0.8)))
     CombatFeel.shake_scale = float(cf.get_value("feel", "shake", 1.0))
     Ambience.quality = int(cf.get_value("feel", "effects", 2))
+    TranslationServer.set_locale(String(cf.get_value("ui", "lang", "es")))
 
 
 static func save_settings() -> void:
@@ -37,6 +38,7 @@ static func save_settings() -> void:
         cf.set_value("audio", bus, UIKit.get_volume(bus))
     cf.set_value("feel", "shake", CombatFeel.shake_scale)
     cf.set_value("feel", "effects", Ambience.quality)
+    cf.set_value("ui", "lang", TranslationServer.get_locale().substr(0, 2))
     cf.save(SETTINGS)
 
 
@@ -110,7 +112,11 @@ func show_options() -> void:
     _slider("Effects", UIKit.get_volume("SFX"), func(v): UIKit.set_volume("SFX", v))
     _slider("Interface", UIKit.get_volume("UI"), func(v): UIKit.set_volume("UI", v))
     _slider("Shake", CombatFeel.shake_scale, func(v): CombatFeel.shake_scale = v)
-    _slider("Effects", float(Ambience.quality) / 2.0, func(v): Ambience.quality = roundi(v * 2.0))   # off / low / high (lights, particles, vignette)
+    _slider("Visual effects", float(Ambience.quality) / 2.0, func(v): Ambience.quality = roundi(v * 2.0))   # off / low / high (lights, particles, vignette)
+    var lang := UIKit.button("Español / English", func():
+        TranslationServer.set_locale("en" if TranslationServer.get_locale().begins_with("es") else "es")
+        save_settings(), Vector2(160, 22))
+    _box.add_child(lang)
     var hb := HBoxContainer.new()
     hb.add_child(UIKit.label("Window", 14, UIKit.TEXT))
     for k in [2, 3, 4]:

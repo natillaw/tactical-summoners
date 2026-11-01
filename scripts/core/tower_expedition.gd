@@ -22,7 +22,7 @@ const THEME_NAME := "Whispering Forest"
 ## floor 3, one modifier (FloorMods: fog, hazard, enrage, no_heal). Every 5th floor is a spike, the 10th
 ## a major boss. Floor 7 "sabotage": destroy the totems that raise the fallen (FloorMods).
 const FLOORS := {
-    1: {"name": "Floor 1: Forest Edge", "hall": 1, "difficulty": "Tutorial", "mission": "combat", "party": 1, "threat": 25, "width": 96, "height": 84,
+    1: {"name": "Floor 1: Forest Edge", "hall": 1, "difficulty": "Tutorial", "mission": "combat", "party": 1, "threat": 14, "width": 96, "height": 84,
         "foes": ["bandido_maton", "bandido_maton", "bandido_arquero"], "nodes": 0, "intro": "A lone scout against a few bandits on the forest edge."},
     2: {"name": "Floor 2: Mossy Trail", "hall": 1, "difficulty": "Easy", "mission": "exploration", "party": 2, "threat": 48, "width": 124, "height": 110,
         "foes": ["bandido_maton", "bandido_arquero", "bandido_bruto"], "nodes": 0, "intro": "Find the three old markers. A bandit elite patrols the trail."},
