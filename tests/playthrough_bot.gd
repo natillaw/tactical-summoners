@@ -258,13 +258,25 @@ func _gear_up() -> void:
                 Game.equip(hd, int(it["uid"]), String(slots[0]))
 
 
+func _party_score(h: HeroData) -> int:
+    var s := (100000 if Game.is_fighter(h) else 0) + h.power()
+    if h.hq_assignment == "blacksmith":
+        s -= 1000000                                  # the smith is the last to be drafted
+    elif h.hq_assignment != "":
+        s -= 50000
+    return s
+
+
 func _pick_party() -> void:
     Game.clear_party()
     var pool: Array = Game.heroes.values().filter(func(h): return h.hq_assignment != "construction")
-    pool.sort_custom(func(a, b): return (1 if Game.is_fighter(a) else 0) * 100000 + a.power() > (1 if Game.is_fighter(b) else 0) * 100000 + b.power())
-    if pool.size() < Game.PARTY_SIZE:
+    # beta pass: only as many as the floor lets in, and town workers (the smith first) stay home when
+    # others can go; a player keeps the forge running
+    var need := TowerExpedition.party_max(_next_floor) if _next_floor > 0 else Game.PARTY_SIZE
+    pool.sort_custom(func(a, b): return _party_score(a) > _party_score(b))
+    if pool.size() < need:
         pool = Game.heroes.values()
-    for i in mini(Game.PARTY_SIZE, pool.size()):
+    for i in mini(need, pool.size()):
         var h: HeroData = pool[i]
         if h.hq_assignment != "" and h.hq_assignment != "construction":
             Game.assign_work(h, "")
