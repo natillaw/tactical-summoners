@@ -1,6 +1,6 @@
 # Handoff del overhaul LPC
 
-**Fase actual: 4 terminada salvo la puerta del tamaño del Barón** (`baron_opciones.png`; `BanditArt.BARON_SCALE`, hoy 2). Siguiente: fase 5 (catálogo de vestuario, `item_visuals`, razas; puerta: emparejamientos `visual_id`).
+**Fase actual: 5 terminada.** Barón ×2 + aura (dueño: "a+b"), 80/20 confirmado, decisiones de ítems en D-077. Siguiente: fase 6 (licencias e íconos de los packs, fondos, efectos, UI B).
 
 Hecho:
 - Fase 0: `.gdignore` y `.gitignore` para `assets/nuevos assets/` (sacados del índice), prompt viejo marcado SUSTITUIDO, inventario `USO_ASSETS_ANTES.md`, fixture de 200 semillas (`tests/test_hero_fixture.gd`), línea base `BASELINE.md` (25 suites en verde).
@@ -23,3 +23,6 @@ Pendiente: `HeroAnim` en 4 direcciones reales (hoy los alias usan izquierda/dere
 
 Fase 4 (hecha): piezas bandidas importadas (pañuelo, capucha, capa, cuero, placas, cascos, parche, hacha, maza, bastones, mandoble), `scripts/data/lpc_factions.gd`, `BanditArt` reescrito sobre LPC (misma interfaz, 4 caras por tipo), test de facción en `smoke_bandits`.
 Pendiente: armas con frames sobredimensionados (el bastón de cristal y el mandoble solo tienen walk/hurt a 64 px); las animaciones de enemigo usan la fila derecha y `hurt` como muerte.
+
+Fase 5 (hecha): `tools/lpc_catalog.py` → `assets/pixel/lpc/wardrobe_catalog.json` (408 piezas con slot, material, variantes, animaciones, licencia, autores) y hojas `docs/reports/overhaul/vestuario/<slot>.png`; `tools/lpc_races_sheet.py` → `razas.png` (23 cabezas); `scripts/data/lpc_races.gd` (10 arquetipos, sin stats ni pisos); `scripts/data/item_visuals.gd` (base → pieza LPC, color de metal por nivel de ítem: cobre, hierro, acero, plata, oro); el equipo se ve en el héroe (`SpriteComposer` pasa `ItemVisuals.equipment_layers`). Test en `smoke_lpc`.
+Pendiente: escudos, anillos, amuletos y trinkets solo con ícono; armas sobredimensionadas.

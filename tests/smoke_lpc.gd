@@ -41,6 +41,14 @@ func _init() -> void:
     var a := LpcWardrobe.random_look(rng)
     rng.seed = 77
     check(a == LpcWardrobe.random_look(rng), "the same seed gives the same look")
+    # D-D: equipping a helm and a mail shirt replaces their layers; unequipping restores them
+    rng.seed = 5
+    var lk := LpcWardrobe.random_look(rng)
+    var bare := LpcComposer.visual_layers(lk, "class.warrior").map(func(l): return String(l["piece"]))
+    var eq := ItemVisuals.equipment_layers({"head": {"base": "helm", "ilvl": 3}, "chest": {"base": "mail", "ilvl": 15}})
+    var worn := LpcComposer.visual_layers(lk, "class.warrior", eq).map(func(l): return String(l["piece"]))
+    check(worn.has("helmet_barbuta") and worn.has("chainmail") and not worn.has("shirt_longsleeve") and bare.has("shirt_longsleeve")
+        and String(eq["head"][1]) == "copper" and String(eq["chest"][1]) == "steel", "equipped helm (copper, ilvl 3) and mail (steel, ilvl 15) replace their layers; bare look restored")
     # strip: 4 heroes, each animation facing down (row 2; hurt row 0)
     var looks: Array = []
     for s in [3, 11, 25, 40]:

@@ -53,6 +53,11 @@ static func layers_for(look: Dictionary, hero_class: String = "", equipment: Dic
         out.append([String(look["beard"]), String(look.get("hair_color", "black"))])
     for slot in STARTER_OUTFIT:
         out.append(equipment.get(slot, STARTER_OUTFIT[slot]))
+    for slot in ["head", "hands"]:                    # extra worn pieces (D-D)
+        if equipment.has(slot):
+            out.append(equipment[slot])
+    if equipment.has("head"):
+        out = out.filter(func(p): return not String(p[0]).begins_with("hair_"))   # helms and hoods cover the hair
     var weapon := String(equipment.get("main_hand", [STARTER_WEAPON_BY_CLASS.get(hero_class, "")])[0])
     if weapon != "":
         out.append([weapon, "default"])

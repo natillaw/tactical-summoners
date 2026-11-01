@@ -115,7 +115,8 @@
       "def": "torso/shirts/longsleeve/torso_clothes_longsleeve.json",
       "palette": "cloth",
       "colors": [
-        "tan"
+        "tan",
+        "navy"
       ]
     },
     "pants": {
@@ -159,7 +160,9 @@
       "def": "headwear/coverings/hoods/hat_hood_cloth.json",
       "palette": "cloth",
       "colors": [
-        "maroon"
+        "maroon",
+        "forest",
+        "brown"
       ]
     },
     "shirt_sleeveless": {
@@ -185,9 +188,7 @@
     "armour_plate": {
       "def": "torso/armour/torso_armour_plate.json",
       "palette": "metal",
-      "colors": [
-        "iron"
-      ]
+      "colors": "metals"
     },
     "cape": {
       "def": "torso/cape/cape_solid.json",
@@ -236,6 +237,45 @@
     },
     "weapon_longsword": {
       "def": "weapons/sword/weapon_sword_longsword.json"
+    },
+    "chainmail": {
+      "def": "torso/torso_chainmail.json",
+      "palette": "metal",
+      "colors": "metals"
+    },
+    "helmet_barbuta": {
+      "def": "headwear/helmets/helmets/hat_helmet_barbuta.json",
+      "palette": "metal",
+      "colors": "metals"
+    },
+    "legs_plate": {
+      "def": "legs/legs_armour.json",
+      "palette": "metal",
+      "colors": "metals"
+    },
+    "gloves": {
+      "def": "arms/arms_gloves.json",
+      "palette": "metal",
+      "colors": "metals"
+    },
+    "boots_basic": {
+      "def": "feet/boots/feet_boots_basic.json",
+      "palette": "cloth",
+      "colors": [
+        "leather",
+        "black"
+      ]
+    },
+    "weapon_wand": {
+      "def": "weapons/magic/weapon_magic_wand.json",
+      "variant": "wand"
     }
-  }
+  },
+  "metals": [
+    "copper",
+    "iron",
+    "steel",
+    "silver",
+    "gold"
+  ]
 }

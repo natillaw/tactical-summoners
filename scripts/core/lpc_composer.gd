@@ -121,8 +121,8 @@ static func build_frames_for(look: Dictionary, hero_class: String = "", equipmen
 
 
 ## One still frame (cards, portraits): the first frame of anim facing down.
-static func pose_texture_for(look: Dictionary, hero_class: String = "", anim: String = "idle") -> Texture2D:
-    var layers := visual_layers(look, hero_class)
+static func pose_texture_for(look: Dictionary, hero_class: String = "", anim: String = "idle", equipment: Dictionary = {}) -> Texture2D:
+    var layers := visual_layers(look, hero_class, equipment)
     var key := _key(layers) + "/" + anim
     if _tex_cache.has(key):
         return _tex_cache[key]
@@ -141,8 +141,8 @@ const ATTACK_BY_CLASS := {"class.ranger": "shoot", "class.mage": "spellcast", "c
 
 ## SpriteComposer-compatible frames for a hero: the LPC set plus the old names the game plays
 ## (idle, idle_<dir>, walk_<dir>, ready_<side>, attack_<side>, down_<side>).
-static func build_frames_legacy(look: Dictionary, hero_class: String) -> SpriteFrames:
-    var sf := build_frames_for(look, hero_class)
+static func build_frames_legacy(look: Dictionary, hero_class: String, equipment: Dictionary = {}) -> SpriteFrames:
+    var sf := build_frames_for(look, hero_class, equipment)
     if sf.has_animation("attack_right"):
         return sf
     var attack := String(ATTACK_BY_CLASS.get(hero_class, "slash"))

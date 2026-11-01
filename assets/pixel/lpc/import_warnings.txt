@@ -19,3 +19,6 @@ weapon_staff_green layer_1: no idle,combat_idle,run,slash,thrust,shoot,spellcast
 weapon_staff_green layer_2: no idle,combat_idle,run,slash,thrust,shoot,spellcast (falls back in LpcComposer)
 weapon_longsword layer_1: no idle,combat_idle,run,slash,thrust,shoot,spellcast (falls back in LpcComposer)
 weapon_longsword layer_2: no idle,combat_idle,run,slash,thrust,shoot,spellcast (falls back in LpcComposer)
+chainmail layer_1: no combat_idle (falls back in LpcComposer)
+legs_plate layer_1: no combat_idle,run (falls back in LpcComposer)
+weapon_wand layer_1: no idle,combat_idle,walk,run,thrust,shoot,spellcast,hurt (falls back in LpcComposer)
