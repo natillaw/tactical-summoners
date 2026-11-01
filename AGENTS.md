@@ -4,9 +4,9 @@ El repositorio Git es la única fuente de verdad; la memoria del chat no lo es.
 
 ## Reglas duras del juego (nunca violarlas)
 - Tiempo real **sin pausa ni cámara lenta** (D-014).
-- Escuadrón de **5** héroes; teclas 1-5 enfocan a un héroe, Tab da la vista de grupo, G selecciona el escuadrón (D-015, D-017).
+- Escuadrón de **5** héroes: el **Máster** (personaje del jugador, siempre en el hueco 1 y el único controlado) + 4 autónomos. Tab da la vista de grupo, G selecciona el escuadrón (D-017, D-080; 1-5 ya no cambia de héroe).
 - Las órdenes directas **nunca** se rechazan al azar (D-016).
-- **Muerte permanente** y memorial; sin resurrección (D-011).
+- **Muerte permanente** y memorial; sin resurrección (D-011). Única excepción: el Máster vuelve herido (D-080).
 - Los héroes **nunca se re-generan** al cargar; se guarda el snapshot (D-004).
 - Trust, Obedience y Composure son valores separados, con cambios deterministas (D-016).
 - **No modificar los sprites de héroes de Caz** (`assets/sprites/**`) (D-023).

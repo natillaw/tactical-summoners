@@ -6,6 +6,9 @@ extends RefCounted
 var id: String = ""
 var hero_seed: int = 0
 var hero_name: String = ""
+var is_master: bool = false       # D-080: the player's own character (MasterDefs); never dies, sold or consumed
+var first_name: String = ""       # D-080: the Master's chosen name and surname (hero_name = both)
+var surname: String = ""
 var epithet: String = ""
 var stars: int = 1
 var level: int = 1
@@ -468,6 +471,9 @@ func to_dict() -> Dictionary:
         "id": id,
         "seed": "%x" % hero_seed,   # stored as hex text: JSON numbers would lose 64-bit precision
         "name": hero_name,
+        "is_master": is_master,
+        "first_name": first_name,
+        "surname": surname,
         "epithet": epithet,
         "stars": stars,
         "level": level,
@@ -521,6 +527,9 @@ static func from_dict(d: Dictionary) -> HeroData:
     h.id = str(d.get("id", ""))
     h.hero_seed = String(d.get("seed", "0")).hex_to_int()
     h.hero_name = str(d.get("name", "Unknown"))
+    h.is_master = bool(d.get("is_master", false))     # save v16 or older: no Master (the creator opens once)
+    h.first_name = str(d.get("first_name", ""))
+    h.surname = str(d.get("surname", ""))
     h.epithet = str(d.get("epithet", ""))
     h.stars = clampi(int(d.get("stars", 1)), 1, HeroTables.MAX_STARS)
     h.level = maxi(1, int(d.get("level", 1)))

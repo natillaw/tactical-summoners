@@ -225,3 +225,50 @@ static func roll_gifts(hero_seed: int, stars: int) -> Array:
 	if rng.randf() < float(PowerDefs.TRADE_GIFT_CHANCE[s]):
 		out.append(String(trade[rng.randi() % trade.size()]))
 	return out
+
+
+## D-080: the Master from the character creator. Same pipeline as a summon (generate) at MasterDefs.STARS,
+## then the player's choices replace name, look, class and traits. choices = {"first", "last", "look",
+## "class", "trait"}. Starts in the plain starter outfit like every summon (LpcWardrobe.STARTER_OUTFIT).
+static func create_master(hero_seed: int, choices: Dictionary) -> HeroData:
+	var h := generate(hero_seed, MasterDefs.STARS)
+	h.is_master = true
+	h.first_name = String(choices.get("first", "")).strip_edges().left(MasterDefs.NAME_MAX)
+	h.surname = String(choices.get("last", "")).strip_edges().left(MasterDefs.NAME_MAX)
+	h.hero_name = "%s %s" % [h.first_name, h.surname]
+	h.epithet = ""
+	var look: Dictionary = h.look.duplicate()
+	for k in (choices.get("look", {}) as Dictionary):
+		look[k] = choices["look"][k]
+	h.look = master_look(look)
+	var cls := String(choices.get("class", "class.warrior"))
+	h.hero_class = cls if MasterDefs.CLASSES.has(cls) else "class.warrior"
+	var t := String(choices.get("trait", ""))
+	h.traits = [t] if HeroTables.TRAITS.has(t) else _roll_traits(_rng_for(hero_seed), 1, [])
+	h.passives = _roll_passives(_rng_for(hero_seed), h.traits, int(HeroTables.STAR_DATA[h.stars]["passives"]), [])
+	h.background_id = MasterDefs.BACKGROUND_ID
+	h.background_text = MasterDefs.BACKGROUND_TEXT
+	h.innate = []                                  # gifts come from the summoning circle; the Master was not summoned
+	h.trust = MasterDefs.TRUST
+	h.obedience = MasterDefs.OBEDIENCE
+	h.skills = []
+	h.loadout = []
+	h.ensure_skills()                              # the starter of the chosen class
+	return h
+
+
+## The parts of a look that follow from the others (same rules as LpcWardrobe.random_look): the head
+## of the body, elven ears for elves, beards only on male bodies. The creator's preview uses it too.
+static func master_look(look: Dictionary) -> Dictionary:
+	var out := look.duplicate()
+	out["head"] = "head_human_" + String(out.get("body", "male"))
+	out["ears"] = "ears_elven" if String(out.get("race", "human")) == "elf" else ""
+	if String(out.get("body", "male")) != "male":
+		out["beard"] = ""
+	return out
+
+
+static func _rng_for(hero_seed: int) -> RandomNumberGenerator:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hero_seed ^ 0x4D4153
+	return rng

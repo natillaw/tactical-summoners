@@ -61,6 +61,9 @@ var defeated: int = 0
 var elapsed: float = 0.0
 var fallen: Array = []                        # display names of heroes lost this mission
 var real_squad: bool = false                  # true when the squad is the player's saved party
+var master_hero: SandboxHero = null           # D-080: the Master in this squad (always the driven hero), or null
+var master_lost: bool = false                 # D-080: the Master's agony ran out or they were left behind
+var _ending: bool = false                     # extract()/_wipe() are already ending the mission
 var reward_given: bool = false
 var follow_slot: int = -1                     # -1 = group view
 var overview: bool = false                    # M: whole-map view (camera only, never pauses)
@@ -202,6 +205,10 @@ func _build_squad() -> void:
 		h.position = map.center_of(sc)
 		h.died.connect(_on_hero_died)
 		h.went_down.connect(_on_hero_down)
+		if (squad[i] as HeroData).is_master:
+			h.no_death = true
+			h.lost_down.connect(_on_master_lost)
+			master_hero = h
 		_world.add_child(h)
 		heroes.append(h)
 
@@ -330,11 +337,12 @@ func extract() -> bool:
 		FloatingText.spawn(heroes[0], extract_block(), Color(1.0, 0.6, 0.5), false, 2.0)
 		return false
 	var at := map.center_of(map.extract_cell)
+	_ending = true
 	for h in heroes:
 		if h.downed and h.position.distance_to(at) > EXTRACT_RADIUS * EXTRACT_GATHER:
 			h.killed_by = "left behind"
-			h.die()
-	_end_mission(Mission.ESCAPED)
+			h.die()                              # D-080: the Master is not killed, only lost
+	_end_mission(Mission.FAILED if master_lost else Mission.ESCAPED)   # leaving without the Master fails
 	return true
 
 
@@ -1047,6 +1055,8 @@ func select_slot(i: int) -> void:
 	if i < 0 or i >= heroes.size():
 		return
 	var h := heroes[i]
+	if _locked() and h != master_hero:
+		return                                   # D-080: with a Master in the squad only the Master is driven
 	if not h.alive:
 		if h.downed or h.dead:
 			FloatingText.spawn(h, "down" if h.downed else "fallen", Color(0.8, 0.8, 0.8), false)
@@ -1066,7 +1076,14 @@ func select_all() -> void:
 
 func group_view() -> void:
 	follow_slot = -1
-	_set_controlled(null)                        # everybody back to autonomy
+	# everybody back to autonomy; D-080: except the Master, who stays driven while standing
+	_set_controlled(master_hero if _locked() and master_hero.alive else null)
+
+
+## D-080: true when the squad has a Master, so control never leaves them (MasterDefs.DEBUG_HERO_SWITCH
+## brings back the 1-5 switch of D-053; squads without a Master, like the test squad, keep it).
+func _locked() -> bool:
+	return master_hero != null and not MasterDefs.DEBUG_HERO_SWITCH
 
 
 ## Pure data: where the camera wants to be. update_camera() eases toward it each frame.
@@ -1311,6 +1328,8 @@ func tick(delta: float) -> void:
 			selected.erase(h)
 		if not h.alive and h.is_controlled():
 			group_view()                         # the driven hero fell: back to the squad view
+	if _locked() and master_hero.alive and not master_hero.is_controlled():
+		_set_controlled(master_hero)             # D-080: a rescued Master takes the lead again
 	_separate()
 	_separate_enemies()
 	_tick_boss_wards()
@@ -1417,6 +1436,7 @@ func _update_mission(delta: float) -> void:
 
 ## D-036: nobody left standing to carry the fallen out -> every downed hero dies, mission failed.
 func _wipe() -> void:
+	_ending = true
 	for h in heroes:
 		if h.downed:
 			h.killed_by = "left behind"
@@ -1435,6 +1455,18 @@ func _on_hero_down(h: SandboxHero) -> void:
 		selected.erase(h)
 	if h.hero != null:
 		h.say("", 0.0)
+
+
+## D-080: the Master's agony ran out (or they were left behind): no death, the expedition fails at once.
+## Standing heroes carry them and the downed out; with nobody standing _wipe() handles the rest.
+func _on_master_lost(_c: Combatant) -> void:
+	master_lost = true
+	FloatingText.spawn(master_hero, "The Master has fallen!", Color(1.0, 0.4, 0.3), false, 2.5)
+	if not _ending and mission_state == Mission.ACTIVE:
+		if living_heroes().is_empty():
+			_wipe()
+		else:
+			_end_mission(Mission.FAILED)
 
 
 ## Permanent death (D-011): the saved hero is removed from the roster and written to the
@@ -1480,7 +1512,7 @@ func _end_mission(state: Mission) -> void:
 		var back: Array = []
 		for h in heroes:
 			if not h.dead:
-				back.append({"hero": h.hero, "downed": h.was_downed, "poisoned": h.was_poisoned})
+				back.append({"hero": h.hero, "downed": h.was_downed, "poisoned": h.was_poisoned, "master_lost": h.lost})
 		town_report = Game.after_expedition(back, floor_number, fallen.size(),
 			DungeonDefs.HOURS_PER_RUN if is_wilds() else EconomyDefs.HOURS_PER_EXPEDITION)
 	_show_result()
@@ -1510,6 +1542,8 @@ func result_text() -> String:
 		lines.append("Explored: %d%% of the floor (remembered)" % roundi(fog.explored_fraction() * 100.0))
 	if not fallen.is_empty():
 		lines.append("Fallen (permanent): %s" % ", ".join(fallen))
+	if master_lost:
+		lines.append("The Master fell and was carried home wounded.")
 	lines.append("")
 	if not real_squad:
 		lines.append("Test squad: nothing is kept.  Gathered: %s" % _res_line(ledger))
@@ -1795,7 +1829,8 @@ func _input(event: InputEvent) -> void:
 		return
 	match event.keycode:
 		KEY_1, KEY_2, KEY_3, KEY_4, KEY_5:
-			select_slot(event.keycode - KEY_1 + (5 if event.shift_pressed else 0))
+			if not _locked():                    # D-080: no hero switch with a Master (debug flag aside)
+				select_slot(event.keycode - KEY_1 + (5 if event.shift_pressed else 0))
 		KEY_TAB:
 			overview = false
 			group_view()

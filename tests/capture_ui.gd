@@ -1,5 +1,5 @@
 extends Node
-## UI capture (not pass/fail, D-063): title, summon reveal and summary, village, hero sheet tabs,
+## UI capture (not pass/fail, D-063): title, character creator (D-080), summon reveal and summary, village, hero sheet tabs,
 ## inventory, expedition HUD, Esc menu, options, credits and results. Needs a real renderer:
 ##   godot --path . res://tests/capture_ui.tscn      (CAPTURE_DIR overrides the folder)
 
@@ -18,6 +18,14 @@ func _ready() -> void:
     _main = (load("res://scenes/main.tscn") as PackedScene).instantiate() as Control
     add_child(_main)
     await _shot("ui_01_title", 1.0)
+    _main.call("show_screen", "master", 0)            # D-080: the character creator, one shot per tab
+    await get_tree().process_frame
+    var mc: MasterCreator = _find("MasterCreator")
+    mc.randomize_all()
+    for t in 4:
+        mc._tabs.current_tab = t
+        await _shot("ui_01b_master_tab%d" % t, 0.5)
+    mc.confirm()
     _main.call("show_screen", "welcome", 0)
     await get_tree().process_frame
     var w: WelcomeScreen = _find("WelcomeScreen")

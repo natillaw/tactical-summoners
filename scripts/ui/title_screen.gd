@@ -2,6 +2,7 @@ class_name TitleScreen
 extends Control
 ## Title screen (D-063): the tower portal of the kit, a few generated heroes idling in front of the
 ## forest, title music. Continue / New game / Options / Credits / Quit. New game asks before wiping.
+## D-080: New game -> character creator -> welcome; Continue on a save without a Master -> creator once.
 
 signal navigate(screen: String, arg: int)
 
@@ -47,7 +48,7 @@ func _ready() -> void:
     v.add_child(UIKit.label("Tactical Summoners", 28, UIKit.ACCENT))
     v.add_child(UIKit.label("A tower, a village and the people you call.", 14, UIKit.MUTED))
     if not Game.heroes.is_empty() or Game.onboarded:
-        v.add_child(UIKit.button("Continue", func(): navigate.emit("town", 0), Vector2(260, 36)))
+        v.add_child(UIKit.button("Continue", func(): navigate.emit("master" if Game.needs_master() else "town", 0), Vector2(260, 36)))
     v.add_child(UIKit.button("New game", _confirm_new, Vector2(260, 36)))
     v.add_child(UIKit.button("Options", func(): _open_menu("options"), Vector2(260, 36)))
     v.add_child(UIKit.button("Credits", func(): _open_menu("credits"), Vector2(260, 36)))
@@ -67,12 +68,12 @@ func _open_menu(page: String) -> void:
 func _confirm_new() -> void:
     if Game.heroes.is_empty() and not Game.onboarded:
         Game.new_game()
-        navigate.emit("welcome", 0)
+        navigate.emit("master", 0)
         return
     var dlg := ConfirmationDialog.new()
     dlg.dialog_text = "Start a new account?\nThe current village, heroes and progress are erased."
     dlg.confirmed.connect(func():
         Game.new_game()
-        navigate.emit("welcome", 0))
+        navigate.emit("master", 0))
     add_child(dlg)
     dlg.popup_centered()
