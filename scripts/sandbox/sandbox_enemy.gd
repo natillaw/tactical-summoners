@@ -107,7 +107,11 @@ func setup_type(id: String, floor_num: int = 0) -> void:
 
 
 ## Stats and role from EnemyDefs, scaled a little per floor (more health and damage deeper).
+var _floor: int = 0
+
+
 func _apply_def(id: String, floor_num: int) -> void:
+    _floor = floor_num
     var d := EnemyDefs.info(id)
     var k := EnemyDefs.floor_scale(floor_num)
     setup_combat(roundi(float(d["hp"]) * k), int(d["armor"]), int(d["mres"]), crit_chance, status_resist, int(combat_rng.seed))
@@ -236,7 +240,7 @@ func _do_lunge() -> void:
 ## longer and clearer wind-up so the player can read and dodge it.
 func make_boss(boss_name: String = "Orc Chieftain") -> void:
     enemy_name = boss_name
-    base_max_hp *= EnemyDefs.BOSS_HP_MULT
+    base_max_hp *= int(TowerExpedition.get_floor_config(_floor).get("boss_hp_mult", EnemyDefs.BOSS_HP_MULT)) if _floor > 0 else EnemyDefs.BOSS_HP_MULT
     max_hp = base_max_hp
     hp = max_hp
     atk = roundi(float(atk) * 1.6)

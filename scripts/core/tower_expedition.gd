@@ -26,7 +26,7 @@ const FLOORS := {
         "foes": ["bandido_maton", "bandido_maton", "bandido_arquero"], "nodes": 0, "intro": "A lone scout against a few bandits on the forest edge."},
     2: {"name": "Floor 2: Mossy Trail", "hall": 1, "difficulty": "Easy", "mission": "exploration", "party": 2, "threat": 14, "width": 124, "height": 110,
         "foes": ["bandido_maton", "bandido_arquero", "bandido_bruto"], "nodes": 0, "intro": "Find the three old markers. A bandit elite patrols the trail."},
-    3: {"name": "Floor 3: Mushroom Hollow", "hall": 2, "difficulty": "Normal", "mission": "defense", "party": 3, "threat": 20, "modifier": "fog", "width": 130, "height": 112,
+    3: {"name": "Floor 3: Mushroom Hollow", "hall": 2, "difficulty": "Normal", "mission": "defense", "party": 3, "threat": 20, "hold_time": 150.0, "modifier": "fog", "width": 130, "height": 112,
         "foes": ["bandido_maton", "bandido_arquero", "bandido_degollador"], "nodes": 0, "intro": "Hold the shrine while the bandits come in waves. Mist hides them until they are close."},
     4: {"name": "Floor 4: Bandit Pass", "hall": 2, "difficulty": "Hard", "mission": "escape", "party": 2, "threat": 34, "modifier": "hazard", "lookouts": true, "tactics": true, "width": 136, "height": 116,
         "foes": ["bandido_bruto", "bandido_maton", "bandido_arquero", "bandido_degollador", "bandido_chaman"], "nodes": 0, "intro": "Cross the pass to the far side. Fighting them all is losing."},
@@ -40,7 +40,7 @@ const FLOORS := {
         "foes": ["bandido_bruto", "bandido_degollador"], "nodes": 0, "intro": "A duel: one hero against a bandit elite and its two cutthroats."},
     9: {"name": "Floor 9: Warband Clearing", "hall": 5, "difficulty": "Very Hard", "mission": "survival", "party": 5, "threat": 48, "modifier": "hazard", "tactics": true, "width": 160, "height": 138,
         "foes": ["bandido_bruto", "bandido_maton", "bandido_mago", "bandido_degollador", "bandido_chaman", "bandido_arquero"], "nodes": 0},
-    10: {"name": "Floor 10: The Crimson Baron", "hall": 5, "difficulty": "Major Boss", "mission": "boss", "boss_name": "The Crimson Baron", "party": 5, "threat": 30, "modifier": "enrage", "tactics": true, "altar": true, "width": 118, "height": 104,
+    10: {"name": "Floor 10: The Crimson Baron", "hall": 5, "difficulty": "Major Boss", "mission": "boss", "boss_name": "The Crimson Baron", "boss_hp_mult": 6, "party": 5, "threat": 30, "modifier": "enrage", "tactics": true, "altar": true, "width": 118, "height": 104,
         "foes": ["jefe_baron_carmesi", "bandido_bruto", "bandido_degollador", "bandido_mago", "bandido_chaman"], "nodes": 0, "intro": "The Crimson Baron cannot be hurt while his shield holds. The light comes from somewhere else."},
 }
 

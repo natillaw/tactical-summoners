@@ -5,7 +5,7 @@ extends Node
 signal changed
 
 const DEFAULT_SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 10
+const SAVE_VERSION := 11
 const PARTY_SIZE := 5            # slots 0-2 = front row, slots 3-4 = back row
 const XP_PER_BOOK := 100
 
@@ -430,9 +430,43 @@ func party_slot_of(hero_id: String) -> int:
 func party_heroes() -> Array:
     var out: Array = []
     for id in party:
-        if heroes.has(id):
+        if heroes.has(id) and (heroes[id] as HeroData).hq_assignment != "expedition":   # away: master prompt C
             out.append(heroes[id])
     return out
+
+
+# --- master prompt B: the merchant (MerchantDefs) ---------------------------------------------
+
+var merchant_used: Dictionary = {}   # "day:offer" -> trades done (not saved: resets with the day)
+
+
+func merchant_offers() -> Array:
+    var r := RandomNumberGenerator.new()
+    r.seed = hash("merchant:%d" % town_day())
+    var idx: Array = range(MerchantDefs.OFFERS.size())
+    var out: Array = []
+    while out.size() < mini(MerchantDefs.OFFERS_PER_DAY, idx.size()):
+        out.append(idx.pop_at(r.randi() % idx.size()))
+    return out
+
+
+func merchant_trade(offer: int) -> String:
+    if not merchant_offers().has(offer):
+        return "not on sale today"
+    var key := "%d:%d" % [town_day(), offer]
+    if int(merchant_used.get(key, 0)) >= MerchantDefs.TRADES_PER_OFFER:
+        return "sold out for today"
+    var o: Dictionary = MerchantDefs.OFFERS[offer]
+    for k in o["give"]:
+        if int(hq_outputs.get(k, 0)) < int(o["give"][k]):
+            return "needs %d %s" % [int(o["give"][k]), String(EconomyDefs.RESOURCES.get(k, {}).get("name", k)).to_lower()]
+    for k in o["give"]:
+        hq_outputs[k] = int(hq_outputs[k]) - int(o["give"][k])
+    for k in o["get"]:
+        hq_outputs[k] = int(hq_outputs.get(k, 0)) + int(o["get"][k])
+    merchant_used[key] = int(merchant_used.get(key, 0)) + 1
+    _commit()
+    return ""
 
 
 # --- permanent death / memorial (D-011, T-013) -----------------------------------
@@ -1123,7 +1157,12 @@ func unpack_consumable(h: HeroData, res: String) -> String:
 ## and completion XP + MVP bonus (ExpeditionResults). Returns everything the results screen shows.
 # --- the Wilds (D-066) ------------------------------------------------------------------------
 
-var wilds_runs: int = 0              # runs in the Wilds (stat only; not saved)
+var wilds_runs: int = 0
+# master prompt C/B: offline expeditions (OfflineExpeditions), portal upgrades, summon pity, merchant
+var expeditions: Array = []          # [{floor, heroes: [id], start, end}] (unix seconds)
+var exp_charges: int = ExpeditionDefs.CHARGES_MAX
+var exp_charge_t: float = 0.0
+var portal_upgrades: Dictionary = {} # "charges" | "formation" | "retry" -> count              # runs in the Wilds (stat only; not saved)
 
 
 func highest_cleared() -> int:
@@ -1248,6 +1287,10 @@ func new_game() -> void:
     town_buildings = TownTables.start_levels()
     tower_maps.clear()
     tower_cleared.clear()
+    expeditions.clear()
+    exp_charges = ExpeditionDefs.CHARGES_MAX
+    exp_charge_t = 0.0
+    portal_upgrades.clear()
     skill_books.clear()
     _reset_town()
     SpriteComposer.clear_cache()
@@ -1296,6 +1339,7 @@ func save_game() -> bool:
         "town_buildings": town_buildings,
         "tower_maps": tower_maps,
         "tower_cleared": tower_cleared,
+        "expeditions": expeditions, "exp_charges": exp_charges, "exp_charge_t": exp_charge_t, "portal_upgrades": portal_upgrades,
         "skill_books": skill_books,
         "town": {"clock": town_clock, "seed": "%x" % town_seed, "jobs": town_jobs, "batches": town_batches,
             "construction": construction, "patients": patients, "log": town_log, "item_seq": item_seq,
@@ -1383,6 +1427,10 @@ func apply_save(data: Dictionary) -> void:
     town_buildings = HeroData.intify(data.get("town_buildings", TownTables.start_levels()) as Dictionary)
     tower_maps = HeroData.intify(data.get("tower_maps", {}) as Dictionary)
     tower_cleared = HeroData.intify(data.get("tower_cleared", {}) as Dictionary)
+    expeditions = (data.get("expeditions", []) as Array).duplicate(true)
+    exp_charges = int(data.get("exp_charges", ExpeditionDefs.CHARGES_MAX))
+    exp_charge_t = float(data.get("exp_charge_t", 0.0))
+    portal_upgrades = HeroData.intify(data.get("portal_upgrades", {}) as Dictionary)
     skill_books = {}
     var sb: Dictionary = data.get("skill_books", {})
     for k in sb:
@@ -1480,5 +1528,11 @@ func _migrate(data: Dictionary) -> Dictionary:
                 e["explored"] = ""
         data["tower_maps"] = tm
         data["onboarded"] = true          # existing accounts never see the new-account welcome
+    if v < 11:
+        # v10 -> v11 (master prompt C/B): offline expeditions start empty with full charges
+        data["expeditions"] = []
+        data["exp_charges"] = ExpeditionDefs.CHARGES_MAX
+        data["exp_charge_t"] = 0.0
+        data["portal_upgrades"] = {}
     data["version"] = SAVE_VERSION
     return data

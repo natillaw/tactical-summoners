@@ -655,6 +655,11 @@ func _on_immune_hit() -> void:
 	h.say(line, 4.5)
 
 
+## Defense: seconds at the shrine (a floor may set "hold_time"; else HOLD_TIME).
+func hold_time() -> float:
+	return float(TowerExpedition.get_floor_config(floor_number).get("hold_time", HOLD_TIME)) if floor_number > 0 else HOLD_TIME
+
+
 ## Master prompt D: one floor modifier from floor 3 (data: the floor's "modifier", numbers in FloorMods).
 var modifier: String = ""
 
@@ -1194,9 +1199,9 @@ func _update_mission(delta: float) -> void:
 				mission_timer += delta
 				for h in heroes:
 					if h.alive and h.position.distance_to(shrine.position) <= SHRINE_RADIUS:
-						h.credit("objective", delta / HOLD_TIME * 3.0)
-				shrine.progress = clampf(mission_timer / HOLD_TIME, 0.0, 1.0)
-			if mission_timer >= (SURVIVE_TIME if mission_type == "survival" else HOLD_TIME) and not living_heroes().is_empty():
+						h.credit("objective", delta / hold_time() * 3.0)
+				shrine.progress = clampf(mission_timer / hold_time(), 0.0, 1.0)
+			if mission_timer >= (SURVIVE_TIME if mission_type == "survival" else hold_time()) and not living_heroes().is_empty():
 				_end_mission(Mission.SUCCESS)
 				return
 	var limit := float(TowerExpedition.get_floor_config(floor_number).get("time_limit", 0.0)) if floor_number > 0 else 0.0

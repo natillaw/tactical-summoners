@@ -18,7 +18,7 @@ const BOTH_REQUIRED := true          # phase 2: both altars (false = either one)
 const ALTAR_MIN_CELLS := 12          # an altar is this far (cells) from the Baron at least
 const ALTAR_MAX_CELLS := 30
 ## The Baron sends adds to the altar while someone channels (and now and then anyway).
-const ADDS_EVERY := 12.0
+const ADDS_EVERY := 18.0
 const ADDS := 2
 const ADD_TYPES := ["bandido_degollador", "bandido_maton"]
 ## When the shield falls the Baron strikes towards the altar (an area there) every SLAM_EVERY s.
