@@ -280,8 +280,8 @@ func _spawn_nodes() -> void:
 ## A hero next to a gathering spot and not fighting collects it (one gatherer at a time).
 func _tick_gathering(delta: float) -> void:
 	for g in nodes:
-		if g.taken:
-			continue
+		if not is_instance_valid(g) or g.taken:
+			continue                                   # gathered spots are freed (crash fix 2026-10-31)
 		g.visible = fog == null or fog.is_explored(map.cell_of(g.position))
 		var who: SandboxHero = null
 		for h in heroes:
@@ -301,6 +301,7 @@ func _tick_gathering(delta: float) -> void:
 				_add_loot(String(res), int(g.amounts[res]), who)
 				who.credit("gathered", float(g.amounts[res]))
 			g.queue_free()
+	nodes.assign(nodes.filter(func(n): return is_instance_valid(n) and not n.taken))
 
 
 ## "" when the squad can escape now (every standing hero near the extraction point), else why not.

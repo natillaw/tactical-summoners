@@ -73,7 +73,7 @@ func _ready() -> void:
     sb.heroes[1].order_hold()                      # holds there (an explorer would otherwise go scouting)
     for i in 40:
         sb.tick(0.05)
-    check(g.taken and not sb.ledger.is_empty(), "drops and a gathered node fill the expedition ledger: %s" % str(sb.ledger))
+    check((not is_instance_valid(g) or g.taken) and not sb.ledger.is_empty(), "drops and a gathered node fill the expedition ledger: %s" % str(sb.ledger))
     var ledger := sb.ledger.duplicate()
     var exit := sb.map.center_of(sb.map.extract_cell)
     for h in sb.heroes:
