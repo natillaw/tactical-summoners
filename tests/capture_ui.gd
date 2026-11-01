@@ -26,6 +26,7 @@ func _ready() -> void:
         mc._tabs.current_tab = t
         await _shot("ui_01b_master_tab%d" % t, 0.5)
     mc.confirm()
+    Game.hardcore = true                               # D-081: show the skull on the HUD shot
     _main.call("show_screen", "welcome", 0)
     await get_tree().process_frame
     var w: WelcomeScreen = _find("WelcomeScreen")
@@ -51,6 +52,19 @@ func _ready() -> void:
         if sheet != null:
             sheet._tabs.current_tab = t
         await _shot("ui_06_sheet_tab%d" % t, 0.4)
+    var mst := Game.master()                           # D-081: the Master's sheet (Leadership, memories)
+    if mst != null:
+        MasterRules.unlock_memory(mst, 10)
+        _main.call("show_screen", "roster", 0)
+        await get_tree().process_frame
+        var ms: HeroSheet = _find("HeroSheet")
+        if ms != null:
+            ms.hero = mst
+            ms._tab_index = 6
+            ms.rebuild()
+        await _shot("ui_06b_master_memories", 0.5)
+        _main.call("show_screen", "master_edit", 0)
+        await _shot("ui_06c_mirror", 0.5)
     _main.call("show_screen", "inventory", 0)
     await _shot("ui_07_inventory", 0.8)
     _main.call("show_screen", "sandbox", 1)

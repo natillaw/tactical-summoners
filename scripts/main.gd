@@ -49,6 +49,8 @@ func _refresh_currency() -> void:
 func show_screen(screen: String, arg: int = 0) -> void:
     for c in _content.get_children():
         c.queue_free()
+    if Game.game_over and not ["title", "game_over"].has(screen):
+        screen = "game_over"                     # D-081: a hardcore game whose Master died goes no further
     var back := show_screen.bind("town", 0)
     var s: Control
     match screen:
@@ -83,6 +85,14 @@ func show_screen(screen: String, arg: int = 0) -> void:
             var mc := MasterCreator.new()        # D-080: new account -> welcome; old save without a Master -> town
             mc.finished.connect(func(): show_screen("town" if Game.onboarded else "welcome", 0))
             s = mc
+        "master_edit":
+            var me := MasterCreator.new(true)    # D-081: the mirror in the Summoner's Hall (looks only)
+            me.finished.connect(back)
+            s = me
+        "game_over":
+            var go := GameOverScreen.new()       # D-081: hardcore, the Master died
+            go.finished.connect(func(): show_screen("title", 0))
+            s = go
         "welcome":
             var w := WelcomeScreen.new()
             w.finished.connect(back)

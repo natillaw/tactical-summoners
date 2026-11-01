@@ -5,7 +5,7 @@ extends Node
 signal changed
 
 const DEFAULT_SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 17
+const SAVE_VERSION := 18
 const PARTY_SIZE := 5            # slots 0-2 = front row, slots 3-4 = back row; D-080: slot 0 is the Master
 const MASTER_BED := "town_hall"   # D-080: the Master sleeps in the Hall (no dorm bed)
 const XP_PER_BOOK := 100
@@ -28,6 +28,10 @@ var hq_outputs: Dictionary = START_STOCK.duplicate()   # THE town storage (wareh
 var town_buildings: Dictionary = TownTables.start_levels()   # building id -> level (0 = not built), D-030
 var tower_maps: Dictionary = {}
 var onboarded: bool = false          # the welcome and the first ten summons happened (new accounts)
+var hardcore: bool = false           # D-081: chosen once at the creator; the Master's death ends the game
+var game_over: bool = false          # D-081: a hardcore game whose Master died (kept, only for the summary)
+var game_over_info: Dictionary = {}  # {"floors", "heroes", "seconds", "cause"} for the end screen
+var play_seconds: float = 0.0        # D-081: time played (end screen)
 var skill_books: Dictionary = {}     # skill id -> copies owned (D-046)
 var tower_cleared: Dictionary = {}   # floor (str) -> times completed (D-031: every floor is unlocked) # floor_num (str) -> {"seed": int, "width": int, "height": int, "grid_rows": Array}
 # Town simulation state (HQ Phase 1, save v9). Rules live in TownSim / EconomyDefs.
@@ -47,6 +51,11 @@ var item_seq: int = 0                # next item uid
 var last_reason: String = ""         # why the last town action was refused (shown by the UI)
 var _clock_acc: float = 0.0
 const TOWN_LOG_CAP := 60
+
+
+func _process(delta: float) -> void:
+    if onboarded and not game_over:
+        play_seconds += delta
 
 
 func _ready() -> void:
@@ -492,9 +501,38 @@ func create_master(choices: Dictionary) -> HeroData:
                 party[i] = old
                 break
     h.add_memory("master", "Stood in the circle again and called out: this time, someone answered.", "", 3)
+    if not onboarded:
+        hardcore = bool(choices.get("hardcore", false))   # D-081: only when the game is created, never later
     assign_beds()
     _commit()
     return h
+
+
+## D-081 barber / mirror: only the look changes (never race, class, trait, name or background).
+## "" on success, else why not.
+func restyle_master(look: Dictionary) -> String:
+    var m := master()
+    if m == null:
+        return "no Master"
+    if not has_resources(MasterDefs.BARBER_COST):
+        return "needs %s" % str(MasterDefs.BARBER_COST)
+    var nl: Dictionary = m.look.duplicate()
+    for k in ["body", "skin", "eyes", "hair", "hair_color", "beard"]:
+        if look.has(k):
+            nl[k] = look[k]
+    nl["race"] = m.look.get("race", "human")
+    m.look = HeroGenerator.master_look(nl)
+    for k in MasterDefs.BARBER_COST:
+        hq_outputs[k] = int(hq_outputs.get(k, 0)) - int(MasterDefs.BARBER_COST[k])
+    _commit()
+    return ""
+
+
+## D-081: a hardcore Master died. The game is kept but marked over, with a summary for the end screen.
+func _end_hardcore(m: HeroData, cause: String) -> void:
+    game_over = true
+    game_over_info = {"name": m.display_name(), "cause": cause, "floors": highest_cleared(), "heroes": heroes.size() - 1,
+        "memorial": memorial.size() + 1, "seconds": roundi(play_seconds)}
 
 
 func party_slot_of(hero_id: String) -> int:
@@ -566,7 +604,16 @@ func merchant_trade(offer: int) -> String:
 ## Survivors in the party lose a little Trust (deterministic, never a refused order: D-016).
 func record_death(h: HeroData, cause: String = "", mission: String = "") -> bool:
     if h != null and h.is_master:
-        return false                  # D-080: the Master never dies (comes home wounded instead)
+        if not hardcore:
+            return false              # D-080: the Master never dies (comes home wounded instead)
+        _end_hardcore(h, cause)       # D-081: hardcore, the game ends (the Master still goes to the memorial)
+    elif h != null and heroes.has(h.id) and cause != "sacrificed" and master() != null and party.has(h.id):
+        # D-081: a hero lost on an expedition with the Master shakes everybody's bond with them
+        for other in party_heroes():
+            if other != h:
+                MasterRules.bond_event(other, "ally_died")
+                if cause.contains("left behind"):
+                    MasterRules.bond_event(other, "left_behind")
     if h == null or not heroes.has(h.id):
         return false
     h.add_event("died", {"cause": cause, "mission": mission})
@@ -787,6 +834,7 @@ func complete_floor(floor_num: int, mission: String = "") -> Dictionary:
     for res in r["chest"]:
         hq_outputs[res] = mini(storage_cap(), int(hq_outputs.get(res, 0)) + int(r["chest"][res]))
     tower_cleared[key] = int(tower_cleared.get(key, 0)) + 1
+    r["memory"] = MasterRules.unlock_memory(master(), floor_num)     # D-081: tenth floors, once
     gems += int(r["gems"])
     stones += int(r["stones"])
     books += int(r["books"])
@@ -1375,13 +1423,20 @@ func finish_expedition(floor_num: int, outcome: String, loot: Dictionary, entrie
             var before := int(hq_outputs.get(res, 0))
             hq_outputs[res] = mini(storage_cap(), before + int(loot[res]))
             rep["loot"][res] = int(hq_outputs[res]) - before
+    var with_master := entries.any(func(e): return (e["hero"] as HeroData).is_master)
     if outcome == "success" and floor_num > 0:
+        if with_master:                                   # D-081: a floor cleared together
+            for e in entries:
+                if bool(e["alive"]):
+                    MasterRules.bond_event(e["hero"], "floor_cleared")
         rep["reward"] = complete_floor(floor_num, mission)
         if secret_done:
             rep["unique"] = roll_unique()
     var res := ExpeditionResults.compute(entries, outcome, floor_num, kill_xp, secret_done)
     if res["mvp"] != null:
         rep["mvp"] = (res["mvp"] as HeroData).display_name()
+        if with_master:
+            MasterRules.bond_event(res["mvp"], "mvp")
         rep["mvp_reason"] = res["mvp_reason"]
         rep["mvp_bonus"] = int(res.get("mvp_bonus", 0))
     for e in entries:
@@ -1439,6 +1494,10 @@ func grant(add_gems: int, add_stones: int, add_books: int) -> void:
 
 func new_game() -> void:
     onboarded = false
+    hardcore = false
+    game_over = false
+    game_over_info = {}
+    play_seconds = 0.0
     gems = SummonConfig.START_GEMS
     stones = 5
     books = 5
@@ -1517,6 +1576,7 @@ func save_game() -> bool:
             "layout": _layout_to_json()},
         "stash": stash,
         "onboarded": onboarded,
+        "hardcore": hardcore, "game_over": game_over, "game_over_info": game_over_info, "play_seconds": play_seconds,
     }
     return _write_atomic(JSON.stringify(data))
 
@@ -1572,6 +1632,10 @@ func _read_save(path: String) -> Variant:
 func apply_save(data: Dictionary) -> void:
     data = _migrate(data)
     onboarded = bool(data.get("onboarded", true))
+    hardcore = bool(data.get("hardcore", false))
+    game_over = bool(data.get("game_over", false))
+    game_over_info = (data.get("game_over_info", {}) as Dictionary).duplicate()
+    play_seconds = float(data.get("play_seconds", 0.0))
     gems = int(data.get("gems", 0))
     stones = int(data.get("stones", 0))
     books = int(data.get("books", 0))
@@ -1708,6 +1772,8 @@ func _migrate(data: Dictionary) -> Dictionary:
         data["exp_charges"] = ExpeditionDefs.CHARGES_MAX
         data["exp_charge_t"] = 0.0
         data["portal_upgrades"] = {}
+    if v < 18:
+        pass                              # v17 -> v18 (D-081): Leadership, memories and bond (0 / [] / 30 on load); an elf Master becomes human; hardcore off
     if v < 17:
         pass                              # v16 -> v17 (D-080): heroes gain is_master/first_name/surname (false/""); a save without a Master opens the creator once, the roster stays
     if v < 16:

@@ -64,6 +64,7 @@ var real_squad: bool = false                  # true when the squad is the playe
 var master_hero: SandboxHero = null           # D-080: the Master in this squad (always the driven hero), or null
 var master_lost: bool = false                 # D-080: the Master's agony ran out or they were left behind
 var _ending: bool = false                     # extract()/_wipe() are already ending the mission
+var command_cd: Dictionary = {}               # D-081: command id -> seconds left
 var reward_given: bool = false
 var follow_slot: int = -1                     # -1 = group view
 var overview: bool = false                    # M: whole-map view (camera only, never pauses)
@@ -205,9 +206,11 @@ func _build_squad() -> void:
 		h.position = map.center_of(sc)
 		h.died.connect(_on_hero_died)
 		h.went_down.connect(_on_hero_down)
+		(squad[i] as HeroData).set_composure(100)           # Composure is per mission (D-016)
 		if (squad[i] as HeroData).is_master:
-			h.no_death = true
+			h.no_death = not Game.hardcore                  # D-081: in hardcore the Master can die for real
 			h.lost_down.connect(_on_master_lost)
+			h.dmg_mult = MasterDefs.DAMAGE_MULT             # D-081: the Master leads, the others carry
 			master_hero = h
 		_world.add_child(h)
 		heroes.append(h)
@@ -1330,6 +1333,7 @@ func tick(delta: float) -> void:
 			group_view()                         # the driven hero fell: back to the squad view
 	if _locked() and master_hero.alive and not master_hero.is_controlled():
 		_set_controlled(master_hero)             # D-080: a rescued Master takes the lead again
+	_tick_leadership(delta)
 	_separate()
 	_separate_enemies()
 	_tick_boss_wards()
@@ -1446,6 +1450,9 @@ func _wipe() -> void:
 
 ## A hero fell (not dead yet): the relic drops where they lie; an escorted villager waits there.
 func _on_hero_down(h: SandboxHero) -> void:
+	for o in heroes:                              # D-081: seeing an ally (or the Master) fall shakes the others
+		if o != h:
+			shake(o, "master_down" if h.hero != null and h.hero.is_master else "ally_down")
 	if carrier == h:
 		carrier = null
 		h.carrying = false
@@ -1455,6 +1462,103 @@ func _on_hero_down(h: SandboxHero) -> void:
 		selected.erase(h)
 	if h.hero != null:
 		h.say("", 0.0)
+
+
+## D-081: command cooldowns, Composure lost at low health, Composure back when a panic ends, and devoted
+## heroes (bond tier with "rescue") running on their own to lift a fallen Master.
+func _tick_leadership(delta: float) -> void:
+	for id in command_cd.keys():
+		command_cd[id] = maxf(0.0, float(command_cd[id]) - delta)
+	for h in heroes:
+		if not h.alive or h.hero == null or h.hero.is_master:
+			continue
+		var low := float(h.hp) < float(h.max_hp) * MasterDefs.LOW_HP_FRAC
+		if low and not h.low_hp_shaken:
+			h.low_hp_shaken = true
+			shake(h, "low_hp")
+		elif not low:
+			h.low_hp_shaken = false
+		var panicking := h.has_status("panicked")
+		if h.was_panicked and not panicking:
+			h.hero.set_composure(maxi(h.hero.composure, MasterDefs.PANIC_RECOVER))
+		h.was_panicked = panicking
+	if master_hero != null and master_hero.downed and not master_hero.dead and not master_hero.lost \
+			and not heroes.any(func(x): return x.rescue_target == master_hero):
+		var best: SandboxHero = null
+		for h in heroes:
+			if h.alive and not h.is_controlled() and h.hero != null and not h.has_status("panicked") \
+					and bool(MasterRules.bond_tier(h.hero.bond_master)["rescue"]) \
+					and (best == null or h.position.distance_to(master_hero.position) < best.position.distance_to(master_hero.position)):
+				best = h
+		if best != null:
+			best.order_rescue(master_hero)
+			best.say("Hold on!", 2.0)
+
+
+## D-081 panic: a hero loses Composure on an event (after Leadership and bond) and panics below the line.
+## The Master never panics.
+func shake(h: SandboxHero, why: String) -> void:
+	if not h.alive or h.hero == null or h.hero.is_master:
+		return
+	var m: HeroData = master_hero.hero if master_hero != null else null
+	h.hero.set_composure(h.hero.composure - MasterRules.composure_loss(h.hero, m, why, h.in_master_radius()))
+	if h.hero.composure < MasterDefs.PANIC_BELOW and not h.has_status("panicked"):
+		h.apply_status("panicked", MasterDefs.PANIC_TIME)
+		h.order = "auto"
+		h.target = null
+		FloatingText.spawn(h, "panics!", Color(1.0, 0.95, 0.5), false, 1.6)
+
+
+## D-081: fires the command in slot `slot` (keys 1 2 3). aim = where the player points (the Master's
+## target for "focus fire"). Heroes answer only inside the Master's radius and with enough Obedience.
+## Returns how many answered (-1 = could not be used: locked, on cooldown, no Master standing).
+func use_command(slot: int, aim: Vector2 = Vector2.INF) -> int:
+	if master_hero == null or not master_hero.alive or mission_state != Mission.ACTIVE:
+		return -1
+	var id := ""
+	for cid in MasterRules.commands(master_hero.hero):
+		if int(MasterDefs.COMMANDS[cid]["slot"]) == slot:
+			id = cid
+	if id == "":
+		FloatingText.spawn(master_hero, "not learned yet", Color(0.8, 0.8, 0.8), false)
+		return -1
+	if float(command_cd.get(id, 0.0)) > 0.0:
+		FloatingText.spawn(master_hero, "%ds" % ceili(float(command_cd[id])), Color(0.8, 0.8, 0.8), false)
+		return -1
+	var c: Dictionary = MasterDefs.COMMANDS[id]
+	command_cd[id] = float(c["cooldown"])
+	var radius := MasterRules.leadership_radius(master_hero.hero)
+	var foe: SandboxEnemy = null
+	if id == "focus_fire":
+		var from: Vector2 = aim if aim != Vector2.INF else master_hero.position
+		for e in visible_enemies():
+			if foe == null or e.position.distance_to(from) < foe.position.distance_to(from):
+				foe = e
+	var answered := 0
+	for h in heroes:
+		if h == master_hero or not h.alive or h.position.distance_to(master_hero.position) > radius:
+			continue
+		if h.effective_obedience() < CombatRules.OBEY_MIN and id != "hold_fast":
+			_refuse_command(h)
+			continue
+		answered += 1
+		match id:
+			"focus_fire":
+				if foe != null and not h.has_status("panicked"):
+					h.order_attack(foe)
+				h.apply_status("focused", float(c["duration"]))
+			"regroup":
+				if not h.has_status("panicked"):
+					h.order_move(map.find_path(h.position, master_hero.position))
+				h.apply_status("rallied", float(c["duration"]))
+			"hold_fast":
+				if h.statuses.has("panicked"):
+					h.statuses.erase("panicked")
+				h.hero.set_composure(h.hero.composure + int(c["composure"]))
+		FloatingText.spawn(h, "!", Color(1.0, 0.85, 0.4), false)
+	FloatingText.spawn(master_hero, String(c["name"]), Color(1.0, 0.85, 0.4), false, 2.0)
+	_mark(master_hero.position, Color(1.0, 0.85, 0.4))
+	return answered
 
 
 ## D-080: the Master's agony ran out (or they were left behind): no death, the expedition fails at once.
@@ -1473,6 +1577,9 @@ func _on_master_lost(_c: Combatant) -> void:
 ## memorial. Sandbox test heroes are not on the roster, so nothing is recorded for them.
 func _on_hero_died(h: SandboxHero) -> void:
 	fallen.append(h.hero.display_name())
+	for o in heroes:
+		if o != h:
+			shake(o, "ally_died")
 	if carrier == h:
 		carrier = null
 		h.carrying = false
@@ -1480,6 +1587,10 @@ func _on_hero_died(h: SandboxHero) -> void:
 		relic.visible = true
 	var cause := "Slain by %s" % h.killed_by if h.killed_by != "" else "Fell in battle"
 	Game.record_death(h.hero, cause, mission_title() if floor_number != 0 else MISSION_NAME)
+	if h == master_hero:                          # D-081 hardcore: the Master is dead, the game is over
+		master_lost = true
+		if not _ending and mission_state == Mission.ACTIVE:
+			_end_mission(Mission.FAILED)
 
 
 func _end_mission(state: Mission) -> void:
@@ -1543,7 +1654,12 @@ func result_text() -> String:
 	if not fallen.is_empty():
 		lines.append("Fallen (permanent): %s" % ", ".join(fallen))
 	if master_lost:
-		lines.append("The Master fell and was carried home wounded.")
+		lines.append("The Master is dead. The game is over (hardcore)." if Game.game_over else "The Master fell and was carried home wounded.")
+	var mem: Dictionary = reward.get("memory", {})
+	if not mem.is_empty():                        # D-081: a memory of the Former Master
+		lines.append("")
+		lines.append("%s: %s" % [tr("A memory returns"), tr(String(mem["title"]))])
+		lines.append(tr(String(mem["text"])))
 	lines.append("")
 	if not real_squad:
 		lines.append("Test squad: nothing is kept.  Gathered: %s" % _res_line(ledger))
@@ -1831,6 +1947,8 @@ func _input(event: InputEvent) -> void:
 		KEY_1, KEY_2, KEY_3, KEY_4, KEY_5:
 			if not _locked():                    # D-080: no hero switch with a Master (debug flag aside)
 				select_slot(event.keycode - KEY_1 + (5 if event.shift_pressed else 0))
+			elif MasterDefs.COMMAND_KEYS.has(event.keycode):   # D-081: Master commands
+				use_command(MasterDefs.COMMAND_KEYS.find(event.keycode), screen_to_world(get_local_mouse_position()))
 		KEY_TAB:
 			overview = false
 			group_view()

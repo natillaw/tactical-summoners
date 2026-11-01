@@ -3,6 +3,8 @@ extends Control
 ## D-080: "Create your character". Big animated preview on the left (turn it with < >), four tabs on the
 ## right (identity, looks, class, trait), Random and Confirm below. Only LPC options that exist in the
 ## imported sheets; clothes are the plain starter outfit of every summon. Confirm -> Game.create_master.
+## D-081: edit mode (the barber / mirror in the Summoner's Hall) shows only the Looks tab, without the race
+## row; Confirm -> Game.restyle_master. Hardcore is a checkbox of a new game only.
 
 signal finished
 
@@ -44,10 +46,19 @@ var _error: Label
 var _class_info: Label
 var _class_btns := {}                              # class id -> Button
 var _trait_box: VBoxContainer
+var edit_mode: bool = false                        # D-081: the mirror (looks only)
 
 
-func _init() -> void:
+func _init(p_edit: bool = false) -> void:
+    edit_mode = p_edit and Game.master() != null
     hero_seed = Game.rng.randi()
+    if edit_mode:
+        var m := Game.master()
+        hero_seed = m.hero_seed
+        choices["look"] = m.look.duplicate()
+        choices["class"] = m.hero_class
+        choices["trait"] = String(m.traits[0]) if not m.traits.is_empty() else "trait.brave"
+        return
     var r := RandomNumberGenerator.new()
     r.seed = hero_seed
     choices["look"] = LpcWardrobe.random_look(r, "human")
@@ -60,7 +71,7 @@ func _ready() -> void:
     var root := VBoxContainer.new()
     root.add_theme_constant_override("separation", 4)  # px
     margin.add_child(root)
-    root.add_child(UIKit.label("Create your character", 16, UIKit.ACCENT))
+    root.add_child(UIKit.label("The mirror: change your looks" if edit_mode else "Create your character", 16, UIKit.ACCENT))
 
     var body := HBoxContainer.new()
     body.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -89,12 +100,16 @@ func _ready() -> void:
     _tabs = TabContainer.new()
     _tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     body.add_child(_tabs)
-    _tabs.add_child(_identity_tab())
-    _tabs.add_child(_looks_tab())
-    _tabs.add_child(_class_tab())
-    _tabs.add_child(_trait_tab())
-    for i in TAB_NAMES.size():
-        _tabs.set_tab_title(i, tr(TAB_NAMES[i]))
+    if edit_mode:
+        _tabs.add_child(_looks_tab())
+        _tabs.set_tab_title(0, tr(TAB_NAMES[1]))
+    else:
+        _tabs.add_child(_identity_tab())
+        _tabs.add_child(_looks_tab())
+        _tabs.add_child(_class_tab())
+        _tabs.add_child(_trait_tab())
+        for i in TAB_NAMES.size():
+            _tabs.set_tab_title(i, tr(TAB_NAMES[i]))
 
     var foot := HBoxContainer.new()
     foot.add_theme_constant_override("separation", 8)  # px
@@ -102,6 +117,8 @@ func _ready() -> void:
     _error = UIKit.label("", 13, UIKit.BAD)
     _error.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     foot.add_child(_error)
+    if edit_mode:
+        foot.add_child(UIKit.button("Cancel", func(): finished.emit(), Vector2(110, 26)))
     foot.add_child(UIKit.button("Random", randomize_all, Vector2(110, 26)))
     foot.add_child(UIKit.button("Confirm", confirm, Vector2(110, 26)))
     _refresh()
@@ -127,6 +144,11 @@ func _identity_tab() -> Control:
     var lore := UIKit.label(MasterDefs.BACKGROUND_TEXT, 13, UIKit.TEXT)
     lore.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     v.add_child(lore)
+    if not Game.onboarded:                           # D-081: only when the game is created
+        var hc := CheckBox.new()
+        hc.text = "Hardcore: if your Master dies, the game ends"
+        hc.toggled.connect(func(on): choices["hardcore"] = on)
+        v.add_child(hc)
     return v
 
 
@@ -149,6 +171,8 @@ func _looks_tab() -> Control:
     v.name = "Looks"
     for row in LOOK_ROWS:
         var key := String(row[0])
+        if edit_mode and key == "race":
+            continue                                 # D-081: the mirror never changes the race
         var h := HBoxContainer.new()
         var l := UIKit.label(String(row[1]), 13, UIKit.MUTED)
         l.custom_minimum_size = Vector2(90, 0)  # px
@@ -233,9 +257,14 @@ func randomize_all() -> void:
     r.seed = Game.rng.randi()
     var look: Dictionary = choices["look"]
     for row in LOOK_ROWS:
+        if edit_mode and row[0] == "race":
+            continue
         var opts: Array = _options(String(row[0]))
         look[row[0]] = opts[r.randi() % opts.size()]
     choices["look"] = HeroGenerator.master_look(look)
+    if edit_mode:
+        _refresh()
+        return
     var cls: Array = MasterDefs.CLASSES.keys()
     choices["class"] = String(cls[r.randi() % cls.size()])
     var tr_ids: Array = HeroTables.TRAITS.keys()
@@ -260,6 +289,13 @@ func block() -> String:
 
 
 func confirm() -> void:
+    if edit_mode:
+        var why_not := Game.restyle_master(choices["look"])
+        if why_not != "":
+            _error.text = tr(why_not)
+            return
+        finished.emit()
+        return
     _sync_names()
     var why := block()
     if why != "":
@@ -278,6 +314,9 @@ func _refresh() -> void:
     var look: Dictionary = choices["look"]
     for key in _rows:
         (_rows[key] as Label).text = tr(String(OPTION_NAMES.get(String(look.get(key, "")), look.get(key, ""))))
+    _show_frame()
+    if _class_info == null:
+        return                                       # edit mode: looks only
     var cid := String(choices["class"])
     for c in _class_btns:
         var cb: Button = _class_btns[c]

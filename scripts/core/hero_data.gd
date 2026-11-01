@@ -9,6 +9,9 @@ var hero_name: String = ""
 var is_master: bool = false       # D-080: the player's own character (MasterDefs); never dies, sold or consumed
 var first_name: String = ""       # D-080: the Master's chosen name and surname (hero_name = both)
 var surname: String = ""
+var leadership_points: int = 0    # D-081: Leadership from the Master's memories (MasterRules.leadership)
+var master_memories: Array = []   # D-081: memory ids unlocked (MasterMemories), Master only
+var bond_master: int = MasterDefs.BOND_START   # D-081: bond with the Master, 0-100 (MasterRules.bond_tier)
 var epithet: String = ""
 var stars: int = 1
 var level: int = 1
@@ -189,6 +192,16 @@ static func legacy_obedience(trait_ids: Array) -> int:
     for t in trait_ids:
         v += int(HeroTables.OBEDIENCE_MODS.get(t, 0))
     return clampi(v, 0, 100)
+
+
+## D-081: command ids granted by memories (MasterMemories rewards), in addition to the level unlocks.
+func memory_commands() -> Array:
+    var out: Array = []
+    for mid in master_memories:
+        var c := String((MasterMemories.info(String(mid)).get("reward", {}) as Dictionary).get("command", ""))
+        if MasterDefs.COMMANDS.has(c):
+            out.append(c)
+    return out
 
 
 func class_title() -> String:
@@ -474,6 +487,9 @@ func to_dict() -> Dictionary:
         "is_master": is_master,
         "first_name": first_name,
         "surname": surname,
+        "leadership_points": leadership_points,
+        "master_memories": master_memories.duplicate(),
+        "bond_master": bond_master,
         "epithet": epithet,
         "stars": stars,
         "level": level,
@@ -530,6 +546,11 @@ static func from_dict(d: Dictionary) -> HeroData:
     h.is_master = bool(d.get("is_master", false))     # save v16 or older: no Master (the creator opens once)
     h.first_name = str(d.get("first_name", ""))
     h.surname = str(d.get("surname", ""))
+    h.leadership_points = int(d.get("leadership_points", 0))           # save v17 or older: 0, no memories, bond 30
+    for mid in d.get("master_memories", []):
+        if not MasterMemories.info(String(mid)).is_empty():
+            h.master_memories.append(String(mid))
+    h.bond_master = clampi(int(d.get("bond_master", MasterDefs.BOND_START)), 0, 100)
     h.epithet = str(d.get("epithet", ""))
     h.stars = clampi(int(d.get("stars", 1)), 1, HeroTables.MAX_STARS)
     h.level = maxi(1, int(d.get("level", 1)))
@@ -541,6 +562,9 @@ static func from_dict(d: Dictionary) -> HeroData:
     h.look = (d.get("look", {}) as Dictionary).duplicate()
     if h.look.is_empty():
         h.look = HeroGenerator.lpc_look(h.hero_seed)  # TPF heroes become LPC deterministically
+    if h.is_master and not MasterDefs.RACES.has(String(h.look.get("race", "human"))):
+        h.look["race"] = "human"                     # D-081 (save v17): an elf Master becomes human, the rest stays
+        h.look = HeroGenerator.master_look(h.look)
     h.traits = (d.get("traits", []) as Array).duplicate()
     h.passives = (d.get("passives", []) as Array).duplicate()
     for g in d.get("innate", []):            # save v15 or older: no gifts ([]), never rolled again (D-004)

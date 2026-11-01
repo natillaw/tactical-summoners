@@ -155,6 +155,27 @@ const ES := {
     "the Master cannot be sacrificed, absorbed or sold": "el Máster no se puede sacrificar, absorber ni vender", "the Master leads the village: no job for them": "el Máster dirige el pueblo: no tiene trabajo asignado", "the Master does not go on offline expeditions": "el Máster no va a expediciones offline",
     "The Master has fallen!": "¡Ha caído el Máster!", "The Master fell and was carried home wounded.": "El Máster cayó y lo llevaron herido al pueblo.", "Wounded Master": "Máster herido",
     "The Master fell in the tower and was carried home (D-080). Passes with rest; a doctor shortens it.": "El Máster cayó en la torre y lo trajeron a casa. Se pasa descansando; un médico lo acorta.",
+    # D-081: commands, panic, Leadership, bond, memories, mirror, hardcore
+    "Focus fire!": "¡Concentren fuego!", "Regroup!": "¡Reagrúpense!", "Hold fast!": "¡Aguanten!",
+    "Heroes in range attack the Master's target and deal +15% damage for 6 s.": "Los héroes en el radio atacan al objetivo del Máster y hacen +15 % de daño durante 6 s.", "Heroes in range fall back to the Master and take 20% less damage for 5 s.": "Los héroes en el radio vuelven junto al Máster y reciben un 20 % menos de daño durante 5 s.", "Heroes in range stop panicking and steady themselves (+40 Composure).": "Los héroes en el radio dejan de entrar en pánico y se serenan (+40 Compostura).",
+    "not learned yet": "aún no aprendido", "panics!": "¡pánico!", "Hold on!": "¡Aguanta!",
+    "Panicking": "En pánico", "Focusing fire": "Concentrando fuego", "Rallied": "Reagrupado",
+    "A memory returns": "Vuelve un recuerdo", "The Master is dead. The game is over (hardcore).": "El Máster ha muerto. La partida ha terminado (hardcore).", "Distrustful": "Desconfiado",
+    "Wary": "Receloso", "Devoted": "Devoto", "Leadership": "Liderazgo", "Master memories": "Memorias",
+    "radius": "radio", "Commands": "Comandos", "Bond with the Master": "Vínculo con el Máster",
+    "Passive": "Pasiva", "Command": "Comando", "The mirror: change your looks": "El espejo: cambia tu apariencia",
+    "Cancel": "Cancelar", "Hardcore: if your Master dies, the game ends": "Hardcore: si tu Máster muere, la partida termina", "Mirror: change your looks": "Espejo: cambia tu apariencia",
+    "Hair, beard, skin and eyes. Not the race, class, trait or name.": "Pelo, barba, piel y ojos. No la raza, la clase, el rasgo ni el nombre.", "Your hardcore game is over.": "Tu partida hardcore ha terminado.", "The Master has fallen": "El Máster ha caído",
+    "Cause": "Causa", "Highest floor cleared": "Piso más alto superado", "Heroes left": "Héroes restantes",
+    "Fallen": "Caídos", "Time played": "Tiempo jugado", "This hardcore game is over.": "Esta partida hardcore ha terminado.",
+    "Back to the title": "Volver al título", "Hardcore": "Hardcore", "no Master": "no hay Máster",
+    "The first circle": "El primer círculo", "A name in the ledger": "Un nombre en el registro", "The bell tower": "El campanario",
+    "Ash on the banner": "Ceniza en el estandarte", "The broken oath": "El juramento roto", "The empty hall": "La sala vacía",
+    "A rival's face": "El rostro de un rival", "Fire below": "Fuego abajo", "The last order": "La última orden",
+    "The top of the tower": "La cima de la torre", "TODO lore: a chalk circle on a stone floor, and the first voice that answered.": "TODO lore: un círculo de tiza sobre un suelo de piedra, y la primera voz que respondió.", "TODO lore: a book of names, and one of them crossed out by your own hand.": "TODO lore: un libro de nombres, y uno tachado por tu propia mano.",
+    "TODO lore: the bell that called the summoned home, ringing for the last time.": "TODO lore: la campana que llamaba a casa a los invocados, sonando por última vez.", "TODO lore: a banner you carried, burnt at the edges.": "TODO lore: un estandarte que llevaste, quemado por los bordes.", "TODO lore: a promise you made to the circle, and the night you broke it.": "TODO lore: una promesa que hiciste al círculo, y la noche en que la rompiste.",
+    "TODO lore: the hall where your summoned waited, and nobody came back.": "TODO lore: la sala donde esperaban tus invocados, y nadie volvió.", "TODO lore: someone who stood beside you, then against you.": "TODO lore: alguien que estuvo a tu lado, y luego en tu contra.", "TODO lore: the deep floors burning, and what you left there.": "TODO lore: los pisos profundos ardiendo, y lo que dejaste allí.",
+    "TODO lore: the last command you gave, and who obeyed it.": "TODO lore: la última orden que diste, y quién la obedeció.", "TODO lore: what waits at the top, and why you climbed it before.": "TODO lore: lo que espera en la cima, y por qué ya la subiste antes.",
 }
 
 
