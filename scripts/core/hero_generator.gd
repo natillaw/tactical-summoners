@@ -5,7 +5,7 @@ extends RefCounted
 ## more traits/passives and a higher level cap - all of it procedural.
 
 
-const VERSION := 4   # 1 = Drop A. 2 adds Trust/Obedience/Composure. 3 adds the starting active skill (D-044) and the first profession from the past life (D-049, no new rolls); look/class/traits are unchanged
+const VERSION := 5   # 1 = Drop A. 2 adds Trust/Obedience/Composure. 3 adds the starting active skill (D-044) and the first profession from the past life (D-049, no new rolls); look/class/traits are unchanged. 5 adds the summon gifts (D-079, own RNG)
 
 
 static func generate(hero_seed: int, stars: int) -> HeroData:
@@ -47,6 +47,7 @@ static func generate(hero_seed: int, stars: int) -> HeroData:
 	h.trust = clampi(trust, 0, 100)
 	h.obedience = clampi(obedience, 0, 100)
 	h.composure = 100
+	h.innate = roll_gifts(hero_seed, h.stars)
 	h.generator_version = VERSION
 	h.ensure_skills()
 	h.init_professions()
@@ -197,3 +198,30 @@ static func lpc_look(hero_seed: int) -> Dictionary:
 			race = String(r)
 			break
 	return LpcWardrobe.random_look(rng, race)
+
+
+## D-079 summon gifts: from their own RNG (hero_seed ^ 0x47494654), so every other roll of an old seed stays
+## the same. One combat gift with PowerDefs.GIFT_CHANCE by stars (a 5-star may get a second), and one
+## trade gift with TRADE_GIFT_CHANCE. Rolled only at the summon: promotions never add gifts.
+static func roll_gifts(hero_seed: int, stars: int) -> Array:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hero_seed ^ 0x47494654
+	var combat: Array = []
+	var trade: Array = []
+	for g in PowerDefs.GIFTS:
+		if String(PowerDefs.GIFTS[g]["kind"]) == "combat":
+			combat.append(g)
+		else:
+			trade.append(g)
+	combat.sort()
+	trade.sort()
+	var out: Array = []
+	var s := clampi(stars, 1, 5)
+	if rng.randf() < float(PowerDefs.GIFT_CHANCE[s]):
+		out.append(String(combat[rng.randi() % combat.size()]))
+		if s == 5 and rng.randf() < PowerDefs.GIFT_SECOND_5:
+			var rest: Array = combat.filter(func(x): return not out.has(x))
+			out.append(String(rest[rng.randi() % rest.size()]))
+	if rng.randf() < float(PowerDefs.TRADE_GIFT_CHANCE[s]):
+		out.append(String(trade[rng.randi() % trade.size()]))
+	return out

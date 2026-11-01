@@ -763,19 +763,42 @@ func hold_time() -> float:
 var modifier: String = ""
 
 
+## D-079 soft block: computed once when the squad enters (PowerCalc.floor_effect): damage multipliers when
+## the squad is short of what the floor expects, and how strong the modifier still is for each hero
+## (1 = in full; less when the hero carries the town's counter or a gift covers it).
+var soft_block: Dictionary = {}
+
+
 func _apply_modifier() -> void:
 	modifier = String(TowerExpedition.get_floor_config(floor_number).get("modifier", "")) if floor_number > 0 else ""
+	var strength: Array = []
+	if floor_number > 0:
+		soft_block = PowerCalc.floor_effect(floor_number, heroes.map(func(h): return h.hero), Game.town_buildings)
+		strength = soft_block["strength"]
+		for h in heroes:
+			h.soft_in = float(soft_block["taken"])
+			h.soft_out = float(soft_block["dealt"])
+	var avg := 1.0
+	if not strength.is_empty():
+		avg = 0.0
+		for v in strength:
+			avg += float(v) / float(strength.size())
 	match modifier:
 		"fog":
-			for h in heroes:
-				h.vision_mod = -FloorMods.FOG_VISION
+			for i in heroes.size():
+				heroes[i].vision_mod = -roundi(float(FloorMods.FOG_VISION) * (float(strength[i]) if i < strength.size() else 1.0))
 		"no_heal":
-			for h in heroes:
-				h.heal_block = true
+			for i in heroes.size():
+				var st := float(strength[i]) if i < strength.size() else 1.0
+				heroes[i].heal_block = st >= 1.0
+				heroes[i].heal_mult = 1.0 - st
 		"enrage":
 			for e in enemies:
 				e.enrage_low = true
+				e.enrage_atk = 1.0 + (FloorMods.ENRAGE_ATK - 1.0) * avg
 		"hazard":
+			for i in heroes.size():
+				heroes[i].poison_mult = float(strength[i]) if i < strength.size() else 1.0
 			if map is ProceduralMap:
 				var r := RandomNumberGenerator.new()
 				r.seed = (map as ProceduralMap).seed_value + 9

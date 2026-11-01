@@ -159,11 +159,12 @@ static func skill_damage(power: int, mult: float, target_def: int) -> int:
 static func resolve(info: DamageInfo, target: Combatant) -> int:
     var amount := info.amount
     if info.source != null and is_instance_valid(info.source) and info.source is Combatant:
-        amount *= (info.source as Combatant).outgoing_mult()
+        amount *= (info.source as Combatant).outgoing_mult() * (info.source as Combatant).soft_out
+
     if info.can_crit and info.rng != null and info.rng.randf() < info.crit_chance:
         info.crit = true
         amount *= CRIT_MULT
-    amount *= target.incoming_mult()
+    amount *= target.incoming_mult() * target.soft_in      # D-079 soft block (1.0 unless the squad is short)
     if info.element != "":
         amount *= 1.0 - clampf(float(target.resistances.get(info.element, 0.0)), 0.0, 0.9)   # P-29 hook
     info.final = mitigate(amount, info.kind, target.armor, target.mres)

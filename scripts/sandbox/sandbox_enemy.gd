@@ -71,6 +71,7 @@ var enrage_after: float = 0.0       # boss hard enrage (EnemyDefs.BOSS_ENRAGE_AF
 var fight_t: float = 0.0            # boss: seconds since it joined the fight
 var hard_enraged: bool = false
 var enrage_low: bool = false        # floor modifier "enrage": hits harder once under FloorMods.ENRAGE_BELOW
+var enrage_atk: float = FloorMods.ENRAGE_ATK   # D-079: a countered "enrage" (Cold Blood, burst weapons) is milder
 var _low_raged: bool = false
 var _skill_hero: SandboxHero = null # target of a skill that follows a hero (Mark of Doom)
 signal called_reinforcements(e)
@@ -768,7 +769,7 @@ func _on_hit(_info: DamageInfo, dmg: int) -> void:
         _check_boss_phase()
     if enrage_low and not _low_raged and hp > 0 and float(hp) < float(max_hp) * FloorMods.ENRAGE_BELOW:
         _low_raged = true
-        atk = roundi(float(atk) * FloorMods.ENRAGE_ATK)
+        atk = roundi(float(atk) * enrage_atk)
         FloatingText.spawn(self, "Enraged!", Color(1.0, 0.3, 0.2), false, 1.2)
     var flinch := not is_heavy() or float(dmg) >= float(max_hp) * STAGGER_PCT * (2.0 if is_boss else 1.0)
     if dmg > 0 and state != State.WINDUP and hp > 0 and flinch:

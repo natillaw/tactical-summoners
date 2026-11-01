@@ -81,6 +81,24 @@ const ES := {
     "Newest": "Más nuevos", "Lv": "Nv", "apprentice": "aprendiz", "talent ???": "talento ???", "Incompatible": "Incompatible",
     "Clumsy": "Torpe", "Talented": "Talentoso", "Prodigy": "Prodigio", "Mat": "Mat", "Ore": "Mineral", "Herb": "Hierba", "Iron": "Hierro", "Potions": "Pociones",
     "(build)": "(construir)", "Tower": "Torre", "Floor": "Piso", "Gems": "Gemas", "Stones": "Piedras", "Books": "Libros",
+    # D-079 risk at the tower gate (bands and qualitative hints; never numbers)
+    "Risk": "Riesgo", "Low": "Bajo", "Moderate": "Moderado", "High": "Alto", "Extreme": "Extremo",
+    "Nobody is ready to go in": "Nadie está listo para entrar",
+    "Fewer heroes than this floor lets in": "Entran menos héroes de los que admite el piso",
+    "Your heroes are too green for this floor": "Tus héroes están demasiado verdes para este piso",
+    "Your weapons are worn out": "Tus armas están desgastadas",
+    "Your armour will not hold against these blows": "Tus armaduras no aguantarán estos golpes",
+    "Pack more potions and elixirs": "Lleva más pociones y elixires", "Nobody carries potions or elixirs": "Nadie lleva pociones ni elixires",
+    "The town could prepare them better": "El pueblo podría prepararlos mejor",
+    "Antidotes sit in storage: nobody carries one": "Hay antídotos en el almacén, pero nadie lleva uno",
+    "The counter sits in storage: nobody carries it": "Lo que hace falta está en el almacén, pero nadie lo lleva",
+    "Only some of them see in this mist": "Solo algunos ven en esta niebla", "A good summon could see in this mist": "Un buen invocado podría ver en esta niebla",
+    "No antidotes on a poisoned floor": "Sin antídotos en un piso venenoso",
+    "Nothing to finish enraged foes quickly": "Nada para rematar rápido a enemigos furiosos",
+    "Nothing heals here, and your armour is light": "Aquí nada cura y vuestras armaduras son ligeras",
+    "Gifts": "Dones", "Owl Eyes": "Ojos de búho", "Poison-proof": "Inmune al veneno", "Cold Blood": "Sangre fría", "Regeneration": "Regeneración",
+    "Sees through mist.": "Ve a través de la niebla.", "Poison barely takes hold.": "El veneno apenas le hace efecto.",
+    "Keeps calm against enraged foes.": "Mantiene la calma ante enemigos furiosos.", "Wounds close a little even where nothing heals.": "Sus heridas se cierran un poco incluso donde nada cura.",
 }
 
 

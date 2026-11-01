@@ -98,6 +98,10 @@ func _summary() -> VBoxContainer:
     for p in hero.passives:
         var pd: Dictionary = HeroTables.PASSIVES[p]
         v.add_child(_wrap("Passive %s: %s" % [pd["name"], pd["desc"]], UIKit.MUTED, 12))
+    for g in hero.innate:                     # D-079: combat gifts only (trade gifts stay hidden, like aptitude)
+        var gd: Dictionary = PowerDefs.GIFTS.get(String(g), {})
+        if String(gd.get("kind", "")) == "combat":
+            v.add_child(_wrap("%s: %s — %s" % [tr("Gifts"), tr(String(gd["name"])), tr(String(gd["desc"]))], UIKit.ACCENT, 12))
     v.add_child(UIKit.label("Background", 20, UIKit.ACCENT))
     v.add_child(_wrap(hero.background_text, UIKit.MUTED, 12))
     return v
