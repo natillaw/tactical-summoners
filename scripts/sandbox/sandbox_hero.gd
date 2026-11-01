@@ -595,10 +595,8 @@ func _try_dodge(enemies: Array, map: NavMap) -> bool:
 ## (cooldown, stunned, rooted, casting, carrying the relic, down). The look: the hero leans and stretches
 ## along the dash, leaves fading after-images of its own current frame and a puff of dust, and squashes
 ## a little on landing (no roll frames needed: the Tiny Pixel Fantasy sheets have none).
-func dash(dir: Vector2) -> bool:
-	if dash_cd > 0.0 or dash_t > 0.0 or downed or not alive or not can_move() or casting != "" or carrying or dir.length() < 0.01:
-		return false
-	dir = dir.normalized()
+## Farthest point of a dash along dir before a wall stops it.
+func _dash_reach(dir: Vector2) -> Vector2:
 	var end := position
 	var step := CombatRules.DASH_DIST / 6.0
 	for i in 6:
@@ -606,6 +604,19 @@ func dash(dir: Vector2) -> bool:
 		if _map != null and not _map.can_step(end, nxt):
 			break
 		end = nxt
+	return end
+
+
+func dash(dir: Vector2) -> bool:
+	if dash_cd > 0.0 or dash_t > 0.0 or downed or not alive or not can_move() or casting != "" or carrying or dir.length() < 0.01:
+		return false
+	dir = dir.normalized()
+	var end := position
+	for d in [dir, dir.rotated(0.8), dir.rotated(-0.8)]:   # blocked straight ahead: slide along the wall
+		end = _dash_reach(d)
+		if end.distance_to(position) >= 8.0:
+			dir = d
+			break
 	if end.distance_to(position) < 8.0:
 		return false
 	_dash_end = end

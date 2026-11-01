@@ -47,6 +47,8 @@ Hecho y probado (30 suites ALL PASSED, ningún error de script en 8 partidas com
 - Pulido: luces de fogatas y altar, hojas y luciérnagas, viñeta; opción "Efectos visuales" (apagado/bajo/alto).
 - Español por defecto (`StringsEs`, botón Español/English en Opciones); textos compuestos traducidos por trozos.
 - Limpieza: capas TPF de bandidos borradas.
+- Herrería solo para herreros, con aprendices y aptitud oculta por oficio (D-078, guardado v15): `AptitudeDefs` (tiers, multiplicadores, eventos, todo en datos), `TownSim._apprentices`, nota "talento ???" en el panel del pueblo.
+- El dash, si choca de frente con un muro, se desliza en diagonal (antes no hacía nada; test de Space a veces fallaba en Wilds aleatorias).
 
 Pendiente para la beta:
 - **Economía del pueblo → progresión:** en la partida del bot, el pueblo no llega a producir equipo (madera y grano se agotan, la herrería se construye tarde o nunca, el herrero novato sube despacio), así que el piso 5 es un muro con héroes nivel 1-2 sin gear. Hay que afinar la economía para que un jugador que usa el pueblo llegue equipado al piso 5 (área de la sesión de ítems/crafteo), y mejorar la IA de pueblo del bot.
