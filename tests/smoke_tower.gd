@@ -55,6 +55,7 @@ func _ready() -> void:
                         e.take_damage(999999)
                 sb.tick(0.1)
                 check(sb.mission_state == SandboxScreen.Mission.ACTIVE, "floor %d: boss fight continues while the chieftain lives" % floor_num)
+                sb.boss.immune = false                   # floor 10: the altar's window (tested below)
                 sb.boss.take_damage(999999)
                 sb.tick(0.1)
             "retrieval", "rescue":
@@ -155,6 +156,36 @@ func _ready() -> void:
             sm.tick(0.05)
             check(sm.mission_state == SandboxScreen.Mission.SUCCESS, "floor 4 escape: reaching the far side wins")
         sm.queue_free()
+    # --- master prompt E: the Crimson Baron and his altar ----------------------------------------
+    var sbb := _make(10)
+    await get_tree().process_frame
+    var baron := sbb.boss
+    check(baron != null and baron.type_id == "jefe_baron_carmesi" and baron.immune and sbb.altars.size() == 1, "floor 10: the Crimson Baron waits shielded, with one altar")
+    var hp0 := baron.hp
+    baron.take_hit(DamageInfo.make(500.0, "true", sbb.heroes[0]))
+    check(baron.hp == hp0, "the shield takes every blow (0 damage)")
+    var alt: BaronAltar = sbb.altars[0]
+    for e in sbb.enemies:
+        if e == baron:
+            continue
+        e.alive = false
+        e.visible = false
+    for i in AltarDefs.CHANNEL_HEROES:
+        sbb.heroes[i].position = alt.position
+    for k in int(AltarDefs.CHANNEL_TIME / 0.5) - 2:
+        sbb._altar_tick(0.5)
+    sbb.heroes[0].take_hit(DamageInfo.make(1.0, "true", null))
+    sbb._altar_tick(0.5)
+    check(alt.progress < 1.0 and baron.immune, "a hit on a channeler breaks the channel")
+    for k in int(AltarDefs.CHANNEL_TIME / 0.5) + 2:
+        sbb._altar_tick(0.5)
+    check(not baron.immune and sbb.vuln_t > 0.0, "%d heroes channel %.0f s on the altar: the shield falls" % [AltarDefs.CHANNEL_HEROES, AltarDefs.CHANNEL_TIME])
+    sbb._altar_tick(AltarDefs.VULN_TIME + 0.5)
+    check(baron.immune, "after %.0f s the shield comes back" % AltarDefs.VULN_TIME)
+    baron.hp = roundi(float(baron.max_hp) * 0.5)
+    sbb._altar_tick(0.1)
+    check(sbb.altars.size() == 2, "under 66%% a second altar appears")
+    sbb.queue_free()
     print("== %s ==" % ("ALL PASSED" if fails == 0 else "%d FAILED" % fails))
     for p in ["user://smoke_tower.json", "user://smoke_tower.json.bak", "user://smoke_tower.json.tmp"]:
         if FileAccess.file_exists(p):

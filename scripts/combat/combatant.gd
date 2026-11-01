@@ -13,6 +13,8 @@ var max_hp: int = 1
 var hp: int = 1
 var armor: int = 0
 var mres: int = 0
+var immune: bool = false             # Crimson Baron's altar shield (master prompt E): every hit does 0
+signal immune_hit
 var heal_block: bool = false         # floor modifier "no_heal" (master prompt D)
 var resistances: Dictionary = {}    # P-29 hook (pending): element -> fraction resisted (0..1); no content yet
 var crit_chance: float = 0.0
@@ -48,6 +50,10 @@ func take_hit(info: DamageInfo) -> int:
         return 0
     if downed:
         agony = maxf(0.0, agony - CombatRules.AGONY_HIT_PENALTY)
+        return 0
+    if immune:
+        FloatingText.spawn(self, "0", Color(0.75, 0.75, 0.85), false, 0.8)
+        immune_hit.emit()
         return 0
     var dmg := CombatRules.resolve(info, self)
     var blocked := false

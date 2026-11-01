@@ -588,6 +588,19 @@ func _blob_aim(heroes: Array, reach: float, fallback: Vector2) -> Vector2:
     return best
 
 
+## Master prompt E: the Baron strikes an area away from himself (towards the altar) right now; it is
+## telegraphed like a skill (a wind-up the players can see) through a one-off skill entry.
+func force_area(at: Vector2, sid: String = "crimson_wave") -> void:
+    if not alive or state == State.WINDUP:
+        return
+    casting_skill = sid
+    _aim = at
+    state = State.WINDUP
+    _timer = float(EnemyDefs.SKILLS[sid]["cast"])
+    strike_seq += 1
+    FloatingText.spawn(self, "Crimson Wave!", Color(1.0, 0.3, 0.25), false, 1.0)
+
+
 ## The radius of the area the current wind-up marks (a skill's own, or the basic strike's).
 func telegraph_radius() -> float:
     if casting_skill != "":

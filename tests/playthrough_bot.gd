@@ -421,6 +421,38 @@ func _tactical_relic(sb: SandboxScreen, standing: Array, goal: Vector2) -> void:
             h.order_follow(carrier)
 
 
+## Master prompt E: while the Baron is shielded, the two sturdiest heroes channel on the altar(s) and
+## the rest guard them (attack-move around the altar); once the shield falls everyone hits the Baron.
+func _tactical_altar(sb: SandboxScreen, standing: Array) -> bool:
+    if not sb.boss.immune:
+        sb.select_only(standing)
+        sb.attack_move_selected(sb.boss.position)
+        return true
+    var pool: Array = standing.duplicate()
+    pool.sort_custom(func(a, b): return a.max_hp > b.max_hp)
+    var used: Array = []
+    for alt in sb.altars:
+        if alt.done:
+            continue
+        for i in AltarDefs.CHANNEL_HEROES:
+            if pool.is_empty():
+                return true
+            var h = pool.pop_front()
+            used.append(h)
+            sb.select_only([h])
+            if h.position.distance_to(alt.position) > AltarDefs.RADIUS * 0.6:
+                sb.order_move_selected(alt.position + Vector2.RIGHT.rotated(float(i) * PI) * 14.0)
+    if not pool.is_empty():
+        var guard_at: Vector2 = sb.altars[0].position
+        var threat = null
+        for e in sb.living_enemies():
+            if e != sb.boss and e.position.distance_to(guard_at) < 300.0 and (threat == null or e.position.distance_to(guard_at) < threat.position.distance_to(guard_at)):
+                threat = e
+        sb.select_only(pool)
+        sb.attack_move_selected(threat.position if threat != null else guard_at + Vector2(0, 60))
+    return true
+
+
 ## Matrix TACTICO: the frontline attack-moves on the nearest creature; ranged heroes and the cleric
 ## hold behind the frontline at their range; a hero under 35% falls back behind the tank to heal/kite.
 func _tactical_formation(sb: SandboxScreen, standing: Array, near: Array, c: Vector2) -> void:
@@ -646,6 +678,10 @@ func _play_floor(floor_num: int, attempt: int) -> Dictionary:
                 sb.select_only(standing)
                 sb.retreat_selected()
             continue
+        if TACTICAL and not sb.altars.is_empty() and sb.boss != null and sb.boss.alive and order_t <= 0.0:
+            order_t = 1.0
+            if _tactical_altar(sb, standing):
+                continue
         if not near_foes.is_empty():
             if TACTICAL and _tactical_focus(sb, standing, near_foes):
                 continue

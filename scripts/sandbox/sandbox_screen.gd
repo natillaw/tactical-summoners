@@ -423,6 +423,8 @@ func _setup_mission() -> void:
 			if boss != null:
 				boss.make_boss(String(TowerExpedition.get_floor_config(floor_number).get("boss_name", "Orc Chieftain")))
 				boss.enrage_after = float(EnemyDefs.BOSS_ENRAGE_AFTER.get(floor_number, 0.0))
+				if bool(TowerExpedition.get_floor_config(floor_number).get("altar", false)):
+					_setup_altar()
 				boss.boss_phase.connect(_on_boss_phase)
 				_spawn_shamans()
 		"exploration":
@@ -527,6 +529,130 @@ func _on_boss_phase(b: SandboxEnemy, phase: int) -> void:
 		e.alert()
 		e.visible = fog == null or fog.is_visible(map.cell_of(e.position))
 	CombatFeel.shake(b, "medium")
+
+
+## --- master prompt E: the Crimson Baron's altar (numbers in AltarDefs) ----------------------------
+var altars: Array[BaronAltar] = []
+var vuln_t: float = 0.0              # seconds of vulnerability left (0 = shielded)
+var _altar_adds_t: float = 0.0
+var _altar_slam_t: float = 0.0
+var _hint_said: bool = false
+var _shield_fx: AnimatedSprite2D = null
+
+
+func _setup_altar() -> void:
+	boss.immune = true
+	boss.immune_hit.connect(_on_immune_hit)
+	boss.boss_phase.connect(func(_b, _p): pass)
+	altars.append(_place_altar(1.0))
+	if ResourceLoader.exists("res://assets/fx/bandidos/fx_escudo_altar.png"):
+		var tex := load("res://assets/fx/bandidos/fx_escudo_altar.png") as Texture2D
+		var sf := SpriteFrames.new()
+		sf.set_animation_speed("default", 6.0)
+		for i in 4:
+			var at := AtlasTexture.new()
+			at.atlas = tex
+			at.region = Rect2(i * 48, 0, 48, 48)
+			sf.add_frame("default", at)
+		_shield_fx = AnimatedSprite2D.new()
+		_shield_fx.sprite_frames = sf
+		_shield_fx.scale = Vector2.ONE * 2.0
+		_shield_fx.position = Vector2(0, -40)
+		boss.add_child(_shield_fx)
+		_shield_fx.play("default")
+
+
+## An altar in a room ALTAR_MIN..MAX cells from the Baron; side = +1 / -1 picks the opposite end.
+func _place_altar(side: float) -> BaronAltar:
+	var best := map.center_of(map.relic_cell)
+	var best_score := -INF
+	var bc := map.cell_of(boss.position)
+	var r := RandomNumberGenerator.new()
+	r.seed = hash(floor_number) + altars.size() * 31 + int(elapsed)
+	if map is ProceduralMap:
+		for z in (map as ProceduralMap).room_zones:
+			var c: Vector2i = (z["rect"] as Rect2i).get_center()
+			var d := Vector2(c).distance_to(Vector2(bc))
+			if map.is_blocked_cell(c) or d < AltarDefs.ALTAR_MIN_CELLS or d > AltarDefs.ALTAR_MAX_CELLS:
+				continue
+			var score := r.randf() + (side * float(c.x - bc.x) / 40.0)
+			for a in altars:
+				score += Vector2(c).distance_to(Vector2(map.cell_of(a.position))) / 20.0
+			if score > best_score:
+				best_score = score
+				best = map.center_of(c)
+	var altar := BaronAltar.new()
+	altar.position = map.nearest_walkable(best)
+	altar.boss = boss
+	altar.heroes = heroes
+	_world.add_child(altar)
+	return altar
+
+
+func _altar_tick(delta: float) -> void:
+	if boss == null or not boss.alive or altars.is_empty():
+		return
+	var frac := float(boss.hp) / float(maxi(1, boss.max_hp))
+	if vuln_t > 0.0:
+		vuln_t -= delta
+		_altar_slam_t -= delta
+		if _altar_slam_t <= 0.0:
+			_altar_slam_t = AltarDefs.SLAM_EVERY
+			boss.force_area(altars[0].position)
+		if vuln_t <= 0.0:
+			boss.immune = true                          # the shield comes back
+			FloatingText.spawn(boss, "The shield returns!", Color(1.0, 0.35, 0.3), true, 2.0)
+			for a in altars:
+				a.done = false
+			if frac < AltarDefs.PHASE3_AT:                 # phase 3: the altar moves after each window
+				var old: BaronAltar = altars[0]
+				altars[0] = _place_altar(1.0 if randf() < 0.5 else -1.0)
+				old.queue_free()
+	else:
+		if frac < AltarDefs.PHASE2_AT and altars.size() < 2 and frac >= AltarDefs.PHASE3_AT:
+			altars.append(_place_altar(-1.0))           # phase 2: a second altar on the far side
+		elif frac < AltarDefs.PHASE3_AT and altars.size() > 1:
+			altars.pop_back().queue_free()
+		for a in altars:
+			a.tick_channel(delta)
+		var need := altars.size() if AltarDefs.BOTH_REQUIRED else 1
+		if altars.filter(func(a): return a.done).size() >= need:
+			vuln_t = AltarDefs.VULN_TIME
+			_altar_slam_t = 1.5
+			boss.immune = false
+			FloatingText.spawn(boss, "The shield breaks!", Color(1.0, 0.85, 0.4), true, 2.0)
+	if _shield_fx != null:
+		_shield_fx.visible = boss.immune
+		_shield_fx.modulate.a = 0.6 + 0.4 * altars[0].pulse()
+	# the Baron sends adds to the altar (more often while someone channels)
+	_altar_adds_t -= delta * (2.0 if altars.any(func(a): return a.progress > 0.0) else 1.0)
+	if _altar_adds_t <= 0.0 and boss.alerted:
+		_altar_adds_t = AltarDefs.ADDS_EVERY
+		var target: BaronAltar = altars[0]
+		for i in AltarDefs.ADDS:
+			var spot := map.nearest_walkable(target.position + Vector2.RIGHT.rotated(TAU * float(i) / float(AltarDefs.ADDS) + 0.7) * 120.0)
+			var e := _spawn_enemy(map.cell_of(spot), String(AltarDefs.ADD_TYPES[i % AltarDefs.ADD_TYPES.size()]))
+			e.tactical = true
+			e.home = target.position
+			e.alert()
+			e.visible = fog == null or fog.is_visible(map.cell_of(e.position))
+
+
+## A hero says it once per attempt, the first time the shield eats a blow (master prompt E hint).
+func _on_immune_hit() -> void:
+	if _hint_said:
+		return
+	_hint_said = true
+	var standing := living_heroes()
+	if standing.is_empty():
+		return
+	var h: SandboxHero = standing[0]
+	var line := String(AltarDefs.HERO_LINES["default"])
+	for t in h.hero.traits:
+		if AltarDefs.HERO_LINES.has(String(t)):
+			line = String(AltarDefs.HERO_LINES[String(t)])
+			break
+	h.say(line, 4.5)
 
 
 ## Master prompt D: one floor modifier from floor 3 (data: the floor's "modifier", numbers in FloorMods).
@@ -1022,6 +1148,7 @@ func tick(delta: float) -> void:
 	if _scout_t <= 0.0:
 		_scout_t = SCOUT_EVERY
 		_direct_autonomy()
+	_altar_tick(delta)
 	_update_mission(delta)
 
 
