@@ -217,7 +217,8 @@ const TEXT_DISABLED := Color(0.45, 0.43, 0.55)
 ## A label in the pixel fonts. size is a design size (old 1280x720 sizes): it picks body or title.
 static func label(text: String, size: int = 18, color: Color = TEXT) -> Label:
     var l := Label.new()
-    l.text = text
+    l.text = StringsEs.tx(text)                       # beta: Spanish pieces inside composed texts
+    l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
     var fs := fpx(size)
     if size >= 20:
         l.add_theme_font_override("font", title_font())
@@ -229,7 +230,8 @@ static func label(text: String, size: int = 18, color: Color = TEXT) -> Label:
 ## A button; min_size in design units.
 static func button(text: String, callback: Callable, min_size: Vector2 = Vector2.ZERO) -> Button:
     var b := Button.new()
-    b.text = text
+    b.text = StringsEs.tx(text)
+    b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
     b.custom_minimum_size = pv(min_size)
     b.pressed.connect(callback)
     b.mouse_entered.connect(func(): UIKit.sound("hover"))
