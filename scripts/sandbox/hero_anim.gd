@@ -35,6 +35,13 @@ static func side_of(facing: String, last_side: String) -> String:
     return last_side
 
 
+## Overhaul LPC: the four real directions when the sheet has them (LPC), else the last side (TPF).
+static func dir_anim(sprite: AnimatedSprite2D, base: String, facing: String, last_side: String) -> String:
+    if sprite != null and sprite.sprite_frames != null and sprite.sprite_frames.has_animation(base + facing):
+        return base + facing
+    return base + side_of(facing, last_side)
+
+
 static func attack_anim(facing: String, last_side: String) -> String:
     return "attack_" + side_of(facing, last_side)
 
@@ -62,13 +69,13 @@ static func play_attack(sprite: AnimatedSprite2D, facing: String, last_side: Str
     var wind := ANTICIPATION if lead else ANTICIPATION_SHORT
     sprite.speed_scale = 1.0
     if ranged:
-        sprite.play("ready_" + side)
+        sprite.play(dir_anim(sprite, "ready_", facing, last_side))
         t.tween_property(sprite, "position", -v * 3.0, wind).set_ease(Tween.EASE_OUT)
         t.tween_property(sprite, "position", v * 2.0, EXECUTION)
         t.tween_property(sprite, "position", Vector2.ZERO, RECOVERY)
     else:
         sprite.stop()
-        sprite.play("attack_" + side)
+        sprite.play(dir_anim(sprite, "attack_", facing, last_side))
         t.tween_property(sprite, "position", -v * 2.0, wind).set_ease(Tween.EASE_OUT)
         t.tween_property(sprite, "position", v * 6.0, EXECUTION).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
         t.tween_property(sprite, "position", Vector2.ZERO, RECOVERY).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
@@ -114,7 +121,7 @@ static func spawn_death(hero: Node2D, sprite: AnimatedSprite2D, facing: String, 
     s.sprite_frames = sprite.sprite_frames
     s.offset = sprite.offset
     ghost.add_child(s)
-    s.play("down_" + side_of(facing, last_side))
+    s.play(dir_anim(sprite, "down_", facing, last_side))
     parent.add_child.call_deferred(ghost)
     if hero_name != "":
         FloatingText.spawn(hero, "%s has fallen" % hero_name, Color(0.95, 0.85, 0.6), true, DEATH_HOLD + 0.6)
