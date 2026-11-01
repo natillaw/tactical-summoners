@@ -549,8 +549,8 @@ func _run_matrix() -> void:
                     t_sum += float(r["time"])
                     d_sum += int(r["dead"])
                     xp_sum += float(r["xp"])
-                    print("RUN %s %s %s #%d %s t=%.0f dead=%d xp=%.0f" % [profile, "mej" if upgraded else "sin", "wilds" if content == 0 else "F%d" % content,
-                        i + 1, r["outcome"], r["time"], r["dead"], r["xp"]])
+                    print("RUN %s %s %s #%d %s t=%.0f dead=%d xp=%.0f breaks=%d boss=%.2f" % [profile, "mej" if upgraded else "sin", "wilds" if content == 0 else "F%d" % content,
+                        i + 1, r["outcome"], r["time"], r["dead"], r["xp"], r["breaks"], r["boss_hp"]])
                 rows.append([profile, "si" if upgraded else "no", "wilds" if content == 0 else "piso%d" % content,
                     float(wins) / float(n_runs), t_sum / float(n_runs), float(d_sum) / float(n_runs), xp_sum / float(n_runs)])
     DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://tests/out"))
@@ -787,6 +787,8 @@ func _play_floor(floor_num: int, attempt: int) -> Dictionary:
     var xp_avg := 0.0
     for x in xps:
         xp_avg += float(x) / float(xps.size())
+    var breaks := sb.shield_breaks
+    var boss_hp := (float(sb.boss.hp) / float(sb.boss.max_hp)) if sb.boss != null else -1.0
     sb.queue_free()
     await get_tree().process_frame
-    return {"outcome": outcome, "time": t, "dead": dead_n, "xp": xp_avg}
+    return {"outcome": outcome, "time": t, "dead": dead_n, "xp": xp_avg, "breaks": breaks, "boss_hp": boss_hp}

@@ -10,7 +10,7 @@ extends RefCounted
 
 const CHANNEL_HEROES := 2
 const CHANNEL_TIME := 8.0
-const VULN_TIME := 20.0
+const VULN_TIME := 25.0
 const RADIUS := 46.0                 # standing on the altar
 const PHASE2_AT := 0.66
 const PHASE3_AT := 0.33

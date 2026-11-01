@@ -40,7 +40,7 @@ const FLOORS := {
         "foes": ["bandido_bruto", "bandido_degollador"], "nodes": 0, "intro": "A duel: one hero against a bandit elite and its two cutthroats."},
     9: {"name": "Floor 9: Warband Clearing", "hall": 5, "difficulty": "Very Hard", "mission": "survival", "party": 5, "threat": 48, "modifier": "hazard", "tactics": true, "width": 160, "height": 138,
         "foes": ["bandido_bruto", "bandido_maton", "bandido_mago", "bandido_degollador", "bandido_chaman", "bandido_arquero"], "nodes": 0},
-    10: {"name": "Floor 10: The Crimson Baron", "hall": 5, "difficulty": "Major Boss", "mission": "boss", "boss_name": "The Crimson Baron", "boss_hp_mult": 6, "party": 5, "threat": 30, "modifier": "enrage", "tactics": true, "altar": true, "width": 118, "height": 104,
+    10: {"name": "Floor 10: The Crimson Baron", "hall": 5, "difficulty": "Major Boss", "mission": "boss", "boss_name": "The Crimson Baron", "boss_hp_mult": 5, "atk_scale": 2.0, "shamans": 0, "party": 5, "threat": 30, "modifier": "enrage", "tactics": true, "altar": true, "width": 118, "height": 104,
         "foes": ["jefe_baron_carmesi", "bandido_bruto", "bandido_degollador", "bandido_mago", "bandido_chaman"], "nodes": 0, "intro": "The Crimson Baron cannot be hurt while his shield holds. The light comes from somewhere else."},
 }
 
