@@ -78,7 +78,8 @@ const ES := {
     # frequent screen words and labels built in code
     "Workers": "Trabajadores", "Level": "Nivel", "Not built yet": "Aún sin construir", "Day": "Día", "Beds": "Camas",
     "Upgrade": "Mejorar", "Heroes": "Héroes", "Summary": "Resumen", "Skills": "Habilidades", "Equipment": "Equipo", "Progression": "Progresión",
-    "Newest": "Más nuevos", "Lv": "Nv", "Mat": "Mat", "Ore": "Mineral", "Herb": "Hierba", "Iron": "Hierro", "Potions": "Pociones",
+    "Newest": "Más nuevos", "Lv": "Nv", "apprentice": "aprendiz", "talent ???": "talento ???", "Incompatible": "Incompatible",
+    "Clumsy": "Torpe", "Talented": "Talentoso", "Prodigy": "Prodigio", "Mat": "Mat", "Ore": "Mineral", "Herb": "Hierba", "Iron": "Hierro", "Potions": "Pociones",
     "(build)": "(construir)", "Tower": "Torre", "Floor": "Piso", "Gems": "Gemas", "Stones": "Piedras", "Books": "Libros",
 }
 

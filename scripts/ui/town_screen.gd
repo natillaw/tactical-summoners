@@ -446,6 +446,16 @@ func _panel_jobs(id: String) -> void:
         _panel_box.add_child(_wrap("Problem: " + problem, 13, Color(1.0, 0.6, 0.5)))
 
 
+## Apprentice line: the hidden aptitude stays "???" until a master has watched them (AptitudeDefs).
+func _aptitude_note(hd: HeroData, prof: String) -> String:
+    var known := String(hd.aptitude_known.get(prof, ""))
+    var p = hd.apprenticeship.get(prof)
+    var prog := ("  %d%%" % int(float(p.get("progress", 0.0)) * 100.0)) if p is Dictionary else ""
+    if known == "":
+        return "apprentice  ·  talent ???" + prog
+    return "apprentice  ·  %s" % AptitudeDefs.TIER_NAMES[known] + prog
+
+
 func _res_text(d: Dictionary) -> String:
     if d.is_empty():
         return "nothing"
@@ -474,7 +484,7 @@ func _panel_workers(id: String, slots: int) -> void:
     for i in mini(5, cands.size()):
         var hd := cands[i] as HeroData
         var lvl := hd.prof_level(prof)
-        var note := ("%s Lv %d" % [ProfessionDefs.info(prof).get("name", prof), lvl]) if lvl >= 0 else (("apprentice: needs a master here, learns in %d h" % TownTables.APPRENTICE_HOURS if TownTables.SPECIALIST_ONLY.has(id) else "can learn it") if hd.professions.size() < ProfessionDefs.MAX_KNOWN else "knows 2 professions")
+        var note := ("%s Lv %d" % [ProfessionDefs.info(prof).get("name", prof), lvl]) if lvl >= 0 else ((_aptitude_note(hd, prof) if TownTables.SPECIALIST_ONLY.has(id) else "can learn it") if hd.professions.size() < ProfessionDefs.MAX_KNOWN else "knows 2 professions")
         var row := HBoxContainer.new()
         row.add_child(_wrap("%s (%s)%s" % [hd.hero_name.split(" ")[0], note, " · now: " + hd.hq_assignment if hd.hq_assignment != "" else ""], 13, UIKit.MUTED))
         (row.get_child(0) as Label).custom_minimum_size = Vector2(125, 0)  # px

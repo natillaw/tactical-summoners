@@ -363,6 +363,13 @@ Los bandidos son humanos LPC con un atuendo fijo por tipo (`LpcFactions.BANDIT`)
 - **Sets del herrero:** el set completo de cada tier da bonificaciones.
 - **Arte:** pieza LPC cuando existe; ícono del pack más parecido. Anillos, amuletos y trinkets: solo ícono.
 
+### D-078 — Oficios con maestro y aptitud (2026-11-01, dueño)
+- En la herrería (`TownTables.SPECIALIST_ONLY`) solo trabajan herreros. Otros aprenden como **aprendices**: solo junto a un maestro (nivel 1+), en un puesto propio, sin producir.
+- Cada héroe tiene una **aptitud oculta** por oficio, fija desde la invocación (`AptitudeDefs`): atributos base ponderados + rasgos + tirada con su semilla. Tiers: incompatible (10 %), torpe (25 %), normal (35 %), talentoso (20 %), prodigio (10 %).
+- Progreso por hora = base × tier × maestro × rand(0,7-1,3); avances bruscos y frustraciones diarias; el incompatible abandona tras 8 h y el pueblo lo recuerda; al graduarse empieza en nivel 0-3 según su talento.
+- La aptitud se ve como "???" hasta que el maestro lo observa 6 h. Las 10 primeras invocaciones traen siempre un herrero. Guardado v15.
+- Para una segunda pasada: orientador para evaluar talentos, perks de oficio, "buen mentor" y compatibilidad de personalidades.
+
 ## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)
 
 | ID | Tema | Lo que existe / origen | Pregunta abierta |
