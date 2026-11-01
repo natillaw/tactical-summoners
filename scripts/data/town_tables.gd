@@ -54,6 +54,9 @@ const BUILDINGS := {
     "workshop": {"name": "Workshop", "plot": Rect2i(21, 3, 3, 2), "start": 0, "max": 5, "cost": 30,
         "open": "", "roof": Color(0.70, 0.55, 0.35), "props": ["caz:OutsideFeatures/OutsideFeatures_4_1", "caz:OutsideFeatures/OutsideFeatures_6_1"], "look": {"roof": "thatch", "wall": "timber", "tint": Color(0.9, 0.85, 0.75)}, "experts": ["occupation.lumberjack", "occupation.miner", "occupation.mason", "occupation.builder", "occupation.engineer", "occupation.blacksmith"],
         "jobs": ["make_materials"], "slots": 2, "hall": 0, "desc": "Carpenters shape wood and stone into building materials."},
+    "jeweler": {"name": "Jeweller", "plot": Rect2i(3, 21, 3, 2), "start": 0, "max": 5, "cost": 50,
+        "open": "", "roof": Color(0.45, 0.35, 0.6), "props": [], "look": {"roof": "tile", "wall": "stone", "tint": Color(0.8, 0.75, 0.9)},
+        "jobs": [], "slots": 1, "hall": 0, "desc": "Jewellers cut gems and set rings, amulets and trinkets (D-077)."},
     "alchemy": {"name": "Alchemy Lab", "plot": Rect2i(9, 15, 4, 2), "start": 0, "max": 5, "cost": 60,
         "open": "", "roof": Color(0.45, 0.85, 0.65), "props": ["voxel:crystal_deco", "caz:OutsideFeatures/OutsideFeatures_12_1"], "look": {"roof": "thatch", "wall": "plaster", "tint": Color(0.8, 1.0, 0.8)},
         "jobs": ["brew_medicine", "brew_potion", "brew_antidote"], "slots": 1, "hall": 1, "desc": "Alchemists brew medicine, healing potions and antidotes from herbs."},
@@ -94,8 +97,22 @@ static func ids() -> Array:
     return BUILDINGS.keys()
 
 
+static var _info_cache := {}
+
+
+## A building's data; its jobs include the item library's recipes made there (D-077).
 static func info(id: String) -> Dictionary:
-    return BUILDINGS.get(id, {})
+    if not BUILDINGS.has(id):
+        return {}
+    if not _info_cache.has(id):
+        var d: Dictionary = (BUILDINGS[id] as Dictionary).duplicate()
+        var jobs: Array = (d.get("jobs", []) as Array).duplicate()
+        for rid in ItemLibrary.recipes():
+            if String(ItemLibrary.recipes()[rid]["building"]) == id:
+                jobs.append(rid)
+        d["jobs"] = jobs
+        _info_cache[id] = d
+    return _info_cache[id]
 
 
 static func start_levels() -> Dictionary:
@@ -181,6 +198,6 @@ static func _uses_prof(id: String, prof: String) -> bool:
     if id == "library":
         return prof == "scholar"
     for rid in info(id).get("jobs", []):
-        if String(EconomyDefs.RECIPES.get(rid, {}).get("prof", "")) == prof:
+        if String(EconomyDefs.recipe(rid).get("prof", "")) == prof:
             return true
     return false

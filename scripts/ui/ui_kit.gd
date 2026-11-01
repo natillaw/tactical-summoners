@@ -128,6 +128,35 @@ static func piece(sheet: String, rect: Rect2, l: int, t: int, r: int, b: int, co
     return s
 
 
+## Speech bubble over a unit (owner: messages never fitted). Measured and drawn at the same size,
+## word-wrapped to `max_w` px, minimal: soft parchment, thin rim, small tail at `tip`.
+const BUBBLE_FS := 12
+static func draw_bubble(ci: CanvasItem, text: String, tip: Vector2, max_w: float = 120.0) -> void:
+    var font := ThemeDB.fallback_font
+    var lines: Array = []
+    var cur := ""
+    for w in text.split(" "):
+        var t := w if cur == "" else cur + " " + w
+        if cur != "" and font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, BUBBLE_FS).x > max_w:
+            lines.append(cur)
+            cur = w
+        else:
+            cur = t
+    if cur != "":
+        lines.append(cur)
+    var lh := font.get_height(BUBBLE_FS)
+    var widest := 0.0
+    for ln in lines:
+        widest = maxf(widest, font.get_string_size(ln, HORIZONTAL_ALIGNMENT_LEFT, -1, BUBBLE_FS).x)
+    var box := Rect2(tip.x - widest * 0.5 - 5, tip.y - 5 - lh * lines.size() - 6, widest + 10, lh * lines.size() + 6)
+    ci.draw_rect(box, Color(0.97, 0.94, 0.86, 0.96))
+    ci.draw_rect(box, Color(0.25, 0.17, 0.1, 0.9), false, 1.0)
+    ci.draw_colored_polygon(PackedVector2Array([tip + Vector2(-3, -5), tip + Vector2(3, -5), tip]), Color(0.97, 0.94, 0.86, 0.96))
+    for k in lines.size():
+        ci.draw_string(font, Vector2(box.position.x + 5, box.position.y + 3 + font.get_ascent(BUBBLE_FS) + k * lh), String(lines[k]),
+            HORIZONTAL_ALIGNMENT_LEFT, -1, BUBBLE_FS, Color(0.2, 0.13, 0.08))
+
+
 static func box(bg: Color, border: Color = Color(0, 0, 0, 0), border_w: int = 0, radius: int = 0, p_margin: int = 4) -> StyleBoxFlat:
     var s := StyleBoxFlat.new()
     s.bg_color = bg

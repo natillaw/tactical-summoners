@@ -5,7 +5,7 @@ extends Node2D
 ## acts it out. Only when the simulation says "idle" does it pick a free-time pastime of its own
 ## (wander, visit, train, rest, chat), weighted by personality. Never changes hero data.
 
-const SPEED := 55.0
+const SPEED := 30.0                 # map px/s; the town is drawn x2 (TownScreen.WORLD_SCALE)
 const ACTIVITIES := ["wander", "visit", "train", "work", "rest", "chat"]
 const SYNC_EVERY := 0.5
 ## Jobs done indoors (the hero goes inside) vs. outdoors (swings a tool at the door).
@@ -271,12 +271,7 @@ func _draw() -> void:
     draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
     var font := ThemeDB.fallback_font
     if _bubble_t > 0.0:
-        var bw := font.get_string_size(_bubble, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
-        var box := Rect2(-bw * 0.5 - 5, -66, bw + 10, 17)
-        draw_rect(box, Color(0.98, 0.97, 0.92, 0.95))
-        draw_rect(box, Color(0.2, 0.18, 0.15), false, 1.0)
-        draw_colored_polygon(PackedVector2Array([Vector2(-3, -49), Vector2(3, -49), Vector2(0, -44)]), Color(0.98, 0.97, 0.92))
-        draw_string(font, Vector2(-bw * 0.5, -53), _bubble, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.15, 0.12, 0.1))
+        UIKit.draw_bubble(self, _bubble, Vector2(0, -58))
     elif hovered:
         var txt := hero.display_name()
         var w := font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x

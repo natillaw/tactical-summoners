@@ -75,6 +75,15 @@ const NODES := {
 # --- recipes -------------------------------------------------------------------------------------
 ## work = hours of a 1.0-efficiency worker per batch. Inputs are taken when a batch STARTS (so the same
 ## material can never be used twice) and outputs land when it ends. item = crafted equipment kind.
+## Every recipe: the town's own (RECIPES) plus the item library's crafted gear (ItemLibrary, D-077).
+static func recipe(rid: String) -> Dictionary:
+    return RECIPES[rid] if RECIPES.has(rid) else ItemLibrary.recipes().get(rid, {})
+
+
+static func has_recipe(rid: String) -> bool:
+    return RECIPES.has(rid) or ItemLibrary.recipes().has(rid)
+
+
 const RECIPES := {
     "grow_grain": {"name": "Grow grain", "building": "farm", "prof": "farmer", "min": 0, "work": 2.0, "in": {}, "out": {"grain": 3}},
     "grow_herbs": {"name": "Grow herbs", "building": "farm", "prof": "farmer", "min": 1, "work": 3.0, "in": {}, "out": {"herb": 2}},

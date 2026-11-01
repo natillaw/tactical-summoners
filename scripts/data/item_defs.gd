@@ -14,10 +14,12 @@ const RARITIES := {
     "uncommon": {"name": "Uncommon", "affixes": 1, "mult": 1.1, "color": Color(0.45, 0.9, 0.45), "weight": 28.0},
     "rare": {"name": "Rare", "affixes": 2, "mult": 1.2, "color": Color(0.4, 0.6, 1.0), "weight": 9.0},
     "epic": {"name": "Epic", "affixes": 3, "mult": 1.35, "color": Color(0.75, 0.4, 1.0), "weight": 2.5},
-    "legendary": {"name": "Legendary", "affixes": 2, "mult": 1.5, "color": Color(1.0, 0.6, 0.15), "weight": 0.45, "unique": true},
-    "mythic": {"name": "Mythic", "affixes": 3, "mult": 1.7, "color": Color(1.0, 0.25, 0.3), "weight": 0.05, "unique": true},
+    "legendary": {"name": "Legendary", "affixes": 4, "mult": 1.5, "color": Color(1.0, 0.6, 0.15), "weight": 0.45},
+    "unique": {"name": "Unique", "affixes": 2, "mult": 1.6, "color": Color(1.0, 0.22, 0.22), "weight": 0.0, "unique": true},
+    "mythic": {"name": "Mythic", "affixes": 3, "mult": 1.7, "color": Color(1.0, 0.25, 0.3), "weight": 0.0, "unique": true},   # old saves only
 }
-const RARITY_ORDER := ["common", "uncommon", "rare", "epic", "legendary", "mythic"]
+## D-077: common (white), uncommon (green), rare (blue), epic (purple), legendary (orange), unique (red).
+const RARITY_ORDER := ["common", "uncommon", "rare", "epic", "legendary", "unique", "mythic"]
 
 ## kind: "weapon" | "armor" | "jewel". slot: where it goes ("ring" fits ring1/ring2). two_handed fills
 ## both hands. classes = trained users (others get NOVICE_EFF of its stats). stats grow per item level.
@@ -41,7 +43,7 @@ const BASES := {
     "boots": {"name": "Boots", "kind": "armor", "slot": "feet", "stats": {"def": 1, "move": 4.0}, "classes": []},
     "ring": {"name": "Ring", "kind": "jewel", "slot": "ring", "stats": {"crit": 0.02}, "classes": []},
     "amulet": {"name": "Amulet", "kind": "jewel", "slot": "amulet", "stats": {"mres": 2, "status_resist": 0.03}, "classes": []},
-    "charm": {"name": "Charm", "kind": "jewel", "slot": "special", "stats": {"hp": 8}, "classes": []},
+    "charm": {"name": "Trinket", "kind": "jewel", "slot": "special", "stats": {"hp": 8}, "classes": []},
 }
 const CRAFTABLE := {"weapon": ["sword", "greataxe", "dagger", "mace", "bow", "staff", "wand"],
     "armor": ["shield", "helm", "hood", "mail", "robe", "gloves", "greaves", "boots"]}
@@ -96,7 +98,7 @@ static func rarity_color(r: String) -> Color:
 
 ## D-060: 8 slots are open now (they match the Dragon Regalia frames); hands, ring2 and special exist
 ## in the data and saves but stay locked until opened (nothing is generated or equipped for them).
-const ACTIVE_SLOTS := ["main_hand", "off_hand", "head", "chest", "legs", "feet", "ring1", "amulet"]
+const ACTIVE_SLOTS := ["main_hand", "off_hand", "head", "chest", "hands", "legs", "feet", "ring1", "amulet", "special"]   # D-077: + hands, trinket
 
 
 static func slot_open(slot: String) -> bool:
@@ -166,7 +168,7 @@ static func apply_equipment(stats: Dictionary, equipment: Dictionary, class_id: 
         if st != "":
             set_count[st] = int(set_count.get(st, 0)) + 1
     for st in set_count:
-        var bonus: Dictionary = SETS[st]["bonus"]
+        var bonus: Dictionary = SETS[st]["bonus"] if SETS.has(st) else ItemLibrary.SET_BONUS
         for need in bonus:
             if int(set_count[st]) >= int(need):
                 for k in bonus[need]:
@@ -175,6 +177,8 @@ static func apply_equipment(stats: Dictionary, equipment: Dictionary, class_id: 
                             hp_pct += float(bonus[need][k])
                         "crit":
                             out["crit"] = clampf(float(out.get("crit", 0.0)) + float(bonus[need][k]), 0.0, 0.6)
+                        "def", "mres", "atk", "mag", "hp":
+                            out[k] = int(out.get(k, 0)) + int(bonus[need][k])
                         _:
                             mods[k] = bonus[need][k]
     out["hp"] = roundi(float(out.get("hp", 1)) * (1.0 + hp_pct))
