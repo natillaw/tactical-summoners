@@ -24,7 +24,7 @@ const METAL_NAMES := {"copper": "Copper", "iron": "Iron", "steel": "Steel", "sil
 ## Who makes what. cost = materials per tier step (x tier); time = work-hours.
 const LINES := {
     "blacksmith": {"prof": "blacksmith", "bases": ["sword", "greataxe", "dagger", "mace", "shield", "helm", "mail", "gloves", "greaves", "boots"],
-        "cost": {"ingot": 3, "materials": 4}, "cost_t1": {"ore": 5, "materials": 4}, "time": 6.0, "name": "metal"},
+        "cost": {"ingot": 3, "materials": 4}, "cost_t1": {"ore": 3, "materials": 3}, "time": 6.0, "name": "metal"},
     "workshop": {"prof": "carpenter", "bases": ["bow", "staff", "wand"], "cost": {"wood": 6, "materials": 3}, "time": 5.0, "name": "wood"},
     "jeweler": {"prof": "jeweler", "bases": ["ring", "amulet", "charm"], "cost": {"ingot": 1, "materials": 2, "essence": 1}, "time": 6.0, "name": "gem"},
 }

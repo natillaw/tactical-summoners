@@ -82,7 +82,10 @@ func _ready() -> void:
                 break
             say("  -> Wilds runs for experience and materials before retrying")
             for farm in 2:                            # a player grinds a little before retrying
+                _next_floor_saved = _next_floor
+                _next_floor = -1                       # Wilds: four go, the smith stays at the forge
                 _pick_party()
+                _next_floor = _next_floor_saved
                 _gear_up()
                 await _play_floor(-Game.wilds_tier(), 0)
                 total_farm_runs += 1
@@ -261,6 +264,9 @@ func _gear_up() -> void:
                 Game.equip(hd, int(it["uid"]), String(slots[0]))
 
 
+var _next_floor_saved := 1
+
+
 func _party_score(h: HeroData) -> int:
     var s := (100000 if Game.is_fighter(h) else 0) + h.power()
     if h.hq_assignment == "blacksmith":
@@ -275,7 +281,7 @@ func _pick_party() -> void:
     var pool: Array = Game.heroes.values().filter(func(h): return h.hq_assignment != "construction")
     # beta pass: only as many as the floor lets in, and town workers (the smith first) stay home when
     # others can go; a player keeps the forge running
-    var need := TowerExpedition.party_max(_next_floor) if _next_floor > 0 else Game.PARTY_SIZE
+    var need := TowerExpedition.party_max(_next_floor) if _next_floor > 0 else Game.PARTY_SIZE - 1
     pool.sort_custom(func(a, b): return _party_score(a) > _party_score(b))
     if pool.size() < need:
         pool = Game.heroes.values()
