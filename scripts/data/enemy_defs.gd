@@ -109,7 +109,13 @@ const CALLER_ADDS := 3
 ## skills (hero_area) aimed at a blob deal BLOB_MULT more.
 const BLOB_RADIUS := 80.0
 const BLOB_COUNT := 3
-const BLOB_MULT := 1.6
+const BLOB_MULT := 2.0
+## 2026-10-31 (owner: "a lo loco no debe tener chance"): what is telegraphed must be lethal, so reading
+## and dodging is the skill. Every creature skill that hits an area multiplies its dmg_mult by
+## TELEGRAPH_MULT; a slow basic strike (wind-up >= HEAVY_WINDUP, a readable blow) hits HEAVY_MULT harder.
+const TELEGRAPH_MULT := 1.5
+const HEAVY_WINDUP := 0.9
+const HEAVY_MULT := 1.6
 
 ## --- creature classes and skills (D-065) -------------------------------------------------------------
 ## Roles work as classes: swarm (skirmisher), melee (fighter), brute, guard (defender), ranged (archer),
@@ -121,8 +127,8 @@ const BLOB_MULT := 1.6
 ## strongest creature (wards); allies = every creature around the caster; hero_area = an area at a hero
 ## (marked on the ground: step out of it).
 const SKILLS := {
-    "mend": {"name": "Mend", "cast": 1.5, "cd": 7.0, "range": 200.0, "target": "ally_low", "below": 0.75, "min_floor": 2,
-        "heal_pct": 0.3, "desc": "Heals the most hurt creature. Kill or stun the healer."},
+    "mend": {"name": "Mend", "cast": 1.5, "cd": 5.0, "range": 200.0, "target": "ally_low", "below": 0.75, "min_floor": 2,
+        "heal_pct": 0.4, "desc": "Heals the most hurt creature. Kill or stun the healer."},
     "ward": {"name": "Ward", "cast": 1.1, "cd": 11.0, "range": 220.0, "target": "ally_key", "min_floor": 3,
         "shield_pct": 0.22, "desc": "Shields an ally (the boss first)."},
     "rally": {"name": "Rally", "cast": 1.2, "cd": 16.0, "range": 230.0, "target": "allies", "min_floor": 4,

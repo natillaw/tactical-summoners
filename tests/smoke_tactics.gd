@@ -153,5 +153,21 @@ func _ready() -> void:
     sbh.queue_free()
     await get_tree().process_frame
 
+    # --- dash (2026-10-31): i-frames, cooldown, imperfect AI, faster warriors ---------------------
+    var sbd := _screen(7)
+    var dh: SandboxHero = sbd.heroes[0]
+    var dp0 := dh.position
+    var ok_dash := dh.dash(Vector2.RIGHT)
+    var hp_d := dh.hp
+    dh.take_hit(DamageInfo.make(80.0, "true", null))
+    check(ok_dash and dh.hp == hp_d and not dh.dash(Vector2.LEFT), "a dash gives i-frames (the blow misses) and has a cooldown")
+    for k in 10:
+        dh.tick(0.05)
+    check(dh.position.distance_to(dp0) > 8.0, "the dash moves the hero (%.0f px)" % dh.position.distance_to(dp0))
+    check(CombatRules.ai_dash_chance(10, 30) <= CombatRules.AI_DASH_MAX and CombatRules.AI_DASH_MAX < 0.7, "autonomous heroes dash at most %.0f%% of the time" % (CombatRules.AI_DASH_MAX * 100.0))
+    var w := CombatRules.derive({"agi": 5}, "class.warrior")
+    var m := CombatRules.derive({"agi": 5}, "class.mage")
+    check(float(w["interval"]) < float(m["interval"]), "warriors swing faster (%.2f s vs %.2f s)" % [float(w["interval"]), float(m["interval"])])
+    sbd.queue_free()
     print("== ALL PASSED ==" if fails == 0 else "== %d FAILED ==" % fails)
     get_tree().quit(0 if fails == 0 else 1)

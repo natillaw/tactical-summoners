@@ -13,6 +13,7 @@ var max_hp: int = 1
 var hp: int = 1
 var armor: int = 0
 var mres: int = 0
+var iframe_t: float = 0.0            # dash invulnerability left (CombatRules.DASH_IFRAMES)
 var immune: bool = false             # Crimson Baron's altar shield (master prompt E): every hit does 0
 signal immune_hit
 var heal_block: bool = false         # floor modifier "no_heal" (master prompt D)
@@ -50,6 +51,9 @@ func take_hit(info: DamageInfo) -> int:
         return 0
     if downed:
         agony = maxf(0.0, agony - CombatRules.AGONY_HIT_PENALTY)
+        return 0
+    if iframe_t > 0.0:
+        FloatingText.spawn(self, "Dodged!", Color(0.7, 0.9, 1.0), false, 0.8)
         return 0
     if immune:
         FloatingText.spawn(self, "0", Color(0.75, 0.75, 0.85), false, 0.8)
@@ -246,6 +250,7 @@ func _sync_status_fx() -> void:
 
 ## Call every simulation step: status durations, damage over time, agony countdown.
 func tick_combat(delta: float) -> void:
+    iframe_t = maxf(0.0, iframe_t - delta)
     _sync_status_fx()
     if dead:
         return

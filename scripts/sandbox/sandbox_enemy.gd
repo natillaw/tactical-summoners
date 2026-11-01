@@ -643,7 +643,7 @@ func _resolve_skill(heroes: Array) -> void:
             var blob := EnemyDefs.BLOB_MULT if caught.size() >= EnemyDefs.BLOB_COUNT else 1.0
             for h in caught:
                 var own := float(sk.get("target_mult", 1.0)) if h == _skill_hero else 1.0
-                var hit := DamageInfo.make(float(atk) * float(sk["dmg_mult"]) * blob * own, "physical", self, crit_chance, combat_rng)
+                var hit := DamageInfo.make(float(atk) * float(sk["dmg_mult"]) * EnemyDefs.TELEGRAPH_MULT * blob * own, "physical", self, crit_chance, combat_rng)
                 hit.element = String(sk.get("element", ""))
                 h.take_hit(hit)
                 if sk.has("status") and h.alive:
@@ -721,7 +721,7 @@ const STRIKE_PROJECTILE_SPEED := 900.0
 func _land_strike(heroes: Array) -> void:
     for h in heroes:
         if is_instance_valid(h) and not h.dead and h.position.distance_to(_aim) <= strike_radius:
-            h.take_hit(DamageInfo.make(float(atk), "physical", self, crit_chance, combat_rng))
+            h.take_hit(DamageInfo.make(float(atk) * (EnemyDefs.HEAVY_MULT if windup_time >= EnemyDefs.HEAVY_WINDUP else 1.0), "physical", self, crit_chance, combat_rng))
             if not on_hit_status.is_empty() and h.alive:
                 h.apply_status(String(on_hit_status["id"]), float(on_hit_status["dur"]), float(on_hit_status.get("mag", 0.0)), self)
     if is_boss:

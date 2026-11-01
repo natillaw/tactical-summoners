@@ -40,6 +40,24 @@ const KITE_COOLDOWN := 2.5        # a ranged hero backs off at most this often
 const PROJECTILE_SPEED := 650.0   # basic shots (look and D-054 travel time)
 
 
+## --- dash (2026-10-31, owner): a Souls-like dodge. Space = a short burst in the moving direction (or to
+## the cursor) with invulnerability frames. A good player can dodge every telegraphed blow; the AI's
+## heroes dash too, but only when their own roll succeeds (AI_DASH_*), late, and sometimes the wrong way.
+const DASH_DIST := 92.0           # px
+const DASH_TIME := 0.18           # s of travel
+const DASH_IFRAMES := 0.26        # s untouchable (starts with the dash)
+const DASH_CD := 1.6
+const AI_DASH_BASE := 0.12        # chance an autonomous hero dashes out of a blow (+ the old auto-dodge)
+const AI_DASH_MAX := 0.55
+const AI_DASH_WRONG := 0.2        # share of AI dashes that pick a poor direction (sideways, still caught)
+## Warriors swing faster (owner: "se siente eterno"): basic attack interval multiplier per class.
+const CLASS_INTERVAL_MULT := {"class.warrior": 0.7}
+
+
+static func ai_dash_chance(agi: int, level: int) -> float:
+    return clampf(AI_DASH_BASE + auto_dodge_chance(agi, level), 0.0, AI_DASH_MAX)
+
+
 static func auto_dodge_chance(agi: int, level: int) -> float:
     return clampf(DODGE_PER_AGI_LEVEL * float(agi) * float(maxi(0, level - 1)), 0.0, DODGE_MAX)
 
@@ -101,7 +119,7 @@ static func derive(attrs: Dictionary, class_id: String) -> Dictionary:
         "mres": tem / 2 + int(c["mres"]),
         "spd": agi,
         "move": 70.0 + float(agi) * 3.0,
-        "interval": clampf(1.6 - float(agi) * 0.04, 0.6, 1.6),
+        "interval": clampf(1.6 - float(agi) * 0.04, 0.6, 1.6) * float(CLASS_INTERVAL_MULT.get(class_id, 1.0)),
         "crit": clampf(0.05 + float(agi) * 0.005, 0.0, 0.35),
         "energy": 3 + tem / 3,
         "status_resist": clampf(float(tem) * 0.01, 0.0, 0.5),

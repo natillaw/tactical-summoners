@@ -745,9 +745,29 @@ func mission_title() -> String:
 func _spawn_wave() -> void:
 	if living_enemies().size() >= WAVE_MAX_ALIVE or map.enemy_spawn_cells.is_empty():
 		return
-	for i in 2:
+	# master prompt D (protection): waves grow and march on the objective (the shrine, else the squad)
+	_wave_n += 1
+	var cfg := TowerExpedition.get_floor_config(floor_number) if floor_number > 0 else {}
+	var size := int(cfg.get("wave_base", 2)) + int(float(_wave_n) * float(cfg.get("wave_growth", 0.0)))
+	var target := shrine.position if shrine != null else _centre_of_squad()
+	for i in size:
 		var c: Vector2i = map.enemy_spawn_cells[_rng.randi() % map.enemy_spawn_cells.size()]
-		_spawn_enemy(c, TowerExpedition.foe_for(floor_number, _rng.randi()))
+		var e := _spawn_enemy(c, TowerExpedition.foe_for(floor_number, _rng.randi()))
+		if cfg.has("wave_base"):
+			e.tactical = true
+			e.home = target
+			e.alert()
+
+
+var _wave_n: int = 0
+
+
+func _centre_of_squad() -> Vector2:
+	var live := living_heroes()
+	var c := Vector2.ZERO
+	for h in live:
+		c += h.position / float(maxi(1, live.size()))
+	return c
 
 
 ## "Clear the floor" (playtest B6): the last creatures can be ambushers, hidden until a hero walks next
@@ -900,6 +920,17 @@ func select_only(list: Array) -> void:
 ## D-051: a hero below the obedience threshold ignores the command and says so.
 func _refuse_command(h: SandboxHero) -> void:
 	FloatingText.spawn(h, "ignores you (Obedience %d)" % h.hero.obedience, Color(1.0, 0.6, 0.4), false, 1.6)
+
+
+## Space: the driven hero dashes the way it is moving (or to the cursor when standing still); in group
+## view every selected hero dashes toward the cursor.
+func dash_selected() -> void:
+	var cursor := screen_to_world(get_local_mouse_position())
+	var c := controlled()
+	var who: Array = [c] if c != null else heroes.filter(func(h): return h.selected and h.alive)
+	for h in who:
+		var dir: Vector2 = h.velocity if h.velocity.length() > 5.0 else cursor - h.position
+		h.dash(dir)
 
 
 ## The hero the player drives right now (D-053), or null in group view.
@@ -1655,6 +1686,10 @@ func _input(event: InputEvent) -> void:
 		_q_held = event.pressed
 		if event.pressed:
 			attack_at_cursor()
+		get_viewport().set_input_as_handled()
+		return
+	if event.keycode == KEY_SPACE and event.pressed:
+		dash_selected()
 		get_viewport().set_input_as_handled()
 		return
 	var skill_keys := {KEY_W: 0, KEY_E: 1, KEY_R: 2}
