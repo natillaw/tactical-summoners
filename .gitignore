@@ -36,3 +36,6 @@ assets/_inbox/**/raw/
 # test outputs (keep the balance matrix)
 tests/out/*
 !tests/out/balance_matrix.csv
+
+# raw packs (overhaul): only processed, used assets enter the repo
+assets/nuevos assets/

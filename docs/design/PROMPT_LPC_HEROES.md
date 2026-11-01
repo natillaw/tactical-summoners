@@ -1,3 +1,5 @@
+> **SUSTITUIDO (2026-10-31)** por `docs/design/PROMPT_OVERHAUL_GRAFICO_LPC.md` (overhaul gráfico LPC). Se conserva por el detalle de héroes.
+
 # PROMPT — Rework completo del frontend de héroes a LPC (Liberated Pixel Cup)
 
 > Para Claude Code, en el repo `tactical-summoners`. Léelo entero antes de tocar nada.
