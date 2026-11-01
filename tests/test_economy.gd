@@ -62,6 +62,33 @@ func _initialize() -> void:
     var old12: Dictionary = g._migrate({"version": 12, "heroes": [{"hero_seed": 4242}], "memorial": [{"snapshot": {"hero_seed": 77}}]})
     check(old12["heroes"][0]["look"] == HeroGenerator.lpc_look(4242) and old12["memorial"][0]["snapshot"]["look"] == HeroGenerator.lpc_look(77),
         "v12 -> v13: roster and memorial heroes get their LPC look from their seed")
+    # owner 2026-11-01: only smiths work the forge; others learn it as apprentices beside a master
+    var g2: Node = load("res://scripts/autoload/game.gd").new()
+    root.add_child(g2)
+    g2.autosave = false
+    g2.save_path = "user://test_economy_appr.json"
+    g2.new_game()
+    g2.starter_summons()
+    check(g2.heroes.values().any(func(x): return (x as HeroData).knows_prof("blacksmith")), "the first ten summons always bring a smith")
+    g2.town_buildings["blacksmith"] = 2
+    var smiths: Array = g2.heroes.values().filter(func(x): return (x as HeroData).knows_prof("blacksmith"))
+    var pupil: HeroData = g2.heroes.values().filter(func(x): return not (x as HeroData).knows_prof("blacksmith") and (x as HeroData).professions.size() < ProfessionDefs.MAX_KNOWN)[0]
+    for x in g2.heroes.values():
+        (x as HeroData).hq_assignment = ""
+    for i in 5:
+        g2.party[i] = ""
+    check(g2.assign_work(pupil, "blacksmith") != "", "no master at the forge: a non-smith cannot work there")
+    var master: HeroData = smiths[0]
+    master.professions["blacksmith"]["lvl"] = TownTables.MASTER_MIN_LVL
+    var r_m: String = g2.assign_work(master, "blacksmith")
+    var r_p: String = g2.assign_work(pupil, "blacksmith")
+    check(r_m == "" and r_p == "", "with a master working, a hero joins as an apprentice (master: %s, pupil: %s)" % [r_m, r_p])
+    g2.hq_outputs["ore"] = 300
+    g2.hq_outputs["materials"] = 300
+    g2.set_job("blacksmith", "smelt_iron")
+    for d in 8:
+        g2.pass_time(24)
+    check(pupil.knows_prof("blacksmith"), "after %d hours beside the master the apprentice is a smith (%s)" % [TownTables.APPRENTICE_HOURS, str(pupil.apprenticeship)])
     if OS.get_environment("SIM_DAYS") != "":
         _simulate(int(OS.get_environment("SIM_DAYS")))
     print("== %s ==" % ("ALL PASSED" if fails == 0 else "%d FAILED" % fails))

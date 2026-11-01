@@ -131,14 +131,15 @@ func _ready() -> void:
     smith.professions.clear()
     var nobody: HeroData = Game.heroes.values().filter(func(h): return h != smith and not (h as HeroData).knows_prof("blacksmith") and not (h as HeroData).knows_prof("builder"))[0]
     nobody.professions.clear()
-    check(Game.assign_work(nobody, "blacksmith") == "" and nobody.prof_level("blacksmith") == 0, "a hero without the trade only joins the forge as an apprentice")
+    for w in Game.workers_at("blacksmith"):
+        Game.assign_work(w, "")
+    check(Game.assign_work(nobody, "blacksmith") != "" and not nobody.knows_prof("blacksmith"), "2026-11-01: without a master at the forge a hero without the trade cannot work there")
     Game.hq_outputs["ingot"] = 20
     Game.hq_outputs["wood"] = 20
     Game.set_job("blacksmith", "forge_weapon")
     var stash0 := Game.stash.size()
     Game.pass_time(24)
-    check(Game.stash.size() == stash0 and String(Game.town_problems.get("blacksmith", "")).contains("Blacksmith"), "an apprentice cannot forge a weapon (needs a real blacksmith)")
-    Game.assign_work(nobody, "")                     # frees the only work place of a level-1 forge
+    check(Game.stash.size() == stash0, "nobody qualified at the forge: no weapon is forged")
     smith.learn_prof("blacksmith")
     smith.professions["blacksmith"]["lvl"] = 2
     check(Game.assign_work(smith, "blacksmith") == "", "a blacksmith takes the forge")

@@ -5,7 +5,7 @@ extends Node
 signal changed
 
 const DEFAULT_SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 13
+const SAVE_VERSION := 14
 const PARTY_SIZE := 5            # slots 0-2 = front row, slots 3-4 = back row
 const XP_PER_BOOK := 100
 
@@ -139,6 +139,16 @@ func starter_summons() -> Array:
         if (x as HeroData).knows_prof("builder"):
             (x as HeroData).hq_assignment = "construction"           # builders start on the building site
             break
+    # owner 2026-11-01: the forge takes only smiths, so the first ten always bring one (the hero with the
+    # most free profession room learns it if no past life gave it)
+    if not out.any(func(x): return (x as HeroData).knows_prof("blacksmith")):
+        var pick: Array = out.duplicate()
+        pick.sort_custom(func(a, b): return (a as HeroData).professions.size() < (b as HeroData).professions.size())
+        for x in pick:
+            if not is_fighter(x) and (x as HeroData).learn_prof("blacksmith") == "":
+                break
+        if not out.any(func(x): return (x as HeroData).knows_prof("blacksmith")):
+            (pick[0] as HeroData).learn_prof("blacksmith")
     # a first squad of five is ready to go (fighters first): the player can change it in Menu -> Party
     var squad: Array = out.filter(func(x): return is_fighter(x))
     for x in out:
@@ -895,6 +905,18 @@ func set_job(bid: String, recipe: String) -> bool:
 
 
 ## Profession a workplace needs ("" if none).
+## Work places taken for this hero: at a specialist-only building apprentices have their own places
+## (TownTables.APPRENTICE_SLOTS) and do not use the workers' ones.
+func _slots_taken(bid: String, h: HeroData) -> int:
+    if not TownTables.SPECIALIST_ONLY.has(bid):
+        return workers_at(bid).size()
+    var prof := workplace_prof(bid)
+    var pupils: Array = workers_at(bid).filter(func(w): return not (w as HeroData).knows_prof(prof))
+    if h.knows_prof(prof):
+        return workers_at(bid).size() - pupils.size()
+    return 999 if pupils.size() >= TownTables.APPRENTICE_SLOTS else 0
+
+
 func workplace_prof(bid: String) -> String:
     if bid == "construction":
         return "builder"
@@ -918,12 +940,23 @@ func assign_work(h: HeroData, bid: String) -> String:
         h.hq_assignment = ""
     elif bid != "construction" and building_level(bid) <= 0:
         last_reason = "not built yet"
-    elif bid != "construction" and workers_at(bid).size() >= TownTables.worker_slots(bid, building_level(bid)) and h.hq_assignment != bid:
+    elif bid != "construction" and _slots_taken(bid, h) >= TownTables.worker_slots(bid, building_level(bid)) and h.hq_assignment != bid:
         last_reason = "no free work place (%d)" % TownTables.worker_slots(bid, building_level(bid))
     else:
         var prof := workplace_prof(bid)
         if prof == "":
             last_reason = "nobody works here"
+        elif TownTables.SPECIALIST_ONLY.has(bid) and not h.knows_prof(prof):
+            # apprentice: needs a master at work there and room for one more profession
+            var master: bool = workers_at(bid).any(func(w): return (w as HeroData).prof_level(prof) >= TownTables.MASTER_MIN_LVL)
+            if not master:
+                last_reason = "only a %s can work here (an apprentice needs a master working there)" % String(ProfessionDefs.info(prof)["name"]).to_lower()
+            elif h.professions.size() >= ProfessionDefs.MAX_KNOWN:
+                last_reason = "already knows %d professions: forget one first" % ProfessionDefs.MAX_KNOWN
+            else:
+                h.apprenticeship[prof] = float(h.apprenticeship.get(prof, 0.0))
+                h.hq_assignment = bid
+                h.add_memory("hq_assign", "Became an apprentice at the %s." % TownTables.info(bid).get("name", bid), "", 2)
         else:
             last_reason = h.learn_prof(prof)
             if last_reason == "":
@@ -940,7 +973,10 @@ func can_work_now(h: HeroData) -> bool:
         return false
     if h.hq_assignment == "construction":
         return not construction.is_empty() and h.knows_prof("builder")
-    return building_level(h.hq_assignment) > 0 and h.knows_prof(workplace_prof(h.hq_assignment))
+    var prof := workplace_prof(h.hq_assignment)
+    if building_level(h.hq_assignment) > 0 and h.apprenticeship.has(prof):
+        return true                                  # an apprentice goes to work to learn (TownSim._apprentices)
+    return building_level(h.hq_assignment) > 0 and h.knows_prof(prof)
 
 
 ## Takes a recipe's inputs and opens a batch. "" on success, else why it cannot start.
@@ -1605,6 +1641,8 @@ func _migrate(data: Dictionary) -> Dictionary:
         data["exp_charges"] = ExpeditionDefs.CHARGES_MAX
         data["exp_charge_t"] = 0.0
         data["portal_upgrades"] = {}
+    if v < 14:
+        pass                              # v13 -> v14: heroes gain "apprenticeship" (defaults to {} on load)
     if v < 13:
         # v12 -> v13 (overhaul LPC, D-A): every hero and memorial snapshot gets its LPC look from its
         # seed; the TPF look stays in "appearance" as the legacy one.

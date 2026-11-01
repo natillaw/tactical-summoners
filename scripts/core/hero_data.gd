@@ -35,6 +35,7 @@ var hq_assignment: String = ""    # workplace: "" | a building id | "constructio
 ## in_treatment | deployed. Exclusive: a hero is never working and deployed at once.
 var activity_state: String = "idle"
 # Town life (HQ Phase 1, save v9): professions (D-049), needs, health, bed, gear.
+var apprenticeship: Dictionary = {}  # prof -> hours learned beside a master (TownTables.APPRENTICE_HOURS)
 var professions: Dictionary = {}  # prof id -> {"lvl": int, "xp": float}; at most ProfessionDefs.MAX_KNOWN
 var passion: String = ""          # profession from the past life (learns faster)
 var hunger: int = 0               # 0 fed .. 100 starving
@@ -496,7 +497,8 @@ func to_dict() -> Dictionary:
         "skills": skills.duplicate(),
         "loadout": loadout.duplicate(),
         "skill_choices": intify(skill_choices.duplicate(true)),
-        "professions": intify(professions.duplicate(true)),     # same numbers as after a JSON round trip
+        "professions": intify(professions.duplicate(true)),
+        "apprenticeship": apprenticeship.duplicate(),     # same numbers as after a JSON round trip
         "passion": passion,
         "needs": [hunger, fatigue, stress, exhausted_hours],
         "diseases": intify(diseases.duplicate(true)),
@@ -573,6 +575,7 @@ static func from_dict(d: Dictionary) -> HeroData:
         # level already reached, so veteran heroes are not left behind.
         h.ensure_skills()
         h._queue_skill_choices(0, h.level)
+    h.apprenticeship = (d.get("apprenticeship", {}) as Dictionary).duplicate()
     if d.has("professions"):
         h.professions = (d["professions"] as Dictionary).duplicate(true)
         for k in h.professions.keys():

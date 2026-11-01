@@ -60,7 +60,7 @@ const ES := {
     "Works at: ": "Trabaja en: ", "ambush!": "¡emboscada!", "antidote": "antídoto", "can't reach": "no llego", "down": "caído",
     "falling back": "me repliego", "greater potion": "poción mayor", "interrupted": "interrumpido", "no one to follow": "nadie a quien seguir",
     "no way out": "sin salida", "potion": "poción", "shield broken!": "¡escudo roto!", "stagger": "aturdido", "target down": "objetivo abatido",
-    "target lost": "objetivo perdido", "won't obey": "no obedece",
+    "target lost": "objetivo perdido", "won't obey": "no obedece", "only a blacksmith can work here": "solo un herrero puede trabajar aquí", "can learn it": "puede aprenderlo", "knows 2 professions": "sabe 2 profesiones",
     # buildings, classes, missions, floors (data names shown inside composed texts)
     "Alchemy Lab": "Laboratorio de alquimia", "Barracks": "Cuartel", "Blacksmith": "Herrería", "Dormitory": "Dormitorio", "Farm": "Granja",
     "Hospital": "Hospital", "Jeweller": "Joyería", "Kitchen": "Cocina", "Library": "Biblioteca", "Lumber Camp": "Aserradero", "Memorial": "Memorial",
