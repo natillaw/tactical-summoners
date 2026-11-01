@@ -609,7 +609,7 @@ Warning: " + why
 Warning: " + Game.floor_advice(f)
         grid.add_child(btn)
     if Game.party_heroes().size() < Game.PARTY_SIZE:
-        var warn := UIKit.label("Party not full: a test squad will go instead and nothing is kept (Menu -> Party, or the War Room).", 13, Color(1.0, 0.7, 0.5))
+        var warn := UIKit.label("Each floor lets in up to its squad size; with fewer heroes than that, a test squad goes and nothing is kept (Menu -> Party).", 13, Color(1.0, 0.7, 0.5))
         warn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
         warn.custom_minimum_size = Vector2(150, 0)  # px
         _panel_box.add_child(warn)

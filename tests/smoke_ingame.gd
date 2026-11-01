@@ -56,7 +56,7 @@ func _ready() -> void:
     ev.pressed = true
     Input.parse_input_event(ev)
     await _frames(15)
-    check(hero.dashes >= 1 and hero.position.distance_to(p0) > 10.0, "Space dashes the driven hero (%d dash, %.0f px)" % [hero.dashes, hero.position.distance_to(p0)])
+    check(hero.dashes >= 1 and hero.position.distance_to(p0) > 10.0, "Space dashes the driven hero (%d dash, %.0f px; cd %.1f move %s cast '%s' down %s ctl %s)" % [hero.dashes, hero.position.distance_to(p0), hero.dash_cd, str(hero.can_move()), hero.casting, str(hero.downed), str(sb.controlled() == hero)])
     # --- tower floors from a new account: the new content ----------------------------------------
     for f in [1, 5, 10]:
         main.show_screen("sandbox", f)

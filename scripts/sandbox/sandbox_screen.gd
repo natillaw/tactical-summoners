@@ -186,7 +186,9 @@ func _ready() -> void:
 
 func _build_squad() -> void:
 	var squad: Array = Game.party_heroes()
-	real_squad = squad.size() == Game.PARTY_SIZE
+	# bug fix (beta playthrough): a party with as many heroes as the floor lets in is real (it used to
+	# need all 5, so a 1-hero floor sent a throwaway test squad and kept nothing)
+	real_squad = squad.size() >= (TowerExpedition.party_max(floor_number) if floor_number > 0 else Game.PARTY_SIZE) and not squad.is_empty()
 	if not real_squad:
 		squad = []
 		for entry in TEST_SQUAD:
