@@ -213,6 +213,66 @@ static func bake(map: NavMap, art_seed: int, camps: bool = false) -> Texture2D:
     return ImageTexture.create_from_image(out)
 
 
+## Ground only, for any grid (the town uses it): kind_at(x, y) -> 0 grass, 1 dirt, 2 water per cell.
+## Same jittered Match-Corners terrain as bake(), so paths have organic edges.
+static func ground_image(w_cells: int, h_cells: int, kind_at: Callable, art_seed: int) -> Image:
+    var tiles := _img(TILES)
+    var w := w_cells * SUB
+    var h := h_cells * SUB
+    var out := Image.create(w * T, h * T, false, Image.FORMAT_RGBA8)
+    var r := RandomNumberGenerator.new()
+    r.seed = art_seed
+    var nx := FastNoiseLite.new()
+    nx.seed = art_seed
+    nx.frequency = 0.21
+    var ny := FastNoiseLite.new()
+    ny.seed = art_seed + 1
+    ny.frequency = 0.21
+    var vert := PackedByteArray()
+    vert.resize((w + 1) * (h + 1))
+    for vy in h + 1:
+        for vx in w + 1:
+            var q := Vector2(vx, vy) + Vector2(nx.get_noise_2d(vx, vy), ny.get_noise_2d(vx, vy)) * JITTER
+            vert[vy * (w + 1) + vx] = int(kind_at.call(clampi(floori(q.x / SUB), 0, w_cells - 1), clampi(floori(q.y / SUB), 0, h_cells - 1)))
+    for ty in h:
+        for tx in w:
+            var k := [vert[ty * (w + 1) + tx], vert[ty * (w + 1) + tx + 1], vert[(ty + 1) * (w + 1) + tx], vert[(ty + 1) * (w + 1) + tx + 1]]
+            var other := 0
+            for v in k:
+                other = maxi(other, int(v))
+            var at := Vector2i(0, 0)
+            if other == 0:
+                var roll := r.randf()
+                if roll < GRASS_VARIANT_P * 4.0:
+                    at = Vector2i(8 + int(roll / GRASS_VARIANT_P) % 4, 0)
+            else:
+                var idx := 0
+                for i in 4:
+                    if int(k[i]) == other:
+                        idx |= 1 << i
+                at = (Vector2i(0, 0) if other == 1 else Vector2i(4, 0)) + Vector2i(idx % 4, idx / 4)
+                if idx == 15 and r.randf() < FULL_VARIANT_P * 2.0:
+                    at = Vector2i(8 + r.randi() % 2, other)
+            out.blit_rect(tiles, Rect2i(at * T, Vector2i(T, T)), Vector2i(tx, ty) * T)
+    return out
+
+
+## A decor cluster (flowers, tufts, stones...) around a point, or a tree with its shadow.
+static func decor_cluster(out: Image, centre: Vector2i, r: RandomNumberGenerator) -> void:
+    var props := _img(PROPS)
+    var fam: Array = CLUSTERS[r.randi() % CLUSTERS.size()]
+    for i in r.randi_range(3, 6):
+        var n: String = fam[r.randi() % fam.size()]
+        _blit(out, props, defs()["props"], n, centre + Vector2i(r.randi_range(-22, 22), r.randi_range(-14, 14)))
+
+
+static func tree(out: Image, feet: Vector2i, r: RandomNumberGenerator) -> void:
+    var props := _img(PROPS)
+    var big := r.randf() < 0.6
+    _blit(out, props, defs()["props"], "sombra_grande" if big else "sombra_mediana", feet)
+    _blit(out, props, defs()["props"], (BIG_TREES if big else MID_TREES)[r.randi() % 3], feet)
+
+
 static func _entry(name: String, feet: Vector2i, shadow: String = "") -> Array:
     return [feet.y, name, feet, "props", shadow]
 

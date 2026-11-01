@@ -335,6 +335,8 @@ Inmune mientras dura su escudo; 2 héroes canalizan 8 s en un altar del mismo ma
 ### D-072 — Overhaul LPC: escala del mundo (D-B, 2026-10-31, dueño: "Todo a ×1")
 Rejilla lógica de 32 px. Todo el arte se dibuja a ×1: personajes LPC (frame de 64 px), objetos de CraftPix y tiles de 16 px (2×2 por celda). Nunca escalado no entero ni ×2 de tiles: misma densidad de píxel en todo. Sustituye la referencia de escala de D-055 por el humano LPC. Pendientes del overhaul: estilo de UI (A Dragon Regalia / B CraftPix) y pesos humano/elfo (propuesta 80/20); D-A, D-C..D-G se registran al cerrar sus fases.
 
+**Revisión de D-072 (dueño, 2026-10-31: "los personajes se ven muy grandes en proporción al mapa"):** los packs de CraftPix están dibujados para personajes de ~16×32 px; los LPC miden ~48 px. El arte del **mundo** (suelo, edificios, interiores, props) va a **×2 respecto a los personajes** (escalado entero) y el mapa crece en proporción. Interiores ya a ×2; pueblo, pisos y Wilds: pendiente (TileMap en vez de imagen horneada).
+
 ### D-073 — Overhaul LPC: atuendo inicial único (D-C, 2026-10-31, aprobado en el prompt del overhaul)
 `LpcWardrobe.STARTER_OUTFIT`: camisa de manga larga `tan`, pantalón `brown`, zapatos básicos `leather` (sin cinturón: la pieza de LPC no trae animaciones). Arma visual por clase en `STARTER_WEAPON_BY_CLASS` (espada arming de acero, daga, bastón simple, arco normal), sin stats. Los héroes usan los cuerpos adultos `male` y `female` (la camisa no existe para `muscular`).
 

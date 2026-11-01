@@ -43,6 +43,7 @@ func _ready() -> void:
         var s := AnimatedSprite2D.new()
         s.sprite_frames = SpriteComposer.build_frames(h)
         s.offset = SpriteComposer.feet_offset(h)
+        s.scale = Vector2.ONE * 0.5                  # owner 2026-10-31: the room is drawn x2 against the heroes
         var sp: Array = spots[i % spots.size()]
         s.position = Vector2(float(sp[0]), float(sp[1])) + Vector2(float(i / spots.size()) * 18.0, 0)
         room.add_child(s)
@@ -50,7 +51,8 @@ func _ready() -> void:
         var tag := Label.new()
         tag.text = h.display_name().get_slice(" ", 0)
         tag.add_theme_font_size_override("font_size", 8)
-        tag.position = s.position + Vector2(-16, 8)
+        tag.scale = Vector2.ONE * 0.5
+        tag.position = s.position + Vector2(-8, 4)
         room.add_child(tag)
     var title := UIKit.label("%s  ·  %s" % [TownTables.info(building_id)["name"],
         ("%d working here" % workers.size()) if not workers.is_empty() else "nobody works here: assign a hero to make anything"], 15,
@@ -72,5 +74,29 @@ func _fit() -> void:
     var pic := room.get_child(0) as Sprite2D
     var avail := size - Vector2(200, 60)
     var k := maxi(1, floori(minf(avail.x / pic.texture.get_width(), avail.y / pic.texture.get_height())))
+    k = maxi(2, k - k % 2)                            # even, so the half-scale heroes stay whole pixels
     room.scale = Vector2.ONE * k
-    room.position = Vector2(floorf((size.x - 190.0 - pic.texture.get_width() * k) * 0.5), floorf(30.0 + (size.y - 30.0 - pic.texture.get_height() * k) * 0.5))
+    # centred on the work spots (the room is bigger than the screen at x2); drag to look around
+    var focus: Array = _scene["spots"][0]
+    room.position = Vector2(floorf((size.x - 190.0) * 0.5 - float(focus[0]) * k), floorf(size.y * 0.55 - float(focus[1]) * k))
+    _clamp_room()
+
+
+func _clamp_room() -> void:
+    var room := get_node_or_null("Room") as Node2D
+    if room == null:
+        return
+    var pic := room.get_child(0) as Sprite2D
+    var sz := Vector2(pic.texture.get_size()) * room.scale
+    var view := size - Vector2(190, 0)
+    room.position.x = clampf(room.position.x, minf(0.0, view.x - sz.x), maxf(0.0, view.x - sz.x)) if sz.x > view.x else floorf((view.x - sz.x) * 0.5)
+    room.position.y = clampf(room.position.y, minf(30.0, view.y - sz.y), 30.0) if sz.y > view.y - 30.0 else floorf(30.0 + (view.y - 30.0 - sz.y) * 0.5)
+    room.position = room.position.floor()
+
+
+func _gui_input(event: InputEvent) -> void:
+    if event is InputEventMouseMotion and (event.button_mask & (MOUSE_BUTTON_MASK_LEFT | MOUSE_BUTTON_MASK_RIGHT)) != 0:
+        var room := get_node_or_null("Room") as Node2D
+        if room != null:
+            room.position += (event as InputEventMouseMotion).relative
+            _clamp_room()

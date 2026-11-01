@@ -1,6 +1,6 @@
 # Handoff del overhaul LPC
 
-**Fase actual: 5 terminada.** Barón ×2 + aura (dueño: "a+b"), 80/20 confirmado, decisiones de ítems en D-077. Siguiente: fase 6 (licencias e íconos de los packs, fondos, efectos, UI B).
+**Fase actual: 6 hecha (UI B, packs, interiores); 7 a medias.** Ver "Siguiente" al final.
 
 Hecho:
 - Fase 0: `.gdignore` y `.gitignore` para `assets/nuevos assets/` (sacados del índice), prompt viejo marcado SUSTITUIDO, inventario `USO_ASSETS_ANTES.md`, fixture de 200 semillas (`tests/test_hero_fixture.gd`), línea base `BASELINE.md` (25 suites en verde).
@@ -26,3 +26,14 @@ Pendiente: armas con frames sobredimensionados (el bastón de cristal y el mando
 
 Fase 5 (hecha): `tools/lpc_catalog.py` → `assets/pixel/lpc/wardrobe_catalog.json` (408 piezas con slot, material, variantes, animaciones, licencia, autores) y hojas `docs/reports/overhaul/vestuario/<slot>.png`; `tools/lpc_races_sheet.py` → `razas.png` (23 cabezas); `scripts/data/lpc_races.gd` (10 arquetipos, sin stats ni pisos); `scripts/data/item_visuals.gd` (base → pieza LPC, color de metal por nivel de ítem: cobre, hierro, acero, plata, oro); el equipo se ve en el héroe (`SpriteComposer` pasa `ItemVisuals.equipment_layers`). Test en `smoke_lpc`.
 Pendiente: escudos, anillos, amuletos y trinkets solo con ícono; armas sobredimensionadas.
+
+Fase 6 (hecha): `tools/import_packs.py` (50+ packs, licencias en `ASSET_REGISTRY.json`), tema UI B (madera, pergamino, botones verdes; `UIKit.piece`), paleta de UI en madera.
+Edificios entrables (pedido del dueño): `tools/bake_tmx.py` hornea los mapas Tiled de los packs (taller con forja, capilla, guild hall 2 pisos, casa, templo, mazmorra) a `assets/pixel/interiors/`, más edificios sueltos `bld_*` para el pueblo. `BuildingInterior` (click en un edificio construido): la sala a ×2 frente a los héroes, los héroes asignados en sus puestos, arrastrar para mirar; sin trabajadores el panel avisa y no se produce nada. `InteriorDefs` mapea edificio → interior y exterior.
+Pueblo (fase 7, parcial): suelo con el tileset de bosque del dueño (caminos de tierra orgánicos, clusters, anillo de árboles); edificios de los packs a ×1.
+
+## Siguiente (en orden)
+1. **Escala del mundo ×2 frente a los personajes (revisión de D-072):** pueblo, pisos y Wilds. Pasar de imagen horneada a `TileMapLayer` (tiles de 16 px en un nodo a escala 2) y doblar las celdas lógicas o el tamaño del mapa; ajustar en datos radios, alcances, velocidades y percepción para que el balance en celdas no cambie (test de distancias). Los edificios `bld_*` a ×2 → parcelas del pueblo más grandes (`TownTables` plot ×2) y mapa del pueblo más grande.
+2. **Profesiones estilo WoW** (pedido del dueño): ventana de recetas por edificio/profesión: lista por categorías a la izquierda con color de dificultad (naranja/amarillo/verde/gris según nivel del artesano), detalle a la derecha con materiales tengo/necesito, cantidad y botón Crear; requiere trabajador asignado.
+3. **Biblioteca de ítems (D-077):** tiers por material, slot trinket, rarezas con único, afijos buenos y malos, drops temáticos por enemigo vs línea del herrero, joyero, sets del herrero, únicos por misión secreta, consumibles, requisitos de nivel y clase, íconos emparejados (packs de íconos ya importados en `assets/pixel/packs/icons_*`, `willibab`, `rpg_icons`).
+4. Pisos y Wilds con mezcla de packs (árboles, rocas, arbustos, objetos de CraftPix junto al tileset del dueño).
+5. Fase 8 (pulido: luces, viento, copas translúcidas, partículas, viñeta, opciones de calidad) y fase 9 (borrar lo huérfano: aprobado por el dueño salvo los PNG de Caz; créditos; informe).
