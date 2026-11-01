@@ -110,7 +110,7 @@ static func _work_building(g: Object, bid: String, hs: Array, rng: RandomNumberG
     var rid: String = g.job_of(bid)
     if level <= 0 or rid == "":
         return
-    var r: Dictionary = EconomyDefs.RECIPES[rid]
+    var r: Dictionary = EconomyDefs.recipe(rid)
     var prof := String(r["prof"])
     g.town_problems.erase(bid)
     var eff := 0.0
@@ -140,7 +140,7 @@ static func _work_building(g: Object, bid: String, hs: Array, rng: RandomNumberG
             batch = g.town_batches[bid]
         batch["progress"] = float(batch["progress"]) + eff
         eff = 0.0
-        var rr: Dictionary = EconomyDefs.RECIPES[String(batch["recipe"])]
+        var rr: Dictionary = EconomyDefs.recipe(String(batch["recipe"]))
         if float(batch["progress"]) < float(rr["work"]):
             break
         eff = float(batch["progress"]) - float(rr["work"])         # leftover work carries on

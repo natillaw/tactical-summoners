@@ -14,6 +14,8 @@ const APPRENTICE_EFF := 0.3       # level-0 efficiency
 const PROFESSIONS := {
     "builder": {"name": "Builder", "family": "craft", "attr": "fue", "desc": "Raises and upgrades buildings (D-048)."},
     "blacksmith": {"name": "Blacksmith", "family": "craft", "attr": "fue", "desc": "Smelts ore and forges weapons and armor."},
+    "woodworker": {"name": "Woodworker", "family": "craft", "attr": "agi", "desc": "Carves bows, staves and wands (D-077)."},
+    "jeweler": {"name": "Jeweller", "family": "craft", "attr": "int", "desc": "Sets rings, amulets and trinkets (D-077)."},
     "carpenter": {"name": "Carpenter", "family": "craft", "attr": "agi", "desc": "Turns wood and stone into building materials."},
     "miner": {"name": "Miner", "family": "gather", "attr": "fue", "desc": "Digs ore and stone."},
     "lumberjack": {"name": "Lumberjack", "family": "gather", "attr": "fue", "desc": "Fells trees for wood."},

@@ -16,7 +16,7 @@ const SCENES := {
     "temple": {"png": "temple_interior", "spots": [[176, 150], [140, 175], [212, 175]]},
 }
 const BY_BUILDING := {
-    "blacksmith": "smithy", "workshop": "smithy",
+    "blacksmith": "smithy", "workshop": "smithy", "jeweler": "smithy",
     "alchemy": "chapel", "infirmary": "chapel",
     "kitchen": "home", "common": "home", "dorm_1": "home", "dorm_2": "home", "dorm_3": "home", "dorm_4": "home",
     "town_hall": "guild", "war_room": "guild", "barracks": "guild", "training_grounds": "guild", "library": "guild_upper",
@@ -27,7 +27,7 @@ const BY_BUILDING := {
 ## The building seen from outside in the town (baked from the same packs, ground excluded). Drawn at
 ## x1, bottom-centre on the plot's door; buildings not listed keep the procedural house.
 const EXTERIOR := {
-    "blacksmith": "bld_smithy", "workshop": "bld_smithy",
+    "blacksmith": "bld_smithy", "workshop": "bld_smithy", "jeweler": "bld_home",
     "infirmary": "bld_chapel", "alchemy": "bld_chapel", "ascension": "bld_chapel", "library": "bld_chapel",
     "town_hall": "bld_chapel", "kitchen": "bld_home", "common": "bld_home", "dorm_1": "bld_home", "dorm_2": "bld_home",
     "dorm_3": "bld_home", "dorm_4": "bld_home", "barracks": "bld_home", "war_room": "bld_home", "farm": "bld_home",

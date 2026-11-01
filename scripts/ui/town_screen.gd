@@ -20,6 +20,10 @@ var selected_hero_id: String = ""
 
 var _viewport: SubViewport
 var _world: Node2D
+## D-072 revision (owner 2026-10-31): ground, buildings and props are drawn x2 against the LPC heroes
+## (each TownHero is scaled back by 1/WORLD_SCALE). Logic stays in map pixels; the camera works in
+## scaled pixels.
+const WORLD_SCALE := 2
 var _res: Label
 var _panel: PanelContainer
 var _panel_box: VBoxContainer
@@ -61,6 +65,7 @@ func _ready() -> void:
     _viewport.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
     container.add_child(_viewport)
     _world = Node2D.new()
+    _world.scale = Vector2.ONE * WORLD_SCALE          # D-072 revision: the town's art x2 against the heroes
     _viewport.add_child(_world)
     camera = Camera2D.new()
     _viewport.add_child(camera)
@@ -83,6 +88,7 @@ func rebuild() -> void:
     var i := 0
     for id in Game.heroes:
         var th := TownHero.new(Game.heroes[id], map)
+        th.scale = Vector2.ONE / WORLD_SCALE
         th.position = map.center_of(map.spawn_cells[i % map.spawn_cells.size()]) + Vector2((i / map.spawn_cells.size()) * 7, 0)
         _world.add_child(th)
         heroes.append(th)
@@ -93,8 +99,8 @@ func rebuild() -> void:
         # first view: the whole town fits on screen
         var ws := map.world_size()
         var vs := Vector2(_viewport.size) if _viewport.size.x > 0 else Vector2(1280, 670)
-        camera.zoom = Vector2.ONE                 # D-063: start at x1 (crisp, readable); wheel = 0.5 / 1 / 2
-        camera.position = _clamp_cam(map.center_of(Vector2i(17, 10)))
+        camera.zoom = Vector2.ONE * 0.5           # D-063 + D-072 revision: the town is drawn x2, so start at 0.5 (wheel = 0.5 / 1 / 2)
+        camera.position = _clamp_cam(map.center_of(Vector2i(17, 10)) * WORLD_SCALE)
     _refresh()
 
 
@@ -232,6 +238,26 @@ func select_building(id: String) -> void:
         _show_panel(id)
         if Game.building_level(id) > 0:
             _enter(id)
+
+
+var recipes_win: ProfessionWindow = null
+
+
+## WoW-style profession window for a building (owner, 2026-10-31).
+func open_recipes(id: String) -> void:
+    if recipes_win != null:
+        recipes_win.queue_free()
+    recipes_win = ProfessionWindow.new(id)
+    add_child(recipes_win)
+    recipes_win.anchor_left = 0.5
+    recipes_win.anchor_right = 0.5
+    recipes_win.anchor_top = 0.5
+    recipes_win.anchor_bottom = 0.5
+    recipes_win.offset_left = -300
+    recipes_win.offset_right = 140
+    recipes_win.offset_top = -150
+    recipes_win.offset_bottom = 150
+    recipes_win.closed.connect(func(): recipes_win.queue_free(); recipes_win = null; _show_panel(id))
 
 
 ## Owner, 2026-10-31: clicking a building opens its interior with the heroes who work there.
@@ -394,9 +420,12 @@ func _panel_jobs(id: String) -> void:
     var current := Game.job_of(id)
     if Game.workers_at(id).is_empty():
         _panel_box.add_child(_wrap("Nobody works here: assign a hero (Workers below) or nothing is made.", 13, Color(1.0, 0.65, 0.5)))
+    if not (TownTables.info(id).get("jobs", []) as Array).is_empty():
+        _panel_box.add_child(UIKit.button("Recipe book", func(): open_recipes(id), Vector2(150, 22)))
+        return
     var row := HFlowContainer.new()
     for rid in TownTables.info(id)["jobs"]:
-        var r: Dictionary = EconomyDefs.RECIPES[rid]
+        var r: Dictionary = EconomyDefs.recipe(rid)
         if r.get("service", false):
             continue
         var recipe := String(rid)
@@ -407,11 +436,11 @@ func _panel_jobs(id: String) -> void:
     if row.get_child_count() > 0:
         _panel_box.add_child(UIKit.label("Job", 15, UIKit.ACCENT))
         _panel_box.add_child(row)
-        var cr: Dictionary = EconomyDefs.RECIPES[current]
+        var cr: Dictionary = EconomyDefs.recipe(current)
         _panel_box.add_child(_wrap("%s: %s → %s" % [cr["name"], _res_text(cr["in"]), (_res_text(cr["out"]) if not cr.has("item") else "a %s (quality from smith and forge level)" % cr["item"])], 13, UIKit.TEXT))
         var bt: Dictionary = Game.town_batches.get(id, {})
         if not bt.is_empty():
-            _panel_box.add_child(UIKit.label("In progress: %.1f / %.0f work-hours" % [float(bt["progress"]), float(EconomyDefs.RECIPES[String(bt["recipe"])]["work"])], 13, UIKit.TEXT))
+            _panel_box.add_child(UIKit.label("In progress: %.1f / %.0f work-hours" % [float(bt["progress"]), float(EconomyDefs.recipe(String(bt["recipe"]))["work"])], 13, UIKit.TEXT))
     var problem := String(Game.town_problems.get(id, ""))
     if problem != "":
         _panel_box.add_child(_wrap("Problem: " + problem, 13, Color(1.0, 0.6, 0.5)))
@@ -630,7 +659,7 @@ func _add_merchant_buttons() -> void:
 
 func screen_to_world(p: Vector2) -> Vector2:
     var vsize := Vector2(_viewport.size)
-    return camera.position + (p - vsize * 0.5) / camera.zoom.x
+    return (camera.position + (p - vsize * 0.5) / camera.zoom.x) / WORLD_SCALE
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -737,7 +766,7 @@ func _zoom(f: float) -> void:
 func _clamp_cam(p: Vector2) -> Vector2:
     if map == null:
         return p
-    var ws := map.world_size()
+    var ws := map.world_size() * WORLD_SCALE
     return Vector2(clampf(p.x, 0.0, ws.x), clampf(p.y, 0.0, ws.y))
 
 

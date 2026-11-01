@@ -74,6 +74,65 @@ static func generate(rng: RandomNumberGenerator, uid: int, ilvl: int, rarity: St
     return item
 
 
+## D-077 drop: a base from the enemy family's theme, named after it ("Cutthroat's Dagger").
+static func generate_drop(rng: RandomNumberGenerator, uid: int, ilvl: int, rarity: String, theme: String) -> Dictionary:
+    var th: Dictionary = ItemLibrary.THEMES.get(theme, ItemLibrary.THEMES["beast"])
+    var bases: Array = (th["bases"] as Array).filter(func(b): return ItemDefs.base_open(String(b)))
+    var item := generate(rng, uid, ilvl, rarity, String(bases[rng.randi() % bases.size()]) if not bases.is_empty() else "")
+    if String(item["unique"]) == "" and String(item["set"]) == "":
+        var word := String(th["names"][rng.randi() % (th["names"] as Array).size()])
+        item["name"] = "%s %s" % [word, ItemDefs.BASES[String(item["base"])]["name"]]
+        if not (item["affixes"] as Array).is_empty():
+            var an := String(ItemDefs.AFFIXES.get(String(item["affixes"][0]["id"]), {}).get("name", ""))
+            if an.begins_with("of "):
+                item["name"] = "%s %s" % [item["name"], an]
+    item["source"] = "drop"
+    item["theme"] = theme
+    return item
+
+
+## D-077 crafted: the line's clean piece of a tier, at most rare, one chosen affix (affix_id, or the
+## first rolled), a smith set for armour pieces.
+static func generate_crafted(rng: RandomNumberGenerator, uid: int, rid: String, rarity: String, affix_id: String = "") -> Dictionary:
+    var r: Dictionary = ItemLibrary.recipes()[rid]
+    var tier := int(r["tier"])
+    if ItemDefs.RARITY_ORDER.find(rarity) > ItemDefs.RARITY_ORDER.find(ItemLibrary.CRAFT_MAX_RARITY):
+        rarity = ItemLibrary.CRAFT_MAX_RARITY
+    var item := generate(rng, uid, int(ItemLibrary.TIERS[tier]["ilvl"]), rarity, String(r["craft"]))
+    item["affixes"] = []
+    var kind := String(ItemDefs.BASES[String(r["craft"])]["kind"])
+    if affix_id == "" or not ItemDefs.AFFIXES.has(affix_id):
+        var pool := ItemDefs.AFFIXES.keys().filter(func(a): return (ItemDefs.AFFIXES[a]["kinds"] as Array).has(kind))
+        pool.sort()
+        affix_id = String(pool[rng.randi() % pool.size()])
+    var a: Dictionary = ItemDefs.AFFIXES[affix_id]
+    var v := lerpf(float(a["min"]), float(a["max"]), 0.5 + 0.15 * float(ItemDefs.RARITY_ORDER.find(rarity)))
+    if ItemDefs.SCALING_STATS.has(String(a["stat"])):
+        v = float(roundi(v * (1.0 + ItemDefs.PER_ILVL * float(int(item["ilvl"]) - 1))))
+    item["affixes"] = [{"id": affix_id, "stat": String(a["stat"]), "value": snappedf(v, 0.01)}]
+    item["name"] = String(r["name"])
+    item["metal"] = String(ItemLibrary.TIERS[tier]["metal"])
+    item["source"] = "craft"
+    item["set"] = ""
+    if String(r["line"]) == "blacksmith" and ItemLibrary.SET_PIECES.has(String(r["craft"])):
+        item["set"] = "smith_t%d" % tier
+    return item
+
+
+## Three affix choices a crafter offers for a recipe (deterministic per recipe and day).
+static func craft_affix_choices(rid: String, day: int) -> Array:
+    var r: Dictionary = ItemLibrary.recipes()[rid]
+    var kind := String(ItemDefs.BASES[String(r["craft"])]["kind"])
+    var pool := ItemDefs.AFFIXES.keys().filter(func(a): return (ItemDefs.AFFIXES[a]["kinds"] as Array).has(kind))
+    pool.sort()
+    var rng := RandomNumberGenerator.new()
+    rng.seed = hash("%s:%d" % [rid, day])
+    var out: Array = []
+    while out.size() < mini(ItemLibrary.CRAFT_AFFIX_CHOICES, pool.size()):
+        out.append(pool.pop_at(rng.randi() % pool.size()))
+    return out
+
+
 static func _roll_affixes(rng: RandomNumberGenerator, item: Dictionary, count: int, kind: String, ilvl: int) -> void:
     var pool: Array = []
     for a in ItemDefs.AFFIXES:
@@ -95,6 +154,15 @@ static func _roll_affixes(rng: RandomNumberGenerator, item: Dictionary, count: i
             v = snappedf(v, 0.01)
         (item["affixes"] as Array).append({"id": id, "stat": String(a["stat"]), "value": v})
         count -= 1
+    # D-077: a cursed affix on some non-common pieces, always paired with a boosted good one
+    if not (item["affixes"] as Array).is_empty() and String(item.get("rarity", "common")) != "common" and rng.randf() < ItemLibrary.CURSE_CHANCE:
+        var good: Dictionary = item["affixes"][0]
+        good["value"] = snappedf(float(good["value"]) * ItemLibrary.CURSE_BOOST, 0.01)
+        var ck: Array = ItemLibrary.CURSES.keys()
+        ck.sort()
+        var cid := String(ck[rng.randi() % ck.size()])
+        var c: Dictionary = ItemLibrary.CURSES[cid]
+        (item["affixes"] as Array).append({"id": cid, "stat": String(c["stat"]), "value": snappedf(rng.randf_range(float(c["min"]), float(c["max"])), 0.01), "cursed": true})
 
 
 ## Crafted item (blacksmith): rarity comes from the smith's level and the forge level, with a small

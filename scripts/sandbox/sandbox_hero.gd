@@ -1580,16 +1580,7 @@ func _draw() -> void:
 	var font := ThemeDB.fallback_font
 	draw_string(font, Vector2(-4, -52), str(slot + 1), HORIZONTAL_ALIGNMENT_CENTER, -1, 16, col)
 	if chatter_timer > 0.0 and chatter_text != "":
-		var lines := _wrap_words(chatter_text, 28)
-		var widest := 0.0
-		for ln in lines:
-			widest = maxf(widest, font.get_string_size(ln, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x)
-		var box := Rect2(-widest * 0.5 - 6, -62 - 14 * lines.size(), widest + 12, 14 * lines.size() + 6)
-		draw_rect(box, Color(0.98, 0.97, 0.92, 0.95))
-		draw_rect(box, Color(0.2, 0.18, 0.15), false, 1.0)
-		draw_colored_polygon(PackedVector2Array([Vector2(-4, -56), Vector2(4, -56), Vector2(0, -51)]), Color(0.98, 0.97, 0.92))
-		for k in lines.size():
-			draw_string(font, Vector2(-widest * 0.5, box.position.y + 13 + k * 14), lines[k], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.15, 0.12, 0.1))
+		UIKit.draw_bubble(self, chatter_text, Vector2(0, -58))
 
 
 static func _wrap_words(text: String, width: int) -> Array:

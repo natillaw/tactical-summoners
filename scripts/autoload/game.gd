@@ -721,7 +721,7 @@ func complete_floor(floor_num: int, mission: String = "") -> Dictionary:
         if stash.size() >= stash_cap():
             r["left_behind"] = int(r["left_behind"]) + 1     # no room: left in the tower (shown in the result)
             continue
-        var it := ItemGen.generate(rng, _next_uid(), floor_num, rarity)
+        var it := ItemGen.generate_drop(rng, _next_uid(), floor_num, rarity, ItemLibrary.theme_of(String(TowerExpedition.get_floor_config(floor_num)["foes"][0])))
         stash.append(it)
         (r["items"] as Array).append(ItemDefs.item_label(it))
     _commit()
@@ -875,7 +875,7 @@ func workplace_prof(bid: String) -> String:
     if bid == "library":
         return "scholar"
     var rid := job_of(bid)
-    return "" if rid == "" else String(EconomyDefs.RECIPES[rid]["prof"])
+    return "" if rid == "" else String(EconomyDefs.recipe(rid)["prof"])
 
 
 func workers_at(bid: String) -> Array:
@@ -919,7 +919,7 @@ func can_work_now(h: HeroData) -> bool:
 
 ## Takes a recipe's inputs and opens a batch. "" on success, else why it cannot start.
 func start_batch(bid: String, rid: String) -> String:
-    var r: Dictionary = EconomyDefs.RECIPES[rid]
+    var r: Dictionary = EconomyDefs.recipe(rid)
     if r.get("service", false):
         return ""
     if not has_resources(r["in"]):
@@ -944,10 +944,20 @@ func finish_batch(bid: String, best_level: int, rr: RandomNumberGenerator, repor
     town_batches.erase(bid)
     if b.is_empty():
         return
-    var r: Dictionary = EconomyDefs.RECIPES[String(b["recipe"])]
+    var r: Dictionary = EconomyDefs.recipe(String(b["recipe"]))
     for k in r["out"]:
         hq_outputs[k] = int(hq_outputs.get(k, 0)) + int(r["out"][k])
         report["produced"][k] = int(report["produced"].get(k, 0)) + int(r["out"][k])
+    if r.has("craft"):                                      # D-077 library recipe: one clean crafted piece
+        var it2 := ItemGen.generate_crafted(rr, _next_uid(), String(b["recipe"]), ItemGen.craft_rarity(rr, best_level, building_level(bid)),
+            String(craft_affix.get(bid, "")))
+        stash.append(it2)
+        (report["events"] as Array).append("The %s made %s." % [TownTables.info(bid)["name"], ItemDefs.item_label(it2)])
+        if int(craft_left.get(bid, 0)) > 0:
+            craft_left[bid] = int(craft_left[bid]) - 1
+            if int(craft_left[bid]) <= 0:
+                craft_left.erase(bid)
+                town_jobs.erase(bid)                          # the order is done: the bench rests
     if r.has("item"):
         var rarity := ItemGen.craft_rarity(rr, best_level, building_level(bid))
         var floor_rarity := String(r.get("min_rarity", "common"))
@@ -1062,6 +1072,9 @@ func equip(h: HeroData, uid: int, slot: String = "") -> String:
     if h == null or i < 0:
         return "item not in the stash"
     var it: Dictionary = stash[i]
+    var req := ItemLibrary.equip_block(h, it)
+    if req != "":
+        return req
     var allowed := ItemDefs.slots_for(String(it["base"]))
     if allowed.is_empty():
         return "that slot opens later (D-060)"
@@ -1163,7 +1176,29 @@ var wilds_runs: int = 0
 var expeditions: Array = []          # [{floor, heroes: [id], start, end}] (unix seconds)
 var exp_charges: int = ExpeditionDefs.CHARGES_MAX
 var exp_charge_t: float = 0.0
-var portal_upgrades: Dictionary = {} # "charges" | "formation" | "retry" -> count              # runs in the Wilds (stat only; not saved)
+var portal_upgrades: Dictionary = {}
+var craft_left: Dictionary = {}      # building -> pieces still to make for the current order (WoW-style "Create x N")
+var craft_affix: Dictionary = {}     # building -> affix chosen for its crafted gear
+var uniques_found: Array = []        # D-077: unique ids already dropped on this account (never again)
+
+
+## WoW-style crafting order: make `count` of a recipe at a building (0 = keep going).
+func order_craft(bid: String, rid: String, count: int, affix: String = "") -> String:
+    if workers_at(bid).is_empty():
+        return "nobody works here"
+    if not set_job(bid, rid):
+        return "this building cannot make that"
+    if count > 0:
+        craft_left[bid] = count
+    else:
+        craft_left.erase(bid)
+    if affix != "":
+        craft_affix[bid] = affix
+    else:
+        craft_affix.erase(bid)
+    town_batches.erase(bid)
+    _commit()
+    return "" # "charges" | "formation" | "retry" -> count              # runs in the Wilds (stat only; not saved)
 
 
 func highest_cleared() -> int:
@@ -1289,6 +1324,9 @@ func new_game() -> void:
     tower_maps.clear()
     tower_cleared.clear()
     expeditions.clear()
+    uniques_found.clear()
+    craft_left.clear()
+    craft_affix.clear()
     exp_charges = ExpeditionDefs.CHARGES_MAX
     exp_charge_t = 0.0
     portal_upgrades.clear()
@@ -1340,6 +1378,7 @@ func save_game() -> bool:
         "town_buildings": town_buildings,
         "tower_maps": tower_maps,
         "tower_cleared": tower_cleared,
+        "uniques_found": uniques_found, "craft_left": craft_left, "craft_affix": craft_affix,
         "expeditions": expeditions, "exp_charges": exp_charges, "exp_charge_t": exp_charge_t, "portal_upgrades": portal_upgrades,
         "skill_books": skill_books,
         "town": {"clock": town_clock, "seed": "%x" % town_seed, "jobs": town_jobs, "batches": town_batches,
@@ -1429,6 +1468,9 @@ func apply_save(data: Dictionary) -> void:
     tower_maps = HeroData.intify(data.get("tower_maps", {}) as Dictionary)
     tower_cleared = HeroData.intify(data.get("tower_cleared", {}) as Dictionary)
     expeditions = (data.get("expeditions", []) as Array).duplicate(true)
+    uniques_found = (data.get("uniques_found", []) as Array).duplicate()
+    craft_left = HeroData.intify(data.get("craft_left", {}) as Dictionary)
+    craft_affix = (data.get("craft_affix", {}) as Dictionary).duplicate()
     exp_charges = int(data.get("exp_charges", ExpeditionDefs.CHARGES_MAX))
     exp_charge_t = float(data.get("exp_charge_t", 0.0))
     portal_upgrades = HeroData.intify(data.get("portal_upgrades", {}) as Dictionary)
@@ -1443,7 +1485,7 @@ func apply_save(data: Dictionary) -> void:
     town_jobs = (t.get("jobs", {}) as Dictionary).duplicate()
     for bid in HeroData.intify(t.get("batches", {}) as Dictionary):
         var bt: Dictionary = t["batches"][bid]
-        if EconomyDefs.RECIPES.has(String(bt.get("recipe", ""))):
+        if EconomyDefs.has_recipe(String(bt.get("recipe", ""))):
             town_batches[String(bid)] = {"recipe": String(bt["recipe"]), "progress": float(bt.get("progress", 0.0))}
     for p in t.get("construction", []):
         if TownTables.BUILDINGS.has(String(p.get("bid", ""))):

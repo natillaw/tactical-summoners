@@ -30,6 +30,10 @@ func _ready() -> void:
     var town = main.get("_content").get_child(main.get("_content").get_child_count() - 1)
     town.select_building("blacksmith")
     await _shot("interior_blacksmith")
+    town.open_recipes("blacksmith")
+    await _shot("recipes_blacksmith")
+    town.recipes_win.queue_free()
+    town.recipes_win = null
     town.select_building("kitchen")
     await _shot("interior_kitchen")
     town.select_building("infirmary")

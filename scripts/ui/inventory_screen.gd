@@ -126,7 +126,7 @@ func _forge() -> Control:
     var pv := _panel("Forge & alchemy", 190)
     var v: VBoxContainer = pv[1]
     for rid in EconomyDefs.RECIPES:
-        var r: Dictionary = EconomyDefs.RECIPES[rid]
+        var r: Dictionary = EconomyDefs.recipe(rid)
         if not (String(r["building"]) in ["blacksmith", "alchemy"]):
             continue
         var built := Game.building_level(String(r["building"])) > 0
