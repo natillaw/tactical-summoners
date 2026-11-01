@@ -456,6 +456,14 @@ func _setup_mission() -> void:
 				t.enemy_name = "Bandit Totem"
 				t.home = t.position
 				totems.append(t)
+				var guard: Array = [t]
+				for gi in FloorMods.TOTEM_GUARDS.size():
+					var g := _spawn_enemy(map.cell_of(map.nearest_walkable(t.position + Vector2.RIGHT.rotated(PI * float(gi)) * 50.0)), String(FloorMods.TOTEM_GUARDS[gi]))
+					g.tactical = tactics_on()
+					g.home = t.position
+					guard.append(g)
+				for m in guard:
+					m.group_mates = guard
 		"defense":
 			shrine = SandboxRelic.new("shrine")
 			shrine.position = map.center_of(map.extract_cell) + Vector2(0, -40)

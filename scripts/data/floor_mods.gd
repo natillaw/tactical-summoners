@@ -19,5 +19,6 @@ const ENRAGE_ATK := 1.5
 ## raises one fallen bandit within REVIVE_RADIUS of it. The mission ends when every totem is down.
 const TOTEMS := 3
 const TOTEM_ID := "totem_bandido"
-const REVIVE_EVERY := 9.0
+const REVIVE_EVERY := 6.0
+const TOTEM_GUARDS := ["bandido_bruto", "bandido_chaman"]   # each totem's guard (the healer mends the totem)
 const REVIVE_RADIUS := 420.0
