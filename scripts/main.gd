@@ -6,6 +6,7 @@ var _currency: Label
 
 
 func _ready() -> void:
+    StringsEs.install()                                  # beta: Spanish by default (Options can switch)
     theme = UIKit.make_theme()
     ThemeDB.fallback_font = UIKit.body_font()          # world text (bars, names, floating numbers) in m5x7 too
     ThemeDB.fallback_font_size = UIKit.BODY

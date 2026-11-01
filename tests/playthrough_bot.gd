@@ -236,7 +236,13 @@ func _gear_up() -> void:
                 want = base
                 break
         if want != "":
-            Game.set_job("blacksmith", ItemLibrary.recipe_id("blacksmith", want, tier))
+            var rid := ItemLibrary.recipe_id("blacksmith", want, tier)
+            var best := 0
+            for w in Game.workers_at("blacksmith"):
+                best = maxi(best, int((w as HeroData).professions.get("blacksmith", {}).get("lvl", 0)))
+            var need := int(ItemLibrary.recipes().get(rid, {}).get("min", 0))
+            # a novice smith learns on the level-0 job first (smelting), like a player would
+            Game.set_job("blacksmith", rid if best >= need else "smelt_iron")
     for h in Game.party_heroes():
         var hd: HeroData = h
         for it in Game.stash.duplicate():
