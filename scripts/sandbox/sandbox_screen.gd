@@ -136,7 +136,8 @@ func _ready() -> void:
 	_world.add_child(ground)
 	if SandboxMapView.has_camps(map) and BosqueArt.available():
 		for fire in BosqueArt.campfires(map, (map as ProceduralMap).seed_value):
-			_world.add_child(fire)                   # master prompt I: animated campfires in the bandit camps
+			_world.add_child(fire)
+			Ambience.add_light(_world, fire.position + Vector2(0, -6), Color(1.0, 0.6, 0.25), 80)   # phase 8                   # master prompt I: animated campfires in the bandit camps
 	var grade := CanvasModulate.new()            # master prompt G: one warm, slightly muted palette
 	grade.color = Color(1.0, 0.97, 0.9)
 	_viewport.add_child(grade)
@@ -151,6 +152,7 @@ func _ready() -> void:
 	camera.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_ON   # eased per tick, drawn interpolated
 	_viewport.add_child(camera)
 	camera.make_current()
+	Ambience.add_particles(camera, Vector2(640, 360))   # phase 8: leaves and fireflies (Options: effects)
 	# Smooth motion on any refresh rate: the rules tick at the physics rate and the world is drawn
 	# interpolated between ticks, and so is the camera (eased in the same tick). The HUD is not. Turned off again when the mission screen closes.
 	physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
@@ -607,6 +609,7 @@ func _place_altar(side: float) -> BaronAltar:
 	altar.boss = boss
 	altar.heroes = heroes
 	_world.add_child(altar)
+	Ambience.add_light(_world, altar.position, Color(1.0, 0.2, 0.15), 90, true)
 	return altar
 
 
@@ -922,6 +925,7 @@ func update_fog() -> void:
 
 
 func _build_ui() -> void:
+	Ambience.add_vignette(self)                  # phase 8: under the HUD, over the world
 	# D-063: the expedition HUD (party, skills, orders, objective, minimap, boss). The old text panel lives
 	# on as the Details panel (I): _info and _squad_label are refreshed as before.
 	_info = UIKit.label("", 14, UIKit.TEXT)

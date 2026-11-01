@@ -28,6 +28,7 @@ static func load_settings() -> void:
     for bus in ["Music", "SFX", "UI"]:
         UIKit.set_volume(bus, float(cf.get_value("audio", bus, 0.8)))
     CombatFeel.shake_scale = float(cf.get_value("feel", "shake", 1.0))
+    Ambience.quality = int(cf.get_value("feel", "effects", 2))
 
 
 static func save_settings() -> void:
@@ -35,6 +36,7 @@ static func save_settings() -> void:
     for bus in ["Music", "SFX", "UI"]:
         cf.set_value("audio", bus, UIKit.get_volume(bus))
     cf.set_value("feel", "shake", CombatFeel.shake_scale)
+    cf.set_value("feel", "effects", Ambience.quality)
     cf.save(SETTINGS)
 
 
@@ -108,6 +110,7 @@ func show_options() -> void:
     _slider("Effects", UIKit.get_volume("SFX"), func(v): UIKit.set_volume("SFX", v))
     _slider("Interface", UIKit.get_volume("UI"), func(v): UIKit.set_volume("UI", v))
     _slider("Shake", CombatFeel.shake_scale, func(v): CombatFeel.shake_scale = v)
+    _slider("Effects", float(Ambience.quality) / 2.0, func(v): Ambience.quality = roundi(v * 2.0))   # off / low / high (lights, particles, vignette)
     var hb := HBoxContainer.new()
     hb.add_child(UIKit.label("Window", 14, UIKit.TEXT))
     for k in [2, 3, 4]:
