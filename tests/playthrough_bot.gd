@@ -144,6 +144,9 @@ func _town_turn(why: String) -> void:
             continue
         if not TownTables.BUILDINGS.has(bid):
             continue
+        # the forge before anything else (after the workshop): its gear is what floor 5 asks for
+        if bid != "workshop" and bid != "blacksmith" and Game.building_level("blacksmith") == 0 and Game.under_construction("blacksmith").is_empty():
+            continue
         if Game.construction_block(bid) == "":
             var lvl := Game.building_level(bid)
             if Game.build_or_upgrade(bid):
