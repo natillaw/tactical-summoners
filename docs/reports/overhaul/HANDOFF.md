@@ -37,3 +37,19 @@ Pueblo (fase 7, parcial): suelo con el tileset de bosque del dueño (caminos de 
 3. **Biblioteca de ítems (D-077):** tiers por material, slot trinket, rarezas con único, afijos buenos y malos, drops temáticos por enemigo vs línea del herrero, joyero, sets del herrero, únicos por misión secreta, consumibles, requisitos de nivel y clase, íconos emparejados (packs de íconos ya importados en `assets/pixel/packs/icons_*`, `willibab`, `rpg_icons`).
 4. Pisos y Wilds con mezcla de packs (árboles, rocas, arbustos, objetos de CraftPix junto al tileset del dueño).
 5. Fase 8 (pulido: luces, viento, copas translúcidas, partículas, viñeta, opciones de calidad) y fase 9 (borrar lo huérfano: aprobado por el dueño salvo los PNG de Caz; créditos; informe).
+
+## Pase de beta (2026-11-01)
+Hecho y probado (30 suites ALL PASSED, ningún error de script en 8 partidas completas del bot):
+- Bugs del juego encontrados por el bot de partida completa y corregidos: las oleadas de defensa nunca salían (piso 3 se ganaba sin pelear); un escuadrón del tamaño del piso se trataba como "de prueba" (pisos de 1 héroe no guardaban nada); el dash con el cursor sobre el héroe no hacía nada.
+- Red de seguridad: si quedan menos de 5 héroes, cada mañana llega un recluta 1★ (permadeath se mantiene, la cuenta nunca se bloquea).
+- Balance: tutorial más suave (amenaza 14), piso 3 con oleadas que crecen despacio (tope 6), Wilds tier 1 ×1,4 de daño, XP de las Wilds ×0,7.
+- Mundo: árboles, arbustos y rocas de CraftPix mezclados en los pisos; pueblo y personajes a ×2; animaciones de ataque, guardia y caída en 4 direcciones.
+- Pulido: luces de fogatas y altar, hojas y luciérnagas, viñeta; opción "Efectos visuales" (apagado/bajo/alto).
+- Español por defecto (`StringsEs`, botón Español/English en Opciones); textos compuestos traducidos por trozos.
+- Limpieza: capas TPF de bandidos borradas.
+
+Pendiente para la beta:
+- **Economía del pueblo → progresión:** en la partida del bot, el pueblo no llega a producir equipo (madera y grano se agotan, la herrería se construye tarde o nunca, el herrero novato sube despacio), así que el piso 5 es un muro con héroes nivel 1-2 sin gear. Hay que afinar la economía para que un jugador que usa el pueblo llegue equipado al piso 5 (área de la sesión de ítems/crafteo), y mejorar la IA de pueblo del bot.
+- Pisos 5-10 sin verificar en partida completa (se verificaron por separado en la matriz).
+- Armas LPC sobredimensionadas (tajos grandes), textos con números que no pasan por UIKit (algunos tooltips) sin traducir.
+- Partida de prueba humana.
