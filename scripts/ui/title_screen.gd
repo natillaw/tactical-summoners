@@ -47,8 +47,14 @@ func _ready() -> void:
     v.position = Vector2(20, 20)
     v.add_child(UIKit.label("Tactical Summoners", 28, UIKit.ACCENT))
     v.add_child(UIKit.label("A tower, a village and the people you call.", 14, UIKit.MUTED))
-    if not Game.heroes.is_empty() or Game.onboarded:
-        v.add_child(UIKit.button("Continue", func(): navigate.emit("master" if Game.needs_master() else "town", 0), Vector2(260, 36)))
+    if (not Game.heroes.is_empty() or Game.onboarded) and not Game.game_over:
+        var row := HBoxContainer.new()
+        row.add_child(UIKit.button("Continue", func(): navigate.emit("master" if Game.needs_master() else "town", 0), Vector2(260, 36)))
+        if Game.hardcore:                        # D-081: a hardcore game shows its skull
+            row.add_child(UIKit.icon(MasterDefs.HARDCORE_ICON, "Hardcore: if your Master dies, the game ends"))
+        v.add_child(row)
+    elif Game.game_over:
+        v.add_child(UIKit.label("Your hardcore game is over.", 14, UIKit.BAD))
     v.add_child(UIKit.button("New game", _confirm_new, Vector2(260, 36)))
     v.add_child(UIKit.button("Options", func(): _open_menu("options"), Vector2(260, 36)))
     v.add_child(UIKit.button("Credits", func(): _open_menu("credits"), Vector2(260, 36)))
@@ -66,7 +72,7 @@ func _open_menu(page: String) -> void:
 
 
 func _confirm_new() -> void:
-    if Game.heroes.is_empty() and not Game.onboarded:
+    if (Game.heroes.is_empty() and not Game.onboarded) or Game.game_over:
         Game.new_game()
         navigate.emit("master", 0)
         return

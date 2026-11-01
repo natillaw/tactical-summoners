@@ -42,6 +42,8 @@ var controller: String = "ai"
 ## What this hero did this expedition (ExpeditionResults / MVP): damage, kills, healing, shield,
 ## rescues, explored, objective, gathered, tanked.
 var contrib: Dictionary = {}
+var low_hp_shaken: bool = false       # D-081: Composure already lost for this low-health spell
+var was_panicked: bool = false
 var anchor: SandboxHero = null       # hero the player drives: autonomous ones stay around it (set by the screen)
 var rally_point: Vector2 = Vector2.INF   # squad centre (set by the screen): where a hurt hero falls back to
 var explore_goal: Vector2 = Vector2.INF  # fog frontier picked by the screen for an idle explorer
@@ -166,7 +168,42 @@ func is_controlled() -> bool:
 
 ## D-051: deterministic, never a roll.
 func obeys() -> bool:
-	return hero == null or hero.obedience >= CombatRules.OBEY_MIN
+	if has_status("panicked"):
+		return false                             # D-081: a panicking hero hears nobody (deterministic)
+	return hero == null or effective_obedience() >= CombatRules.OBEY_MIN
+
+
+## D-081: Obedience after the bond tier and, inside the Master's radius, the Master's Leadership.
+func effective_obedience() -> int:
+	var m := squad_master()
+	return MasterRules.effective_obedience(hero, m.hero if m != null else null, in_master_radius())
+
+
+## The Master of this squad (D-080), or null.
+func squad_master() -> SandboxHero:
+	for o in squad:
+		if is_instance_valid(o) and o.hero != null and o.hero.is_master:
+			return o
+	return null
+
+
+## Inside the radius of a standing Master (commands, Leadership bonuses; the pings will use it too).
+func in_master_radius() -> bool:
+	var m := squad_master()
+	return m != null and m != self and m.alive and position.distance_to(m.position) <= MasterRules.leadership_radius(m.hero)
+
+
+## D-081 panic: runs to the Master (or the squad) and does nothing else until it passes.
+func _panic_tick(map: NavMap) -> void:
+	target = null
+	var m := squad_master()
+	var to: Vector2 = m.position if m != null and m.alive and m != self else rally_point
+	if to == Vector2.INF or position.distance_to(to) < 40.0:
+		path.clear()
+		return
+	if path.is_empty() or _repath <= 0.0:
+		_repath = REPATH_EVERY
+		path = map.find_path(position, to)
 
 
 ## Something that lands later (a projectile in flight); runs on the simulation clock, so it is
@@ -385,6 +422,9 @@ func combat_tick(enemies: Array, map: NavMap) -> void:
 		return                                   # mid-dash: nothing else moves the hero
 	if _dodge_t > 0.0 and not path.is_empty():
 		return                                   # finishing a dodge step
+	if has_status("panicked"):
+		_panic_tick(map)
+		return
 	if order != "move" and order != "retreat" and order != "rescue" and can_move() and not is_controlled():
 		if _try_dodge(enemies, map):
 			return
@@ -894,6 +934,8 @@ func _rescue_tick(map: NavMap) -> void:
 			credit("rescues", 1.0)
 			if hero != null and rescue_target.hero != null:
 				hero.rescue_hero(rescue_target.hero)          # memory, bond and Trust (Phase 3 data)
+				if hero.is_master:
+					MasterRules.bond_event(rescue_target.hero, "rescued_by_master")   # D-081
 			FloatingText.spawn(rescue_target, "Rescued!", Color(0.5, 1.0, 0.6), true)
 			if then_retreat != Vector2.INF:
 				rescue_target.order_retreat(then_retreat + Vector2(18, 0), map)   # both head for the exit

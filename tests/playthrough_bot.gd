@@ -408,7 +408,8 @@ func _frontier(sb: SandboxScreen, from: Vector2i) -> Vector2:
 
 
 ## D-080: the driven Master has no autonomy of its own (D-053), so the bot plays it like a player: it
-## attacks the nearest foe it sees and fires every ready skill at it. Returns the skills used.
+## walks to the nearest foe it sees, attacks with Q, fires every ready skill at it and (D-081) calls
+## "focus fire" when it is ready. Returns the skills and commands used.
 func _drive_master(sb: SandboxScreen, foes: Array) -> int:
     var m: SandboxHero = sb.master_hero
     if m == null or not m.alive or not m.is_controlled() or m.order == "retreat" or m.order == "rescue":
@@ -419,9 +420,14 @@ func _drive_master(sb: SandboxScreen, foes: Array) -> int:
             near = e
     if near == null:
         return 0
-    if m.target != near and m.order != "move":
-        m.order_attack(near)
+    if m.position.distance_to(near.position) > m.attack_range():
+        if m.order != "move" or m.path.is_empty():
+            m.order_move(sb.map.find_path(m.position, near.position))       # walks up like a player
+    else:
+        m.aimed_attack(near.position, foes, sb.map)                       # Q at the foe (D-059)
     var used := 0
+    if sb.use_command(0, near.position) > 0:                              # D-081: focus fire when ready
+        used += 1
     for i in m.slots.size():
         if m.skill_ready(i) and m.use_skill_slot(i, foes, sb.heroes, near.position):
             used += 1

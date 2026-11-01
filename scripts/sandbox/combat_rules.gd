@@ -102,6 +102,9 @@ const STATUS := {
     "fortified": {"name": "Fortified", "in_dmg": 0.8, "no_resist": true, "color": Color(0.8, 0.8, 0.6)},  # elixir of defence (D-077)
     "warded": {"name": "Warded by shamans", "in_dmg": 0.6, "no_resist": true, "color": Color(0.5, 0.8, 1.0)},
     "wounded": {"name": "Wounded", "max_hp": WOUNDED_MAX_HP, "no_resist": true, "color": Color(0.8, 0.3, 0.3)},
+    "focused": {"name": "Focusing fire", "out_dmg": MasterDefs.FOCUS_OUT_DMG, "no_resist": true, "color": Color(1.0, 0.75, 0.3)},   # D-081 command
+    "rallied": {"name": "Rallied", "in_dmg": MasterDefs.RALLY_IN_DMG, "no_resist": true, "color": Color(0.6, 0.9, 1.0)},              # D-081 command
+    "panicked": {"name": "Panicking", "blocks": ["act"], "debuff": true, "no_resist": true, "color": Color(0.95, 0.95, 0.5)},     # D-081 panic
 }
 
 
@@ -159,7 +162,7 @@ static func skill_damage(power: int, mult: float, target_def: int) -> int:
 static func resolve(info: DamageInfo, target: Combatant) -> int:
     var amount := info.amount
     if info.source != null and is_instance_valid(info.source) and info.source is Combatant:
-        amount *= (info.source as Combatant).outgoing_mult() * (info.source as Combatant).soft_out
+        amount *= (info.source as Combatant).outgoing_mult() * (info.source as Combatant).soft_out * (info.source as Combatant).dmg_mult
 
     if info.can_crit and info.rng != null and info.rng.randf() < info.crit_chance:
         info.crit = true

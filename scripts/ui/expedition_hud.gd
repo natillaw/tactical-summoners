@@ -14,6 +14,7 @@ const SKILL_ICON_PX := 32             # KURAI sheet cell (drawn at x0.5 inside t
 var sb: SandboxScreen
 var _party: Array = []                # [{"slot": TextureButton-like Control, ...}] per hero
 var _skills: Array = []               # 4 Controls: Q, W, E, R
+var _commands: Array = []             # D-081: 3 Buttons, Master commands (keys 1 2 3)
 var _objective: Label
 var _floor: Label
 var _order_label: Label
@@ -61,6 +62,8 @@ func _build_top_left() -> void:
     vb.add_child(_floor)
     _objective = UIKit.label("", 14, UIKit.TEXT)
     vb.add_child(_objective)
+    if Game.hardcore:                                    # D-081: hardcore game, always visible
+        hb.add_child(UIKit.icon(MasterDefs.HARDCORE_ICON, "Hardcore: if your Master dies, the game ends"))
 
 
 # --- top-centre: boss -----------------------------------------------------------------------------
@@ -151,6 +154,14 @@ func _build_skills() -> void:
         var cell := SkillCell.new(sb, i - 1, _skill_tex)          # -1 = Q basic attack, 0..2 = W E R
         hb.add_child(cell)
         _skills.append(cell)
+    if sb != null and sb.master_hero != null:             # D-081: the Master's commands, apart from the skills
+        hb.add_child(VSeparator.new())
+        for i in MasterDefs.COMMAND_KEYS.size():
+            var slot := i
+            var b := UIKit.button("", func(): sb.use_command(slot), Vector2(SKILL + 12, SKILL))
+            b.focus_mode = Control.FOCUS_NONE
+            hb.add_child(b)
+            _commands.append(b)
 
 
 # --- bottom-right: orders -----------------------------------------------------------------------------
@@ -233,6 +244,7 @@ func _process(_delta: float) -> void:
         (c as PartyCell).refresh()
     for c in _skills:
         (c as SkillCell).refresh(focus)
+    _refresh_commands()
     _refresh_social(focus)
     _order_label.text = ("%s · %s" % [focus.hero.hero_name.split(" ")[0], focus.order_label()]) if focus != null else "Squad: %d selected" % sb.selected.size()
     var boss := sb.boss
@@ -242,6 +254,33 @@ func _process(_delta: float) -> void:
         _boss_bar.max_value = boss.max_hp
         _boss_bar.value = boss.hp
     _minimap.queue_redraw()
+
+
+## D-081: key, then cooldown seconds or the level that unlocks it; the tooltip says what it does.
+func _refresh_commands() -> void:
+    if _commands.is_empty():
+        return
+    var m: HeroData = sb.master_hero.hero
+    var known := MasterRules.commands(m)
+    for i in _commands.size():
+        var b: Button = _commands[i]
+        var id := ""
+        for cid in MasterDefs.COMMANDS:
+            if int(MasterDefs.COMMANDS[cid]["slot"]) == i:
+                id = String(cid)
+        if id == "":
+            b.visible = false
+            continue
+        var c: Dictionary = MasterDefs.COMMANDS[id]
+        var cd := float(sb.command_cd.get(id, 0.0))
+        var key := OS.get_keycode_string(MasterDefs.COMMAND_KEYS[i])
+        if not known.has(id):
+            b.text = "%s %s%d" % [key, tr("Lv"), int(c["unlock_level"])]
+            b.disabled = true
+        else:
+            b.text = key if cd <= 0.0 else "%s %d" % [key, ceili(cd)]
+            b.disabled = cd > 0.0 or not sb.master_hero.alive
+        b.tooltip_text = "%s (%s)\n%s" % [tr(String(c["name"])), key, tr(String(c["desc"]))]
 
 
 func _refresh_social(h: SandboxHero) -> void:

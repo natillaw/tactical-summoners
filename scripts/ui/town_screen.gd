@@ -301,6 +301,10 @@ func _show_panel(id: String) -> void:
         _panel_storage()
     if id == "town_hall":
         _panel_hall()
+        if Game.master() != null:                # D-081: the mirror (barber) re-opens only the looks
+            var mirror := UIKit.button("Mirror: change your looks", func(): navigate.emit("master_edit", 0), Vector2(150, 24))
+            mirror.tooltip_text = "Hair, beard, skin and eyes. Not the race, class, trait or name."
+            _panel_box.add_child(mirror)
     if not (b.get("jobs", []) as Array).is_empty() and level > 0:
         _panel_jobs(id)
     if level > 0 and (TownTables.worker_slots(id, level) > 0):

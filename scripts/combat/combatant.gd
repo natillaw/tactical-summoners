@@ -24,6 +24,7 @@ var heal_mult: float = 1.0           # D-079: "no_heal" partly countered (heavy 
 var poison_mult: float = 1.0         # D-079: "hazard" countered (antidote, Poison-proof gift): poison strength
 var soft_in: float = 1.0             # D-079 soft block: damage taken x (PowerCalc.floor_effect, set once per floor)
 var soft_out: float = 1.0            # D-079 soft block: damage dealt x
+var dmg_mult: float = 1.0            # D-081: the Master leads, the others carry (MasterDefs.DAMAGE_MULT)
 var resistances: Dictionary = {}    # P-29 hook (pending): element -> fraction resisted (0..1); no content yet
 var crit_chance: float = 0.0
 var status_resist: float = 0.0

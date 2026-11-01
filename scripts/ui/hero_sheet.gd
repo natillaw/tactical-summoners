@@ -49,6 +49,8 @@ func rebuild() -> void:
     _tabs.add_child(_scroll("Progression", _progression()))
     _tabs.add_child(_scroll("Profession", _profession()))
     _tabs.add_child(_scroll("Relations", _relations()))
+    if hero.is_master:
+        _tabs.add_child(_scroll("Master memories", _memories()))     # D-081
     _tabs.current_tab = clampi(_tab_index, 0, _tabs.get_tab_count() - 1)
     _tabs.tab_changed.connect(func(i): _tab_index = i)
 
@@ -75,6 +77,44 @@ func _done(msg: String) -> void:
     changed.emit()
 
 
+# --- D-081: Leadership (the Master) or the bond with the Master (everybody else) -------------------
+
+func _leader_line() -> Control:
+    if hero.is_master:
+        var known: Array = MasterRules.commands(hero).map(func(c): return tr(String(MasterDefs.COMMANDS[c]["name"])))
+        return _wrap("%s %d  ·  %s %d px  ·  %s: %s" % [tr("Leadership"), roundi(MasterRules.leadership(hero)), tr("radius"),
+            roundi(MasterRules.leadership_radius(hero)), tr("Commands"), ", ".join(known) if not known.is_empty() else "-"], UIKit.ACCENT, 13)
+    var row := HBoxContainer.new()
+    row.add_child(UIKit.label(tr("Bond with the Master"), 12, UIKit.MUTED))
+    row.add_child(UIKit.bar("xp", float(hero.bond_master), 100.0, 60, false))
+    row.add_child(UIKit.label("%d · %s" % [hero.bond_master, tr(String(MasterRules.bond_tier(hero.bond_master)["name"]))], 12, UIKit.TEXT))
+    return row
+
+
+## Memories of the Former Master: the unlocked ones with their scene and reward, the others as "???".
+func _memories() -> VBoxContainer:
+    var v := VBoxContainer.new()
+    for mem in MasterMemories.MEMORIES:
+        var id := String(mem["id"])
+        if hero.master_memories.has(id):
+            v.add_child(UIKit.label("%s %d  -  %s" % [tr("Floor"), int(mem["floor"]), tr(String(mem["title"]))], 14, UIKit.ACCENT))
+            v.add_child(_wrap(tr(String(mem["text"])), UIKit.TEXT, 12))
+            v.add_child(_wrap(_reward_text(mem["reward"]), UIKit.MUTED, 12))
+        else:
+            v.add_child(UIKit.label("%s %d  -  ???" % [tr("Floor"), int(mem["floor"])], 14, UIKit.MUTED))
+    return v
+
+
+static func _reward_text(r: Dictionary) -> String:
+    if r.has("leadership"):
+        return "+%d %s" % [int(r["leadership"]), TranslationServer.translate("Leadership")]
+    if r.has("passive") and HeroTables.PASSIVES.has(String(r["passive"])):
+        return "%s: %s" % [TranslationServer.translate("Passive"), TranslationServer.translate(String(HeroTables.PASSIVES[r["passive"]]["name"]))]
+    if r.has("command") and MasterDefs.COMMANDS.has(String(r["command"])):
+        return "%s: %s" % [TranslationServer.translate("Command"), TranslationServer.translate(String(MasterDefs.COMMANDS[r["command"]]["name"]))]
+    return ""
+
+
 # --- Summary --------------------------------------------------------------------------------------
 
 func _summary() -> VBoxContainer:
@@ -91,6 +131,7 @@ func _summary() -> VBoxContainer:
     for s in [["social_trust", "Trust", hero.trust], ["social_obedience", "Obedience", hero.obedience], ["social_composure", "Composure", hero.composure]]:
         social.add_child(UIKit.icon(AssetCatalog.icon(String(s[0])), String(s[1])))
         social.add_child(UIKit.label("%s %d" % [String(s[1]), int(s[2])], 12, UIKit.TEXT))
+    v.add_child(_leader_line())
     v.add_child(UIKit.label("Personality", 20, UIKit.ACCENT))
     for t in hero.traits:
         var td: Dictionary = HeroTables.TRAITS[t]
