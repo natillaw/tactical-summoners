@@ -110,6 +110,24 @@ static func nine(path: String, margin: int, frame_w: int = 0, idx: int = 0, cont
     return s
 
 
+## D-075: a piece of the CraftPix basic UI sheets as a 9-slice (rect inside the sheet, margins l/t/r/b).
+const UI_B := "res://assets/pixel/packs/ui_basic/PNG/"
+static func piece(sheet: String, rect: Rect2, l: int, t: int, r: int, b: int, content: int = 5) -> StyleBox:
+    var tex := _tex(UI_B + sheet)
+    if tex == null:
+        return box(PANEL, ArtPalette.PANEL_RIM, 1, 0, content)
+    var s := StyleBoxTexture.new()
+    s.texture = tex
+    s.region_rect = rect
+    s.texture_margin_left = l
+    s.texture_margin_top = t
+    s.texture_margin_right = r
+    s.texture_margin_bottom = b
+    s.set_content_margin_all(content)
+    s.content_margin_top = maxf(content, t - 2)
+    return s
+
+
 static func box(bg: Color, border: Color = Color(0, 0, 0, 0), border_w: int = 0, radius: int = 0, p_margin: int = 4) -> StyleBoxFlat:
     var s := StyleBoxFlat.new()
     s.bg_color = bg
@@ -127,12 +145,14 @@ static func make_theme() -> Theme:
     t.default_font = body_font()
     t.default_font_size = BODY
     var ui: Dictionary = AssetCatalog.UI
-    var panel := nine(String(ui["panel"][0]), 4, 0, 0, 6)
+    # D-075: CraftPix basic UI (wood panels with a header band, parchment insets, green buttons)
+    var panel := piece("Main_tiles.png", Rect2(103, 48, 34, 37), 6, 14, 6, 7, 6)
+    var parchment := piece("Main_tiles.png", Rect2(7, 48, 34, 37), 6, 14, 6, 7, 4)
     t.set_stylebox("panel", "PanelContainer", panel)
     t.set_stylebox("panel", "Panel", panel)
     t.set_stylebox("panel", "PopupPanel", panel)
-    t.set_stylebox("panel", "TooltipPanel", nine(String(ui["panel"][0]), 4, 0, 0, 4))
-    t.set_color("font_color", "TooltipLabel", TEXT)
+    t.set_stylebox("panel", "TooltipPanel", parchment)
+    t.set_color("font_color", "TooltipLabel", Color("3b2416"))
     t.set_font("font", "TooltipLabel", body_font())
     t.set_font_size("font_size", "TooltipLabel", BODY)
     for c in ["Label", "Button", "LineEdit", "CheckBox", "OptionButton", "TabBar"]:
@@ -142,19 +162,17 @@ static func make_theme() -> Theme:
     t.set_color("font_focus_color", "Button", TEXT)
     t.set_color("font_disabled_color", "Button", Color(TEXT_DISABLED))
     t.set_color("font_outline_color", "Label", ArtPalette.OUTLINE)
-    var b: Array = ui["dragon_button"]
-    # Dragon Regalia button sheet: 4 states side by side (rest, hover, pressed, disabled)
-    t.set_stylebox("normal", "Button", nine(String(b[0]), 6, int(b[2]), 3, 4))
-    t.set_stylebox("hover", "Button", nine(String(b[0]), 6, int(b[2]), 0, 4))
-    t.set_stylebox("pressed", "Button", nine(String(b[0]), 6, int(b[2]), 2, 4))
-    t.set_stylebox("hover_pressed", "Button", nine(String(b[0]), 6, int(b[2]), 2, 4))
+    t.set_stylebox("normal", "Button", piece("Buttons.png", Rect2(51, 97, 42, 15), 4, 4, 4, 5, 4))
+    t.set_stylebox("hover", "Button", piece("Buttons.png", Rect2(147, 97, 42, 15), 4, 4, 4, 5, 4))
+    t.set_stylebox("pressed", "Button", piece("Buttons.png", Rect2(3, 113, 42, 15), 4, 4, 4, 5, 4))
+    t.set_stylebox("hover_pressed", "Button", piece("Buttons.png", Rect2(3, 113, 42, 15), 4, 4, 4, 5, 4))
     t.set_stylebox("disabled", "Button", box(Color(ArtPalette.PANEL, 0.9), ArtPalette.PANEL_RIM, 1, 0, 4))
     t.set_stylebox("focus", "Button", StyleBoxEmpty.new())
     t.set_stylebox("background", "ProgressBar", nine(String(ui["bar_frame"][0]), 2, 0, 0, 1))
     t.set_stylebox("fill", "ProgressBar", box(ArtPalette.MANA, Color(0, 0, 0, 0), 0, 0, 0))
     t.set_stylebox("normal", "LineEdit", box(ArtPalette.INK, ArtPalette.PANEL_RIM, 1, 0, 3))
     t.set_stylebox("panel", "TabContainer", panel)
-    t.set_stylebox("tab_selected", "TabContainer", box(ArtPalette.PANEL_LIGHT, ArtPalette.GOLD[2], 1, 0, 3))
+    t.set_stylebox("tab_selected", "TabContainer", piece("Buttons.png", Rect2(147, 97, 42, 15), 4, 4, 4, 5, 3))
     t.set_stylebox("tab_unselected", "TabContainer", box(ArtPalette.PANEL, ArtPalette.PANEL_RIM, 1, 0, 3))
     t.set_stylebox("tab_hovered", "TabContainer", box(ArtPalette.PANEL_LIGHT, ArtPalette.PANEL_RIM, 1, 0, 3))
     t.set_constant("separation", "VBoxContainer", 4)
