@@ -372,6 +372,9 @@ func _tactical_micro(sb: SandboxScreen, standing: Array, foes: Array) -> int:
         for h in standing:
             if h.position.distance_to(aim) <= r + 12.0 and not _dodging.has(h):
                 var away: Vector2 = (h.position - aim).normalized() if h.position.distance_to(aim) > 1.0 else Vector2.RIGHT.rotated(float(h.slot))
+                if e.windup_left() < 0.35 and h.dash(away):     # a good player dashes through on timing
+                    _dodging[h] = 0.4
+                    continue
                 var spot: Vector2 = sb.map.nearest_walkable(aim + away * (r + 45.0))
                 var p := sb.map.find_path(h.position, spot)
                 if not p.is_empty():

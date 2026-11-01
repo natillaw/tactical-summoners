@@ -17,7 +17,12 @@ const WALK_ANIM_SPEED := 85.0       # move speed at which the walk cycle plays a
 const ATTACK_LEAD := 0.12           # the attack pose starts this early so the blow lands on the damage
 
 var hero: HeroData
-var vision_mod: int = 0              # floor modifier "fog" (master prompt D)
+var vision_mod: int = 0
+var dash_cd: float = 0.0             # CombatRules.DASH_*
+var dash_t: float = 0.0
+var _dash_end: Vector2 = Vector2.ZERO
+var _ghost_t: float = 0.0
+var dashes: int = 0                  # stat (bots, tests)              # floor modifier "fog" (master prompt D)
 var slot: int = 0                 # 0-4 -> key 1-5
 var selected: bool = false : set = _set_selected
 var path: Array[Vector2] = []
@@ -295,6 +300,9 @@ func tick(delta: float) -> void:
 	_use_consumables(delta)
 	_repath = maxf(0.0, _repath - delta)
 	_dodge_t = maxf(0.0, _dodge_t - delta)
+	dash_cd = maxf(0.0, dash_cd - delta)
+	if dash_t > 0.0:
+		_dash_step(delta)
 	_kite_cd = maxf(0.0, _kite_cd - delta)
 	_fallback_cd = maxf(0.0, _fallback_cd - delta)
 	if chatter_timer > 0.0:
@@ -370,6 +378,8 @@ func combat_tick(enemies: Array, map: NavMap) -> void:
 	_map = map
 	if not alive or casting != "":
 		return
+	if dash_t > 0.0:
+		return                                   # mid-dash: nothing else moves the hero
 	if _dodge_t > 0.0 and not path.is_empty():
 		return                                   # finishing a dodge step
 	if order != "move" and order != "retreat" and order != "rescue" and can_move() and not is_controlled():
@@ -554,11 +564,17 @@ func _try_dodge(enemies: Array, map: NavMap) -> bool:
 			continue                             # already decided for this strike
 		_dodge_seen[key] = e.strike_seq
 		var lvl := hero.level if hero != null else 1
-		if combat_rng.randf() >= CombatRules.auto_dodge_chance(int(stats.get("spd", 5)), lvl):
-			continue                             # did not react in time
 		var away := position - aim
 		if away.length() < 1.0:
 			away = Vector2.RIGHT.rotated(float(slot))
+		if dash_cd <= 0.0 and combat_rng.randf() < CombatRules.ai_dash_chance(int(stats.get("spd", 5)), lvl):
+			var dir := away.normalized()
+			if combat_rng.randf() < CombatRules.AI_DASH_WRONG:
+				dir = dir.orthogonal() * (1.0 if combat_rng.randf() < 0.5 else -1.0)   # a poor read: sideways
+			if dash(dir):
+				return true
+		if combat_rng.randf() >= CombatRules.auto_dodge_chance(int(stats.get("spd", 5)), lvl):
+			continue                             # did not react in time
 		var spot := aim + away.normalized() * (r + 22.0)
 		if not map.can_step(position, spot):
 			spot = aim - away.normalized().orthogonal() * (r + 22.0)
@@ -570,6 +586,74 @@ func _try_dodge(enemies: Array, map: NavMap) -> bool:
 		_dodge_t = 0.6
 		return true
 	return false
+
+
+## Dash (CombatRules.DASH_*): a short burst with invulnerability frames. Returns false when it cannot
+## (cooldown, stunned, rooted, casting, carrying the relic, down). The look: the hero leans and stretches
+## along the dash, leaves fading after-images of its own current frame and a puff of dust, and squashes
+## a little on landing (no roll frames needed: the Tiny Pixel Fantasy sheets have none).
+func dash(dir: Vector2) -> bool:
+	if dash_cd > 0.0 or dash_t > 0.0 or downed or not alive or not can_move() or casting != "" or carrying or dir.length() < 0.01:
+		return false
+	dir = dir.normalized()
+	var end := position
+	var step := CombatRules.DASH_DIST / 6.0
+	for i in 6:
+		var nxt := end + dir * step
+		if _map != null and not _map.can_step(end, nxt):
+			break
+		end = nxt
+	if end.distance_to(position) < 8.0:
+		return false
+	_dash_end = end
+	dash_t = CombatRules.DASH_TIME
+	dash_cd = CombatRules.DASH_CD
+	iframe_t = CombatRules.DASH_IFRAMES
+	dashes += 1
+	path.clear()
+	_ghost_t = 0.0
+	if _sprite != null:
+		var tw := create_tween()
+		_sprite.scale = Vector2(1.25, 0.82)                       # stretch along the burst
+		_sprite.rotation = dir.x * 0.18                           # lean into it
+		tw.tween_property(_sprite, "scale", Vector2(0.9, 1.1), CombatRules.DASH_TIME)   # squash on landing
+		tw.tween_property(_sprite, "scale", Vector2.ONE, 0.12)
+		tw.parallel().tween_property(_sprite, "rotation", 0.0, 0.12)
+	var parent := get_parent()
+	if parent != null and is_inside_tree():
+		CombatVFX.play(parent, position, "dust", 0.8)
+	return true
+
+
+func _dash_step(delta: float) -> void:
+	var speed := CombatRules.DASH_DIST / CombatRules.DASH_TIME
+	position = position.move_toward(_dash_end, speed * delta)
+	dash_t = maxf(0.0, dash_t - delta)
+	_ghost_t -= delta
+	if _ghost_t <= 0.0:
+		_ghost_t = CombatRules.DASH_TIME / 4.0
+		_after_image()
+	if dash_t <= 0.0:
+		position = _dash_end
+
+
+## One fading copy of the hero's current frame (the dash trail).
+func _after_image() -> void:
+	if _sprite == null or _sprite.sprite_frames == null or not is_inside_tree() or get_parent() == null:
+		return
+	var g := Sprite2D.new()
+	g.texture = _sprite.sprite_frames.get_frame_texture(_sprite.animation, _sprite.frame)
+	g.centered = _sprite.centered
+	g.offset = _sprite.offset
+	g.flip_h = _sprite.flip_h
+	g.scale = _sprite.scale
+	g.position = position + _sprite.position
+	g.modulate = Color(0.65, 0.85, 1.0, 0.55)
+	g.z_index = z_index - 1
+	get_parent().add_child(g)
+	var tw := g.create_tween()
+	tw.tween_property(g, "modulate:a", 0.0, 0.25)
+	tw.tween_callback(g.queue_free)
 
 
 ## Hurt and in a fight, an autonomous hero breaks off toward the driven hero or the squad centre
