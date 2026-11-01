@@ -91,8 +91,8 @@ static func compose_sheet(appearance: Dictionary) -> Image:
 
 ## Cheap single-pose texture (used by cards and portraits). Cached per hero + animation.
 static func pose_texture(hero: HeroData, anim: String = "idle") -> Texture2D:
-    if uses_lpc(hero):                                     # overhaul LPC (D-A)
-        return LpcComposer.pose_texture_for(hero.look, hero.hero_class)
+    if uses_lpc(hero):                                     # overhaul LPC (D-A); equipped items show (D-D)
+        return LpcComposer.pose_texture_for(hero.look, hero.hero_class, "idle", ItemVisuals.equipment_layers(hero.equipment))
     var key := hero.id + "/" + anim
     if _tex_cache.has(key):
         return _tex_cache[key]
@@ -122,7 +122,7 @@ static func feet_offset(hero: HeroData) -> Vector2:
 
 static func build_frames(hero: HeroData) -> SpriteFrames:
     if uses_lpc(hero):
-        return LpcComposer.build_frames_legacy(hero.look, hero.hero_class)
+        return LpcComposer.build_frames_legacy(hero.look, hero.hero_class, ItemVisuals.equipment_layers(hero.equipment))
     var key := hero.id + "/sheet"
     var sheet: ImageTexture
     if _tex_cache.has(key):

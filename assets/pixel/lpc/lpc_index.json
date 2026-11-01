@@ -3670,6 +3670,17 @@
         "shoot": "shirt_longsleeve/layer_1/male/tan/shoot.png",
         "spellcast": "shirt_longsleeve/layer_1/male/tan/spellcast.png",
         "hurt": "shirt_longsleeve/layer_1/male/tan/hurt.png"
+       },
+       "navy": {
+        "idle": "shirt_longsleeve/layer_1/male/navy/idle.png",
+        "combat_idle": "shirt_longsleeve/layer_1/male/navy/combat_idle.png",
+        "walk": "shirt_longsleeve/layer_1/male/navy/walk.png",
+        "run": "shirt_longsleeve/layer_1/male/navy/run.png",
+        "slash": "shirt_longsleeve/layer_1/male/navy/slash.png",
+        "thrust": "shirt_longsleeve/layer_1/male/navy/thrust.png",
+        "shoot": "shirt_longsleeve/layer_1/male/navy/shoot.png",
+        "spellcast": "shirt_longsleeve/layer_1/male/navy/spellcast.png",
+        "hurt": "shirt_longsleeve/layer_1/male/navy/hurt.png"
        }
       },
       "female": {
@@ -3683,6 +3694,17 @@
         "shoot": "shirt_longsleeve/layer_1/female/tan/shoot.png",
         "spellcast": "shirt_longsleeve/layer_1/female/tan/spellcast.png",
         "hurt": "shirt_longsleeve/layer_1/female/tan/hurt.png"
+       },
+       "navy": {
+        "idle": "shirt_longsleeve/layer_1/female/navy/idle.png",
+        "combat_idle": "shirt_longsleeve/layer_1/female/navy/combat_idle.png",
+        "walk": "shirt_longsleeve/layer_1/female/navy/walk.png",
+        "run": "shirt_longsleeve/layer_1/female/navy/run.png",
+        "slash": "shirt_longsleeve/layer_1/female/navy/slash.png",
+        "thrust": "shirt_longsleeve/layer_1/female/navy/thrust.png",
+        "shoot": "shirt_longsleeve/layer_1/female/navy/shoot.png",
+        "spellcast": "shirt_longsleeve/layer_1/female/navy/spellcast.png",
+        "hurt": "shirt_longsleeve/layer_1/female/navy/hurt.png"
        }
       }
      }
@@ -4087,6 +4109,28 @@
         "shoot": "hood/layer_1/male/maroon/shoot.png",
         "spellcast": "hood/layer_1/male/maroon/spellcast.png",
         "hurt": "hood/layer_1/male/maroon/hurt.png"
+       },
+       "forest": {
+        "idle": "hood/layer_1/male/forest/idle.png",
+        "combat_idle": "hood/layer_1/male/forest/combat_idle.png",
+        "walk": "hood/layer_1/male/forest/walk.png",
+        "run": "hood/layer_1/male/forest/run.png",
+        "slash": "hood/layer_1/male/forest/slash.png",
+        "thrust": "hood/layer_1/male/forest/thrust.png",
+        "shoot": "hood/layer_1/male/forest/shoot.png",
+        "spellcast": "hood/layer_1/male/forest/spellcast.png",
+        "hurt": "hood/layer_1/male/forest/hurt.png"
+       },
+       "brown": {
+        "idle": "hood/layer_1/male/brown/idle.png",
+        "combat_idle": "hood/layer_1/male/brown/combat_idle.png",
+        "walk": "hood/layer_1/male/brown/walk.png",
+        "run": "hood/layer_1/male/brown/run.png",
+        "slash": "hood/layer_1/male/brown/slash.png",
+        "thrust": "hood/layer_1/male/brown/thrust.png",
+        "shoot": "hood/layer_1/male/brown/shoot.png",
+        "spellcast": "hood/layer_1/male/brown/spellcast.png",
+        "hurt": "hood/layer_1/male/brown/hurt.png"
        }
       },
       "female": {
@@ -4100,6 +4144,28 @@
         "shoot": "hood/layer_1/female/maroon/shoot.png",
         "spellcast": "hood/layer_1/female/maroon/spellcast.png",
         "hurt": "hood/layer_1/female/maroon/hurt.png"
+       },
+       "forest": {
+        "idle": "hood/layer_1/female/forest/idle.png",
+        "combat_idle": "hood/layer_1/female/forest/combat_idle.png",
+        "walk": "hood/layer_1/female/forest/walk.png",
+        "run": "hood/layer_1/female/forest/run.png",
+        "slash": "hood/layer_1/female/forest/slash.png",
+        "thrust": "hood/layer_1/female/forest/thrust.png",
+        "shoot": "hood/layer_1/female/forest/shoot.png",
+        "spellcast": "hood/layer_1/female/forest/spellcast.png",
+        "hurt": "hood/layer_1/female/forest/hurt.png"
+       },
+       "brown": {
+        "idle": "hood/layer_1/female/brown/idle.png",
+        "combat_idle": "hood/layer_1/female/brown/combat_idle.png",
+        "walk": "hood/layer_1/female/brown/walk.png",
+        "run": "hood/layer_1/female/brown/run.png",
+        "slash": "hood/layer_1/female/brown/slash.png",
+        "thrust": "hood/layer_1/female/brown/thrust.png",
+        "shoot": "hood/layer_1/female/brown/shoot.png",
+        "spellcast": "hood/layer_1/female/brown/spellcast.png",
+        "hurt": "hood/layer_1/female/brown/hurt.png"
        }
       }
      }
@@ -4237,6 +4303,17 @@
      "z": 60,
      "files": {
       "male": {
+       "copper": {
+        "idle": "armour_plate/layer_1/male/copper/idle.png",
+        "combat_idle": "armour_plate/layer_1/male/copper/combat_idle.png",
+        "walk": "armour_plate/layer_1/male/copper/walk.png",
+        "run": "armour_plate/layer_1/male/copper/run.png",
+        "slash": "armour_plate/layer_1/male/copper/slash.png",
+        "thrust": "armour_plate/layer_1/male/copper/thrust.png",
+        "shoot": "armour_plate/layer_1/male/copper/shoot.png",
+        "spellcast": "armour_plate/layer_1/male/copper/spellcast.png",
+        "hurt": "armour_plate/layer_1/male/copper/hurt.png"
+       },
        "iron": {
         "idle": "armour_plate/layer_1/male/iron/idle.png",
         "combat_idle": "armour_plate/layer_1/male/iron/combat_idle.png",
@@ -4247,9 +4324,53 @@
         "shoot": "armour_plate/layer_1/male/iron/shoot.png",
         "spellcast": "armour_plate/layer_1/male/iron/spellcast.png",
         "hurt": "armour_plate/layer_1/male/iron/hurt.png"
+       },
+       "steel": {
+        "idle": "armour_plate/layer_1/male/steel/idle.png",
+        "combat_idle": "armour_plate/layer_1/male/steel/combat_idle.png",
+        "walk": "armour_plate/layer_1/male/steel/walk.png",
+        "run": "armour_plate/layer_1/male/steel/run.png",
+        "slash": "armour_plate/layer_1/male/steel/slash.png",
+        "thrust": "armour_plate/layer_1/male/steel/thrust.png",
+        "shoot": "armour_plate/layer_1/male/steel/shoot.png",
+        "spellcast": "armour_plate/layer_1/male/steel/spellcast.png",
+        "hurt": "armour_plate/layer_1/male/steel/hurt.png"
+       },
+       "silver": {
+        "idle": "armour_plate/layer_1/male/silver/idle.png",
+        "combat_idle": "armour_plate/layer_1/male/silver/combat_idle.png",
+        "walk": "armour_plate/layer_1/male/silver/walk.png",
+        "run": "armour_plate/layer_1/male/silver/run.png",
+        "slash": "armour_plate/layer_1/male/silver/slash.png",
+        "thrust": "armour_plate/layer_1/male/silver/thrust.png",
+        "shoot": "armour_plate/layer_1/male/silver/shoot.png",
+        "spellcast": "armour_plate/layer_1/male/silver/spellcast.png",
+        "hurt": "armour_plate/layer_1/male/silver/hurt.png"
+       },
+       "gold": {
+        "idle": "armour_plate/layer_1/male/gold/idle.png",
+        "combat_idle": "armour_plate/layer_1/male/gold/combat_idle.png",
+        "walk": "armour_plate/layer_1/male/gold/walk.png",
+        "run": "armour_plate/layer_1/male/gold/run.png",
+        "slash": "armour_plate/layer_1/male/gold/slash.png",
+        "thrust": "armour_plate/layer_1/male/gold/thrust.png",
+        "shoot": "armour_plate/layer_1/male/gold/shoot.png",
+        "spellcast": "armour_plate/layer_1/male/gold/spellcast.png",
+        "hurt": "armour_plate/layer_1/male/gold/hurt.png"
        }
       },
       "female": {
+       "copper": {
+        "idle": "armour_plate/layer_1/female/copper/idle.png",
+        "combat_idle": "armour_plate/layer_1/female/copper/combat_idle.png",
+        "walk": "armour_plate/layer_1/female/copper/walk.png",
+        "run": "armour_plate/layer_1/female/copper/run.png",
+        "slash": "armour_plate/layer_1/female/copper/slash.png",
+        "thrust": "armour_plate/layer_1/female/copper/thrust.png",
+        "shoot": "armour_plate/layer_1/female/copper/shoot.png",
+        "spellcast": "armour_plate/layer_1/female/copper/spellcast.png",
+        "hurt": "armour_plate/layer_1/female/copper/hurt.png"
+       },
        "iron": {
         "idle": "armour_plate/layer_1/female/iron/idle.png",
         "combat_idle": "armour_plate/layer_1/female/iron/combat_idle.png",
@@ -4260,6 +4381,39 @@
         "shoot": "armour_plate/layer_1/female/iron/shoot.png",
         "spellcast": "armour_plate/layer_1/female/iron/spellcast.png",
         "hurt": "armour_plate/layer_1/female/iron/hurt.png"
+       },
+       "steel": {
+        "idle": "armour_plate/layer_1/female/steel/idle.png",
+        "combat_idle": "armour_plate/layer_1/female/steel/combat_idle.png",
+        "walk": "armour_plate/layer_1/female/steel/walk.png",
+        "run": "armour_plate/layer_1/female/steel/run.png",
+        "slash": "armour_plate/layer_1/female/steel/slash.png",
+        "thrust": "armour_plate/layer_1/female/steel/thrust.png",
+        "shoot": "armour_plate/layer_1/female/steel/shoot.png",
+        "spellcast": "armour_plate/layer_1/female/steel/spellcast.png",
+        "hurt": "armour_plate/layer_1/female/steel/hurt.png"
+       },
+       "silver": {
+        "idle": "armour_plate/layer_1/female/silver/idle.png",
+        "combat_idle": "armour_plate/layer_1/female/silver/combat_idle.png",
+        "walk": "armour_plate/layer_1/female/silver/walk.png",
+        "run": "armour_plate/layer_1/female/silver/run.png",
+        "slash": "armour_plate/layer_1/female/silver/slash.png",
+        "thrust": "armour_plate/layer_1/female/silver/thrust.png",
+        "shoot": "armour_plate/layer_1/female/silver/shoot.png",
+        "spellcast": "armour_plate/layer_1/female/silver/spellcast.png",
+        "hurt": "armour_plate/layer_1/female/silver/hurt.png"
+       },
+       "gold": {
+        "idle": "armour_plate/layer_1/female/gold/idle.png",
+        "combat_idle": "armour_plate/layer_1/female/gold/combat_idle.png",
+        "walk": "armour_plate/layer_1/female/gold/walk.png",
+        "run": "armour_plate/layer_1/female/gold/run.png",
+        "slash": "armour_plate/layer_1/female/gold/slash.png",
+        "thrust": "armour_plate/layer_1/female/gold/thrust.png",
+        "shoot": "armour_plate/layer_1/female/gold/shoot.png",
+        "spellcast": "armour_plate/layer_1/female/gold/spellcast.png",
+        "hurt": "armour_plate/layer_1/female/gold/hurt.png"
        }
       }
      }
@@ -4705,6 +4859,613 @@
        "default": {
         "walk": "weapon_longsword/layer_2/female/walk.png",
         "hurt": "weapon_longsword/layer_2/female/hurt.png"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "chainmail": {
+   "name": "Chainmail",
+   "licenses": [
+    "CC-BY-SA 3.0",
+    "GPL 3.0",
+    "OGA-BY 3.0"
+   ],
+   "authors": [
+    "JaidynReiman",
+    "Johannes Sj\u00f6lund (wulax)",
+    "Napsio (Vitruvian Studio)"
+   ],
+   "layers": [
+    {
+     "z": 50,
+     "files": {
+      "male": {
+       "copper": {
+        "idle": "chainmail/layer_1/male/copper/idle.png",
+        "walk": "chainmail/layer_1/male/copper/walk.png",
+        "run": "chainmail/layer_1/male/copper/run.png",
+        "slash": "chainmail/layer_1/male/copper/slash.png",
+        "thrust": "chainmail/layer_1/male/copper/thrust.png",
+        "shoot": "chainmail/layer_1/male/copper/shoot.png",
+        "spellcast": "chainmail/layer_1/male/copper/spellcast.png",
+        "hurt": "chainmail/layer_1/male/copper/hurt.png"
+       },
+       "iron": {
+        "idle": "chainmail/layer_1/male/iron/idle.png",
+        "walk": "chainmail/layer_1/male/iron/walk.png",
+        "run": "chainmail/layer_1/male/iron/run.png",
+        "slash": "chainmail/layer_1/male/iron/slash.png",
+        "thrust": "chainmail/layer_1/male/iron/thrust.png",
+        "shoot": "chainmail/layer_1/male/iron/shoot.png",
+        "spellcast": "chainmail/layer_1/male/iron/spellcast.png",
+        "hurt": "chainmail/layer_1/male/iron/hurt.png"
+       },
+       "steel": {
+        "idle": "chainmail/layer_1/male/steel/idle.png",
+        "walk": "chainmail/layer_1/male/steel/walk.png",
+        "run": "chainmail/layer_1/male/steel/run.png",
+        "slash": "chainmail/layer_1/male/steel/slash.png",
+        "thrust": "chainmail/layer_1/male/steel/thrust.png",
+        "shoot": "chainmail/layer_1/male/steel/shoot.png",
+        "spellcast": "chainmail/layer_1/male/steel/spellcast.png",
+        "hurt": "chainmail/layer_1/male/steel/hurt.png"
+       },
+       "silver": {
+        "idle": "chainmail/layer_1/male/silver/idle.png",
+        "walk": "chainmail/layer_1/male/silver/walk.png",
+        "run": "chainmail/layer_1/male/silver/run.png",
+        "slash": "chainmail/layer_1/male/silver/slash.png",
+        "thrust": "chainmail/layer_1/male/silver/thrust.png",
+        "shoot": "chainmail/layer_1/male/silver/shoot.png",
+        "spellcast": "chainmail/layer_1/male/silver/spellcast.png",
+        "hurt": "chainmail/layer_1/male/silver/hurt.png"
+       },
+       "gold": {
+        "idle": "chainmail/layer_1/male/gold/idle.png",
+        "walk": "chainmail/layer_1/male/gold/walk.png",
+        "run": "chainmail/layer_1/male/gold/run.png",
+        "slash": "chainmail/layer_1/male/gold/slash.png",
+        "thrust": "chainmail/layer_1/male/gold/thrust.png",
+        "shoot": "chainmail/layer_1/male/gold/shoot.png",
+        "spellcast": "chainmail/layer_1/male/gold/spellcast.png",
+        "hurt": "chainmail/layer_1/male/gold/hurt.png"
+       }
+      },
+      "female": {
+       "copper": {
+        "idle": "chainmail/layer_1/female/copper/idle.png",
+        "walk": "chainmail/layer_1/female/copper/walk.png",
+        "run": "chainmail/layer_1/female/copper/run.png",
+        "slash": "chainmail/layer_1/female/copper/slash.png",
+        "thrust": "chainmail/layer_1/female/copper/thrust.png",
+        "shoot": "chainmail/layer_1/female/copper/shoot.png",
+        "spellcast": "chainmail/layer_1/female/copper/spellcast.png",
+        "hurt": "chainmail/layer_1/female/copper/hurt.png"
+       },
+       "iron": {
+        "idle": "chainmail/layer_1/female/iron/idle.png",
+        "walk": "chainmail/layer_1/female/iron/walk.png",
+        "run": "chainmail/layer_1/female/iron/run.png",
+        "slash": "chainmail/layer_1/female/iron/slash.png",
+        "thrust": "chainmail/layer_1/female/iron/thrust.png",
+        "shoot": "chainmail/layer_1/female/iron/shoot.png",
+        "spellcast": "chainmail/layer_1/female/iron/spellcast.png",
+        "hurt": "chainmail/layer_1/female/iron/hurt.png"
+       },
+       "steel": {
+        "idle": "chainmail/layer_1/female/steel/idle.png",
+        "walk": "chainmail/layer_1/female/steel/walk.png",
+        "run": "chainmail/layer_1/female/steel/run.png",
+        "slash": "chainmail/layer_1/female/steel/slash.png",
+        "thrust": "chainmail/layer_1/female/steel/thrust.png",
+        "shoot": "chainmail/layer_1/female/steel/shoot.png",
+        "spellcast": "chainmail/layer_1/female/steel/spellcast.png",
+        "hurt": "chainmail/layer_1/female/steel/hurt.png"
+       },
+       "silver": {
+        "idle": "chainmail/layer_1/female/silver/idle.png",
+        "walk": "chainmail/layer_1/female/silver/walk.png",
+        "run": "chainmail/layer_1/female/silver/run.png",
+        "slash": "chainmail/layer_1/female/silver/slash.png",
+        "thrust": "chainmail/layer_1/female/silver/thrust.png",
+        "shoot": "chainmail/layer_1/female/silver/shoot.png",
+        "spellcast": "chainmail/layer_1/female/silver/spellcast.png",
+        "hurt": "chainmail/layer_1/female/silver/hurt.png"
+       },
+       "gold": {
+        "idle": "chainmail/layer_1/female/gold/idle.png",
+        "walk": "chainmail/layer_1/female/gold/walk.png",
+        "run": "chainmail/layer_1/female/gold/run.png",
+        "slash": "chainmail/layer_1/female/gold/slash.png",
+        "thrust": "chainmail/layer_1/female/gold/thrust.png",
+        "shoot": "chainmail/layer_1/female/gold/shoot.png",
+        "spellcast": "chainmail/layer_1/female/gold/spellcast.png",
+        "hurt": "chainmail/layer_1/female/gold/hurt.png"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "helmet_barbuta": {
+   "name": "Barbuta",
+   "licenses": [
+    "CC-BY 3.0",
+    "CC-BY 4.0",
+    "GPL 2.0",
+    "GPL 3.0",
+    "OGA-BY 3.0"
+   ],
+   "authors": [
+    "bluecarrot16"
+   ],
+   "layers": [
+    {
+     "z": 130,
+     "files": {
+      "male": {
+       "copper": {
+        "idle": "helmet_barbuta/layer_1/male/copper/idle.png",
+        "combat_idle": "helmet_barbuta/layer_1/male/copper/combat_idle.png",
+        "walk": "helmet_barbuta/layer_1/male/copper/walk.png",
+        "run": "helmet_barbuta/layer_1/male/copper/run.png",
+        "slash": "helmet_barbuta/layer_1/male/copper/slash.png",
+        "thrust": "helmet_barbuta/layer_1/male/copper/thrust.png",
+        "shoot": "helmet_barbuta/layer_1/male/copper/shoot.png",
+        "spellcast": "helmet_barbuta/layer_1/male/copper/spellcast.png",
+        "hurt": "helmet_barbuta/layer_1/male/copper/hurt.png"
+       },
+       "iron": {
+        "idle": "helmet_barbuta/layer_1/male/iron/idle.png",
+        "combat_idle": "helmet_barbuta/layer_1/male/iron/combat_idle.png",
+        "walk": "helmet_barbuta/layer_1/male/iron/walk.png",
+        "run": "helmet_barbuta/layer_1/male/iron/run.png",
+        "slash": "helmet_barbuta/layer_1/male/iron/slash.png",
+        "thrust": "helmet_barbuta/layer_1/male/iron/thrust.png",
+        "shoot": "helmet_barbuta/layer_1/male/iron/shoot.png",
+        "spellcast": "helmet_barbuta/layer_1/male/iron/spellcast.png",
+        "hurt": "helmet_barbuta/layer_1/male/iron/hurt.png"
+       },
+       "steel": {
+        "idle": "helmet_barbuta/layer_1/male/steel/idle.png",
+        "combat_idle": "helmet_barbuta/layer_1/male/steel/combat_idle.png",
+        "walk": "helmet_barbuta/layer_1/male/steel/walk.png",
+        "run": "helmet_barbuta/layer_1/male/steel/run.png",
+        "slash": "helmet_barbuta/layer_1/male/steel/slash.png",
+        "thrust": "helmet_barbuta/layer_1/male/steel/thrust.png",
+        "shoot": "helmet_barbuta/layer_1/male/steel/shoot.png",
+        "spellcast": "helmet_barbuta/layer_1/male/steel/spellcast.png",
+        "hurt": "helmet_barbuta/layer_1/male/steel/hurt.png"
+       },
+       "silver": {
+        "idle": "helmet_barbuta/layer_1/male/silver/idle.png",
+        "combat_idle": "helmet_barbuta/layer_1/male/silver/combat_idle.png",
+        "walk": "helmet_barbuta/layer_1/male/silver/walk.png",
+        "run": "helmet_barbuta/layer_1/male/silver/run.png",
+        "slash": "helmet_barbuta/layer_1/male/silver/slash.png",
+        "thrust": "helmet_barbuta/layer_1/male/silver/thrust.png",
+        "shoot": "helmet_barbuta/layer_1/male/silver/shoot.png",
+        "spellcast": "helmet_barbuta/layer_1/male/silver/spellcast.png",
+        "hurt": "helmet_barbuta/layer_1/male/silver/hurt.png"
+       },
+       "gold": {
+        "idle": "helmet_barbuta/layer_1/male/gold/idle.png",
+        "combat_idle": "helmet_barbuta/layer_1/male/gold/combat_idle.png",
+        "walk": "helmet_barbuta/layer_1/male/gold/walk.png",
+        "run": "helmet_barbuta/layer_1/male/gold/run.png",
+        "slash": "helmet_barbuta/layer_1/male/gold/slash.png",
+        "thrust": "helmet_barbuta/layer_1/male/gold/thrust.png",
+        "shoot": "helmet_barbuta/layer_1/male/gold/shoot.png",
+        "spellcast": "helmet_barbuta/layer_1/male/gold/spellcast.png",
+        "hurt": "helmet_barbuta/layer_1/male/gold/hurt.png"
+       }
+      },
+      "female": {
+       "copper": {
+        "idle": "helmet_barbuta/layer_1/female/copper/idle.png",
+        "combat_idle": "helmet_barbuta/layer_1/female/copper/combat_idle.png",
+        "walk": "helmet_barbuta/layer_1/female/copper/walk.png",
+        "run": "helmet_barbuta/layer_1/female/copper/run.png",
+        "slash": "helmet_barbuta/layer_1/female/copper/slash.png",
+        "thrust": "helmet_barbuta/layer_1/female/copper/thrust.png",
+        "shoot": "helmet_barbuta/layer_1/female/copper/shoot.png",
+        "spellcast": "helmet_barbuta/layer_1/female/copper/spellcast.png",
+        "hurt": "helmet_barbuta/layer_1/female/copper/hurt.png"
+       },
+       "iron": {
+        "idle": "helmet_barbuta/layer_1/female/iron/idle.png",
+        "combat_idle": "helmet_barbuta/layer_1/female/iron/combat_idle.png",
+        "walk": "helmet_barbuta/layer_1/female/iron/walk.png",
+        "run": "helmet_barbuta/layer_1/female/iron/run.png",
+        "slash": "helmet_barbuta/layer_1/female/iron/slash.png",
+        "thrust": "helmet_barbuta/layer_1/female/iron/thrust.png",
+        "shoot": "helmet_barbuta/layer_1/female/iron/shoot.png",
+        "spellcast": "helmet_barbuta/layer_1/female/iron/spellcast.png",
+        "hurt": "helmet_barbuta/layer_1/female/iron/hurt.png"
+       },
+       "steel": {
+        "idle": "helmet_barbuta/layer_1/female/steel/idle.png",
+        "combat_idle": "helmet_barbuta/layer_1/female/steel/combat_idle.png",
+        "walk": "helmet_barbuta/layer_1/female/steel/walk.png",
+        "run": "helmet_barbuta/layer_1/female/steel/run.png",
+        "slash": "helmet_barbuta/layer_1/female/steel/slash.png",
+        "thrust": "helmet_barbuta/layer_1/female/steel/thrust.png",
+        "shoot": "helmet_barbuta/layer_1/female/steel/shoot.png",
+        "spellcast": "helmet_barbuta/layer_1/female/steel/spellcast.png",
+        "hurt": "helmet_barbuta/layer_1/female/steel/hurt.png"
+       },
+       "silver": {
+        "idle": "helmet_barbuta/layer_1/female/silver/idle.png",
+        "combat_idle": "helmet_barbuta/layer_1/female/silver/combat_idle.png",
+        "walk": "helmet_barbuta/layer_1/female/silver/walk.png",
+        "run": "helmet_barbuta/layer_1/female/silver/run.png",
+        "slash": "helmet_barbuta/layer_1/female/silver/slash.png",
+        "thrust": "helmet_barbuta/layer_1/female/silver/thrust.png",
+        "shoot": "helmet_barbuta/layer_1/female/silver/shoot.png",
+        "spellcast": "helmet_barbuta/layer_1/female/silver/spellcast.png",
+        "hurt": "helmet_barbuta/layer_1/female/silver/hurt.png"
+       },
+       "gold": {
+        "idle": "helmet_barbuta/layer_1/female/gold/idle.png",
+        "combat_idle": "helmet_barbuta/layer_1/female/gold/combat_idle.png",
+        "walk": "helmet_barbuta/layer_1/female/gold/walk.png",
+        "run": "helmet_barbuta/layer_1/female/gold/run.png",
+        "slash": "helmet_barbuta/layer_1/female/gold/slash.png",
+        "thrust": "helmet_barbuta/layer_1/female/gold/thrust.png",
+        "shoot": "helmet_barbuta/layer_1/female/gold/shoot.png",
+        "spellcast": "helmet_barbuta/layer_1/female/gold/spellcast.png",
+        "hurt": "helmet_barbuta/layer_1/female/gold/hurt.png"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "legs_plate": {
+   "name": "Armour",
+   "licenses": [
+    "CC-BY-SA 3.0",
+    "GPL 3.0",
+    "OGA-BY 3.0"
+   ],
+   "authors": [
+    "JaidynReiman",
+    "Johannes Sj\u00f6lund (wulax)",
+    "Matthew Krohn (makrohn)",
+    "Michael Whitlock (bigbeargames)",
+    "bluecarrot16"
+   ],
+   "layers": [
+    {
+     "z": 20,
+     "files": {
+      "male": {
+       "copper": {
+        "idle": "legs_plate/layer_1/male/copper/idle.png",
+        "walk": "legs_plate/layer_1/male/copper/walk.png",
+        "slash": "legs_plate/layer_1/male/copper/slash.png",
+        "thrust": "legs_plate/layer_1/male/copper/thrust.png",
+        "shoot": "legs_plate/layer_1/male/copper/shoot.png",
+        "spellcast": "legs_plate/layer_1/male/copper/spellcast.png",
+        "hurt": "legs_plate/layer_1/male/copper/hurt.png"
+       },
+       "iron": {
+        "idle": "legs_plate/layer_1/male/iron/idle.png",
+        "walk": "legs_plate/layer_1/male/iron/walk.png",
+        "slash": "legs_plate/layer_1/male/iron/slash.png",
+        "thrust": "legs_plate/layer_1/male/iron/thrust.png",
+        "shoot": "legs_plate/layer_1/male/iron/shoot.png",
+        "spellcast": "legs_plate/layer_1/male/iron/spellcast.png",
+        "hurt": "legs_plate/layer_1/male/iron/hurt.png"
+       },
+       "steel": {
+        "idle": "legs_plate/layer_1/male/steel/idle.png",
+        "walk": "legs_plate/layer_1/male/steel/walk.png",
+        "slash": "legs_plate/layer_1/male/steel/slash.png",
+        "thrust": "legs_plate/layer_1/male/steel/thrust.png",
+        "shoot": "legs_plate/layer_1/male/steel/shoot.png",
+        "spellcast": "legs_plate/layer_1/male/steel/spellcast.png",
+        "hurt": "legs_plate/layer_1/male/steel/hurt.png"
+       },
+       "silver": {
+        "idle": "legs_plate/layer_1/male/silver/idle.png",
+        "walk": "legs_plate/layer_1/male/silver/walk.png",
+        "slash": "legs_plate/layer_1/male/silver/slash.png",
+        "thrust": "legs_plate/layer_1/male/silver/thrust.png",
+        "shoot": "legs_plate/layer_1/male/silver/shoot.png",
+        "spellcast": "legs_plate/layer_1/male/silver/spellcast.png",
+        "hurt": "legs_plate/layer_1/male/silver/hurt.png"
+       },
+       "gold": {
+        "idle": "legs_plate/layer_1/male/gold/idle.png",
+        "walk": "legs_plate/layer_1/male/gold/walk.png",
+        "slash": "legs_plate/layer_1/male/gold/slash.png",
+        "thrust": "legs_plate/layer_1/male/gold/thrust.png",
+        "shoot": "legs_plate/layer_1/male/gold/shoot.png",
+        "spellcast": "legs_plate/layer_1/male/gold/spellcast.png",
+        "hurt": "legs_plate/layer_1/male/gold/hurt.png"
+       }
+      },
+      "female": {
+       "copper": {
+        "idle": "legs_plate/layer_1/female/copper/idle.png",
+        "walk": "legs_plate/layer_1/female/copper/walk.png",
+        "slash": "legs_plate/layer_1/female/copper/slash.png",
+        "thrust": "legs_plate/layer_1/female/copper/thrust.png",
+        "shoot": "legs_plate/layer_1/female/copper/shoot.png",
+        "spellcast": "legs_plate/layer_1/female/copper/spellcast.png",
+        "hurt": "legs_plate/layer_1/female/copper/hurt.png"
+       },
+       "iron": {
+        "idle": "legs_plate/layer_1/female/iron/idle.png",
+        "walk": "legs_plate/layer_1/female/iron/walk.png",
+        "slash": "legs_plate/layer_1/female/iron/slash.png",
+        "thrust": "legs_plate/layer_1/female/iron/thrust.png",
+        "shoot": "legs_plate/layer_1/female/iron/shoot.png",
+        "spellcast": "legs_plate/layer_1/female/iron/spellcast.png",
+        "hurt": "legs_plate/layer_1/female/iron/hurt.png"
+       },
+       "steel": {
+        "idle": "legs_plate/layer_1/female/steel/idle.png",
+        "walk": "legs_plate/layer_1/female/steel/walk.png",
+        "slash": "legs_plate/layer_1/female/steel/slash.png",
+        "thrust": "legs_plate/layer_1/female/steel/thrust.png",
+        "shoot": "legs_plate/layer_1/female/steel/shoot.png",
+        "spellcast": "legs_plate/layer_1/female/steel/spellcast.png",
+        "hurt": "legs_plate/layer_1/female/steel/hurt.png"
+       },
+       "silver": {
+        "idle": "legs_plate/layer_1/female/silver/idle.png",
+        "walk": "legs_plate/layer_1/female/silver/walk.png",
+        "slash": "legs_plate/layer_1/female/silver/slash.png",
+        "thrust": "legs_plate/layer_1/female/silver/thrust.png",
+        "shoot": "legs_plate/layer_1/female/silver/shoot.png",
+        "spellcast": "legs_plate/layer_1/female/silver/spellcast.png",
+        "hurt": "legs_plate/layer_1/female/silver/hurt.png"
+       },
+       "gold": {
+        "idle": "legs_plate/layer_1/female/gold/idle.png",
+        "walk": "legs_plate/layer_1/female/gold/walk.png",
+        "slash": "legs_plate/layer_1/female/gold/slash.png",
+        "thrust": "legs_plate/layer_1/female/gold/thrust.png",
+        "shoot": "legs_plate/layer_1/female/gold/shoot.png",
+        "spellcast": "legs_plate/layer_1/female/gold/spellcast.png",
+        "hurt": "legs_plate/layer_1/female/gold/hurt.png"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "gloves": {
+   "name": "Gloves",
+   "licenses": [
+    "CC-BY-SA 3.0",
+    "GPL 3.0",
+    "OGA-BY 3.0"
+   ],
+   "authors": [
+    "JaidynReiman",
+    "Johannes Sj\u00f6lund (wulax)",
+    "Matthew Krohn (makrohn)",
+    "Michael Whitlock (bigbeargames)",
+    "bluecarrot16"
+   ],
+   "layers": [
+    {
+     "z": 70,
+     "files": {
+      "male": {
+       "copper": {
+        "idle": "gloves/layer_1/male/copper/idle.png",
+        "combat_idle": "gloves/layer_1/male/copper/combat_idle.png",
+        "walk": "gloves/layer_1/male/copper/walk.png",
+        "run": "gloves/layer_1/male/copper/run.png",
+        "slash": "gloves/layer_1/male/copper/slash.png",
+        "thrust": "gloves/layer_1/male/copper/thrust.png",
+        "shoot": "gloves/layer_1/male/copper/shoot.png",
+        "spellcast": "gloves/layer_1/male/copper/spellcast.png",
+        "hurt": "gloves/layer_1/male/copper/hurt.png"
+       },
+       "iron": {
+        "idle": "gloves/layer_1/male/iron/idle.png",
+        "combat_idle": "gloves/layer_1/male/iron/combat_idle.png",
+        "walk": "gloves/layer_1/male/iron/walk.png",
+        "run": "gloves/layer_1/male/iron/run.png",
+        "slash": "gloves/layer_1/male/iron/slash.png",
+        "thrust": "gloves/layer_1/male/iron/thrust.png",
+        "shoot": "gloves/layer_1/male/iron/shoot.png",
+        "spellcast": "gloves/layer_1/male/iron/spellcast.png",
+        "hurt": "gloves/layer_1/male/iron/hurt.png"
+       },
+       "steel": {
+        "idle": "gloves/layer_1/male/steel/idle.png",
+        "combat_idle": "gloves/layer_1/male/steel/combat_idle.png",
+        "walk": "gloves/layer_1/male/steel/walk.png",
+        "run": "gloves/layer_1/male/steel/run.png",
+        "slash": "gloves/layer_1/male/steel/slash.png",
+        "thrust": "gloves/layer_1/male/steel/thrust.png",
+        "shoot": "gloves/layer_1/male/steel/shoot.png",
+        "spellcast": "gloves/layer_1/male/steel/spellcast.png",
+        "hurt": "gloves/layer_1/male/steel/hurt.png"
+       },
+       "silver": {
+        "idle": "gloves/layer_1/male/silver/idle.png",
+        "combat_idle": "gloves/layer_1/male/silver/combat_idle.png",
+        "walk": "gloves/layer_1/male/silver/walk.png",
+        "run": "gloves/layer_1/male/silver/run.png",
+        "slash": "gloves/layer_1/male/silver/slash.png",
+        "thrust": "gloves/layer_1/male/silver/thrust.png",
+        "shoot": "gloves/layer_1/male/silver/shoot.png",
+        "spellcast": "gloves/layer_1/male/silver/spellcast.png",
+        "hurt": "gloves/layer_1/male/silver/hurt.png"
+       },
+       "gold": {
+        "idle": "gloves/layer_1/male/gold/idle.png",
+        "combat_idle": "gloves/layer_1/male/gold/combat_idle.png",
+        "walk": "gloves/layer_1/male/gold/walk.png",
+        "run": "gloves/layer_1/male/gold/run.png",
+        "slash": "gloves/layer_1/male/gold/slash.png",
+        "thrust": "gloves/layer_1/male/gold/thrust.png",
+        "shoot": "gloves/layer_1/male/gold/shoot.png",
+        "spellcast": "gloves/layer_1/male/gold/spellcast.png",
+        "hurt": "gloves/layer_1/male/gold/hurt.png"
+       }
+      },
+      "female": {
+       "copper": {
+        "idle": "gloves/layer_1/female/copper/idle.png",
+        "combat_idle": "gloves/layer_1/female/copper/combat_idle.png",
+        "walk": "gloves/layer_1/female/copper/walk.png",
+        "run": "gloves/layer_1/female/copper/run.png",
+        "slash": "gloves/layer_1/female/copper/slash.png",
+        "thrust": "gloves/layer_1/female/copper/thrust.png",
+        "shoot": "gloves/layer_1/female/copper/shoot.png",
+        "spellcast": "gloves/layer_1/female/copper/spellcast.png",
+        "hurt": "gloves/layer_1/female/copper/hurt.png"
+       },
+       "iron": {
+        "idle": "gloves/layer_1/female/iron/idle.png",
+        "combat_idle": "gloves/layer_1/female/iron/combat_idle.png",
+        "walk": "gloves/layer_1/female/iron/walk.png",
+        "run": "gloves/layer_1/female/iron/run.png",
+        "slash": "gloves/layer_1/female/iron/slash.png",
+        "thrust": "gloves/layer_1/female/iron/thrust.png",
+        "shoot": "gloves/layer_1/female/iron/shoot.png",
+        "spellcast": "gloves/layer_1/female/iron/spellcast.png",
+        "hurt": "gloves/layer_1/female/iron/hurt.png"
+       },
+       "steel": {
+        "idle": "gloves/layer_1/female/steel/idle.png",
+        "combat_idle": "gloves/layer_1/female/steel/combat_idle.png",
+        "walk": "gloves/layer_1/female/steel/walk.png",
+        "run": "gloves/layer_1/female/steel/run.png",
+        "slash": "gloves/layer_1/female/steel/slash.png",
+        "thrust": "gloves/layer_1/female/steel/thrust.png",
+        "shoot": "gloves/layer_1/female/steel/shoot.png",
+        "spellcast": "gloves/layer_1/female/steel/spellcast.png",
+        "hurt": "gloves/layer_1/female/steel/hurt.png"
+       },
+       "silver": {
+        "idle": "gloves/layer_1/female/silver/idle.png",
+        "combat_idle": "gloves/layer_1/female/silver/combat_idle.png",
+        "walk": "gloves/layer_1/female/silver/walk.png",
+        "run": "gloves/layer_1/female/silver/run.png",
+        "slash": "gloves/layer_1/female/silver/slash.png",
+        "thrust": "gloves/layer_1/female/silver/thrust.png",
+        "shoot": "gloves/layer_1/female/silver/shoot.png",
+        "spellcast": "gloves/layer_1/female/silver/spellcast.png",
+        "hurt": "gloves/layer_1/female/silver/hurt.png"
+       },
+       "gold": {
+        "idle": "gloves/layer_1/female/gold/idle.png",
+        "combat_idle": "gloves/layer_1/female/gold/combat_idle.png",
+        "walk": "gloves/layer_1/female/gold/walk.png",
+        "run": "gloves/layer_1/female/gold/run.png",
+        "slash": "gloves/layer_1/female/gold/slash.png",
+        "thrust": "gloves/layer_1/female/gold/thrust.png",
+        "shoot": "gloves/layer_1/female/gold/shoot.png",
+        "spellcast": "gloves/layer_1/female/gold/spellcast.png",
+        "hurt": "gloves/layer_1/female/gold/hurt.png"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "boots_basic": {
+   "name": "Basic Boots",
+   "licenses": [
+    "CC-BY-SA 3.0",
+    "GPL 2.0",
+    "GPL 3.0",
+    "OGA-BY 3.0"
+   ],
+   "authors": [
+    "JaidynReiman",
+    "Nila122",
+    "bluecarrot16"
+   ],
+   "layers": [
+    {
+     "z": 25,
+     "files": {
+      "male": {
+       "leather": {
+        "idle": "boots_basic/layer_1/male/leather/idle.png",
+        "combat_idle": "boots_basic/layer_1/male/leather/combat_idle.png",
+        "walk": "boots_basic/layer_1/male/leather/walk.png",
+        "run": "boots_basic/layer_1/male/leather/run.png",
+        "slash": "boots_basic/layer_1/male/leather/slash.png",
+        "thrust": "boots_basic/layer_1/male/leather/thrust.png",
+        "shoot": "boots_basic/layer_1/male/leather/shoot.png",
+        "spellcast": "boots_basic/layer_1/male/leather/spellcast.png",
+        "hurt": "boots_basic/layer_1/male/leather/hurt.png"
+       },
+       "black": {
+        "idle": "boots_basic/layer_1/male/black/idle.png",
+        "combat_idle": "boots_basic/layer_1/male/black/combat_idle.png",
+        "walk": "boots_basic/layer_1/male/black/walk.png",
+        "run": "boots_basic/layer_1/male/black/run.png",
+        "slash": "boots_basic/layer_1/male/black/slash.png",
+        "thrust": "boots_basic/layer_1/male/black/thrust.png",
+        "shoot": "boots_basic/layer_1/male/black/shoot.png",
+        "spellcast": "boots_basic/layer_1/male/black/spellcast.png",
+        "hurt": "boots_basic/layer_1/male/black/hurt.png"
+       }
+      },
+      "female": {
+       "leather": {
+        "idle": "boots_basic/layer_1/female/leather/idle.png",
+        "combat_idle": "boots_basic/layer_1/female/leather/combat_idle.png",
+        "walk": "boots_basic/layer_1/female/leather/walk.png",
+        "run": "boots_basic/layer_1/female/leather/run.png",
+        "slash": "boots_basic/layer_1/female/leather/slash.png",
+        "thrust": "boots_basic/layer_1/female/leather/thrust.png",
+        "shoot": "boots_basic/layer_1/female/leather/shoot.png",
+        "spellcast": "boots_basic/layer_1/female/leather/spellcast.png",
+        "hurt": "boots_basic/layer_1/female/leather/hurt.png"
+       },
+       "black": {
+        "idle": "boots_basic/layer_1/female/black/idle.png",
+        "combat_idle": "boots_basic/layer_1/female/black/combat_idle.png",
+        "walk": "boots_basic/layer_1/female/black/walk.png",
+        "run": "boots_basic/layer_1/female/black/run.png",
+        "slash": "boots_basic/layer_1/female/black/slash.png",
+        "thrust": "boots_basic/layer_1/female/black/thrust.png",
+        "shoot": "boots_basic/layer_1/female/black/shoot.png",
+        "spellcast": "boots_basic/layer_1/female/black/spellcast.png",
+        "hurt": "boots_basic/layer_1/female/black/hurt.png"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "weapon_wand": {
+   "name": "Wand",
+   "licenses": [
+    "CC-BY-SA 3.0",
+    "GPL 3.0",
+    "OGA-BY 3.0"
+   ],
+   "authors": [
+    "Matthew Krohn (makrohn)"
+   ],
+   "layers": [
+    {
+     "z": 140,
+     "files": {
+      "male": {
+       "default": {
+        "slash": "weapon_wand/layer_1/male/slash.png"
+       }
+      },
+      "female": {
+       "default": {
+        "slash": "weapon_wand/layer_1/female/slash.png"
        }
       }
      }
