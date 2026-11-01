@@ -215,11 +215,15 @@ func _draw() -> void:
         if level > 0:
             var look: Dictionary = b.get("look", {})
             var img: Image = null
-            if CazArt.available():
+            var ext := InteriorDefs.exterior_for(id)
+            if ext != null:                    # overhaul: the packs' buildings, x1, standing on the plot's bottom edge
+                draw_texture(ext, Vector2(floorf(r.get_center().x - ext.get_width() * 0.5), r.end.y - ext.get_height()))
+            elif CazArt.available():
                 img = CazArt.house(plot.size.x * NavMap.CELL, plot.size.y * NavMap.CELL, String(look.get("roof", "thatch")), String(look.get("wall", "plaster")), look.get("tint", Color.WHITE))
-            if img == null:
+            if img == null and ext == null:
                 img = ProcArt.house(plot.size.x * NavMap.CELL, plot.size.y * NavMap.CELL, b["roof"], String(STYLES.get(id, "plaster")), true)
-            draw_texture(ProcArt.texture(img), r.position)
+            if img != null:
+                draw_texture(ProcArt.texture(img), r.position)
             if id == "tower_gate" and CazArt.texture(CazArt.ARCH) != null:
                 draw_texture(CazArt.texture(CazArt.ARCH), Vector2(r.get_center().x - 24, r.end.y - 48))
             var props: Array = b["props"]

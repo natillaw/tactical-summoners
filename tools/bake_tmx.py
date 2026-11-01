@@ -27,6 +27,14 @@ MAPS = {  # output name -> (zip pattern, tmx path)
     'temple_interior': ('ruined-temple', 'Tiled_files/Ruined_temple_interior.tmx'),
     'temple_exterior': ('ruined-temple', 'Tiled_files/Ruined_temple_exterior.tmx'),
 }
+## Buildings alone (for the town): only the layers whose name matches, ground excluded.
+BUILDINGS = {
+    'bld_smithy': ('glassblowers-workshop', 'Tiled_files/Exterior.tmx', r'(?i)^(tent_shadow|supplies|tent|sign|walls|windows_top|roof|stovepipe|roof_detail|barrel|cart)$'),
+    'bld_chapel': ('free-chapel', 'Tiled_files/Exterior.tmx', r'(?i)^(house)$'),
+    'bld_home': ('main-characters-home', 'Tiled_files/Exterior.tmx', r'(?i)^(house_wall|windows1|windows2|house_roof)$'),
+    'bld_temple': ('ruined-temple', 'Tiled_files/Ruined_temple_exterior.tmx', r'(?i)^(house_platform|house|bricks|roof|statues|columns)$'),
+}
+ONLY = None
 FLIP_H, FLIP_V, FLIP_D = 0x80000000, 0x40000000, 0x20000000
 
 
@@ -118,6 +126,8 @@ def tile_img(tiles, gid):
 def collect(parent, tiles, tw, th, w, draws):
     """Appends (x px, y px, image) in drawing order."""
     for el in parent:
+        if el.tag in ('layer', 'objectgroup') and ONLY and not re.search(ONLY, el.get('name') or ''):
+            continue
         if el.get('visible') == '0' or re.search(r'(?i)charact|people|npc|citizen|customer', el.get('name') or ''):
             continue                                      # the pack's own characters: our heroes go there
         if el.tag == 'group':
@@ -166,6 +176,13 @@ def bake(name, pat, tmx):
 
 
 if __name__ == '__main__':
+    for name, (pat, tmx, only) in BUILDINGS.items():
+        ONLY = only
+        try:
+            print('RESULT', name, bake(name, pat, tmx))
+        except Exception as e:
+            print('FAILED', name, type(e).__name__, str(e)[:120])
+    ONLY = None
     for name, (pat, tmx) in MAPS.items():
         try:
             print('RESULT', name, bake(name, pat, tmx))
