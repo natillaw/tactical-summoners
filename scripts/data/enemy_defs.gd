@@ -116,6 +116,8 @@ const BLOB_MULT := 2.0
 const TELEGRAPH_MULT := 1.5
 const HEAVY_WINDUP := 0.9
 const HEAVY_MULT := 1.6
+## Telegraphed area hits pierce armour (gear does not replace dodging): damage kind of creature area skills.
+const TELEGRAPH_KIND := "true"
 
 ## --- creature classes and skills (D-065) -------------------------------------------------------------
 ## Roles work as classes: swarm (skirmisher), melee (fighter), brute, guard (defender), ranged (archer),

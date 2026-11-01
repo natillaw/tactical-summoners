@@ -643,7 +643,7 @@ func _resolve_skill(heroes: Array) -> void:
             var blob := EnemyDefs.BLOB_MULT if caught.size() >= EnemyDefs.BLOB_COUNT else 1.0
             for h in caught:
                 var own := float(sk.get("target_mult", 1.0)) if h == _skill_hero else 1.0
-                var hit := DamageInfo.make(float(atk) * float(sk["dmg_mult"]) * EnemyDefs.TELEGRAPH_MULT * blob * own, "physical", self, crit_chance, combat_rng)
+                var hit := DamageInfo.make(float(atk) * float(sk["dmg_mult"]) * EnemyDefs.TELEGRAPH_MULT * blob * own, EnemyDefs.TELEGRAPH_KIND, self, crit_chance, combat_rng)
                 hit.element = String(sk.get("element", ""))
                 h.take_hit(hit)
                 if sk.has("status") and h.alive:
