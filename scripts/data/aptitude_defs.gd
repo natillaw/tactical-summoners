@@ -54,6 +54,10 @@ static func score(h: HeroData, prof: String) -> float:
     for t in h.traits:
         var m: Dictionary = TRAITS.get(String(t), {})
         s += float(m.get("all", 0.0)) + float(m.get(prof, 0.0))
+    for g in h.innate:                       # D-079 trade gifts (a good summon also helps the town)
+        var gd: Dictionary = PowerDefs.GIFTS.get(String(g), {})
+        if String(gd.get("prof", "")) == prof:
+            s += float(gd.get("aptitude", 0.0))
     var rng := RandomNumberGenerator.new()
     rng.seed = h.hero_seed ^ hash("aptitude:" + prof)
     return s + rng.randf_range(-ROLL, ROLL)

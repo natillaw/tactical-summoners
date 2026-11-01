@@ -600,11 +600,7 @@ func _add_tower_buttons() -> void:
         btn.tooltip_text = "%s
 Recommended: %d heroes. Explored: %s" % [String(cfg.get("intro", "")), TowerExpedition.RECOMMENDED_HEROES,
             "yes" if Game.floor_explored(f) != "" else "not yet"]
-        var why := Game.floor_advice(f)
-        if why != "":
-            btn.tooltip_text += "
-Warning: " + why
-            btn.text += "  ·  hard without Hall %d gear" % int(cfg.get("hall", 1))
+        _show_risk(btn, f, true)
         _panel_box.add_child(btn)
     var grid := GridContainer.new()
     grid.columns = 5
@@ -614,9 +610,7 @@ Warning: " + why
         var btn := UIKit.button("F%d" % f, func(): navigate.emit("sandbox", floor_num), Vector2(56, 30))
         btn.focus_mode = Control.FOCUS_NONE
         btn.tooltip_text = String(TowerExpedition.get_floor_config(f)["name"]) + " (beyond the demo: not tuned yet)"
-        if Game.floor_advice(f) != "":
-            btn.tooltip_text += "
-Warning: " + Game.floor_advice(f)
+        _show_risk(btn, f, false)
         grid.add_child(btn)
     if Game.party_heroes().size() < Game.PARTY_SIZE:
         var warn := UIKit.label("Each floor lets in up to its squad size; with fewer heroes than that, a test squad goes and nothing is kept (Menu -> Party).", 13, Color(1.0, 0.7, 0.5))
@@ -625,6 +619,26 @@ Warning: " + Game.floor_advice(f)
         _panel_box.add_child(warn)
     _add_expedition_buttons()
     _add_merchant_buttons()
+
+
+## D-079: the only thing the player sees of the soft block: "Risk: N% (band)" in the band's colour and at
+## most 3 qualitative hints in the tooltip. Never power numbers (only with PowerDefs.DEBUG_SHOW_NUMBERS).
+func _show_risk(btn: Button, f: int, in_text: bool) -> void:
+    var r := PowerCalc.floor_risk(f, Game.party_heroes(), Game.hq_outputs, Game.town_buildings)
+    var band := String(r["band"])
+    var line := "%s: %d%% (%s)" % [tr("Risk"), int(r["risk"]), tr(PowerCalc.band_name(band))]
+    if in_text:
+        btn.text += "  ·  " + line
+    btn.add_theme_color_override("font_color", PowerCalc.band_color(band))
+    btn.add_theme_color_override("font_hover_color", PowerCalc.band_color(band).lightened(0.2))
+    btn.tooltip_text += "
+" + line
+    for h in r["hints"]:
+        btn.tooltip_text += "
+· " + tr(String(h))
+    if r.has("debug"):
+        btn.tooltip_text += "
+[debug] " + String(r["debug"])
 
 
 ## Master prompt C: offline expeditions (idle heroes outside the squad go back to a cleared floor).

@@ -17,6 +17,10 @@ var iframe_t: float = 0.0            # dash invulnerability left (CombatRules.DA
 var immune: bool = false             # Crimson Baron's altar shield (master prompt E): every hit does 0
 signal immune_hit
 var heal_block: bool = false         # floor modifier "no_heal" (master prompt D)
+var heal_mult: float = 1.0           # D-079: "no_heal" partly countered (heavy armour, Regeneration gift)
+var poison_mult: float = 1.0         # D-079: "hazard" countered (antidote, Poison-proof gift): poison strength
+var soft_in: float = 1.0             # D-079 soft block: damage taken x (PowerCalc.floor_effect, set once per floor)
+var soft_out: float = 1.0            # D-079 soft block: damage dealt x
 var resistances: Dictionary = {}    # P-29 hook (pending): element -> fraction resisted (0..1); no content yet
 var crit_chance: float = 0.0
 var status_resist: float = 0.0
@@ -108,7 +112,7 @@ func heal(amount: int) -> int:
     if not alive or heal_block:
         return 0
     var before := hp
-    hp = mini(max_hp, hp + maxi(0, amount))
+    hp = mini(max_hp, hp + maxi(0, roundi(float(amount) * heal_mult)))
     if hp > before:
         FloatingText.spawn(self, "+%d" % (hp - before), Color(0.45, 1.0, 0.5), false)
     return hp - before
@@ -161,6 +165,8 @@ func apply_status(id: String, duration: float, magnitude: float = 0.0, source: N
         return
     var def: Dictionary = CombatRules.STATUS[id]
     var t := duration if def.get("no_resist", false) else duration * (1.0 - status_resist)
+    if id == "poison":
+        magnitude *= poison_mult
     if statuses.has(id):
         var s: Dictionary = statuses[id]
         s["t"] = maxf(float(s["t"]), t)

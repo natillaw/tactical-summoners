@@ -5,7 +5,7 @@ extends Node
 signal changed
 
 const DEFAULT_SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 15
+const SAVE_VERSION := 16
 const PARTY_SIZE := 5            # slots 0-2 = front row, slots 3-4 = back row
 const XP_PER_BOOK := 100
 
@@ -1645,6 +1645,8 @@ func _migrate(data: Dictionary) -> Dictionary:
         data["exp_charges"] = ExpeditionDefs.CHARGES_MAX
         data["exp_charge_t"] = 0.0
         data["portal_upgrades"] = {}
+    if v < 16:
+        pass                              # v15 -> v16 (D-079): heroes gain "innate" summon gifts; old heroes get [] on load (never rolled)
     if v < 15:
         pass                              # v14 -> v15: apprenticeship becomes {hours, progress}; aptitude_known (defaults {})
     if v < 14:

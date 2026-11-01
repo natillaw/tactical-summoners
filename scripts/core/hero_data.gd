@@ -15,6 +15,7 @@ var look: Dictionary = {}         # overhaul LPC (D-A): race, body, skin, eyes, 
 var appearance: Dictionary = {}   # layer key -> "Folder/style_color" ("" = layer not used)
 var traits: Array = []            # trait ids
 var passives: Array = []          # passive ids
+var innate: Array = []            # D-079 summon gifts (PowerDefs.GIFTS), rolled once at the summon; old heroes keep []
 var background_id: String = ""
 var background_text: String = ""
 var profession: String = ""        # past life profession/job for base building lobby bonuses
@@ -476,6 +477,7 @@ func to_dict() -> Dictionary:
         "look": look.duplicate(),
         "traits": traits.duplicate(),
         "passives": passives.duplicate(),
+        "innate": innate.duplicate(),
         "background_id": background_id,
         "background_text": background_text,
         "profession": profession,
@@ -532,6 +534,9 @@ static func from_dict(d: Dictionary) -> HeroData:
         h.look = HeroGenerator.lpc_look(h.hero_seed)  # TPF heroes become LPC deterministically
     h.traits = (d.get("traits", []) as Array).duplicate()
     h.passives = (d.get("passives", []) as Array).duplicate()
+    for g in d.get("innate", []):            # save v15 or older: no gifts ([]), never rolled again (D-004)
+        if PowerDefs.GIFTS.has(String(g)):
+            h.innate.append(String(g))
     h.background_id = str(d.get("background_id", ""))
     h.background_text = str(d.get("background_text", ""))
     h.profession = str(d.get("profession", ""))
