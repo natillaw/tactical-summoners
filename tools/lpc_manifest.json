@@ -1,0 +1,30 @@
+{
+  "_doc": "Overhaul LPC phase 2: what tools/import_lpc.py copies from ../_vendor/lpc into assets/pixel/lpc/. Only these pieces and these colour variants (recoloured by the LPC palettes). Heroes use the adult 'male' and 'female' bodies: the starter long-sleeve shirt has no 'muscular' sheet.",
+  "bodies": ["male", "female"],
+  "anims": ["idle", "combat_idle", "walk", "run", "slash", "thrust", "shoot", "spellcast", "hurt"],
+  "skins": ["light", "amber", "olive", "taupe", "bronze", "brown", "black"],
+  "eyes": ["blue", "green", "brown", "gray"],
+  "hair_colors": ["black", "dark_brown", "chestnut", "light_brown", "blonde", "ginger", "gray", "white", "red"],
+  "pieces": {
+    "body": {"def": "body/body.json", "palette": "body", "colors": "skins"},
+    "head_human_male": {"def": "head/heads/human/heads_human_male.json", "palette": "body", "colors": "skins", "palette2": "eye", "colors2": "eyes"},
+    "head_human_female": {"def": "head/heads/human/heads_human_female.json", "palette": "body", "colors": "skins", "palette2": "eye", "colors2": "eyes"},
+    "ears_elven": {"def": "head/ears/head_ears_elven.json", "palette": "body", "colors": "skins"},
+    "hair_buzzcut": {"def": "hair/bald/hair_buzzcut.json", "palette": "hair", "colors": "hair_colors"},
+    "hair_bob": {"def": "hair/bob/hair_bob.json", "palette": "hair", "colors": "hair_colors"},
+    "hair_long": {"def": "hair/long/hair_long.json", "palette": "hair", "colors": "hair_colors"},
+    "hair_bedhead": {"def": "hair/short/hair_bedhead.json", "palette": "hair", "colors": "hair_colors"},
+    "hair_messy1": {"def": "hair/short/hair_messy1.json", "palette": "hair", "colors": "hair_colors"},
+    "hair_parted": {"def": "hair/short/hair_parted.json", "palette": "hair", "colors": "hair_colors"},
+    "hair_pixie": {"def": "hair/short/hair_pixie.json", "palette": "hair", "colors": "hair_colors"},
+    "hair_plain": {"def": "hair/short/hair_plain.json", "palette": "hair", "colors": "hair_colors"},
+    "beard_trimmed": {"def": "hair/beards/beards_trimmed.json", "palette": "hair", "colors": "hair_colors"},
+    "shirt_longsleeve": {"def": "torso/shirts/longsleeve/torso_clothes_longsleeve.json", "palette": "cloth", "colors": ["tan"]},
+    "pants": {"def": "legs/pants/legs_pants.json", "palette": "cloth", "colors": ["brown"]},
+    "shoes_basic": {"def": "feet/shoes/feet_shoes_basic.json", "palette": "cloth", "colors": ["leather"]},
+    "weapon_dagger": {"def": "weapons/sword/weapon_sword_dagger.json", "variant": "dagger"},
+    "weapon_arming": {"def": "weapons/sword/weapon_sword_arming.json", "variant": "steel"},
+    "weapon_staff": {"def": "weapons/magic/weapon_magic_simple.json"},
+    "weapon_bow": {"def": "weapons/ranged/bow/weapon_ranged_bow_normal.json", "variant": "light"}
+  }
+}

@@ -332,6 +332,12 @@ Inmune mientras dura su escudo; 2 héroes canalizan 8 s en un altar del mismo ma
 - **Dash** (Espacio; `CombatRules.DASH_*`): 92 px, i-frames 0,26 s, enfriamiento 1,6 s. Animación sin frames nuevos: estirado e inclinación, estelas del propio frame que se desvanecen, polvo y aplastado al aterrizar. Un buen jugador puede esquivarlo todo; la IA autónoma solo a veces (12-55 %, a veces hacia un lado malo).
 - Guerreros: intervalo de ataque básico ×0,7. Piso 3: oleadas que marchan al santuario y crecen.
 
+### D-072 — Overhaul LPC: escala del mundo (D-B, 2026-10-31, dueño: "Todo a ×1")
+Rejilla lógica de 32 px. Todo el arte se dibuja a ×1: personajes LPC (frame de 64 px), objetos de CraftPix y tiles de 16 px (2×2 por celda). Nunca escalado no entero ni ×2 de tiles: misma densidad de píxel en todo. Sustituye la referencia de escala de D-055 por el humano LPC. Pendientes del overhaul: estilo de UI (A Dragon Regalia / B CraftPix) y pesos humano/elfo (propuesta 80/20); D-A, D-C..D-G se registran al cerrar sus fases.
+
+### D-073 — Overhaul LPC: atuendo inicial único (D-C, 2026-10-31, aprobado en el prompt del overhaul)
+`LpcWardrobe.STARTER_OUTFIT`: camisa de manga larga `tan`, pantalón `brown`, zapatos básicos `leather` (sin cinturón: la pieza de LPC no trae animaciones). Arma visual por clase en `STARTER_WEAPON_BY_CLASS` (espada arming de acero, daga, bastón simple, arco normal), sin stats. Los héroes usan los cuerpos adultos `male` y `female` (la camisa no existe para `muscular`).
+
 ## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)
 
 | ID | Tema | Lo que existe / origen | Pregunta abierta |
