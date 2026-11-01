@@ -38,6 +38,7 @@ const ES := {
     "Nothing remembered yet.": "Aún no recuerda nada.", "Now: ": "Ahora: ", "Off": "Apagado", "Open in Barracks": "Abrir en el Cuartel",
     "Options": "Opciones", "Party": "Escuadrón", "Party Formation": "Formación del escuadrón",
     "Party not full: a test squad will go instead and nothing is kept (Menu -> Party, or the War Room).": "Escuadrón incompleto: irá uno de prueba y no se guarda nada (Menú -> Escuadrón, o la Sala de Guerra).",
+    "Each floor lets in up to its squad size; with fewer heroes than that, a test squad goes and nothing is kept (Menu -> Party).": "Cada piso admite hasta su tamaño de escuadrón; con menos héroes que eso va un escuadrón de prueba y no se guarda nada (Menú -> Escuadrón).",
     "Past life: ": "Vida pasada: ", "Personality": "Personalidad",
     "Pick a building, then click where it goes (near the town). Builders raise it over time.": "Elige un edificio y haz click donde irá (cerca del pueblo). Los constructores lo levantan con el tiempo.",
     "Pick a slot, then click a hero from the list. Right-click a slot to empty it.": "Elige un hueco y luego un héroe de la lista. Click derecho en un hueco para vaciarlo.",
