@@ -54,9 +54,11 @@ func _initialize() -> void:
     g.save_game()
     g.expeditions = []
     g.load_game()
-    check(g.expeditions.size() == 1 and int(g.SAVE_VERSION) == 11, "expeditions survive save/load (save v11)")
+    check(g.expeditions.size() == 1 and int(g.SAVE_VERSION) >= 11, "expeditions survive save/load (save v%d)" % int(g.SAVE_VERSION))
     var migrated: Dictionary = g._migrate({"version": 10})
     check((migrated["expeditions"] as Array).is_empty() and int(migrated["exp_charges"]) == ExpeditionDefs.CHARGES_MAX, "v10 -> v11 migration adds empty expeditions with full charges")
+    var old11: Dictionary = g._migrate({"version": 11, "tower_maps": {"10": {"seed": 1}}, "tower_cleared": {"3": 1}})
+    check((old11["tower_maps"] as Dictionary).is_empty() and int((old11["tower_cleared"] as Dictionary)["3"]) == 1, "v11 -> v12: old floor maps are regenerated (new bandit floors), clears are kept")
     if OS.get_environment("SIM_DAYS") != "":
         _simulate(int(OS.get_environment("SIM_DAYS")))
     print("== %s ==" % ("ALL PASSED" if fails == 0 else "%d FAILED" % fails))

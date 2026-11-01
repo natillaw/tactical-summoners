@@ -5,7 +5,7 @@ extends Node
 signal changed
 
 const DEFAULT_SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 11
+const SAVE_VERSION := 12
 const PARTY_SIZE := 5            # slots 0-2 = front row, slots 3-4 = back row
 const XP_PER_BOOK := 100
 
@@ -1535,5 +1535,10 @@ func _migrate(data: Dictionary) -> Dictionary:
         data["exp_charges"] = ExpeditionDefs.CHARGES_MAX
         data["exp_charge_t"] = 0.0
         data["portal_upgrades"] = {}
+    if v < 12:
+        # v11 -> v12 (master prompt D, owner 2026-10-31): the tower changed hands (bandits, new missions,
+        # threat budgets). Floors saved before keep their old creatures in the snapshot, so they are
+        # generated again; what was cleared (tower_cleared) and the rewards stay.
+        data["tower_maps"] = {}
     data["version"] = SAVE_VERSION
     return data

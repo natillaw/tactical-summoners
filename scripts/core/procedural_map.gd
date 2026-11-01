@@ -221,6 +221,9 @@ func _place_encounters(rooms: Array[Rect2i], map_grid: Array, rng: RandomNumberG
 	var n := rooms.size()
 	var reserve := mini(4, budget)                               # the goal's guards are always there
 	var used := 0
+	# 2026-10-31 (owner: "camino mucho sin pelear"): spread the threat over the whole chain of rooms, so
+	# the budget does not run out halfway and leave long empty stretches.
+	var per_room := float(budget - reserve) / float(maxi(1, rooms.size() - 2))
 	for i in n:
 		var f := float(i) / float(maxi(1, n - 1))
 		var zone := "entrance" if f < 0.15 else ("explore" if f < 0.45 else "danger")
@@ -234,10 +237,10 @@ func _place_encounters(rooms: Array[Rect2i], map_grid: Array, rng: RandomNumberG
 		var roll := rng.randf()
 		match zone:
 			"explore":
-				if roll < 0.5:
+				if roll < 0.62:
 					kind = "group"
 					size = rng.randi_range(2, 3)
-				elif roll < 0.75:
+				elif roll < 0.88:
 					kind = "patrol"
 					size = rng.randi_range(1, 2)
 			"danger":
@@ -253,6 +256,8 @@ func _place_encounters(rooms: Array[Rect2i], map_grid: Array, rng: RandomNumberG
 				else:
 					kind = "patrol"
 					size = 2
+				if roll > 0.95:
+					kind = ""
 			"objective":
 				kind = "guard"
 				size = reserve
@@ -273,7 +278,8 @@ func _place_encounters(rooms: Array[Rect2i], map_grid: Array, rng: RandomNumberG
 		if zone == "objective" and boss_id != "":
 			members[0] = boss_id
 		if cfg.has("threat") and zone != "objective":
-			while members.size() > 1 and _threat(members) > budget - reserve - used:
+			var allow := mini(budget - reserve - used, ceili(per_room * float(i) + per_room * 1.5) - used)
+			while members.size() > 1 and _threat(members) > maxi(1, allow):
 				members.pop_back()
 				cells.pop_back()
 		var enc := {"kind": kind, "zone": zone, "members": members, "cells": cells, "patrol": []}
