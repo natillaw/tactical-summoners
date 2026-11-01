@@ -80,11 +80,13 @@ func _ready() -> void:
             if r["outcome"] == "SUCCESS":
                 done = true
                 break
-            say("  -> Wilds run for experience and materials before retrying")
-            _pick_party()
-            await _play_floor(-Game.wilds_tier(), 0)
-            total_farm_runs += 1
-            _town_turn("after a Wilds run")
+            say("  -> Wilds runs for experience and materials before retrying")
+            for farm in 2:                            # a player grinds a little before retrying
+                _pick_party()
+                _gear_up()
+                await _play_floor(-Game.wilds_tier(), 0)
+                total_farm_runs += 1
+                _town_turn("after a Wilds run")
             if Game.party_heroes().size() < Game.PARTY_SIZE and Game.heroes.size() < Game.PARTY_SIZE:
                 say("!! fewer than 5 heroes left: cannot field a squad")
                 break

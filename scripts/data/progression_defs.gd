@@ -21,7 +21,7 @@ const LEVELS_PER_FLOOR := 1.0
 const OVERLEVEL_DECAY := 0.2
 const OVERLEVEL_MIN := 0.1
 ## The Wilds pay only creature XP, times this (no completion, no MVP): they are for materials.
-const WILDS_XP_MULT := 0.4
+const WILDS_XP_MULT := 0.7          # beta: farming the Wilds must level fresh recruits (still < a floor)
 ## The creatures' worth is shared by the survivors: SHARE_FLAT of it equally, the rest by contribution.
 ## An escape keeps this part (no completion, no MVP).
 const SHARE_FLAT := 0.6
