@@ -216,14 +216,35 @@ func _refresh() -> void:
 
 # --- building panel ---------------------------------------------------------------------
 
+var interior: BuildingInterior = null
+
+
 func select_building(id: String) -> void:
     selected = id
     if view != null:
         view.selected = id
+    if interior != null:
+        interior.queue_free()
+        interior = null
     if id == "":
         _panel.visible = false
     else:
         _show_panel(id)
+        if Game.building_level(id) > 0:
+            _enter(id)
+
+
+## Owner, 2026-10-31: clicking a building opens its interior with the heroes who work there.
+func _enter(id: String) -> void:
+    var room := BuildingInterior.new(id)
+    if not room.has_scene():
+        room.free()
+        return
+    interior = room
+    add_child(room)
+    room.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    move_child(room, _panel.get_index())                 # under the building panel
+    room.closed.connect(func(): select_building(""))
 
 
 func _show_panel(id: String) -> void:
@@ -371,6 +392,8 @@ func _panel_hall() -> void:
 
 func _panel_jobs(id: String) -> void:
     var current := Game.job_of(id)
+    if Game.workers_at(id).is_empty():
+        _panel_box.add_child(_wrap("Nobody works here: assign a hero (Workers below) or nothing is made.", 13, Color(1.0, 0.65, 0.5)))
     var row := HFlowContainer.new()
     for rid in TownTables.info(id)["jobs"]:
         var r: Dictionary = EconomyDefs.RECIPES[rid]
