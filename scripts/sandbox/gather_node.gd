@@ -22,8 +22,56 @@ func label() -> String:
     return String(EconomyDefs.NODES.get(kind, {}).get("name", kind))
 
 
+## Owner 2026-11-01: the packs' ores and herbs. Ore veins are the crystal pack's crystals, herbs are
+## mushrooms, chanterelles and flowering bushes, stone the rock pack, timber the owner's fallen logs.
+## One variant per spot (from its position), drawn x1 with its own shadow, feet on the node.
+const ART := {
+    "ore": ["res://assets/pixel/packs/crystals/PNG/Assets_shadow/", "^(Blue|Green|Violet|Red|White|Yellow)_crystal[0-9]"],
+    "herb": ["res://assets/pixel/packs/forest_objects/PNG/Assets/", "^(Chanterelles|White-red_mushroom|Beige_green_mushroom)[0-9]"],
+    "herb_bush": ["res://assets/pixel/packs/bushes/PNG/Assets_shadow/", "^Bush_(blue|orange|pink|red)_flowers[0-9]"],
+    "stone": ["res://assets/pixel/packs/rocks2/PNG/Objects_separately/", "^Rock[0-9]+_[0-9]+[.]png$"],
+}
+static var _tex_cache := {}
+
+
+static func _textures(key: String) -> Array:
+    if _tex_cache.has(key):
+        return _tex_cache[key]
+    var out: Array = []
+    if ART.has(key):
+        for img in BosqueArt.pack_images(ART[key]):
+            var used := (img as Image).get_used_rect()
+            out.append(ImageTexture.create_from_image((img as Image).get_region(used)))
+    elif key == "wood" and BosqueArt.available():
+        var d: Dictionary = BosqueArt.defs()["props"]
+        var props := BosqueArt._img(BosqueArt.PROPS)
+        for n in ["tronco_caido", "tocon"]:
+            if d.has(n):
+                var rc: Array = d[n]["rect"]
+                out.append(ImageTexture.create_from_image(props.get_region(Rect2i(int(rc[0]), int(rc[1]), int(rc[2]), int(rc[3])))))
+    _tex_cache[key] = out
+    return out
+
+
+func _art() -> Texture2D:
+    var key := kind
+    if kind == "herb" and int(absf(position.x + position.y)) % 3 == 0:
+        key = "herb_bush"
+    var pool := _textures(key)
+    if pool.is_empty():
+        return null
+    return pool[int(absf(position.x * 7.0 + position.y * 13.0)) % pool.size()]
+
+
 func _draw() -> void:
     var col: Color = EconomyDefs.NODES.get(kind, {}).get("color", Color.WHITE)
+    var art := _art()
+    if art != null:
+        draw_texture(art, Vector2(-art.get_width() * 0.5, -art.get_height() + 4.0).floor())
+        if progress > 0.0:
+            var kk := clampf(progress / EconomyDefs.GATHER_TIME, 0.0, 1.0)
+            draw_arc(Vector2(0, -art.get_height() * 0.5), 20.0, -PI / 2.0, -PI / 2.0 + TAU * kk, 28, col, 3.0)
+        return
     draw_set_transform(Vector2(0, -1), 0.0, Vector2(1.0, 0.45))
     draw_circle(Vector2.ZERO, 14.0, Color(0, 0, 0, 0.3))
     draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
