@@ -131,6 +131,41 @@ static func pose_texture_for(look: Dictionary, hero_class: String = "", anim: St
     return tex
 
 
+## The attack each class plays (overhaul: ItemDefs.BASES[*].attack_anim takes over once items are LPC).
+const ATTACK_BY_CLASS := {"class.ranger": "shoot", "class.mage": "spellcast", "class.cleric": "spellcast", "class.rogue": "thrust"}
+
+
+## SpriteComposer-compatible frames for a hero: the LPC set plus the old names the game plays
+## (idle, idle_<dir>, walk_<dir>, ready_<side>, attack_<side>, down_<side>).
+static func build_frames_legacy(look: Dictionary, hero_class: String) -> SpriteFrames:
+    var sf := build_frames_for(look, hero_class)
+    if sf.has_animation("attack_right"):
+        return sf
+    var attack := String(ATTACK_BY_CLASS.get(hero_class, "slash"))
+    var alias := {"idle": "idle_down"}
+    for d in DIRS:
+        alias["idle_" + d] = "idle_" + d
+        alias["walk_" + d] = "walk_" + d
+    for side in ["left", "right"]:
+        alias["ready_" + side] = "combat_idle_" + side
+        alias["attack_" + side] = attack + "_" + side
+        alias["down_" + side] = "hurt_" + side
+    for old in alias:
+        var src := String(alias[old])
+        if old == src or not sf.has_animation(src):
+            continue
+        sf.add_animation(old)
+        sf.set_animation_speed(old, sf.get_animation_speed(src))
+        sf.set_animation_loop(old, sf.get_animation_loop(src))
+        for i in sf.get_frame_count(src):
+            sf.add_frame(old, sf.get_frame_texture(src, i))
+    return sf
+
+
+## Feet offset for a centred 64 px LPC frame (feet near the bottom of the cell).
+const FEET_OFFSET := Vector2(0, -26)
+
+
 static func clear_cache() -> void:
     _tex_cache.clear()
     _img_cache.clear()

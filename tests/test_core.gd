@@ -142,7 +142,7 @@ func _init() -> void:
     var sheet := SpriteComposer.compose_sheet(h8.appearance)
     check(sheet.get_size() == Vector2i(576, 384), "full sheet composes")
     var frames := SpriteComposer.build_frames(h8)
-    check(frames.get_animation_names().size() == SpriteComposer.ANIMS.size(), "SpriteFrames built with all animations")
+    check(SpriteComposer.ANIMS.keys().all(func(n): return frames.has_animation(n)), "SpriteFrames have every animation the game plays (LPC look: %s)" % str(SpriteComposer.uses_lpc(h8)))
 
     # contact sheet for eyeballing: 5 rows (stars) x 8 heroes
     var out := Image.create(8 * 48, 5 * 48, false, Image.FORMAT_RGBA8)

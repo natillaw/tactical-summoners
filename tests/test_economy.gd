@@ -59,6 +59,9 @@ func _initialize() -> void:
     check((migrated["expeditions"] as Array).is_empty() and int(migrated["exp_charges"]) == ExpeditionDefs.CHARGES_MAX, "v10 -> v11 migration adds empty expeditions with full charges")
     var old11: Dictionary = g._migrate({"version": 11, "tower_maps": {"10": {"seed": 1}}, "tower_cleared": {"3": 1}})
     check((old11["tower_maps"] as Dictionary).is_empty() and int((old11["tower_cleared"] as Dictionary)["3"]) == 1, "v11 -> v12: old floor maps are regenerated (new bandit floors), clears are kept")
+    var old12: Dictionary = g._migrate({"version": 12, "heroes": [{"hero_seed": 4242}], "memorial": [{"snapshot": {"hero_seed": 77}}]})
+    check(old12["heroes"][0]["look"] == HeroGenerator.lpc_look(4242) and old12["memorial"][0]["snapshot"]["look"] == HeroGenerator.lpc_look(77),
+        "v12 -> v13: roster and memorial heroes get their LPC look from their seed")
     if OS.get_environment("SIM_DAYS") != "":
         _simulate(int(OS.get_environment("SIM_DAYS")))
     print("== %s ==" % ("ALL PASSED" if fails == 0 else "%d FAILED" % fails))

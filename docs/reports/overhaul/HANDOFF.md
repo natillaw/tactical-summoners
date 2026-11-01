@@ -1,6 +1,6 @@
 # Handoff del overhaul LPC
 
-**Fase actual: 2 terminada. Escala aprobada (D-072, todo a ×1). Esperando: estilo de UI y pesos humano/elfo (necesarios para la fase 3).** Rama `feat/overhaul-lpc` (local, sin remoto).
+**Fase actual: 3 terminada.** Escala (D-072), UI B (D-075) aprobadas; pesos humano/elfo 80/20 provisionales (D-074). Siguiente: fase 4 (bandidos y Barón en LPC; puerta: tamaño del Barón). Rama `feat/overhaul-lpc` (local, sin remoto).
 
 Hecho:
 - Fase 0: `.gdignore` y `.gitignore` para `assets/nuevos assets/` (sacados del índice), prompt viejo marcado SUSTITUIDO, inventario `USO_ASSETS_ANTES.md`, fixture de 200 semillas (`tests/test_hero_fixture.gd`), línea base `BASELINE.md` (25 suites en verde).
@@ -17,3 +17,6 @@ Fase 2 (hecha): `tools/lpc_manifest.json` + `tools/import_lpc.py` (recoloreo por
 Pendiente técnico: armas con frames sobredimensionados (slash_128, thrust_oversize) no se importan aún; las animaciones que falten en un arma usan su hoja de walk.
 
 Siguiente paso exacto (fase 3): `HeroGenerator.VERSION = 4` con `appearance_lpc` desde `hero_seed ^ 0x4C5043` y la raza por pesos de `SummonConfig`; migración de guardado (v13) que guarda `appearance_legacy`; cambiar a `LpcComposer` todos los llamadores de `SpriteComposer` (retrato, tarjeta, reveal, ficha, panel, party, roster, pueblo y sandbox con `HeroAnim` en 4 direcciones).
+
+Fase 3 (hecha): generador v4 (`HeroGenerator.lpc_look`), `HeroData.look`, guardado v13 con migración (roster y memorial), `SpriteComposer` delega en `LpcComposer` (`uses_lpc`, `feet_offset`, `face_region`, `build_frames_legacy` con los nombres viejos de animación). Capturas en `docs/reports/overhaul/fase3/`.
+Pendiente: `HeroAnim` en 4 direcciones reales (hoy los alias usan izquierda/derecha para atacar y caer), el ataque por arma (`ItemDefs.BASES[*].attack_anim`), la tarjeta del pueblo y del título se ven con LPC pero sin revisar en detalle.

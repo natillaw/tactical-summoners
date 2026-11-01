@@ -31,6 +31,15 @@ func _init() -> void:
             if str(now[k]) != str(rec[k]):
                 bad += 1
                 print("  FAIL  seed %d: %s %s -> %s" % [int(rec["seed"]), k, str(rec[k]), str(now[k])])
+    var looks_ok := true
+    for i in 1000:
+        looks_ok = looks_ok and HeroGenerator.lpc_look(i * 31 + 5) == HeroGenerator.lpc_look(i * 31 + 5) and not HeroGenerator.lpc_look(i * 31 + 5).is_empty()
+    var elves := 0
+    for i in 1000:
+        elves += 1 if String(HeroGenerator.lpc_look(i)["race"]) == "elf" else 0
+    print("  %s  LPC look deterministic in 1000 seeds; elves %d/1000 (weight %d%%)" % ["PASS" if looks_ok and elves > 100 and elves < 300 else "FAIL", elves, int(SummonConfig.RACE_WEIGHTS["elf"])])
+    if not (looks_ok and elves > 100 and elves < 300):
+        bad += 1
     print("  %s  %d seeds keep name, class, traits, passives and Trust/Obedience/Composure" % ["PASS" if bad == 0 else "FAIL", data.size()])
     print("== %s ==" % ("ALL PASSED" if bad == 0 else "%d FAILED" % bad))
     quit(1 if bad > 0 else 0)

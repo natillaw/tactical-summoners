@@ -42,7 +42,7 @@ func _ready() -> void:
     _rng.seed = hero.hero_seed
     _sprite = AnimatedSprite2D.new()
     _sprite.sprite_frames = SpriteComposer.build_frames(hero)
-    _sprite.offset = Vector2(0, -16)
+    _sprite.offset = SpriteComposer.feet_offset(hero)
     add_child(_sprite)
     _sprite.play("idle_down")
     _timer = _rng.randf_range(0.2, 2.0)
