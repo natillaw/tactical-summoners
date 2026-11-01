@@ -341,13 +341,25 @@ Rejilla lógica de 32 px. Todo el arte se dibuja a ×1: personajes LPC (frame de
 ### D-074 — Overhaul LPC: personajes en LPC (D-A) y razas de héroe (D-F) (2026-10-31, prompt del overhaul aprobado por el dueño)
 - Los héroes se dibujan con LPC (`LpcComposer`). Sustituye D-023 para héroes y el "Master prompt H" (ya no todo humano es TPF). Los PNG de Caz no se borran ni se modifican: quedan como respaldo y el aspecto TPF se guarda en `appearance` (legado).
 - `HeroGenerator.VERSION = 4`: `look` LPC desde `hero_seed ^ 0x4C5043`; nombre, clase, rasgos, pasivas y Trust de las semillas viejas no cambian (fixture de 200 semillas). Guardado v13: héroes del roster y del memorial reciben su `look` desde la semilla.
-- Razas de héroe: humano y elfo (`SummonConfig.RACE_WEIGHTS`, **80/20 provisional** hasta que el dueño lo confirme).
+- Razas de héroe: humano y elfo, 80/20 (`SummonConfig.RACE_WEIGHTS`; confirmado por el dueño el 2026-10-31).
 
 ### D-075 — Overhaul LPC: estilo de UI (2026-10-31, dueño: "B: CraftPix basic")
 Se adopta el pack CraftPix "basic pixel art UI for RPG" como el único estilo de UI; Dragon Regalia se retira cuando se haga el cambio (fase 6). No se mezclan los dos.
 
 ### D-076 — Overhaul LPC: bandidos en LPC (D-E, 2026-10-31, prompt del overhaul)
-Los bandidos son humanos LPC con un atuendo fijo por tipo (`LpcFactions.BANDIT`) y el color de facción **maroon** (pañuelo, capucha o capa) sobre cuero oscuro. Dentro de un tipo solo varían cuerpo, piel, pelo y barba (4 variantes). Ningún héroe lleva ese color (test con 1000 semillas). Sustituye el arte TPF de los bandidos (D-070 en cuanto al arte); los presets TPF quedan sin uso. Tamaño del Barón: **pendiente** (puerta; por defecto ×2, `BanditArt.BARON_SCALE`).
+Los bandidos son humanos LPC con un atuendo fijo por tipo (`LpcFactions.BANDIT`) y el color de facción **maroon** (pañuelo, capucha o capa) sobre cuero oscuro. Dentro de un tipo solo varían cuerpo, piel, pelo y barba (4 variantes). Ningún héroe lleva ese color (test con 1000 semillas). Sustituye el arte TPF de los bandidos (D-070 en cuanto al arte); los presets TPF quedan sin uso. Tamaño del Barón (dueño, 2026-10-31: "a+b"): hoja ×2 **y** aura carmesí que late (`BanditArt.BARON_SCALE`, `SandboxEnemy._add_aura`).
+
+### D-077 — Biblioteca de ítems (2026-10-31, dueño; resuelve P-19 y parte de P-20)
+- **Tiers por material, 10 pisos cada uno** (todos en datos): T1 cobre/hierro (1-10), T2 acero (11-20), T3 plata/mithril (21-30), T4 oro rúnico (31-40), T5 obsidiana/dracónico (41-50).
+- **Slots:** se añade **trinket** a los 8 activos (sin segundo anillo por ahora).
+- **Rarezas:** normal (blanco), poco común (verde), raro (azul), épico (morado), legendario (naranja), único (rojo). Afijos 0/1/2/3/4 (únicos: fijos a mano). Stats base ×1,0/1,1/1,2/1,35/1,5.
+- **Afijos:** biblioteca de buenos y malos; el 15 % de las piezas trae un afijo maldito siempre junto a uno bueno reforzado; las normales nunca traen malos.
+- **Drop vs crafteo:** el drop es temático del enemigo (bandido: dagas, capuchas, cuero; orco: hachas, tribal; no muerto: hueso), con afijos aleatorios hasta legendario. El herrero hace una línea limpia por material, stats predecibles, 1 afijo a elegir entre 3 y como máximo raro. Joyas (anillos, amuletos, trinkets): **joyero** (propuesta). Pociones y consumibles: solo alquimia. Nunca coinciden un ítem de drop y uno de herrero.
+- **Únicos:** solo en misiones secretas (objetivo oculto por piso), 1-2 % al completarla, uno por cuenta para siempre; se pierde si muere el héroe que lo lleva; en el alijo se conserva.
+- **Consumibles:** poción menor y mayor, antídoto, elixires de fuerza, velocidad y defensa. La bomba de fuego se aparca (necesitaría otra tecla).
+- **Requisitos:** nivel mínimo por tier (T1 1, T2 10, T3 20...) y requisitos de clase leves (un mago no lleva un hacha a dos manos). Sin durabilidad.
+- **Sets del herrero:** el set completo de cada tier da bonificaciones.
+- **Arte:** pieza LPC cuando existe; ícono del pack más parecido. Anillos, amuletos y trinkets: solo ícono.
 
 ## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)
 

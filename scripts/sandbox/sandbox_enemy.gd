@@ -249,6 +249,8 @@ func make_boss(boss_name: String = "Orc Chieftain") -> void:
     strike_range *= 1.3
     windup_time = 1.1 * float(CombatRules.SIZE[size_class]["windup"])
     is_boss = true
+    if type_id == BanditArt.BARON_ID:
+        _add_aura()
     for sid in EnemyDefs.BOSS_SKILLS.get(type_id, []):
         if not skills.has(sid):
             skills.append(String(sid))
@@ -256,6 +258,30 @@ func make_boss(boss_name: String = "Orc Chieftain") -> void:
     body_radius *= 1.5
     if _sprite != null:
         _sprite.scale *= 1.5
+
+
+## Owner's choice (A+B): the Crimson Baron is drawn x2 and also wears a pulsing crimson aura.
+func _add_aura() -> void:
+    var g := Gradient.new()
+    g.set_color(0, Color(0.95, 0.12, 0.1, 0.55))
+    g.set_color(1, Color(0.6, 0.0, 0.0, 0.0))
+    var tex := GradientTexture2D.new()
+    tex.gradient = g
+    tex.fill = GradientTexture2D.FILL_RADIAL
+    tex.fill_from = Vector2(0.5, 0.5)
+    tex.fill_to = Vector2(1.0, 0.5)
+    tex.width = 96
+    tex.height = 96
+    var aura := Sprite2D.new()
+    aura.texture = tex
+    aura.scale = Vector2(1.6, 0.9)
+    aura.position = Vector2(0, -6)
+    aura.z_index = -1
+    aura.name = "BaronAura"
+    add_child(aura)
+    var tw := aura.create_tween().set_loops()
+    tw.tween_property(aura, "modulate:a", 0.45, 0.8).set_trans(Tween.TRANS_SINE)
+    tw.tween_property(aura, "modulate:a", 1.0, 0.8).set_trans(Tween.TRANS_SINE)
 
 
 func aim_point() -> Vector2:
