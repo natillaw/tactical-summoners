@@ -170,19 +170,21 @@ func _ready() -> void:
     for k in 60:
         h1.stop()
         h1._dodge_t = 0.0
+        h1.dash_t = 0.0                                     # 2026-10-31: the AI may dash instead of stepping
+        h1.dash_cd = 0.0
         h1.position = map.center_of(Vector2i(6, 16))
         foe.state = SandboxEnemy.State.WINDUP
         foe._timer = 0.7
         foe._aim = h1.position
         foe.strike_seq += 1
         h1.combat_tick(sb.living_enemies(), map)
-        var moved := h1._dodge_t > 0.0
+        var moved := h1._dodge_t > 0.0 or h1.dash_t > 0.0
         if moved:
             dodged += 1
         else:
             h1.combat_tick(sb.living_enemies(), map)           # same strike: no second roll
-            rerolls_ok = rerolls_ok and not (h1._dodge_t > 0.0)
-    check(dodged > 0 and dodged < 40, "a veteran hero sometimes steps out, far from always (%d/60, cap %.0f%%)" % [dodged, CombatRules.DODGE_MAX * 100.0])
+            rerolls_ok = rerolls_ok and not (h1._dodge_t > 0.0 or h1.dash_t > 0.0)
+    check(dodged > 0 and dodged < 48, "a veteran hero sometimes steps or dashes out, far from always (%d/60)" % dodged)
     check(rerolls_ok, "one roll per strike: a failed reaction is not retried every tick")
     h1.hero.level = 1
     h1.stats["spd"] = 5
