@@ -165,6 +165,7 @@ func _ready() -> void:
 	ground.z_index = -10                         # floor < zones (-5) < ground effects (-4) < units (0) < air effects (20)
 	if not SimMode.on:                           # D-083 headless simulator: no map art
 		_world.add_child(ground)
+		_world.add_child(ground.prop_layer())     # trees, rocks, logs: Y-sorted with the units
 	if not SimMode.on and SandboxMapView.has_camps(map) and BosqueArt.available():
 		for fire in BosqueArt.campfires(map, (map as ProceduralMap).seed_value):
 			_world.add_child(fire)
@@ -568,7 +569,8 @@ func _setup_mission() -> void:
 					m.group_mates = guard
 		"defense":
 			shrine = SandboxRelic.new("shrine")
-			shrine.position = map.center_of(map.extract_cell) + Vector2(0, -40)
+			# beside the exit portal, not on it (2026-11-02: the stone and the portal were drawn on top of each other)
+			shrine.position = map.nearest_walkable(map.center_of(map.extract_cell) + Vector2(-110, 36))
 			_world.add_child(shrine)
 
 

@@ -20,6 +20,42 @@ static func has_camps(m: NavMap) -> bool:
 	return foes.any(func(id): return BanditArt.has(String(id)))
 
 
+## The tall props (trees, rocks, logs, camp gear) as Y-sorted sprites: add it to the Y-sorted world so
+## units walk behind them (owner 2026-11-02). Empty layer for maps without the forest art.
+func prop_layer() -> Node2D:
+	var layer: Node2D
+	if map is ProceduralMap and BosqueArt.available():
+		layer = BosqueArt.prop_sprites(ForestArt.tall_props(map, (map as ProceduralMap).seed_value, has_camps(map)))
+	else:
+		layer = Node2D.new()
+		layer.y_sort_enabled = true
+	var portal := exit_portal()
+	if portal != null:
+		portal.position = map.center_of(map.extract_cell) + Vector2(0, 8)
+		layer.add_child(portal)
+	return layer
+
+
+## The exit portal (the tower portal of the kit, animated), feet on its position.
+static func exit_portal() -> AnimatedSprite2D:
+	var path := AssetCatalog.world("tower_portal")
+	if not ResourceLoader.exists(path):
+		return null
+	var tex: Texture2D = load(path)
+	var sf := SpriteFrames.new()
+	for i in 6:
+		var at := AtlasTexture.new()
+		at.atlas = tex
+		at.region = Rect2(i * 32, 0, 32, 48)
+		sf.add_frame("default", at)
+	sf.set_animation_speed("default", 8.0)
+	var s := AnimatedSprite2D.new()
+	s.sprite_frames = sf
+	s.offset = Vector2(0, -24)
+	s.play()
+	return s
+
+
 func _draw() -> void:
 	if map == null:
 		return
@@ -58,10 +94,19 @@ func _draw() -> void:
 					if y > 0 and map.is_blocked_cell(Vector2i(x, y - 1)):
 						draw_rect(Rect2(r.position, Vector2(cell, 10)), Color(0, 0, 0, 0.4))
 
-	# Extraction/goal marker with gorgeous glowing portal effect
+	# Exit (owner 2026-11-02: "¿qué es extract?"): a portal stands on the exit cell (prop_layer); the
+	# ground shows a soft glowing circle with runes and the word "Salida".
 	var g: Vector2 = map.center_of(map.extract_cell)
-	draw_circle(g, 24.0, Color(0.15, 0.75, 0.45, 0.3))
-	draw_arc(g, 24.0, 0.0, TAU, 36, Color(0.45, 0.95, 0.65), 4.0)
-	draw_arc(g, 18.0, 0.0, TAU, 28, Color(0.70, 1.0, 0.85, 0.8), 2.5)
-	draw_circle(g, 6.0, Color(0.85, 1.0, 0.90, 0.9))
-	draw_string(ThemeDB.fallback_font, g + Vector2(-32, -32), "EXTRACT", HORIZONTAL_ALIGNMENT_CENTER, 64, 16, Color(0.80, 1.0, 0.85))
+	draw_set_transform(g + Vector2(0, 6), 0.0, Vector2(1.0, 0.5))
+	draw_circle(Vector2.ZERO, 30.0, Color(0.55, 0.35, 0.95, 0.18))
+	draw_arc(Vector2.ZERO, 30.0, 0.0, TAU, 40, Color(0.75, 0.6, 1.0, 0.55), 2.0)
+	draw_arc(Vector2.ZERO, 22.0, 0.0, TAU, 32, Color(0.85, 0.75, 1.0, 0.35), 1.0)
+	for k in 8:
+		var a := TAU * float(k) / 8.0
+		draw_rect(Rect2(Vector2(cos(a), sin(a)) * 26.0 - Vector2(1.5, 1.5), Vector2(3, 3)), Color(0.9, 0.8, 1.0, 0.7))
+	draw_set_transform(Vector2.ZERO)
+	var f := ThemeDB.fallback_font
+	var txt := tr("EXIT")
+	var tw := f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
+	draw_string_outline(f, g + Vector2(-tw / 2.0, 30), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, 3, Color(0.1, 0.05, 0.2, 0.9))
+	draw_string(f, g + Vector2(-tw / 2.0, 30), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.9, 0.82, 1.0))

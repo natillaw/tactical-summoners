@@ -32,6 +32,14 @@ var _ground: Texture2D = null
 var _walls: Texture2D = null
 var _props: Dictionary = {}      # prop id -> Array[Texture2D] (animation frames)
 var _time: float = 0.0
+## 2026-11-02 (owner: "la mejora gráfica de los pisos, no se la diste al pueblo"; "le paso por encima a todo"):
+## the view draws in layers. "ground" = baked floor, construction sites, the move ghost; the buildings and
+## the forest ring are separate Y-sorted pieces (heroes walk behind them); "labels" = names, rings, tags on top.
+var tall: Array = []                 # forest ring trees: [y, name, feet, "props", shadow] (BosqueArt entries)
+var pieces: Array = []               # Y-sorted building nodes (made by building_pieces())
+
+
+var _labels: Node2D = null
 
 
 func _init(m: TownMap = null) -> void:
@@ -39,8 +47,15 @@ func _init(m: TownMap = null) -> void:
 
 
 func _ready() -> void:
+    z_index = -10
+    _labels = Node2D.new()
+    _labels.z_index = 50                               # relative: above the units (0) and the pieces
+    _labels.draw.connect(func(): _draw_labels(_labels))
+    add_child(_labels)
     _walls = _tex(TILE_DIR + "Wall_Tiles.png")
     _ground = _bake_ground()
+    if _ground != null and BosqueArt.available():
+        material = Ambience.wind_material(false)      # same gusts as on the tower floors
     for id in TownTables.ids():
         for p in TownTables.info(id)["props"]:
             _load_prop(String(p))
@@ -50,6 +65,27 @@ func _ready() -> void:
 func _process(delta: float) -> void:
     _time += delta
     queue_redraw()
+    if _labels != null:
+        _labels.queue_redraw()
+    for p in pieces:
+        if is_instance_valid(p):
+            (p as Node2D).queue_redraw()
+
+
+## One Y-sorted node per standing building (feet = the plot's bottom edge), drawn by this view.
+func building_pieces() -> Array:
+    pieces.clear()
+    var cell := float(NavMap.CELL)
+    for id in TownTables.ids():
+        if not map.is_placed(id) or Game.building_level(id) <= 0:
+            continue
+        var plot: Rect2i = map.plot_of(id)
+        var n := Node2D.new()
+        n.position = Vector2(plot.position.x + plot.size.x * 0.5, plot.end.y) * cell - Vector2(0, 6)
+        var bid: String = id
+        n.draw.connect(func(): _draw_building(n, bid))
+        pieces.append(n)
+    return pieces
 
 
 static func _tex(path: String) -> Texture2D:
@@ -167,11 +203,17 @@ func _bake_ground_bosque() -> Texture2D:
     for c in [Vector2i(9, 8), Vector2i(18, 8), Vector2i(24, 8), Vector2i(9, 12), Vector2i(18, 12), Vector2i(24, 12)]:
         if map.ground[c.y][c.x] == ".":
             CazArt.blit_feet(out, CazArt.image("ExteriorFeatures/ExteriorFeatures_1_1"), c * cell + Vector2i(24, 30))
-    for y in range(-1, map.height + 1):                 # the forest around the town
+    tall.clear()
+    var props_img := BosqueArt._img(BosqueArt.PROPS)
+    for y in range(-1, map.height + 1):                 # the forest around the town (Y-sorted sprites)
         for x in range(-1, map.width + 1):
             if x <= 0 or y <= 0 or x >= map.width - 1 or y >= map.height - 1:
                 for k in 2:
-                    BosqueArt.tree(out, Vector2i(x, y) * cell + Vector2i(r.randi_range(4, 44), r.randi_range(20, 46) - k * 16), r)
+                    var feet := Vector2i(x, y) * cell + Vector2i(r.randi_range(4, 44), r.randi_range(20, 46) - k * 16)
+                    var big := r.randf() < 0.6
+                    var tree: String = (BosqueArt.BIG_TREES if big else BosqueArt.MID_TREES)[r.randi() % 3]
+                    BosqueArt._blit(out, props_img, BosqueArt.defs()["props"], "sombra_grande" if big else "sombra_mediana", feet)
+                    tall.append([feet.y, tree, feet, "props", ""])
     return ImageTexture.create_from_image(out)
 
 
@@ -235,72 +277,95 @@ func _draw() -> void:
         draw_texture(_ground, Vector2.ZERO)
     else:
         draw_rect(Rect2(Vector2.ZERO, map.world_size()), Color(0.25, 0.45, 0.20))
+    for id in TownTables.ids():
+        if not map.is_placed(id) or Game.building_level(id) > 0:
+            continue
+        var plot: Rect2i = map.plot_of(id)
+        var r := Rect2(Vector2(plot.position) * cell, Vector2(plot.size) * cell)
+        # construction site: fenced dirt plot with rubble
+        draw_rect(r.grow(-6), Color(0.0, 0.0, 0.0, 0.12))
+        for fx in range(int(r.position.x) + 4, int(r.end.x) - 4, 12):
+            draw_rect(Rect2(fx, r.position.y + 4, 3, 8), Color8(110, 74, 42))
+            draw_rect(Rect2(fx, r.end.y - 12, 3, 8), Color8(110, 74, 42))
+        draw_rect(Rect2(r.position.x + 4, r.position.y + 6, r.size.x - 8, 2), Color8(140, 96, 56))
+        draw_rect(Rect2(r.position.x + 4, r.end.y - 10, r.size.x - 8, 2), Color8(140, 96, 56))
+        _draw_prop("rubble", 0, r.get_center() + Vector2(0, cell * 0.4))
+    _draw_ghost(cell)
+
+
+## A standing building, drawn on its Y-sorted piece `n` (coordinates relative to its feet).
+func _draw_building(n: Node2D, id: String) -> void:
+    var cell := float(NavMap.CELL)
+    var b: Dictionary = TownTables.info(id)
+    var plot: Rect2i = map.plot_of(id)
+    var r := Rect2(Vector2(plot.position) * cell - n.position, Vector2(plot.size) * cell)
+    var look: Dictionary = b.get("look", {})
+    var img: Image = null
+    var ext := InteriorDefs.exterior_for(id)
+    # a soft contact shadow under the building
+    n.draw_rect(Rect2(r.position.x + 6, r.end.y - 8, r.size.x - 12, 8), Color(0, 0, 0, 0.18))
+    if ext != null:                    # overhaul: the packs' buildings, x1, standing on the plot's bottom edge
+        n.draw_texture(ext, Vector2(floorf(r.get_center().x - ext.get_width() * 0.5), r.end.y - ext.get_height()))
+    elif CazArt.available():
+        img = CazArt.house(plot.size.x * NavMap.CELL, plot.size.y * NavMap.CELL, String(look.get("roof", "thatch")), String(look.get("wall", "plaster")), look.get("tint", Color.WHITE))
+    if img == null and ext == null:
+        img = ProcArt.house(plot.size.x * NavMap.CELL, plot.size.y * NavMap.CELL, b["roof"], String(STYLES.get(id, "plaster")), true)
+    if img != null:
+        n.draw_texture(ProcArt.texture(img), r.position)
+    if id == "tower_gate" and CazArt.texture(CazArt.ARCH) != null:
+        n.draw_texture(CazArt.texture(CazArt.ARCH), Vector2(r.get_center().x - 24, r.end.y - 48))
+    var props: Array = b["props"]
+    var front := Vector2(map.door_of(id)) * cell + Vector2(cell * 0.5, cell * 0.85) - n.position
+    for i in props.size():
+        var side := -1.0 if i % 2 == 0 else 1.0
+        _draw_prop(String(props[i]), -1, front + Vector2(side * cell * (1.0 + i / 2), 0), n)
+    var proj: Dictionary = Game.under_construction(id)
+    if not proj.is_empty():
+        _draw_prop("rubble", 0, Vector2(r.end.x - cell * 0.5, r.end.y), n)
+
+
+## Names, levels, selection rings, progress bars and alerts, over everything.
+func _draw_labels(c: CanvasItem) -> void:
+    var cell := float(NavMap.CELL)
     var font := ThemeDB.fallback_font
     for id in TownTables.ids():
         if not map.is_placed(id):
-            continue                        # not built and never placed: no plot on the ground
+            continue
         var b: Dictionary = TownTables.info(id)
         var plot: Rect2i = map.plot_of(id)
         var r := Rect2(Vector2(plot.position) * cell, Vector2(plot.size) * cell)
         var level := Game.building_level(id)
-        if level > 0:
-            var look: Dictionary = b.get("look", {})
-            var img: Image = null
-            var ext := InteriorDefs.exterior_for(id)
-            if ext != null:                    # overhaul: the packs' buildings, x1, standing on the plot's bottom edge
-                draw_texture(ext, Vector2(floorf(r.get_center().x - ext.get_width() * 0.5), r.end.y - ext.get_height()))
-            elif CazArt.available():
-                img = CazArt.house(plot.size.x * NavMap.CELL, plot.size.y * NavMap.CELL, String(look.get("roof", "thatch")), String(look.get("wall", "plaster")), look.get("tint", Color.WHITE))
-            if img == null and ext == null:
-                img = ProcArt.house(plot.size.x * NavMap.CELL, plot.size.y * NavMap.CELL, b["roof"], String(STYLES.get(id, "plaster")), true)
-            if img != null:
-                draw_texture(ProcArt.texture(img), r.position)
-            if id == "tower_gate" and CazArt.texture(CazArt.ARCH) != null:
-                draw_texture(CazArt.texture(CazArt.ARCH), Vector2(r.get_center().x - 24, r.end.y - 48))
-            var props: Array = b["props"]
-            var front := Vector2(map.door_of(id)) * cell + Vector2(cell * 0.5, cell * 0.85)
-            for i in props.size():
-                var side := -1.0 if i % 2 == 0 else 1.0
-                _draw_prop(String(props[i]), -1, front + Vector2(side * cell * (1.0 + i / 2), 0))
-        else:
-            # construction site: fenced dirt plot with rubble
-            draw_rect(r.grow(-6), Color(0.0, 0.0, 0.0, 0.12))
-            for fx in range(int(r.position.x) + 4, int(r.end.x) - 4, 12):
-                draw_rect(Rect2(fx, r.position.y + 4, 3, 8), Color8(110, 74, 42))
-                draw_rect(Rect2(fx, r.end.y - 12, 3, 8), Color8(110, 74, 42))
-            draw_rect(Rect2(r.position.x + 4, r.position.y + 6, r.size.x - 8, 2), Color8(140, 96, 56))
-            draw_rect(Rect2(r.position.x + 4, r.end.y - 10, r.size.x - 8, 2), Color8(140, 96, 56))
-            _draw_prop("rubble", 0, r.get_center() + Vector2(0, cell * 0.4))
         var ring := Color(1.0, 0.9, 0.5) if id == selected else (Color(1, 1, 1, 0.7) if id == hovered else Color(0, 0, 0, 0))
         if ring.a > 0.0:
-            draw_rect(r.grow(3), ring, false, 3.0)
+            c.draw_rect(r.grow(3), ring, false, 3.0)
         var proj: Dictionary = Game.under_construction(id)
         if not proj.is_empty():
             var total := EconomyDefs.BUILD_HOURS_PER_LEVEL * float(proj["to"])
             var k := clampf(1.0 - float(proj["work_left"]) / total, 0.0, 1.0)
-            draw_rect(Rect2(r.position.x + 6, r.end.y - 8, r.size.x - 12, 6), Color(0.1, 0.1, 0.1, 0.8))
-            draw_rect(Rect2(r.position.x + 6, r.end.y - 8, (r.size.x - 12) * k, 6), Color(0.95, 0.75, 0.3))
-            _draw_prop("rubble", 0, Vector2(r.end.x - cell * 0.5, r.end.y))
+            c.draw_rect(Rect2(r.position.x + 6, r.end.y - 8, r.size.x - 12, 6), Color(0.1, 0.1, 0.1, 0.8))
+            c.draw_rect(Rect2(r.position.x + 6, r.end.y - 8, (r.size.x - 12) * k, 6), Color(0.95, 0.75, 0.3))
         var problem := String(Game.town_problems.get(id, ""))
         if problem != "" and level > 0:
-            draw_circle(Vector2(r.end.x - 8, r.position.y + 8), 8.0, Color(0.9, 0.25, 0.2))
-            draw_string(font, Vector2(r.end.x - 11, r.position.y + 13), "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
-        var title := String(b["name"]) + ("  Lv %d" % level if level > 0 else "  (build)")
-        var tw := font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
+            c.draw_circle(Vector2(r.end.x - 8, r.position.y + 8), 8.0, Color(0.9, 0.25, 0.2))
+            c.draw_string(font, Vector2(r.end.x - 11, r.position.y + 13), "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
+        # the name tag only when it matters (hovered, selected, not built yet): the town is not a spreadsheet
+        if id != hovered and id != selected and level > 0:
+            continue
+        var title := StringsEs.tx(String(b["name"]) + ("  Lv %d" % level if level > 0 else "  (build)"))
+        var tw := font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
         var tp := Vector2(r.get_center().x - tw * 0.5, r.position.y - 6)
-        draw_rect(Rect2(tp + Vector2(-4, -14), Vector2(tw + 8, 18)), Color(0.08, 0.07, 0.12, 0.75))
-        draw_string(font, tp, StringsEs.tx(title), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(1, 0.95, 0.8) if level > 0 else Color(0.8, 0.8, 0.8))
-    _draw_ghost(cell)
-    _draw_occupancy(cell)
+        c.draw_rect(Rect2(tp + Vector2(-4, -14), Vector2(tw + 8, 18)), Color(0.08, 0.07, 0.12, 0.75))
+        c.draw_string(font, tp, title, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(1, 0.95, 0.8) if level > 0 else Color(0.8, 0.8, 0.8))
+    _draw_occupancy(c, cell)
     if empty_hint != "":
         var f := ThemeDB.fallback_font
         var ws := map.world_size()
-        draw_string_outline(f, Vector2(0, ws.y * 0.5), empty_hint, HORIZONTAL_ALIGNMENT_CENTER, ws.x, 32, 6, Color(0, 0, 0, 0.85))
-        draw_string(f, Vector2(0, ws.y * 0.5), empty_hint, HORIZONTAL_ALIGNMENT_CENTER, ws.x, 32, Color(1.0, 0.92, 0.7))
+        c.draw_string_outline(f, Vector2(0, ws.y * 0.5), empty_hint, HORIZONTAL_ALIGNMENT_CENTER, ws.x, 32, 6, Color(0, 0, 0, 0.85))
+        c.draw_string(f, Vector2(0, ws.y * 0.5), empty_hint, HORIZONTAL_ALIGNMENT_CENTER, ws.x, 32, Color(1.0, 0.92, 0.7))
 
 
 ## Small tag over each building with how many heroes are inside (sleeping / busy).
-func _draw_occupancy(cell: float) -> void:
+func _draw_occupancy(c: CanvasItem, cell: float) -> void:
     var font := ThemeDB.fallback_font
     for id in occupancy:
         if not TownTables.BUILDINGS.has(id):
@@ -317,8 +382,8 @@ func _draw_occupancy(cell: float) -> void:
         var text := "  ".join(parts)
         var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x + 10
         var at := Vector2(plot.position.x + plot.size.x * 0.5, plot.position.y) * cell + Vector2(-w * 0.5, -4)
-        draw_rect(Rect2(at, Vector2(w, 17)), Color(0.08, 0.08, 0.12, 0.8))
-        draw_string(font, at + Vector2(5, 13), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.95, 0.92, 0.75))
+        c.draw_rect(Rect2(at, Vector2(w, 17)), Color(0.08, 0.08, 0.12, 0.8))
+        c.draw_string(font, at + Vector2(5, 13), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.95, 0.92, 0.75))
 
 
 ## D-050 placement preview (green = valid, red = invalid).
@@ -334,7 +399,9 @@ func _draw_ghost(cell: float) -> void:
 
 ## Draws a prop with its feet at `feet`. Caz props at native size, voxel props (64 px) at 0.75.
 ## frame -1 = animate with time.
-func _draw_prop(key: String, frame: int, feet: Vector2) -> void:
+func _draw_prop(key: String, frame: int, feet: Vector2, on: CanvasItem = null) -> void:
+    if on == null:
+        on = self
     var frames: Array = _props.get(key, [])
     if frames.is_empty():
         return
@@ -342,4 +409,4 @@ func _draw_prop(key: String, frame: int, feet: Vector2) -> void:
     var tex: Texture2D = frames[f]
     var s := 1.0 if key.begins_with("caz:") else 0.75
     var size := tex.get_size() * s
-    draw_texture_rect(tex, Rect2(feet - Vector2(size.x * 0.5, size.y), size), false)
+    on.draw_texture_rect(tex, Rect2(feet - Vector2(size.x * 0.5, size.y), size), false)

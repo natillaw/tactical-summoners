@@ -66,11 +66,17 @@ func _ready() -> void:
     container.add_child(_viewport)
     _world = Node2D.new()
     _world.scale = Vector2.ONE * WORLD_SCALE          # D-072 revision: the town's art x2 against the heroes
+    _world.y_sort_enabled = true                      # 2026-11-02: heroes walk behind buildings and trees
     _viewport.add_child(_world)
+    var grade := CanvasModulate.new()                 # the tower floors' warm, slightly muted palette
+    grade.color = Color(1.0, 0.97, 0.9)
+    _viewport.add_child(grade)
     camera = Camera2D.new()
     _viewport.add_child(camera)
     camera.make_current()
     camera.zoom = Vector2.ONE
+    Ambience.add_particles(camera, Vector2(640, 360))  # leaves and fireflies, like the tower floors
+    Ambience.add_dust(camera, Vector2(640, 360))
     _build_ui()
     rebuild()
     Game.changed.connect(_on_changed)
@@ -85,6 +91,15 @@ func rebuild() -> void:
     view = TownView.new(map)
     view.selected = selected
     _world.add_child(view)
+    for piece in view.building_pieces():              # buildings, Y-sorted with the heroes
+        _world.add_child(piece)
+    if not view.tall.is_empty():
+        _world.add_child(BosqueArt.prop_sprites(view.tall))   # the forest ring
+    if not SimMode.on:                                # the tower floors' life: birds, cloud shadows, lights
+        _world.add_child(WorldLife.create(self, map.world_size(), 0x70e1))
+        for c in [Vector2i(9, 8), Vector2i(18, 8), Vector2i(24, 8), Vector2i(9, 12), Vector2i(18, 12), Vector2i(24, 12)]:
+            if c.y < map.height and c.x < map.width and String(map.ground[c.y])[c.x] == ".":
+                Ambience.add_light(_world, map.center_of(c) + Vector2(0, -14), Color(1.0, 0.8, 0.45), 40, true)
     var i := 0
     for id in Game.heroes:
         var th := TownHero.new(Game.heroes[id], map)
@@ -99,7 +114,7 @@ func rebuild() -> void:
         # first view: the whole town fits on screen
         var ws := map.world_size()
         var vs := Vector2(_viewport.size) if _viewport.size.x > 0 else Vector2(1280, 670)
-        camera.zoom = Vector2.ONE * 0.5           # D-063 + D-072 revision: the town is drawn x2, so start at 0.5 (wheel = 0.5 / 1 / 2)
+        camera.zoom = Vector2.ONE                 # 2026-11-02 (owner: "se ven muy lejos"): start close on the plaza (wheel = 0.5 / 1 / 2)
         camera.position = _clamp_cam(map.center_of(Vector2i(17, 10)) * WORLD_SCALE)
     _refresh()
 
