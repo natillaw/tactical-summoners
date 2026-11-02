@@ -17,6 +17,7 @@ const WALK_ANIM_SPEED := 85.0       # move speed at which the walk cycle plays a
 const ATTACK_LEAD := 0.12           # the attack pose starts this early so the blow lands on the damage
 
 var hero: HeroData
+var dev_fly: bool = false            # D-146 dev console /fly: moves in a straight line through walls
 var vision_mod: int = 0
 var art_scale: float = 1.0           # LPC heroes are drawn at half size (SpriteComposer.LPC_WORLD_SCALE)
 var dash_cd: float = 0.0             # CombatRules.DASH_*
@@ -306,6 +307,10 @@ func order_move(waypoints: Array[Vector2]) -> void:
 	if casting != "":
 		interrupt_cast("cast cancelled")
 	path = waypoints.duplicate()
+	if dev_fly and not path.is_empty():
+		var last: Vector2 = path[path.size() - 1]   # D-146 /fly: straight line, walls ignored
+		path.clear()
+		path.append(last)
 	auto_path = false
 	target = null
 	rescue_target = null

@@ -63,6 +63,7 @@ Leyenda: **I** implementado (sin ejecutar) · **ID** implementado pero defectuos
 | **UI y arte unificados (D-062, D-063)** | I (2026-10-31, probado: `ui full` + 24/24 PASS en Godot 4.7.2; capturas `capture_ui`/`capture_cohesion` revisadas) | `ui_kit.gd`, `art_palette.gd`, `asset_catalog.gd`, `expedition_hud.gd`, `game_menu.gd`, `title_screen.gd`, `inventory_screen.gd`, `summon_reveal.gd`, `hero_sheet.gd`, `autoload/ui_sfx.gd` | Base 640×360 con escala entera, fuentes pixel, tema del kit y Dragon Regalia, música y sonidos de UI, HUD de expedición con minimapa, menú Esc sin pausa, criaturas normalizadas. Audio y fluidez no comprobados a mano; ver `docs/reports/UI_AND_ART_UNIFICATION_REPORT.md` |
 | Equipo de 8 ranuras (D-060) | I (2026-10-31, probado: `items`) | `item_defs.gd` (`ACTIVE_SLOTS`) | Manos, ring2 y especial bloqueadas hasta 11 |
 | Síntesis y sacrificio (D-061) | I (2026-10-31, probado: `slice`) | `Game.synthesize/sacrifice`, `progression_defs.gd`, `HeroData.synth_bonus` | Confirmación y guardado antes; el consumido va al memorial como "sacrificed" |
+| Consola de desarrollo con clave (D-146) | I (2026-11-02, probado: `dev console`, local Godot 4.7.2 36/36) | `scripts/dev/dev_commands.gd`, `scripts/autoload/dev_console.gd`, `Game.cheated` (save v21) | Tecla bajo Esc; `/key` con hash SHA-256; 3 fallos = 30 s; marca cheated + `user://cheat_log.txt`. Sin probar a mano ni en build exportado |
 | Personalidad de 8 dimensiones, crafting avanzado, biomas, eventos | N | — | — |
 
 ## Pruebas (14 suites)
