@@ -42,6 +42,7 @@ func rebuild() -> void:
         add_child(_wrap(_msg, UIKit.ACCENT))
     _tabs = TabContainer.new()
     _tabs.custom_minimum_size = Vector2(300, 220)
+    _tabs.clip_tabs = true                       # many tabs scroll with the arrows instead of widening the sheet
     add_child(_tabs)
     _tabs.add_child(_scroll("Summary", _summary()))
     _tabs.add_child(_scroll("Skills", _skills()))
@@ -117,20 +118,56 @@ static func _reward_text(r: Dictionary) -> String:
 
 # --- Summary --------------------------------------------------------------------------------------
 
+## 2026-11-02 (owner: "interfaz feísima, ponerle sus slots de items"): the summary opens with the hero
+## wearing their gear (every slot around them) next to their numbers as bars.
+const STAT_BAR_MAX := {"hp": 400, "atk": 60, "mag": 60, "def": 40, "spd": 30}
+
+
 func _summary() -> VBoxContainer:
     var v := VBoxContainer.new()
     var stats := hero.get_stats()
-    var grid := GridContainer.new()
-    grid.columns = 6
-    v.add_child(grid)
+    var top := HBoxContainer.new()
+    top.add_theme_constant_override("separation", 6)
+    v.add_child(top)
+    top.add_child(InventoryScreen.paper_doll(hero, func(t: String): _done(t)))
+    var col := VBoxContainer.new()
+    col.add_theme_constant_override("separation", 2)
+    col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    top.add_child(col)
     for k in HeroTables.STAT_KEYS:
-        grid.add_child(UIKit.label(String(HeroTables.STAT_NAMES[k]), 12, UIKit.MUTED))
-        grid.add_child(UIKit.label(str(stats[k]), 14, UIKit.TEXT))
-    var social := HBoxContainer.new()
-    v.add_child(social)
-    for s in [["social_trust", "Trust", hero.trust], ["social_obedience", "Obedience", hero.obedience], ["social_composure", "Composure", hero.composure]]:
-        social.add_child(UIKit.icon(AssetCatalog.icon(String(s[0])), String(s[1])))
-        social.add_child(UIKit.label("%s %d" % [String(s[1]), int(s[2])], 12, UIKit.TEXT))
+        var row := HBoxContainer.new()
+        var name := UIKit.label(String(HeroTables.STAT_NAMES[k]), 12, UIKit.MUTED)
+        name.custom_minimum_size = Vector2(30, 0)
+        row.add_child(name)
+        var val := UIKit.label(str(stats[k]), 14, UIKit.TEXT)
+        val.custom_minimum_size = Vector2(26, 0)
+        row.add_child(val)
+        var bar := ProgressBar.new()
+        bar.show_percentage = false
+        bar.custom_minimum_size = Vector2(60, 6)
+        bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+        bar.max_value = float(STAT_BAR_MAX.get(String(k), 100))
+        bar.value = float(stats[k])
+        bar.add_theme_stylebox_override("fill", UIKit.box([Color(0.8, 0.3, 0.3), Color(0.9, 0.6, 0.25), Color(0.5, 0.5, 0.95), Color(0.6, 0.65, 0.7), Color(0.4, 0.8, 0.5)][HeroTables.STAT_KEYS.find(k) % 5], Color(0, 0, 0, 0), 0, 0, 0))
+        row.add_child(bar)
+        col.add_child(row)
+    for s in [["social_trust", "Trust", hero.trust, Color(0.9, 0.35, 0.4)], ["social_obedience", "Obedience", hero.obedience, Color(0.85, 0.7, 0.4)], ["social_composure", "Composure", hero.composure, Color(0.35, 0.6, 0.95)]]:
+        var row := HBoxContainer.new()
+        row.tooltip_text = tr(String(s[1]))
+        row.add_child(UIKit.icon(AssetCatalog.icon(String(s[0])), tr(String(s[1]))))
+        var val := UIKit.label(str(int(s[2])), 14, UIKit.TEXT)
+        val.custom_minimum_size = Vector2(26, 0)
+        row.add_child(val)
+        var bar := ProgressBar.new()
+        bar.show_percentage = false
+        bar.custom_minimum_size = Vector2(60, 6)
+        bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+        bar.value = float(s[2])
+        bar.add_theme_stylebox_override("fill", UIKit.box(s[3], Color(0, 0, 0, 0), 0, 0, 0))
+        row.add_child(bar)
+        col.add_child(row)
     v.add_child(_leader_line())
     v.add_child(UIKit.label("Personality", 20, UIKit.ACCENT))
     for t in hero.traits:
@@ -223,22 +260,16 @@ func _overlay(panel: Control) -> void:
 
 func _equipment() -> VBoxContainer:
     var v := VBoxContainer.new()
+    var top := HBoxContainer.new()
+    v.add_child(top)
+    top.add_child(InventoryScreen.paper_doll(hero, func(t: String): _done(t)))
+    var right := VBoxContainer.new()
+    right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    top.add_child(right)
+    right.add_child(UIKit.label("From the master's stash (click to equip):", 12, UIKit.ACCENT))
     var grid := GridContainer.new()
-    grid.columns = 4
-    v.add_child(grid)
-    for slot in ItemDefs.ACTIVE_SLOTS:
-        var item: Dictionary = hero.equipment.get(slot, {})
-        var cell := ItemIcons.slot_control(slot, item)
-        cell.tooltip_text = "%s\n%s" % [String(ItemDefs.SLOT_NAMES.get(slot, slot)), ItemIcons.tooltip(item) if not item.is_empty() else "empty"]
-        cell.mouse_filter = Control.MOUSE_FILTER_STOP
-        var s := String(slot)
-        cell.gui_input.connect(func(e):
-            if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT and hero.equipment.has(s):
-                var why := Game.unequip(hero, s)
-                _done(why if why != "" else "Unequipped: back to the master's stash."))
-        grid.add_child(cell)
-    v.add_child(UIKit.label("Locked for now: hands, second ring, special (D-060).", 12, UIKit.MUTED))
-    v.add_child(UIKit.label("From the master's stash (click to equip):", 14, UIKit.ACCENT))
+    grid.columns = 3
+    right.add_child(grid)
     var any := false
     for it in Game.stash:
         var slots := ItemDefs.slots_for(String(it["base"]))
@@ -246,17 +277,15 @@ func _equipment() -> VBoxContainer:
             continue
         any = true
         var vs: Dictionary = hero.equipment.get(String(slots[0]), {})
-        var row := HBoxContainer.new()
         var cell := ItemIcons.slot_control(String(slots[0]), it)
-        row.add_child(cell)
+        cell.tooltip_text = ItemIcons.tooltip(it, vs)
+        cell.mouse_filter = Control.MOUSE_FILTER_STOP
         var uid := int(it["uid"])
-        var b := UIKit.button(ItemDefs.item_label(it), func():
-            var why := Game.equip(hero, uid)
-            _done(why if why != "" else "Equipped."), Vector2(380, 30))
-        b.tooltip_text = ItemIcons.tooltip(it, vs)
-        b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-        row.add_child(b)
-        v.add_child(row)
+        cell.gui_input.connect(func(e):
+            if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+                var why := Game.equip(hero, uid)
+                _done(why if why != "" else "Equipped."))
+        grid.add_child(cell)
     if not any:
         v.add_child(UIKit.label("The stash is empty: the tower and the forge fill it.", 12, UIKit.MUTED))
     return v

@@ -128,13 +128,26 @@ func _doll() -> Control:
     var sub := UIKit.label("%s · %s %d · %s %d" % [tr(cls), tr("Lv"), h.level, tr("Power"), int(PowerCalc.hero_power(h).get("total", 0))], 12, UIKit.MUTED)
     sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     v.add_child(sub)
+    v.add_child(paper_doll(h, func(t: String): _msg.text = t))
+    var locked: Array = ItemDefs.SLOTS.filter(func(s): return not ItemDefs.slot_open(String(s)))
+    if not locked.is_empty():
+        var l := UIKit.label(tr("Locked for now: ") + ", ".join(locked.map(func(s): return tr(String(ItemDefs.SLOT_NAMES.get(s, s))))), 12, UIKit.MUTED)
+        l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        l.custom_minimum_size = Vector2(176, 0)
+        v.add_child(l)
+    return pv[0]
+
+
+## The hero standing on a lit plate with every open equipment slot around them (inventory, hero sheet).
+## Clicking a worn piece takes it off; `say` gets the result text.
+static func paper_doll(h: HeroData, say: Callable) -> Control:
     var doll := Control.new()
     doll.custom_minimum_size = Vector2(172, 196)
-    v.add_child(doll)
     var plate := Panel.new()                                  # a lit stage behind the hero
     plate.add_theme_stylebox_override("panel", UIKit.box(Color(0.16, 0.12, 0.09), Color(ArtPalette.GOLD[2], 0.35), 1, 0, 0))
     plate.position = Vector2(40, 8)
     plate.size = Vector2(96, 148)
+    plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
     doll.add_child(plate)
     var spr := AnimatedSprite2D.new()
     spr.sprite_frames = SpriteComposer.build_frames(h)
@@ -148,22 +161,16 @@ func _doll() -> Control:
         var item: Dictionary = h.equipment.get(slot, {})
         var c := ItemIcons.slot_control(String(slot), item)
         c.position = DOLL[slot]
-        c.tooltip_text = "%s\n%s" % [tr(String(ItemDefs.SLOT_NAMES.get(slot, slot))), ItemIcons.tooltip(item) + "\n" + tr("Click: take it off") if not item.is_empty() else tr("empty")]
+        c.tooltip_text = "%s\n%s" % [StringsEs.tx(String(ItemDefs.SLOT_NAMES.get(slot, slot))), ItemIcons.tooltip(item) + "\n" + TranslationServer.translate("Click: take it off") if not item.is_empty() else TranslationServer.translate("empty")]
         c.mouse_filter = Control.MOUSE_FILTER_STOP
         var sl := String(slot)
         c.gui_input.connect(func(e):
             if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT and not h.equipment.get(sl, {}).is_empty():
                 var why := Game.unequip(h, sl)
-                _msg.text = why if why != "" else tr("Back in the stash.")
+                say.call(why if why != "" else TranslationServer.translate("Back in the stash."))
                 UIKit.sound("click"))
         doll.add_child(c)
-    var locked: Array = ItemDefs.SLOTS.filter(func(s): return not ItemDefs.slot_open(String(s)))
-    if not locked.is_empty():
-        var l := UIKit.label(tr("Locked for now: ") + ", ".join(locked.map(func(s): return tr(String(ItemDefs.SLOT_NAMES.get(s, s))))), 12, UIKit.MUTED)
-        l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-        l.custom_minimum_size = Vector2(176, 0)
-        v.add_child(l)
-    return pv[0]
+    return doll
 
 
 # --- the stash ---------------------------------------------------------------------------------

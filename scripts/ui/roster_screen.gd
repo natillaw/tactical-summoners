@@ -45,13 +45,13 @@ func _ready() -> void:
 	left.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	body.add_child(left)
 	_grid = GridContainer.new()
-	_grid.columns = 4
+	_grid.columns = 3
 	_grid.add_theme_constant_override("h_separation", 5)  # px
 	_grid.add_theme_constant_override("v_separation", 5)  # px
 	left.add_child(_grid)
 
 	var right := PanelContainer.new()
-	right.custom_minimum_size = Vector2(320, 0)  # px: the tabbed hero sheet
+	right.custom_minimum_size = Vector2(372, 0)  # px: the tabbed hero sheet (paper doll + numbers)
 	body.add_child(right)
 	var rscroll := ScrollContainer.new()
 	rscroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
