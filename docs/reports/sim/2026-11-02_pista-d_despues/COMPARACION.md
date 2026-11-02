@@ -37,3 +37,18 @@ bot solo saquee sin enemigos a la vista y no en misiones de defensa/supervivenci
 ## Botín (media por run, después)
 Pocos ítems por piso (0,2-3 en cuerpos; ~30 % basura); a casa llegan sobre todo en los pisos ganados (1-3);
 el avaricioso no aparece (la party de esta config no lo tiene).
+
+## Arreglo del saqueo de la IA (`saqueo_seguro/`, pisos 3 y 9, táctico vs loco, 2 runs)
+Regla nueva (sin tocar valores del juego): el `MasterBot` y los héroes autónomos solo saquean sin criaturas
+vivas a ≤ 320 px (`LootDefs.LOOT_SAFE_RADIUS`) y sin estar peleando ni lanzando; en defensa y supervivencia
+(`LootDefs.HOLD_MISSIONS`) nunca dejan su sitio: solo lo que tienen a los pies en una pausa, y el barrido del
+final recoge el resto. El jugador sigue saqueando cuando quiera.
+
+| Piso | Táctico antes | Táctico con saqueo libre | Táctico sin saquear (A/B) | **Táctico con saqueo seguro** | Loco con saqueo seguro |
+|---|---|---|---|---|---|
+| 3 defense | 75 % (4) | 0 % (5) | 40 % (5) | **0 % (2)** | 0 % (2) |
+| 9 survival | 25 % (4) | 0 % (5) | 20 % (5) | **50 % (2)** | 0 % (2) |
+
+(entre paréntesis, runs). El piso 9 vuelve a su nivel (y el táctico vuelve a sacarle ventaja al loco). El piso 3
+sigue en 0 % en estos 2 runs: con 2 runs no se distingue de un ~40 % (0 de 2 sale ~1 de cada 3 veces); el bot ya
+no se aleja a saquear (1 saqueo por run, a sus pies). Para confirmarlo harían falta ≥ 10 runs del piso 3.

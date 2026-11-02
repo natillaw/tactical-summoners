@@ -62,6 +62,11 @@ const AUTO_LOOT_RANGE := 40.0
 const AUTO_LOOT_TIME := 1.2
 ## A won floor can end on the spot (the boss falls): the squad still sweeps the bodies around them.
 const END_SWEEP := 260.0
+## AI looting (MasterBot and the autonomous heroes; the player decides for themself): only with no living
+## creature within LOOT_SAFE_RADIUS and not fighting; in HOLD_MISSIONS nobody walks off their post to loot
+## (they loot what lies at their feet in a lull, and the end-of-floor sweep collects the rest).
+const LOOT_SAFE_RADIUS := 320.0
+const HOLD_MISSIONS := ["defense", "survival"]
 
 ## D-124 backpacks: items found in a run go into the looter's pack (PACK_SLOTS + the bag's "pack").
 ## Leaving the tower (success or escape) moves every pack into the Master's stash; a fallen hero drops

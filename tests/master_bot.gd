@@ -136,11 +136,18 @@ func think(sb: SandboxScreen, goal: Vector2, dt: float) -> int:
 
 
 ## Pista D: walks to the nearest body with loot (only if a pack has room or it holds materials) and
-## holds F there; gives up on a body after LOOT_GIVE_UP s. True while busy looting.
+## holds F there; gives up on a body after LOOT_GIVE_UP s. Only when it is safe (SandboxScreen.loot_safe),
+## and in defense/survival without moving (loot_holds_post). True while busy looting.
 func _loot(sb: SandboxScreen, m: SandboxHero, dt: float) -> bool:
+    # the same rule as the autonomous heroes: nothing alive nearby and not fighting; in defense and
+    # survival only what lies at its feet (never off its post: the end-of-floor sweep takes the rest)
+    if m.target != null or m.is_casting() or not sb.loot_safe(m.position):
+        _loot_t = 0.0
+        return false
+    var seek := LootDefs.LOOT_RANGE * 0.8 if sb.loot_holds_post() else LOOT_SEEK
     var best: LootBag = null
     for b in sb.loot_bags:
-        if is_instance_valid(b) and not b.is_empty() and b.visible_to_bot and b.position.distance_to(m.position) <= LOOT_SEEK \
+        if is_instance_valid(b) and not b.is_empty() and b.visible_to_bot and b.position.distance_to(m.position) <= seek \
                 and (best == null or b.position.distance_to(m.position) < best.position.distance_to(m.position)):
             best = b
     if best == null or (best.res.is_empty() and sb._pack_with_room(m, true) == null):
