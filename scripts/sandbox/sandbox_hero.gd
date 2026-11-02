@@ -110,7 +110,7 @@ const REGEN_PER_MAG := 0.4          # Sanctuary heals this much per second per p
 var res_kind: String = "stamina"
 var res: float = 0.0
 var res_max: float = 100.0
-var slots: Array = []               # skill ids, keys Q W E R (D-090; the Master's basic attack is the left click)
+var slots: Array = []               # skill ids, keys W E R (D-059; Q = basic attack)
 var combo: int = 0                  # D-090: rogue combo points (SkillDefs.COMBO_MAX), spent by finishers
 var arrows: int = -1                # D-090: arrows left in the quiver (-1 = no bow: nothing to count)
 var combat_t: float = 0.0           # D-090: seconds left "in combat" (SkillDefs.COMBAT_LINGER): resource regen/decay
@@ -1576,7 +1576,7 @@ func is_casting() -> bool:
 	return casting != ""
 
 
-## Direct skill activation (D-090: Q W E R = slots 0-3). Returns true if it fired or started its
+## Direct skill activation (D-059: W E R = slots 0-2; Q is the basic attack). Returns true if it fired or started its
 ## cast. Refused only for a concrete reason, never by a random roll (D-016); the reason is kept in
 ## last_refusal for the UI. allies = every hero of the squad (self included).
 func use_skill_slot(i: int, enemies: Array, allies: Array, aim: Vector2 = Vector2.INF) -> bool:

@@ -27,7 +27,7 @@ func _ready() -> void:
     var v := VBoxContainer.new()
     add_child(v)
     v.add_child(UIKit.label(tr("%s reached level %d: choose ONE skill") % [hero.display_name(), int(c["level"])], 20, UIKit.ACCENT))
-    var hint := UIKit.label(tr("The others are lost for this choice. Up to 4 skills on Q W E R."), 12, UIKit.MUTED)
+    var hint := UIKit.label(tr("The others are lost for this choice. Up to 3 skills on W E R (Q = basic attack)."), 12, UIKit.MUTED)
     v.add_child(hint)
     var row := HBoxContainer.new()
     row.add_theme_constant_override("separation", 8)

@@ -22,7 +22,7 @@ const CHOICE_EVERY := 5
 const CHOICE_MAX_LEVEL := 70
 const CHOICE_OPTIONS := 3
 const LEARN_LEVELS := [2, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70]
-const MAX_SLOTS := 4   # D-090: keys Q W E R (the Master's basic attack moved to the left click)
+const MAX_SLOTS := 3   # keys W E R (D-059; Q is the driven hero's basic attack — owner confirmed, 2026-11-02)
 
 ## D-041 class resources, redone by D-090. max = base + per point of the scaling attribute.
 ## regen = per second (regen_combat while fighting, regen_still while standing still, when given);
