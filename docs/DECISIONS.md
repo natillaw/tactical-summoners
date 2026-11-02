@@ -448,6 +448,44 @@ Ronda paralela (pistas A/C/D). Números en `AiDefs`, `CombatRules`, `SkillDefs`,
 - **Skills por clase:** elección de 1 entre 3 en los niveles **2, 5 y luego cada 5** (las no elegidas se pierden en esa elección); pantalla `SkillChoiceScreen` (icono, coste, enfriamiento, alcance, descripción) desde la ficha del héroe. Con `bonus_skill_choice` (tomo, pista D) sale una opción más. **Q sigue siendo el ataque básico** (D-059) y hay **3 activas en W E R** (`MAX_SLOTS` 3): las "4 en QWER" del prompt = ataque básico + 3 skills (dueño, 2026-11-02).
 - **Dependencias:** ítems `camp_kit`, `arrows` y el campo `bonus_skill_choice` (pista D: se usan si existen); efecto de "Dos en una veta" y el HUD de recursos/combo/atención (pista C: las funciones están expuestas).
 
+### D-110 — Pista C: juice modular por perfil (2026-11-02, dueño, prompt 04C)
+- `JuiceProfile` (Resource, `.tres` en `assets/juice/`, generados por `tools/build_juice_profiles.gd` desde `JuiceDefs`; un `.tres` editado manda sobre la tabla): destello 2-4 frames, partículas `CPUParticles2D` de 2 px en la dirección del golpe (segundo color opcional: brasas, esquirlas), sacudida del sprite en píxeles enteros (y rebote del atacante), squash/stretch, temblor de cámara ≤ 2 px, freeze 0,03-0,05 s solo de render, id de sonido (hook `JuicePlayer.on_sound`, sin audio todavía) y "pesado".
+- **Filtro:** temblor + freeze solo en jefes, críticos, el golpe que remata y skills pesadas; golpe normal = destello + partículas + sacudida leve. El daño en el tiempo nunca tiembla. `CombatFeel.SHAKE` baja a 1 / 1,5 / 2 px y `FREEZE` a ≤ 0,05 s; el golpe normal de una criatura común ya no mueve la cámara (`CombatFeel.shake_allowed`).
+- Perfil por cada skill de `SkillDefs` (46) y por ataque básico de cada clase; tipos de reserva: enemigo, bandido, jefe, DoT, bloqueo, muerte. Bola de fuego `#FF4400` a 0,6 con brasas, escarcha azul con esquirlas, rayo blanco-azul, chispas doradas que suben (clérigo), astillas y destello del disparo tensado (arquero, id `class.ranger` hasta el renombre).
+- **Enganche:** una línea en `Combatant.take_hit` (tras el número) y otra en `Combatant.die`, más `JuicePlayer.pop` en el cadáver (`EnemySprites.spawn_death`). Skill vs básico se deduce leyendo `blows` y `_firing` del héroe (sin tocar `sandbox_hero`). Los DoT llevan la etiqueta `"dot"` (solo aspecto).
+- **No hecho:** "la animación de ataque arranca al instante al pulsar (estilo Hades)" y "anticipación en las animaciones": viven en `sandbox_hero`/`hero_anim` (lógica de combate, fuera de la pista C).
+
+### D-111 — Pista C: party frames estilo WoW (2026-11-02)
+- Columna en el borde izquierdo (`PartyFrames`): retrato, nombre, vida, recurso, estados, contador de agonía (m:ss, X si murió), borde rojo si una criatura lo tiene de objetivo (`enemy.focus`, o `target_of()` de la pista A si existe), clic = ese héroe recibe el próximo ping (`select_slot`). Lee `resource_value/resource_max` de la pista A si existen; si no, `res/res_max`.
+- `SmoothBar`: baja al instante, el trozo blanco espera 0,3 s y se drena; la curación llena en 0,35 s con chispas; verde → amarillo (≤ 60 %) → rojo (≤ 25 %). El retrato destella y hace "punch" al recibir daño. Misma barra en la del jefe. Las barras sobre la cabeza de cada criatura se dibujan en `sandbox_enemy._draw` (fuera de la pista C): **pendiente**.
+
+### D-112 — Pista C: números flotantes (2026-11-02)
+- Pop + arco alterno izquierda/derecha + apilado (no se solapan) + desvanecido; tamaño según el daño (×1 / ×1,5 / ×2) solo si está implicado el Máster o el daño es a la party. Blanco normal, naranja crítico (grande y temblando), verde cura, morado DoT, azul maná, gris esquivado/bloqueado, rojo-anaranjado daño a la party. `FloatingText.compact` reduce todos (falta el interruptor en Opciones).
+- Capa propia `WorldTextLayer` (z 60) para los textos del mundo; posiciones en píxeles enteros; textos traducidos con `StringsEs.tx`.
+
+### D-113 — Pista C: mundo vivo (2026-11-02)
+- `assets/shaders/wind_sway.gdshader`, reutilizable: modo sprite (la copa se mece, la base quieta, desfase por posición; listo para la pista B en el pueblo) y modo mapa horneado (solo píxeles de copa se desplazan 1 texel en rachas). `Ambience.wind_material()`. Aplicado al mapa horneado de la expedición.
+- `WorldLife`: sombras de nubes, pájaros que huyen al acercarse un héroe, polvo al frenar/girar (ignora teleports); `Ambience.add_dust` (motas). Las hojas, luciérnagas, luces con parpadeo y la viñeta ya existían (fase 8) y se mantienen.
+- **No hecho:** hierba que se aparta al pisarla (la hierba está horneada en una textura; necesita hierba como sprites), agua animada (los pisos 1-10 son bosque sin agua), luciérnagas solo de noche (la expedición no tiene ciclo día/noche).
+
+### D-114 — Pista C: cámara (2026-11-02)
+- Adelanto leve hacia donde va el objetivo (≤ 14 px, con retardo), por `offset` junto al temblor: la posición real de la cámara, los límites y los tests de encuadre no cambian.
+- **Conflicto (se reporta):** el prompt pide "zoom leve en jefes", pero D-082b dice que la cámara nunca hace zoom por sí sola. No implementado hasta que el dueño decida.
+
+### D-115 — Pista C: tirones al entrar (2026-11-02)
+- Pantallas pesadas (`sandbox`, `town`): cortina "Cargando..." un par de frames antes de construir, para que el clic responda al instante (en headless se construye directo, como antes). Fundido al cambiar de pantalla.
+- `ForestArt.bake` guarda los 3 últimos pisos horneados (volver a entrar o reintentar no hornea de nuevo). Los sprites LPC compuestos ya tenían caché (`LpcComposer`/`SpriteComposer`).
+- **Sin verificar:** no se midió el tirón en el PC del dueño (headless no dibuja). La carga en segundo plano real (hilo) no se hizo: el horneado usa `Image` y nodos en el hilo principal.
+
+### D-116 — Pista C: UI (2026-11-02)
+- La ventana de fin de misión/retirada medía 360×230 px de scroll + botón de 360 px en una vista de 640×360 (tapaba la pantalla): ahora 300×150 y botón de 130 px, con entrada suavizada (`UIKit.pop_in`).
+- Botones que reaccionan (crecen al pasar el ratón, "punch" al pulsar; `UIKit.react`), fundidos entre pantallas (`UIKit.fade_in`).
+
+### D-117 — Pista C: recolección por cargas (2026-11-02)
+- `GatherNode`: 3-6 cargas (fijas por posición, `GatherDefs`); cada ciclo de 5 s da 1 carga (su parte de lo que guarda: el total no cambia), con animación en bucle (sacudida del nodo + astillas/esquirlas/hojas cada 0,7 s) y pips de cargas encima; al vaciarse se desvanece. Irse del nodo reinicia el ciclo en curso.
+- Sinergia "dos en una mena" (`two_on_ore`): solo si existe `SynergyDefs` de la pista A (más rápido, probabilidad por ciclo de romperla). Si no existe, no hace nada.
+- **No hecho:** animaciones del héroe al minar/talar/recoger/abrir cofres/canalizar altar/levantar a un caído (son del héroe: `hero_anim`/`sandbox_hero`). El nodo sí se anima.
+
 ### D-120 — Por qué los enemigos no soltaban nada y botín en el cuerpo (2026-11-02, dueño: "Pista D")
 - **Causa:** en la torre cada criatura solo tiraba la tabla `LootDefs.FLOORS[n].drops` (4-6 % de un material) y todo el equipo salía al **completar** el piso, directo al alijo. En partida, un enemigo muerto no dejaba nada (como mucho un número flotante de "+1 esencia" muy de vez en cuando).
 - **Ahora** (`LootService.body_loot`, con la semilla de la expedición): cada cuerpo puede llevar equipo según su rango (`LootDefs.CREATURE_ITEM_CHANCE`: normal 10 %, élite —líder, chamán o pregonero— 35 %, jefe 100 % y 2 piezas), los materiales/llaves de siempre y, raramente, un libro (D-129). La recompensa por completar el piso no cambia.

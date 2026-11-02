@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="JuiceProfile" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/juice_profile.gd" id="1_jswmn"]
+
+[resource]
+script = ExtResource("1_jswmn")
+id = "bandit"
+particles = Color(0.85, 0.3, 0.3, 1)
+extra = Color(0.72, 0.62, 0.48, 1)
+recoil = 1
+sound = "hit_slash"

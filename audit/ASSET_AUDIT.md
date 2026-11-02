@@ -34,3 +34,58 @@ Los sprites de héroes de Caz están intactos y se componen en memoria. Cualquie
 2. Registrar todos los packs en `ASSET_REGISTRY.json` y regenerar `CREDITS.md`; guardar el texto de la EULA de Caz (PDF/TXT) junto a los sprites.
 3. Hacer la prueba de estilo D-008 (1 enemigo, 1 efecto, 1 tile por pack) antes de usar SpritePilot/Voxel/KILN/Kitchen.
 4. Confirmar visibilidad del repo antes de cualquier publicación.
+
+## 5. Inventario actualizado (2026-11-02, pista C)
+Conteo real de `assets/` (sin `.import`/`.uid`), por carpeta:
+
+| Ruta | PNG | Audio (ogg/wav/mp3) | Otros | Tamaño |
+|---|---|---|---|---|
+| `assets/_inbox/` | 154 | 0 | 19 | 1.6 MB |
+| `assets/audio/music/` | 0 | 7 | 1 | 11.6 MB |
+| `assets/audio/sfx/` | 0 | 54 | 1 | 4.9 MB |
+| `assets/audio/ui/` | 0 | 100 | 1 | 0.9 MB |
+| `assets/fonts/` | 0 | 0 | 3 | 0.0 MB |
+| `assets/fx/bandidos/` | 5 | 0 | 0 | 0.0 MB |
+| `assets/packs/KILN_FX_Free_Sampler/` | 40 | 0 | 2 | 0.1 MB |
+| `assets/packs/sprite_kitchen_combat_essentials_v0.1/` | 82 | 0 | 20 | 0.7 MB |
+| `assets/packs/spritepilot-combat-pack/` | 27 | 0 | 12 | 0.1 MB |
+| `assets/packs/spritepilot-creatures-pack/` | 24 | 0 | 11 | 0.1 MB |
+| `assets/packs/spritepilot-effects-pack/` | 21 | 0 | 10 | 0.1 MB |
+| `assets/packs/spritepilot-environment-pack/` | 27 | 0 | 12 | 0.2 MB |
+| `assets/packs/spritepilot-magic-pack/` | 27 | 0 | 12 | 0.1 MB |
+| `assets/packs/spritepilot-pickups-pack/` | 30 | 0 | 13 | 0.1 MB |
+| `assets/packs/spritepilot-ui-pack/` | 27 | 0 | 12 | 0.1 MB |
+| `assets/packs/spritepilot-weather-pack/` | 27 | 0 | 12 | 0.1 MB |
+| `assets/packs/voxel-dungeon-pack-full/` | 4431 | 0 | 451 | 14.0 MB |
+| `assets/pixel/bosses/` | 21 | 0 | 1 | 0.0 MB |
+| `assets/pixel/caz-base/` | 311 | 0 | 1 | 0.7 MB |
+| `assets/pixel/enemies/` | 98 | 0 | 3 | 0.2 MB |
+| `assets/pixel/fx/` | 64 | 0 | 1 | 0.1 MB |
+| `assets/pixel/icons/` | 6 | 0 | 3 | 2.8 MB |
+| `assets/pixel/interiors/` | 15 | 0 | 15 | 0.5 MB |
+| `assets/pixel/lpc/` | 3580 | 0 | 8 | 12.6 MB |
+| `assets/pixel/packs/` | 5359 | 0 | 0 | 27.8 MB |
+| `assets/pixel/tilesets/` | 62 | 0 | 2 | 0.1 MB |
+| `assets/pixel/ui/` | 132 | 0 | 3 | 0.6 MB |
+| `assets/processed/creatures/` | 80 | 0 | 0 | 0.1 MB |
+| `assets/processed/outline/` | 85 | 0 | 0 | 0.4 MB |
+| `assets/props/campamento/` | 2 | 0 | 1 | 0.0 MB |
+| `assets/sprites/Body/` | 5 | 0 | 0 | 0.1 MB |
+| `assets/sprites/Bottom/` | 26 | 0 | 0 | 0.2 MB |
+| `assets/sprites/Eyes/` | 4 | 0 | 0 | 0.0 MB |
+| `assets/sprites/Facial_Hair/` | 20 | 0 | 0 | 0.1 MB |
+| `assets/sprites/Front_Hair/` | 30 | 0 | 0 | 0.2 MB |
+| `assets/sprites/Hat/` | 25 | 0 | 0 | 0.2 MB |
+| `assets/sprites/Held_Item/` | 6 | 0 | 0 | 0.1 MB |
+| `assets/sprites/Rear_Hair/` | 40 | 0 | 0 | 0.3 MB |
+| `assets/sprites/Top/` | 55 | 0 | 0 | 0.7 MB |
+| `assets/tiles/bosque/` | 2 | 0 | 1 | 0.0 MB |
+| **Total** | **14950** | **161** | **631** | **82 MB** |
+
+**Qué usa la pista C (D-110..D-117) y qué falta:**
+- Impactos: el catálogo `CombatVFX.FX` (SpritePilot, KILN, Sprite Kitchen, Voxel Dungeon) sigue igual; el juice nuevo son partículas de 2 px generadas por código (sin arte nuevo).
+- Party frames: retratos compuestos (`SpriteComposer.face_region`), marco y barras dibujados por código con `ArtPalette`. **Pendiente de arte:** marcos de party frame del kit UI (hoy rectángulos con borde).
+- Mundo vivo: sombras de nubes y pájaros dibujados por código (pájaro de 3-5 px). **Pendiente de arte:** sprite de pájaro animado (hay `farm_animals`/`hunt_animals`, sin pájaros pequeños de 2 frames).
+- Recolección: arte existente (`crystals`, `forest_objects`, `bushes`, `rocks2`, troncos de BosqueArt); pips de cargas y astillas por código.
+- Shader: `assets/shaders/wind_sway.gdshader` (nuevo, propio). Perfiles: `assets/juice/*.tres` (generados).
+

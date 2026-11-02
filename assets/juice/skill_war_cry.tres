@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="JuiceProfile" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/juice_profile.gd" id="1_b3t30"]
+
+[resource]
+script = ExtResource("1_b3t30")
+id = "skill.war_cry"
+particles = Color(1, 0.55, 0.3, 1)
+kick = 0

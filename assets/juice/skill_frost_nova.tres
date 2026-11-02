@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="JuiceProfile" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/juice_profile.gd" id="1_4cy4x"]
+
+[resource]
+script = ExtResource("1_4cy4x")
+id = "skill.frost_nova"
+flash = Color(0.6, 0.85, 1, 1)
+particles = Color(0.6, 0.85, 1, 1)
+extra = Color(0.95, 1, 1, 1)
+amount = 8
+spread = 180.0
+kick = 2
+sound = "hit_ice"

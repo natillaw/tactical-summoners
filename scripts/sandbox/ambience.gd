@@ -106,3 +106,48 @@ static func add_vignette(parent: Control) -> void:
     r.mouse_filter = Control.MOUSE_FILTER_IGNORE
     parent.add_child(r)
     r.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+
+# --- D-113 (pista C): wind and floating dust -------------------------------------------------------
+
+const WIND_SHADER := "res://assets/shaders/wind_sway.gdshader"
+const DUST := {1: 6, 2: 14}
+static var _wind: Dictionary = {}
+
+
+## Shared wind material. sprite_mode true for separate sprites (trees, grass, bushes: pista B can put it
+## on the town's), false for a baked map texture (only the canopy moves). null when effects are off.
+static func wind_material(sprite_mode: bool = true) -> ShaderMaterial:
+    if quality <= 0 or not ResourceLoader.exists(WIND_SHADER):
+        return null
+    if not _wind.has(sprite_mode):
+        var m := ShaderMaterial.new()
+        m.shader = load(WIND_SHADER)
+        m.set_shader_parameter("sprite_mode", sprite_mode)
+        _wind[sprite_mode] = m
+    return _wind[sprite_mode]
+
+
+## Specks of dust floating in the light over the view; attach to the camera.
+static func add_dust(camera: Node2D, view_size: Vector2) -> void:
+    if quality <= 0:
+        return
+    var d := CPUParticles2D.new()
+    d.amount = int(DUST.get(quality, 6))
+    d.lifetime = 6.0
+    d.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+    d.emission_rect_extents = view_size * 0.55
+    d.gravity = Vector2(1.5, -1.0)
+    d.initial_velocity_min = 1.0
+    d.initial_velocity_max = 4.0
+    d.spread = 180.0
+    d.scale_amount_min = 1.0
+    d.scale_amount_max = 1.0
+    d.color = Color(1.0, 0.95, 0.8, 0.35)
+    var ramp := Gradient.new()
+    ramp.set_color(0, Color(1, 1, 1, 0))
+    ramp.add_point(0.5, Color(1, 1, 1, 1))
+    ramp.set_color(ramp.get_point_count() - 1, Color(1, 1, 1, 0))
+    d.color_ramp = ramp
+    d.z_index = 29
+    camera.add_child(d)
