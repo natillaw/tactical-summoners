@@ -113,6 +113,22 @@ func plaza_props() -> Node2D:
     return layer
 
 
+## The picture of a building as it stands in the town (build menu, building panels).
+static func building_thumb(id: String) -> Texture2D:
+    var ext := InteriorDefs.exterior_for(id)
+    if ext != null:
+        return ext
+    var b: Dictionary = TownTables.info(id)
+    var plot: Rect2i = b["plot"]
+    var look: Dictionary = b.get("look", {})
+    var img: Image = null
+    if CazArt.available():
+        img = CazArt.house(plot.size.x * NavMap.CELL, plot.size.y * NavMap.CELL, String(look.get("roof", "thatch")), String(look.get("wall", "plaster")), look.get("tint", Color.WHITE))
+    if img == null:
+        img = ProcArt.house(plot.size.x * NavMap.CELL, plot.size.y * NavMap.CELL, b["roof"], String(STYLES.get(id, "plaster")), true)
+    return ProcArt.texture(img) if img != null else null
+
+
 ## One Y-sorted node per standing building (feet = the plot's bottom edge), drawn by this view.
 func building_pieces() -> Array:
     pieces.clear()
