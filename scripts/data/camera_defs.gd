@@ -5,8 +5,8 @@ extends RefCounted
 ## at 1440p) and the player can add ZOOM_STEPS on top with the mouse wheel. Keys are data (rebind here);
 ## none of them takes QWER, F, 1/2/3, H/X/C/V, A/S/G/M/T/I, Space (dash) or Tab.
 
-const ZOOM_STEPS := [1.0, 2.0]          # camera zoom levels (whole numbers: pixels stay square)
-const ZOOM_DEFAULT := 0
+const ZOOM_STEPS := [1.0, 1.5, 2.0]     # camera zoom levels (2026-11-02, owner: "se ve un poco lejos": starts at 1.5)
+const ZOOM_DEFAULT := 1
 
 ## Modes: "locked" follows the Master (default); "free" (KEY_TOGGLE) moves with the mouse at the screen
 ## edges, the arrow keys or a middle-button drag, inside the map and the explored area; "follow" = a hero

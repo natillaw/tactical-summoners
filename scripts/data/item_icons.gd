@@ -22,7 +22,28 @@ const CONSUMABLES := {"potion": 80, "antidote": 81, "medicine": 81, "con_potion_
     "book_xp": "r:96", "book_skill": "r:98", "book_trade": "r:102", "book_plan": "r:304"}
 
 
+## 2026-11-02 (owner: "los items solo se muestran como espadas"): every equipment base has its own 32 px
+## icon from the rpg_icons pack (assets/pixel/packs/rpg_icons/IconN.png, authorised by the owner).
+const RPG_DIR := "res://assets/pixel/packs/rpg_icons/Icon%d.png"
+const RPG := {
+    "sword": 3, "greataxe": 45, "dagger": 82, "mace": 21, "bow": 102, "recurve": 104, "longbow": 109, "crossbow": 121,
+    "staff": 71, "wand": 87, "shield": 152, "kite_shield": 144, "bronze_shield": 141, "helm": 172, "hood": 169,
+    "mail": 196, "robe": 187, "gloves": 207, "greaves": 216, "boots": 226, "leather_cap": 165, "leather_vest": 183,
+    "leather_pants": 211, "cloth_pants": 212, "sandals": 229, "satchel": 287, "backpack": 289, "ring": 249,
+    "amulet": 254, "charm": 256, "plain_shirt": 181, "plain_pants": 213, "plain_shoes": 222, "plain_sword": 1,
+    "plain_shield": 143, "plain_dagger": 81, "plain_offhand_dagger": 84, "plain_bow": 101, "plain_staff": 87,
+    "plain_club": 34, "potion": 302, "con_potion_major": 303, "antidote": 282, "medicine": 284,
+}
+static var _rpg_cache: Dictionary = {}
+
+
 static func texture(base_id: String) -> Texture2D:
+    if RPG.has(base_id):
+        var path := RPG_DIR % int(RPG[base_id])
+        if not _rpg_cache.has(path) and ResourceLoader.exists(path):
+            _rpg_cache[path] = load(path)
+        if _rpg_cache.has(path):
+            return _rpg_cache[path]
     var ref = BASES.get(base_id, CONSUMABLES.get(base_id, 19))
     var sheet := AssetCatalog.ITEM_ICONS
     if ref is String:                                      # "r:N" = Raven sheet

@@ -6,7 +6,12 @@ extends Node2D
 ## (wander, visit, train, rest, chat), weighted by personality. Never changes hero data.
 
 const SPEED := 30.0                 # map px/s; the town is drawn x2 (TownScreen.WORLD_SCALE)
-const ACTIVITIES := ["wander", "visit", "train", "work", "rest", "chat"]
+const ACTIVITIES := ["wander", "visit", "train", "work", "rest", "chat", "fountain"]
+## 2026-11-02 (owner: "se van muy lejos"; "deberían interactuar con las cosas del pueblo"): free time stays
+## around the plaza (WANDER_R cells) and uses its features (the fountain); emotes show the mood.
+const PLAZA := Vector2i(17, 10)
+const WANDER_R := Vector2i(8, 5)
+var _emote: String = ""             # "note" | "heart" | "zz" | "dots" | "spark" | ""
 const SYNC_EVERY := 0.5
 ## Jobs done indoors (the hero goes inside) vs. outdoors (swings a tool at the door).
 const INDOOR := ["alchemy", "library", "infirmary", "kitchen", "common", "warehouse", "town_hall"]
@@ -80,7 +85,7 @@ func activity_text() -> String:
 
 ## Weighted by personality and job: workers work more, brave/hot-headed train more, cheerful chat more.
 func _choose() -> String:
-    var w := {"wander": 3.0, "visit": 2.0, "train": 1.0, "work": 0.0, "rest": 1.5, "chat": 1.5}
+    var w := {"wander": 2.0, "visit": 1.5, "train": 1.0, "work": 0.0, "rest": 1.5, "chat": 2.0, "fountain": 2.0}
     for t in hero.traits:
         match String(t):
             "trait.brave", "trait.hot_headed", "trait.reckless":
@@ -91,6 +96,8 @@ func _choose() -> String:
                 w["rest"] += 2.0
             "trait.curious", "trait.greedy":
                 w["visit"] += 2.0
+            "trait.calm", "trait.romantic", "trait.dreamer":
+                w["fountain"] += 2.0
     var total := 0.0
     for k in w:
         total += float(w[k])
@@ -100,6 +107,24 @@ func _choose() -> String:
         if roll <= 0.0:
             return k
     return "wander"
+
+
+## A walkable cell around the plaza (free time stays in the heart of the town).
+func _near_plaza() -> Vector2i:
+    for i in 60:
+        var c := PLAZA + Vector2i(_rng.randi_range(-WANDER_R.x, WANDER_R.x), _rng.randi_range(-WANDER_R.y, WANDER_R.y))
+        if map.in_bounds(c) and not map.is_blocked_cell(c):
+            return c
+    return map.goal_cell
+
+
+## The fountain's centre (the "w" cell of the town ground), or ZERO.
+func _fountain() -> Vector2:
+    for y in map.height:
+        var x := String(map.ground[y]).find("w")
+        if x >= 0:
+            return map.center_of(Vector2i(x, y))
+    return Vector2.ZERO
 
 
 func _built_buildings() -> Array:
@@ -161,7 +186,8 @@ func _start_next() -> void:
     activity = _choose()
     activity_target = ""
     _doing = false
-    var goal := map.center_of(map.random_walkable(_rng))
+    _emote = ""
+    var goal := map.center_of(_near_plaza())
     match activity:
         "visit":
             var b: Array = _built_buildings()
@@ -175,6 +201,13 @@ func _start_next() -> void:
             goal = map.center_of(map.door_of("barracks")) + Vector2(_rng.randf_range(-60, 60), 20)
         "rest":
             goal = map.center_of(Vector2i(17, 10)) + Vector2(_rng.randf_range(-70, 70), _rng.randf_range(30, 50))
+        "fountain":
+            var f := _fountain()
+            if f == Vector2.ZERO:
+                activity = "wander"
+            else:
+                var a := _rng.randf() * TAU
+                goal = f + Vector2(cos(a) * 34.0, sin(a) * 22.0 + 10.0)
         "chat":
             var others := town_heroes.filter(func(o): return o != self and o.visible)
             if others.is_empty():
@@ -231,10 +264,36 @@ func _arrive() -> void:
             _timer = _rng.randf_range(4.0, 9.0)
         "chat":
             _say(HeroChatter.town_line(hero, _rng))
+            _emote = "heart" if _rng.randf() < 0.3 else ""
+            var mate = _mate()
+            if mate != null:
+                _face_to(mate.position)
         "rest":
             _facing = "down"
+            _emote = "zz" if _rng.randf() < 0.5 else "dots"
             if _rng.randf() < 0.4:
                 _say(HeroChatter.town_line(hero, _rng))
+        "fountain":
+            _face_to(_fountain())
+            _emote = ["spark", "note", "dots"][_rng.randi() % 3]
+            _timer = _rng.randf_range(5.0, 10.0)
+        "wander":
+            _emote = "note" if _rng.randf() < 0.35 else ""
+
+
+func _mate():
+    for o in town_heroes:
+        if o != self and o.visible and o.hero != null and o.hero.hero_name.split(" ")[0] == activity_target:
+            return o
+    return null
+
+
+func _face_to(p: Vector2) -> void:
+    var d := p - position
+    if absf(d.x) >= absf(d.y):
+        _facing = "right" if d.x > 0.0 else "left"
+    else:
+        _facing = "down" if d.y > 0.0 else "up"
 
 
 func _say(text: String) -> void:
@@ -250,6 +309,7 @@ func _walk(delta: float) -> void:
         _path.remove_at(0)
         return
     var dir := to.normalized()
+    _emote = "" if _emote != "note" else _emote
     position += dir * step
     if absf(dir.x) >= absf(dir.y):
         _facing = "right" if dir.x > 0.0 else "left"
@@ -272,8 +332,56 @@ func _draw() -> void:
     var font := ThemeDB.fallback_font
     if _bubble_t > 0.0:
         UIKit.draw_bubble(self, _bubble, Vector2(0, -58))
+    elif _emote != "" and _doing or _emote == "note":
+        _draw_emote(Vector2(9, -50))
     elif hovered:
         var txt := hero.display_name()
         var w := font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
         draw_rect(Rect2(-w * 0.5 - 4, -58, w + 8, 16), Color(0.08, 0.07, 0.12, 0.85))
         draw_string(font, Vector2(-w * 0.5, -46), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, hero.star_color())
+
+
+## A tiny thought bubble with a pixel emote (mood at a glance, no text).
+func _draw_emote(at: Vector2) -> void:
+    if _emote == "":
+        return
+    var t := Time.get_ticks_msec() / 1000.0
+    var bob := floorf(sin(t * 3.0 + float(hero.hero_seed % 7)) * 1.5)
+    var o := at + Vector2(0, bob)
+    draw_rect(Rect2(o + Vector2(-7, -7), Vector2(14, 12)), Color(1, 1, 1, 0.92))
+    draw_rect(Rect2(o + Vector2(-6, -8), Vector2(12, 14)), Color(1, 1, 1, 0.92))
+    draw_rect(Rect2(o + Vector2(-5, 6), Vector2(3, 2)), Color(1, 1, 1, 0.92))
+    var ink := Color(0.15, 0.1, 0.2)
+    match _emote:
+        "note":
+            draw_rect(Rect2(o + Vector2(-3, 0), Vector2(3, 3)), ink)
+            draw_rect(Rect2(o + Vector2(-1, -5), Vector2(1, 6)), ink)
+            draw_rect(Rect2(o + Vector2(-1, -5), Vector2(4, 1)), ink)
+            draw_rect(Rect2(o + Vector2(2, -5), Vector2(1, 4)), ink)
+            draw_rect(Rect2(o + Vector2(1, -2), Vector2(2, 2)), ink)
+        "heart":
+            var red := Color(0.9, 0.2, 0.3)
+            draw_rect(Rect2(o + Vector2(-4, -4), Vector2(3, 3)), red)
+            draw_rect(Rect2(o + Vector2(1, -4), Vector2(3, 3)), red)
+            draw_rect(Rect2(o + Vector2(-4, -2), Vector2(8, 2)), red)
+            draw_rect(Rect2(o + Vector2(-3, 0), Vector2(6, 1)), red)
+            draw_rect(Rect2(o + Vector2(-2, 1), Vector2(4, 1)), red)
+            draw_rect(Rect2(o + Vector2(-1, 2), Vector2(2, 1)), red)
+        "zz":
+            var blue := Color(0.3, 0.4, 0.8)
+            draw_rect(Rect2(o + Vector2(-4, -4), Vector2(5, 1)), blue)
+            draw_rect(Rect2(o + Vector2(-2, -3), Vector2(1, 1)), blue)
+            draw_rect(Rect2(o + Vector2(-3, -2), Vector2(1, 1)), blue)
+            draw_rect(Rect2(o + Vector2(-4, -1), Vector2(5, 1)), blue)
+            draw_rect(Rect2(o + Vector2(1, 1), Vector2(3, 1)), blue)
+            draw_rect(Rect2(o + Vector2(2, 2), Vector2(1, 1)), blue)
+            draw_rect(Rect2(o + Vector2(1, 3), Vector2(3, 1)), blue)
+        "dots":
+            for i in 3:
+                if int(t * 2.0) % 4 >= i:
+                    draw_rect(Rect2(o + Vector2(-4 + i * 3, 0), Vector2(2, 2)), ink)
+        "spark":
+            var gold := Color(0.95, 0.75, 0.2)
+            draw_rect(Rect2(o + Vector2(-1, -5), Vector2(2, 9)), gold)
+            draw_rect(Rect2(o + Vector2(-4, -1), Vector2(8, 2)), gold)
+            draw_rect(Rect2(o + Vector2(-2, -2), Vector2(4, 4)), Color(1, 0.95, 0.7))

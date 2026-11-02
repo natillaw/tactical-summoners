@@ -3,6 +3,11 @@ extends Control
 
 var _content: Control
 var _currency: Label
+var _bar: Control
+
+## Screens with their own header or HUD hide the global currency bar (2026-11-02: it doubled the town bar
+## and covered the title and the expedition HUD).
+const NO_BAR := ["title", "town", "sandbox", "master", "master_edit", "game_over", "welcome"]
 
 
 func _ready() -> void:
@@ -20,6 +25,7 @@ func _ready() -> void:
     bar.custom_minimum_size = Vector2(0, 20)       # 640x360 base (D-063)
     bar.add_theme_stylebox_override("panel", UIKit.box(ArtPalette.PANEL, ArtPalette.PANEL_RIM, 1, 0, 2))   # thin wood bar (D-075)
     add_child(bar)
+    _bar = bar
     bar.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
     var hb := HBoxContainer.new()
     bar.add_child(hb)
@@ -40,6 +46,34 @@ func _ready() -> void:
     # D-063: the title screen first; Continue -> the town (D-030), New game -> welcome + first summons
     GameMenu.load_settings()
     show_screen("title")
+
+
+var _fps: Label = null
+
+
+func _process(_delta: float) -> void:
+    if GameMenu.show_fps:
+        if _fps == null:
+            _fps = UIKit.label("", 12, Color(0.7, 1.0, 0.7))
+            _fps.add_theme_constant_override("outline_size", 2)
+            _fps.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+            _fps.z_index = 100
+            _fps.mouse_filter = Control.MOUSE_FILTER_IGNORE
+            add_child(_fps)
+            _fps.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+            _fps.position = Vector2(598, 344)
+        _fps.visible = true
+        _fps.text = "%d FPS" % Engine.get_frames_per_second()
+    elif _fps != null:
+        _fps.visible = false
+
+
+## Options: mute everything while the window is in the background (the game itself never pauses, D-014).
+func _notification(what: int) -> void:
+    if what == NOTIFICATION_APPLICATION_FOCUS_OUT and GameMenu.mute_unfocused:
+        AudioServer.set_bus_mute(0, true)
+    elif what == NOTIFICATION_APPLICATION_FOCUS_IN:
+        AudioServer.set_bus_mute(0, UIKit.get_volume("Master") <= 0.001)
 
 
 ## D-082b: full screen from anywhere (F11 or Alt+Enter; saved in the settings).
@@ -133,3 +167,7 @@ func _show_screen_now(screen: String, arg: int = 0) -> void:
             s = town
     _content.add_child(s)
     UIKit.fill(s)
+    var town_like := not ["summon", "roster", "party", "memorial", "sandbox", "hq", "title", "inventory", "master",
+        "master_edit", "game_over", "welcome", "menu"].has(screen)
+    _bar.visible = not (NO_BAR.has(screen) or town_like)
+    _content.offset_top = 22 if _bar.visible else 0

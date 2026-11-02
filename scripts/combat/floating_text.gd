@@ -38,6 +38,8 @@ static func spawn(unit: Node2D, p_text: String, p_color: Color, p_big: bool, p_l
         return null                               # D-083 headless simulator: nothing to draw
     if unit == null or not unit.is_inside_tree() or unit.get_parent() == null or not unit.is_visible_in_tree():
         return null                               # nothing pops out of the fog of war
+    if not GameMenu.damage_numbers and p_text.lstrip("+-").is_valid_int():
+        return null                               # Options: damage numbers off (words like "Crit!" stay)
     var f := FloatingText.new()
     f.text = StringsEs.tx(p_text)
     f.color = p_color

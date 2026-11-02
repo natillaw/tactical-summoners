@@ -22,30 +22,63 @@ const CONTROLS := [
 
 var leave_label: String = "Back to the town"
 ## D-082b display options (saved in SETTINGS): full screen and, in a window, the mouse kept inside it.
+## 2026-11-02 (owner: "las opciones deberían ser muchas más, y deberían funcionar"): display mode
+## (window / borderless full screen / exclusive), window size, VSync, FPS cap, FPS counter, master volume,
+## mute when the window is in the background, damage numbers, language, shake and effects.
 static var fullscreen: bool = false
+static var exclusive: bool = false
 static var confine_mouse: bool = false
+static var vsync: bool = true
+static var max_fps: int = 0
+static var show_fps: bool = false
+static var mute_unfocused: bool = false
+static var damage_numbers: bool = true
+const FPS_CAPS := [0, 30, 60, 120, 144]
 var _box: VBoxContainer
+var _tab: String = "display"
 
 
 static func load_settings() -> void:
     var cf := ConfigFile.new()
     if cf.load(SETTINGS) != OK:
+        apply_display()
         return
-    for bus in ["Music", "SFX", "UI"]:
-        UIKit.set_volume(bus, float(cf.get_value("audio", bus, 0.8)))
+    for bus in ["Master", "Music", "SFX", "UI"]:
+        UIKit.set_volume(bus, float(cf.get_value("audio", bus, 1.0 if bus == "Master" else 0.8)))
+    mute_unfocused = bool(cf.get_value("audio", "mute_unfocused", false))
     CombatFeel.shake_scale = float(cf.get_value("feel", "shake", 1.0))
     Ambience.quality = int(cf.get_value("feel", "effects", 2))
+    damage_numbers = bool(cf.get_value("feel", "damage_numbers", true))
     TranslationServer.set_locale(String(cf.get_value("ui", "lang", "es")))
     fullscreen = bool(cf.get_value("display", "fullscreen", false))
+    exclusive = bool(cf.get_value("display", "exclusive", false))
     confine_mouse = bool(cf.get_value("display", "confine_mouse", false))
+    vsync = bool(cf.get_value("display", "vsync", true))
+    max_fps = int(cf.get_value("display", "max_fps", 0))
+    show_fps = bool(cf.get_value("display", "show_fps", false))
     apply_display()
+
+
+## Running inside the editor's Game tab: the OS window belongs to the editor and cannot go full screen.
+static func embedded() -> bool:
+    return OS.has_feature("embedded_in_editor")
 
 
 ## Applies the display options (headless runs keep their window as it is).
 static func apply_display() -> void:
+    Engine.max_fps = max_fps
     if DisplayServer.get_name().begins_with("headless"):
         return
-    DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen else DisplayServer.WINDOW_MODE_WINDOWED)
+    DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if vsync else DisplayServer.VSYNC_DISABLED)
+    var tree := Engine.get_main_loop() as SceneTree
+    var win: Window = tree.root if tree != null else null
+    var mode := Window.MODE_WINDOWED
+    if fullscreen:
+        mode = Window.MODE_EXCLUSIVE_FULLSCREEN if exclusive else Window.MODE_FULLSCREEN
+    if win != null:
+        win.mode = mode
+    else:
+        DisplayServer.window_set_mode(mode as DisplayServer.WindowMode)
     Input.mouse_mode = Input.MOUSE_MODE_CONFINED if confine_mouse and not fullscreen else Input.MOUSE_MODE_VISIBLE
 
 
@@ -58,13 +91,19 @@ static func toggle_fullscreen() -> void:
 
 static func save_settings() -> void:
     var cf := ConfigFile.new()
-    for bus in ["Music", "SFX", "UI"]:
+    for bus in ["Master", "Music", "SFX", "UI"]:
         cf.set_value("audio", bus, UIKit.get_volume(bus))
+    cf.set_value("audio", "mute_unfocused", mute_unfocused)
     cf.set_value("feel", "shake", CombatFeel.shake_scale)
     cf.set_value("feel", "effects", Ambience.quality)
+    cf.set_value("feel", "damage_numbers", damage_numbers)
     cf.set_value("ui", "lang", TranslationServer.get_locale().substr(0, 2))
     cf.set_value("display", "fullscreen", fullscreen)
+    cf.set_value("display", "exclusive", exclusive)
     cf.set_value("display", "confine_mouse", confine_mouse)
+    cf.set_value("display", "vsync", vsync)
+    cf.set_value("display", "max_fps", max_fps)
+    cf.set_value("display", "show_fps", show_fps)
     cf.save(SETTINGS)
 
 
@@ -115,9 +154,7 @@ func close() -> void:
 
 func _slider(text: String, value: float, on_change: Callable) -> void:
     var hb := HBoxContainer.new()
-    var l := UIKit.label(text, 14, UIKit.TEXT)
-    l.custom_minimum_size = Vector2(70, 0)
-    hb.add_child(l)
+    hb.add_child(_row_label(text))
     var s := HSlider.new()
     s.min_value = 0.0
     s.max_value = 1.0
@@ -134,36 +171,109 @@ func _slider(text: String, value: float, on_change: Callable) -> void:
 func show_options() -> void:
     _clear()
     _box.add_child(UIKit.label("Options", 28, UIKit.ACCENT))
-    _slider("Music", UIKit.get_volume("Music"), func(v): UIKit.set_volume("Music", v))
-    _slider("Effects", UIKit.get_volume("SFX"), func(v): UIKit.set_volume("SFX", v))
-    _slider("Interface", UIKit.get_volume("UI"), func(v): UIKit.set_volume("UI", v))
-    _slider("Shake", CombatFeel.shake_scale, func(v): CombatFeel.shake_scale = v)
-    _slider("Visual effects", float(Ambience.quality) / 2.0, func(v): Ambience.quality = roundi(v * 2.0))   # off / low / high (lights, particles, vignette)
-    var lang := UIKit.button("Español / English", func():
-        TranslationServer.set_locale("en" if TranslationServer.get_locale().begins_with("es") else "es")
-        save_settings(), Vector2(160, 22))
-    _box.add_child(lang)
-    var hb := HBoxContainer.new()
-    hb.add_child(UIKit.label("Window", 14, UIKit.TEXT))
-    for k in [2, 3, 4]:
-        var scale_k: int = k
-        hb.add_child(UIKit.button("x%d" % k, func():
-            fullscreen = false
-            apply_display()
-            DisplayServer.window_set_size(Vector2i(640, 360) * scale_k)
-            save_settings(), Vector2(56, 32)))
-    hb.add_child(UIKit.button("Full screen (F11)", func(): toggle_fullscreen(), Vector2(120, 32)))
-    _box.add_child(hb)
-    var cm := CheckBox.new()
-    cm.text = "Keep the mouse inside the window"
-    cm.button_pressed = confine_mouse
-    cm.toggled.connect(func(on: bool):
-        confine_mouse = on
-        apply_display()
-        save_settings())
-    _box.add_child(cm)
-    _box.add_child(UIKit.label("The picture always scales by whole numbers (crisp pixels).", 12, UIKit.MUTED))
+    var tabs := HBoxContainer.new()
+    for t in [["display", "Display"], ["audio", "Audio"], ["game", "Game"]]:
+        var id: String = t[0]
+        var b := UIKit.button(String(t[1]), func():
+            _tab = id
+            show_options(), Vector2(150, 30))
+        b.disabled = _tab == id
+        tabs.add_child(b)
+    _box.add_child(tabs)
+    match _tab:
+        "display":
+            _choice("Mode", ["Window", "Full screen", "Exclusive full screen"], (0 if not fullscreen else (2 if exclusive else 1)), func(i: int):
+                fullscreen = i > 0
+                exclusive = i == 2
+                apply_display()
+                save_settings())
+            if embedded():
+                var warn := UIKit.label("You are playing inside the Godot editor: full screen only works when the game runs in its own window (tools/Play.ps1, or turn off 'Embed game' in the editor's Game tab).", 12, UIKit.BAD)
+                warn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+                warn.custom_minimum_size = Vector2(280, 0)
+                _box.add_child(warn)
+            var hb := HBoxContainer.new()
+            var wl := UIKit.label("Window", 14, UIKit.TEXT)
+            wl.custom_minimum_size = Vector2(90, 0)
+            hb.add_child(wl)
+            for k in [2, 3, 4]:
+                var scale_k: int = k
+                hb.add_child(UIKit.button("x%d" % k, func():
+                    fullscreen = false
+                    apply_display()
+                    DisplayServer.window_set_size(Vector2i(640, 360) * scale_k)
+                    var scr := DisplayServer.window_get_current_screen()
+                    DisplayServer.window_set_position(DisplayServer.screen_get_position(scr) + (DisplayServer.screen_get_size(scr) - Vector2i(640, 360) * scale_k) / 2)
+                    save_settings()
+                    show_options(), Vector2(56, 30)))
+            _box.add_child(hb)
+            _check("VSync", vsync, func(on: bool):
+                vsync = on
+                apply_display()
+                save_settings())
+            var caps: Array = []
+            for c in FPS_CAPS:
+                caps.append(tr("No limit") if int(c) == 0 else str(c))
+            _choice("FPS limit", caps, maxi(0, FPS_CAPS.find(max_fps)), func(i: int):
+                max_fps = int(FPS_CAPS[i])
+                apply_display()
+                save_settings())
+            _check("Show FPS", show_fps, func(on: bool):
+                show_fps = on
+                save_settings())
+            _check("Keep the mouse inside the window", confine_mouse, func(on: bool):
+                confine_mouse = on
+                apply_display()
+                save_settings())
+            _box.add_child(UIKit.label("The picture always scales by whole numbers (crisp pixels).", 12, UIKit.MUTED))
+        "audio":
+            _slider("General", UIKit.get_volume("Master"), func(v): UIKit.set_volume("Master", v))
+            _slider("Music", UIKit.get_volume("Music"), func(v): UIKit.set_volume("Music", v))
+            _slider("Effects", UIKit.get_volume("SFX"), func(v): UIKit.set_volume("SFX", v))
+            _slider("Interface", UIKit.get_volume("UI"), func(v): UIKit.set_volume("UI", v))
+            _check("Mute when the window is in the background", mute_unfocused, func(on: bool):
+                mute_unfocused = on
+                save_settings())
+        "game":
+            _choice("Language", ["Español", "English"], 0 if TranslationServer.get_locale().begins_with("es") else 1, func(i: int):
+                TranslationServer.set_locale("es" if i == 0 else "en")
+                save_settings()
+                show_options())
+            _slider("Shake", CombatFeel.shake_scale, func(v): CombatFeel.shake_scale = v)
+            _choice("Visual effects", ["Off", "Low", "High"], Ambience.quality, func(i: int):
+                Ambience.quality = i
+                save_settings())
+            _check("Damage numbers", damage_numbers, func(on: bool):
+                damage_numbers = on
+                save_settings())
     _box.add_child(UIKit.button("Back", show_main, Vector2(480, 36)))
+
+
+func _row_label(text: String) -> Label:
+    var l := UIKit.label(text, 14, UIKit.TEXT)
+    l.custom_minimum_size = Vector2(90, 0)
+    return l
+
+
+func _choice(text: String, options: Array, selected: int, on_pick: Callable) -> void:
+    var hb := HBoxContainer.new()
+    hb.add_child(_row_label(text))
+    var ob := OptionButton.new()
+    for o in options:
+        ob.add_item(StringsEs.tx(String(o)))
+    ob.select(clampi(selected, 0, options.size() - 1))
+    ob.custom_minimum_size = Vector2(150, 20)
+    ob.item_selected.connect(func(i: int): on_pick.call(i))
+    hb.add_child(ob)
+    _box.add_child(hb)
+
+
+func _check(text: String, on: bool, on_toggle: Callable) -> void:
+    var cb := CheckBox.new()
+    cb.text = StringsEs.tx(text)
+    cb.button_pressed = on
+    cb.toggled.connect(func(v: bool): on_toggle.call(v))
+    _box.add_child(cb)
 
 
 func show_controls() -> void:

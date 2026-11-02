@@ -43,14 +43,33 @@ func _draw() -> void:
             draw_arc(Vector2(0, -10), 12.0, 0.0, TAU, 24, Color(0.6, 0.9, 1.0), 2.0)
             draw_string(font, Vector2(-8, -4), "?", HORIZONTAL_ALIGNMENT_CENTER, 16, 16, Color(0.85, 0.95, 1.0))
         "shrine":
+            # owner 2026-11-02 ("¿qué es este shrine?"): a rune stone that must be held (defense floors).
+            # The circle is the zone a hero must stand in; the ring on the stone fills while it is held.
+            var t := Time.get_ticks_msec() / 1000.0
+            var held := progress > 0.0
+            var col := Color(0.6, 0.85, 1.0) if held else Color(0.7, 0.6, 1.0)
             draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.55))
-            draw_circle(Vector2.ZERO, 120.0, Color(0.6, 0.5, 1.0, 0.08))
-            draw_arc(Vector2.ZERO, 120.0, 0.0, TAU, 48, Color(0.7, 0.6, 1.0, 0.5), 2.0)
+            draw_circle(Vector2.ZERO, 120.0, Color(col, 0.06))
+            for k in 24:                                  # dashed, slowly turning border
+                var a0 := TAU * float(k) / 24.0 + t * 0.15
+                draw_arc(Vector2.ZERO, 120.0, a0, a0 + TAU / 48.0, 4, Color(col, 0.55), 2.0)
             draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-            draw_rect(Rect2(-8, -28, 16, 28), Color(0.55, 0.55, 0.65))
-            draw_rect(Rect2(-5, -34, 10, 6), Color(0.75, 0.65, 1.0))
-            draw_arc(Vector2(0, -16), 20.0, -PI / 2.0, -PI / 2.0 + TAU * progress, 32, Color(0.8, 0.7, 1.0), 4.0)
-            draw_string(font, Vector2(-30, -44), "SHRINE %d%%" % int(progress * 100.0), HORIZONTAL_ALIGNMENT_CENTER, 60, 16, Color(0.85, 0.8, 1.0))
+            draw_set_transform(Vector2(0, 2), 0.0, Vector2(1.0, 0.4))
+            draw_circle(Vector2.ZERO, 12.0, Color(0, 0, 0, 0.35))
+            draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+            # the stone: a tapering menhir with a glowing rune
+            draw_colored_polygon(PackedVector2Array([Vector2(-9, 0), Vector2(9, 0), Vector2(6, -30), Vector2(0, -36), Vector2(-6, -30)]), Color(0.42, 0.42, 0.5))
+            draw_colored_polygon(PackedVector2Array([Vector2(1, 0), Vector2(9, 0), Vector2(6, -30), Vector2(0, -36)]), Color(0.32, 0.31, 0.4))
+            var glow := 0.6 + 0.4 * sin(t * 3.0)
+            draw_circle(Vector2(0, -18), 7.0, Color(col, 0.25 * glow))
+            draw_polyline(PackedVector2Array([Vector2(0, -25), Vector2(-3, -18), Vector2(3, -16), Vector2(0, -10)]), Color(col.lightened(0.3), glow), 1.5)
+            draw_arc(Vector2(0, -18), 16.0, -PI / 2.0, -PI / 2.0 + TAU, 32, Color(0, 0, 0, 0.35), 3.0)
+            if progress > 0.0:
+                draw_arc(Vector2(0, -18), 16.0, -PI / 2.0, -PI / 2.0 + TAU * progress, 32, col, 3.0)
+            var txt := "%s %d%%" % [tr("SHRINE"), int(progress * 100.0)]
+            var tw := font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
+            draw_string_outline(font, Vector2(-tw / 2.0, -42), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, 3, Color(0.1, 0.05, 0.2, 0.9))
+            draw_string(font, Vector2(-tw / 2.0, -42), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, col.lightened(0.3))
         _:
             var pts := PackedVector2Array([Vector2(0, -22), Vector2(10, -11), Vector2(0, 0), Vector2(-10, -11)])
             draw_colored_polygon(pts, Color(1.0, 0.82, 0.25))

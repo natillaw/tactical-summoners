@@ -146,7 +146,7 @@ func _build_party() -> void:
     # D-111: the party is a column of frames down the left edge (PartyFrames); PartyCell stays for tests
     _frames = PartyFrames.new(sb)
     add_child(_frames)
-    _frames.position = Vector2(4, 40)
+    _frames.position = Vector2(4, 58)                 # below the mission header (it overlapped it)
     _order_label = UIKit.label("", 12, UIKit.MUTED)
     vb.add_child(_order_label)
 

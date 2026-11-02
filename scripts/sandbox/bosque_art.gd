@@ -110,7 +110,16 @@ static func camp_spots(map: NavMap, art_seed: int) -> Array:
     return out
 
 
-static func bake(map: NavMap, art_seed: int, camps: bool = false) -> Texture2D:
+## Props tall enough for a unit to walk behind (owner 2026-11-02: "le paso por encima a rocas y troncos").
+## They are not baked into the ground: bake() lists them in `tall_out` and the floor makes Y-sorted sprites.
+const TALL := ["roble_grande_a", "roble_grande_b", "pino_grande", "roble_mediano", "pino_chico", "arbol_joven",
+    "juncos", "altar", "menhir", "menhir_runa", "roca_grande", "arbusto", "tronco_caido", "tocon", "arbusto_bayas",
+    "roca_mediana", "arbusto_chico", "helecho"]
+const TALL_PACK_H := 18                  # a pack sprite this tall (px) or more is a Y-sorted prop
+const SPRITE_DEPTH := 3                  # solid cells further than this from open ground stay baked (no one walks there)
+
+
+static func bake(map: NavMap, art_seed: int, camps: bool = false, tall_out = null) -> Texture2D:
     var tiles := _img(TILES)
     var props := _img(PROPS)
     if tiles == null or props == null:
@@ -243,6 +252,9 @@ static func bake(map: NavMap, art_seed: int, camps: bool = false) -> Texture2D:
     for e in draw:
         if String(e[4]) != "":
             _blit(out, props, defs()["props"], String(e[4]), e[2])
+        if tall_out is Array and _is_tall(e) and _near_open(map, Vector2i(e[2]) / cs):
+            (tall_out as Array).append(e)
+            continue
         if String(e[3]) == "pack":
             blit_pack(out, e[5], e[2])
             continue
@@ -313,6 +325,70 @@ static func tree(out: Image, feet: Vector2i, r: RandomNumberGenerator) -> void:
     var big := r.randf() < 0.6
     _blit(out, props, defs()["props"], "sombra_grande" if big else "sombra_mediana", feet)
     _blit(out, props, defs()["props"], (BIG_TREES if big else MID_TREES)[r.randi() % 3], feet)
+
+
+static func _is_tall(e: Array) -> bool:
+    match String(e[3]):
+        "camp":
+            return true
+        "pack":
+            return (e[5] as Image).get_used_rect().size.y >= TALL_PACK_H
+    return String(e[1]) in TALL
+
+
+## Within SPRITE_DEPTH cells of a walkable cell (or anything in the open).
+static func _near_open(map: NavMap, c: Vector2i) -> bool:
+    for dy in range(-SPRITE_DEPTH, SPRITE_DEPTH + 1):
+        for dx in range(-SPRITE_DEPTH, SPRITE_DEPTH + 1):
+            var q := c + Vector2i(dx, dy)
+            if map.in_bounds(q) and not map.is_blocked_cell(q):
+                return true
+    return false
+
+
+static var _tex_cache: Dictionary = {}
+
+
+## Y-sorted sprites for the props bake() left out (feet on the sprite position, so Y-sort is by feet).
+static func prop_sprites(entries: Array) -> Node2D:
+    var layer := Node2D.new()
+    layer.y_sort_enabled = true
+    var props_tex := load(PROPS) as Texture2D
+    var camp_tex := load(CAMP) as Texture2D if ResourceLoader.exists(CAMP) else null
+    var wind := Ambience.wind_material(true)
+    for e in entries:
+        var s := Sprite2D.new()
+        s.centered = false
+        s.region_enabled = true
+        s.position = Vector2(e[2])
+        var kind := String(e[3])
+        if kind == "pack":
+            var img: Image = e[5]
+            var key := img.get_instance_id()
+            if not _tex_cache.has(key):
+                _tex_cache[key] = ImageTexture.create_from_image(img)
+            var used := img.get_used_rect()
+            s.texture = _tex_cache[key]
+            s.region_rect = Rect2(used)
+            s.offset = -Vector2(used.size.x / 2, used.size.y - 2)
+            if used.size.y > 40:
+                s.material = wind
+        else:
+            var table: Dictionary = defs()["camp" if kind == "camp" else "props"]
+            var d: Dictionary = table.get(String(e[1]), {})
+            if d.is_empty() or not d.has("rect"):
+                continue
+            var rc: Array = d["rect"]
+            var o: Array = d.get("origin", [0, 0])
+            s.texture = camp_tex if kind == "camp" else props_tex
+            if s.texture == null:
+                continue
+            s.region_rect = Rect2(int(rc[0]), int(rc[1]), int(rc[2]), int(rc[3]))
+            s.offset = -Vector2(int(o[0]), int(o[1]))
+            if String(e[1]) in BIG_TREES or String(e[1]) in MID_TREES:
+                s.material = wind
+        layer.add_child(s)
+    return layer
 
 
 static func _entry(name: String, feet: Vector2i, shadow: String = "") -> Array:

@@ -99,11 +99,11 @@ func _camera() -> void:
     for i in 60:
         sb.tick(DT)
         sb._step_camera(DT)
-    check(is_equal_approx(sb.camera_zoom_target, float(CameraDefs.ZOOM_STEPS[0])), "the camera starts at a whole zoom step")
+    check(is_equal_approx(sb.camera_zoom_target, float(CameraDefs.ZOOM_STEPS[CameraDefs.ZOOM_DEFAULT])), "the camera starts at a whole zoom step")
     sb.heroes[2].position = sb.map.nearest_walkable(m.position + Vector2(900, 600))   # the squad spreads (a hero sent far)
     for i in 30:
         sb._step_camera(DT)
-    check(is_equal_approx(sb.camera_zoom_target, float(CameraDefs.ZOOM_STEPS[0])) and is_equal_approx(sb.camera.zoom.x, float(CameraDefs.ZOOM_STEPS[0])),
+    check(is_equal_approx(sb.camera_zoom_target, float(CameraDefs.ZOOM_STEPS[CameraDefs.ZOOM_DEFAULT])) and is_equal_approx(sb.camera.zoom.x, float(CameraDefs.ZOOM_STEPS[CameraDefs.ZOOM_DEFAULT])),
         "sending a hero far away does not zoom the camera out (zoom %.2f)" % sb.camera.zoom.x)
     check(sb.cam_mode == "locked" and sb.camera_target.distance_to(m.position) < 120.0, "locked camera: it follows the Master")
     # framing: walking down, the Master stays well above the bottom of the view

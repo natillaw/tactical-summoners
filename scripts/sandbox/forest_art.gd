@@ -36,16 +36,33 @@ static var _bake_cache: Dictionary = {}
 static var _bake_order: Array = []
 
 
+static var _tall_cache: Dictionary = {}
+
+
+## Tall props of the last bake of this floor (Y-sorted sprites, see BosqueArt.prop_sprites).
+static func tall_props(map: NavMap, art_seed: int, camps: bool = false) -> Array:
+    bake(map, art_seed, camps)
+    return _tall_cache.get(_key(map, art_seed, camps), [])
+
+
+static func _key(map: NavMap, art_seed: int, camps: bool) -> String:
+    return "%d|%s|%dx%d|%d" % [art_seed, camps, map.width, map.height, _grid_hash(map)]
+
+
 static func bake(map: NavMap, art_seed: int, camps: bool = false) -> Texture2D:
-    var key := "%d|%s|%dx%d|%d" % [art_seed, camps, map.width, map.height, _grid_hash(map)]
+    var key := _key(map, art_seed, camps)
     if _bake_cache.has(key):
         return _bake_cache[key]
-    var t := _bake_uncached(map, art_seed, camps)
+    var tall: Array = []
+    var t := _bake_uncached(map, art_seed, camps, tall)
     if t != null:
         _bake_cache[key] = t
+        _tall_cache[key] = tall
         _bake_order.append(key)
         while _bake_order.size() > BAKE_CACHE_MAX:
-            _bake_cache.erase(_bake_order.pop_front())
+            var old: String = _bake_order.pop_front()
+            _bake_cache.erase(old)
+            _tall_cache.erase(old)
     return t
 
 
@@ -58,9 +75,9 @@ static func _grid_hash(map: NavMap) -> int:
     return h
 
 
-static func _bake_uncached(map: NavMap, art_seed: int, camps: bool) -> Texture2D:
+static func _bake_uncached(map: NavMap, art_seed: int, camps: bool, tall: Array = []) -> Texture2D:
     if BosqueArt.available():                       # master prompt G: the owner's forest tileset
-        var t := BosqueArt.bake(map, art_seed, camps)
+        var t := BosqueArt.bake(map, art_seed, camps, tall)
         if t != null:
             return t
     if CazArt.available():

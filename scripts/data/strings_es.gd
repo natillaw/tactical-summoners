@@ -67,7 +67,7 @@ const ES := {
     "Centre on a party member (double tap: follow)": "Centrar en un miembro de la party (doble pulsación: seguir)", "Move the free camera": "Mover la cámara libre", "Zoom (whole steps)": "Zoom (pasos enteros)",
     "Full screen": "Pantalla completa", "Dash": "Esquiva", "Master commands": "Comandos del Máster",
     "Quick ping (hold: ping wheel)": "Ping rápido (mantener: rueda de pings)", "Interact: hold next to a fallen ally to lift them, gather, escape at the exit": "Interactuar: mantén junto a un caído para levantarlo, recolecta, escapa en la salida",
-    "Hold F": "Mantén F", "Attack here": "Atacar aquí", "Defend this area": "Defender esta zona", "Explore here": "Explorar por aquí",
+    "Hold F": "Mantén F", "EXIT": "SALIDA", "SHRINE": "SANTUARIO", "Attack here": "Atacar aquí", "Defend this area": "Defender esta zona", "Explore here": "Explorar por aquí",
     "Gather here": "Recolectar aquí", "Danger! Fall back": "¡Peligro! Retirada", "Enemy spotted": "Enemigo avistado",
     "Help / lift": "Ayuda / levantar", "Go here": "Ir ahí", "listening": "escuchando", "Hang on!": "¡Aguanta!",
     "Hold the line!": "¡Mantened la línea!", "Horn!": "¡Cuerno!", "flees!": "¡huye!", "Defending": "Defendiendo",
@@ -302,6 +302,8 @@ static func install(locale: String = "es") -> void:
         t.add_message(String(k), String(ES_PISTA_A[k]))
     for k in ES_PISTA_C:                              # pista C block (end of file)
         t.add_message(String(k), String(ES_PISTA_C[k]))
+    for k in ES_UI2:                                  # visual overhaul 2026-11-02 (end of file)
+        t.add_message(String(k), String(ES_UI2[k]))
     TranslationServer.add_translation(t)
     TranslationServer.set_locale(locale)
 
@@ -348,4 +350,13 @@ const ES_PISTA_C := {
     "DOWN %ds: right-click to rescue": "CAÍDO %ds: clic derecho para rescatar", "block": "bloqueo",
     "Mining": "Minando", "Chopping": "Talando", "Picking herbs": "Recogiendo hierbas", "Opening the cache": "Abriendo",
     "Dodged!": "¡Esquivado!",
+}
+
+
+# --- visual overhaul 2026-11-02 (title, options, HUD, town panels) ---
+const ES_UI2 := {
+    "Begin": "Comenzar", "Start over": "Empezar de nuevo", "A tower, a village and the people you call.": "Una torre, un pueblo y la gente que invocas.",
+    "Your story continues": "Tu historia continúa", "Day": "Día", "heroes": "héroes", "Highest floor": "Piso más alto",
+    "One life, one story: there is no second save.": "Una vida, una historia: no hay segunda partida.",
+    "F11: full screen": "F11: pantalla completa",
 }
