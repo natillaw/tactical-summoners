@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="JuiceProfile" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/juice_profile.gd" id="1_7yd1f"]
+
+[resource]
+script = ExtResource("1_7yd1f")
+id = "basic.mage"
+flash = Color(0.75, 0.6, 1, 1)
+particles = Color(0.7, 0.5, 1, 1)
+sound = "hit_magic"

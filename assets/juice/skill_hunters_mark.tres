@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="JuiceProfile" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/juice_profile.gd" id="1_l5tgo"]
+
+[resource]
+script = ExtResource("1_l5tgo")
+id = "skill.hunters_mark"
+flash = Color(1, 0.85, 0.5, 1)
+particles = Color(1, 0.85, 0.5, 1)
+amount = 4
+kick = 0

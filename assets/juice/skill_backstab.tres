@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="JuiceProfile" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/juice_profile.gd" id="1_tb8mp"]
+
+[resource]
+script = ExtResource("1_tb8mp")
+id = "skill.backstab"
+particles = Color(1, 0.92, 0.6, 1)
+extra = Color(0.85, 0.15, 0.15, 1)
+amount = 7
+kick = 2
+sound = "hit_slash"
+heavy = true

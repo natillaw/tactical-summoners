@@ -41,11 +41,12 @@ func _ready() -> void:
     for e in sb.enemies:
         e.take_damage(999999)
     var g: GatherNode = sb.nodes[0]
+    g.charges = 1                                    # D-117: last charge, so it empties in one ~5 s cycle
     var spot := g.position
     for h in sb.heroes:
         h.position = spot + Vector2(10, 0)
         h.order_hold()
-    await _frames(120)                               # gathers (1.5 s) and keeps running after the node is freed
+    await _frames(480)                               # gathers (one 5 s cycle, fades) and keeps running after the node is freed
     check(not is_instance_valid(g) and not sb.ledger.is_empty(), "a gathered spot is removed and nothing crashes after it: %s" % str(sb.ledger))
     # --- dash with the real key ----------------------------------------------------------------
     sb.select_slot(0)

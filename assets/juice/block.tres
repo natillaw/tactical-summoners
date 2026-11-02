@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="JuiceProfile" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/juice_profile.gd" id="1_v8n1f"]
+
+[resource]
+script = ExtResource("1_v8n1f")
+id = "block"
+flash = Color(0.7, 0.85, 1, 1)
+particles = Color(1, 0.9, 0.55, 1)
+amount = 6
+spread = 70.0
+speed = 100.0
+sound = "hit_shield"

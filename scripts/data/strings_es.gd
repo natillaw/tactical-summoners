@@ -300,6 +300,8 @@ static func install(locale: String = "es") -> void:
         t.add_message(String(k), String(ES[k]))
     for k in ES_PISTA_A:                              # D-090
         t.add_message(String(k), String(ES_PISTA_A[k]))
+    for k in ES_PISTA_C:                              # pista C block (end of file)
+        t.add_message(String(k), String(ES_PISTA_C[k]))
     TranslationServer.add_translation(t)
     TranslationServer.set_locale(locale)
 
@@ -337,4 +339,13 @@ const ES_PISTA_A := {
     "Finisher: stun a foe (longer with more combo points).": "Remate: aturde a un enemigo (más tiempo con más puntos de combo).",
     "Finisher: one brutal strike, stronger with every combo point.": "Remate: un golpe brutal, más fuerte con cada punto de combo.",
     "Freeze everything around you in place (a heavy blow shatters the ice).": "Congela todo a tu alrededor (un golpe fuerte rompe el hielo).",
+}
+
+
+# --- pista C ---
+const ES_PISTA_C := {
+    "Loading...": "Cargando...", "An enemy is going for this hero": "Un enemigo va a por este héroe",
+    "DOWN %ds: right-click to rescue": "CAÍDO %ds: clic derecho para rescatar", "block": "bloqueo",
+    "Mining": "Minando", "Chopping": "Talando", "Picking herbs": "Recogiendo hierbas", "Opening the cache": "Abriendo",
+    "Dodged!": "¡Esquivado!",
 }
