@@ -44,6 +44,7 @@ suites=(
   "combat ai|res://tests/smoke_ai.tscn|ALL PASSED"
   "bots|res://tests/smoke_bots.tscn|ALL PASSED"
   "fixes|res://tests/smoke_fixes.tscn|ALL PASSED"
+  "loot|res://tests/smoke_loot.tscn|ALL PASSED"
   "sim|-s res://tools/sim/run_sim.gd -- --config tools/sim/configs/test_smoke.json --check-determinism --quiet|ALL PASSED"
 )
 bad=0

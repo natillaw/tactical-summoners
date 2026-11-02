@@ -43,3 +43,62 @@ const ITEMS := {
     "key_legendary_fragment": {"tier": 3, "stack": 10, "desc": "10 = a guaranteed Rare+ summon."},
     "con_potion_major": {"tier": 2, "stack": 20, "desc": "Heals 60% of a hero."},
 }
+
+# --- pista D (D-120..D-129): loot on the body, backpacks, greed, consumables and books -------------
+
+## D-120 creature loot. Before, tower creatures only rolled FLOORS "drops" (4-6% of a material) and all
+## the gear came at the end of a cleared floor, straight into the stash: in play, enemies dropped nothing.
+## Now each body may carry equipment (chance by rank: "elite" = a leader, a shaman or a caller), and
+## everything stays on the body until a hero loots it. ITEM_RARITY_BONUS feeds ItemGen.roll_rarity.
+const CREATURE_ITEM_CHANCE := {"normal": 0.10, "elite": 0.35, "boss": 1.0}
+const CREATURE_ITEMS := {"normal": 1, "elite": 1, "boss": 2}
+const ITEM_RARITY_BONUS := {"normal": 0.0, "elite": 1.0, "boss": 3.0}
+const JUNK_CHANCE := 0.35            # D-123: of the items a normal creature drops, this share is grey junk
+## D-121 looting: a body with loot glows; holding F LOOT_HOLD s within LOOT_RANGE opens the loot window.
+## Autonomous heroes standing next to a body with nothing to fight loot it on their own (AUTO_LOOT_*).
+const LOOT_HOLD := 1.0
+const LOOT_RANGE := 44.0
+const AUTO_LOOT_RANGE := 40.0
+const AUTO_LOOT_TIME := 1.2
+## A won floor can end on the spot (the boss falls): the squad still sweeps the bodies around them.
+const END_SWEEP := 260.0
+## AI looting (MasterBot and the autonomous heroes; the player decides for themself): only with no living
+## creature within LOOT_SAFE_RADIUS and not fighting; in HOLD_MISSIONS nobody walks off their post to loot
+## (they loot what lies at their feet in a lull, and the end-of-floor sweep collects the rest).
+const LOOT_SAFE_RADIUS := 320.0
+const HOLD_MISSIONS := ["defense", "survival"]
+
+## D-124 backpacks: items found in a run go into the looter's pack (PACK_SLOTS + the bag's "pack").
+## Leaving the tower (success or escape) moves every pack into the Master's stash; a fallen hero drops
+## their pack where they fell (anyone may pick it up); a pack left on the floor at the end is lost.
+const PACK_SLOTS := 4
+## D-123 salvage of junk (and of any stash piece): materials by item kind, x (1 + rarity rank).
+const SALVAGE := {"weapon": {"ingot": 1}, "armor": {"ingot": 1}, "jewel": {"materials": 1}, "bag": {"hide": 1}}   # as before D-123
+const SALVAGE_JUNK := {"weapon": {"ore": 2}, "armor": {"hide": 1, "materials": 1}, "jewel": {"materials": 1}, "bag": {"hide": 1}}
+
+## D-125 the greedy trait (trait.greedy): the squad loots more (+loot_bonus per greedy hero, up to
+## max_bonus, on item chance), greedy heroes reach for bodies from further away, but every item in a
+## greedy hero's pack may be kept back on the way home (keep_chance). The Master notices each time with
+## `discover` chance and can then confiscate (trust/obedience below) or punish by synthesis in the Hall.
+const GREEDY := {"trait": "trait.greedy", "loot_bonus": 0.25, "max_bonus": 0.5, "loot_range_mult": 2.0,
+    "keep_chance": 0.25, "discover": 0.4, "confiscate_trust": -8, "confiscate_obedience": 4}
+
+## D-128 what a hero may carry in the bag (HeroData.bag), with what it does. "meal": eaten when the
+## expedition starts, a buff for the whole run (fractions of max HP / attack / magic). camp_kit and arrows
+## are for pista A (camp, ammunition): carried and kept until that system reads them.
+const CONSUMABLES := {
+    "potion": {}, "antidote": {}, "con_potion_major": {}, "elixir_strength": {}, "elixir_speed": {}, "elixir_defense": {},
+    "meal_stew": {"meal": {"hp_pct": 0.10}, "desc": "+10% max HP for the whole expedition."},
+    "meal_roast": {"meal": {"atk_pct": 0.08, "mag_pct": 0.08}, "desc": "+8% attack and magic for the whole expedition."},
+    "camp_kit": {"desc": "Set up a camp in the tower (rest point)."},
+    "arrows": {"desc": "A quiver of arrows for archers."},
+}
+
+## D-129 books (rare tower drops; held in town storage until used from the inventory):
+##   book_xp     one whole level for a hero;
+##   book_skill  one extra skill choice (HeroData.bonus_skill_choice, read by pista A);
+##   book_trade  +1 level in a profession (pista B points it at villagers; today: a hero's profession);
+##   book_plan   a master plan: unlocks a building or upgrade (pista B: Game.apply_master_plan); kept until then.
+const BOOKS := ["book_xp", "book_skill", "book_trade", "book_plan"]
+const BOOK_WEIGHTS := {"book_xp": 50.0, "book_skill": 25.0, "book_trade": 15.0, "book_plan": 10.0}
+const BOOK_CHANCE := {"normal": 0.0, "elite": 0.03, "boss": 0.30}

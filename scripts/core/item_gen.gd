@@ -39,7 +39,7 @@ static func generate(rng: RandomNumberGenerator, uid: int, ilvl: int, rarity: St
     if base_id == "":
         var pool: Array = []
         for b in ItemDefs.BASES:
-            if (kind == "" or String(ItemDefs.BASES[b]["kind"]) == kind) and ItemDefs.base_open(String(b)):
+            if (kind == "" or String(ItemDefs.BASES[b]["kind"]) == kind) and ItemDefs.base_droppable(String(b)):   # bags: only crafted
                 pool.append(b)
         pool.sort()
         base_id = String(pool[rng.randi() % pool.size()])
@@ -87,7 +87,7 @@ static func starter(base_id: String, uid: int) -> Dictionary:
 ## D-077 drop: a base from the enemy family's theme, named after it ("Cutthroat's Dagger").
 static func generate_drop(rng: RandomNumberGenerator, uid: int, ilvl: int, rarity: String, theme: String) -> Dictionary:
     var th: Dictionary = ItemLibrary.THEMES.get(theme, ItemLibrary.THEMES["beast"])
-    var bases: Array = (th["bases"] as Array).filter(func(b): return ItemDefs.base_open(String(b)))
+    var bases: Array = (th["bases"] as Array).filter(func(b): return ItemDefs.base_droppable(String(b)))
     var item := generate(rng, uid, ilvl, rarity, String(bases[rng.randi() % bases.size()]) if not bases.is_empty() else "")
     if String(item["unique"]) == "" and String(item["set"]) == "":
         var word := String(th["names"][rng.randi() % (th["names"] as Array).size()])
@@ -96,6 +96,19 @@ static func generate_drop(rng: RandomNumberGenerator, uid: int, ilvl: int, rarit
             var an := String(ItemDefs.AFFIXES.get(String(item["affixes"][0]["id"]), {}).get("name", ""))
             if an.begins_with("of "):
                 item["name"] = "%s %s" % [item["name"], an]
+    item["source"] = "drop"
+    item["theme"] = theme
+    return item
+
+
+## D-123 grey junk: a worn-out piece of the theme ("Rusty Sword"); never worn, salvaged into materials.
+const JUNK_WORDS := {"weapon": ["Rusty", "Chipped", "Bent"], "armor": ["Torn", "Rotten", "Cracked"], "jewel": ["Tarnished", "Dull"]}
+static func generate_junk(rng: RandomNumberGenerator, uid: int, ilvl: int, theme: String) -> Dictionary:
+    var th: Dictionary = ItemLibrary.THEMES.get(theme, ItemLibrary.THEMES["beast"])
+    var bases: Array = (th["bases"] as Array).filter(func(b): return ItemDefs.base_droppable(String(b)))
+    var item := generate(rng, uid, ilvl, "junk", String(bases[rng.randi() % bases.size()]) if not bases.is_empty() else "")
+    var words: Array = JUNK_WORDS.get(String(ItemDefs.BASES[String(item["base"])]["kind"]), ["Worn"])
+    item["name"] = "%s %s" % [String(words[rng.randi() % words.size()]), ItemDefs.BASES[String(item["base"])]["name"]]
     item["source"] = "drop"
     item["theme"] = theme
     return item
@@ -111,15 +124,16 @@ static func generate_crafted(rng: RandomNumberGenerator, uid: int, rid: String, 
     var item := generate(rng, uid, int(ItemLibrary.TIERS[tier]["ilvl"]), rarity, String(r["craft"]))
     item["affixes"] = []
     var kind := String(ItemDefs.BASES[String(r["craft"])]["kind"])
-    if affix_id == "" or not ItemDefs.AFFIXES.has(affix_id):
-        var pool := ItemDefs.AFFIXES.keys().filter(func(a): return (ItemDefs.AFFIXES[a]["kinds"] as Array).has(kind))
+    var pool := ItemDefs.AFFIXES.keys().filter(func(a): return (ItemDefs.AFFIXES[a]["kinds"] as Array).has(kind))
+    if (affix_id == "" or not ItemDefs.AFFIXES.has(affix_id)) and not pool.is_empty():
         pool.sort()
         affix_id = String(pool[rng.randi() % pool.size()])
-    var a: Dictionary = ItemDefs.AFFIXES[affix_id]
-    var v := lerpf(float(a["min"]), float(a["max"]), 0.5 + 0.15 * float(ItemDefs.RARITY_ORDER.find(rarity)))
-    if ItemDefs.SCALING_STATS.has(String(a["stat"])):
-        v = float(roundi(v * (1.0 + ItemDefs.PER_ILVL * float(int(item["ilvl"]) - 1))))
-    item["affixes"] = [{"id": affix_id, "stat": String(a["stat"]), "value": snappedf(v, 0.01)}]
+    if ItemDefs.AFFIXES.has(affix_id):                          # D-124: bags take no property
+        var a: Dictionary = ItemDefs.AFFIXES[affix_id]
+        var v := lerpf(float(a["min"]), float(a["max"]), 0.5 + 0.15 * float(ItemDefs.RARITY_ORDER.find(rarity)))
+        if ItemDefs.SCALING_STATS.has(String(a["stat"])):
+            v = float(roundi(v * (1.0 + ItemDefs.PER_ILVL * float(int(item["ilvl"]) - 1))))
+        item["affixes"] = [{"id": affix_id, "stat": String(a["stat"]), "value": snappedf(v, 0.01)}]
     item["name"] = String(r["name"])
     item["metal"] = String(ItemLibrary.TIERS[tier]["metal"])
     item["source"] = "craft"
@@ -157,7 +171,7 @@ static func _roll_affixes(rng: RandomNumberGenerator, item: Dictionary, count: i
         if groups.has(a["group"]):
             continue
         groups[a["group"]] = true
-        var v := rng.randf_range(float(a["min"]), float(a["max"]))
+        var v := rng.randf_range(float(a["min"]), float(a["max"])) * float(ItemDefs.RARITIES.get(String(item.get("rarity", "common")), {}).get("quality", 1.0))   # D-122
         if ItemDefs.SCALING_STATS.has(String(a["stat"])):
             v = float(roundi(v * scale))
         else:

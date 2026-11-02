@@ -245,6 +245,8 @@ func _build_squad() -> void:
 			master_hero = h
 		_world.add_child(h)
 		heroes.append(h)
+		if real_squad:
+			_eat_meal(h)                                    # D-128: a meal from the bag buffs the whole run
 
 
 ## Visual type per spawn (T-024). Cosmetic only: all enemies keep the same provisional stats for now.
@@ -272,7 +274,15 @@ var ledger: Dictionary = {}
 var kill_xp: int = 0
 var nodes: Array[GatherNode] = []
 var results: Dictionary = {}                     # Game.finish_expedition report, for the results screen
-const EXTRACT_GATHER := 1.8                      # escaping: every standing hero within this x EXTRACT_RADIUS
+# pista D (D-120..D-125): loot stays on the bodies (LootBag) until looted into the heroes' backpacks
+var loot_bags: Array = []                        # LootBag on the floor
+var packs: Dictionary = {}                       # SandboxHero -> Array of item dicts (D-124)
+var loot_report: Dictionary = {}                 # Game.deliver_packs + what was lost
+var loot_stats: Dictionary = {"bodies": 0, "items": 0, "junk": 0, "looted": 0}
+var _loot_win: LootWindow = null
+var _loot_hold: float = 0.0
+var _auto_loot: Dictionary = {}                  # hero -> seconds standing next to a body
+const EXTRACT_GATHER := 1.8                     # escaping: every standing hero within this x EXTRACT_RADIUS
 
 
 func _add_loot(res: String, n: int, at: Node2D) -> void:
@@ -296,11 +306,11 @@ func _on_enemy_died(e: SandboxEnemy) -> void:
 	if killer != null and is_instance_valid(killer) and killer.has_method("credit"):
 		killer.credit("kills", 1.0)
 	# master prompt A: tower creatures drop their floor's rare materials and keys (LootDefs); creature
-	# parts are hunted in the Wilds (D-066)
+	# parts are hunted in the Wilds (D-066). D-120: they also carry gear, and it all stays on the body
 	if floor_number > 0:
-		var got := LootService.enemy_drops(floor_number, e.is_boss, int(Game.tower_cleared.get(str(floor_number), 0)) == 0, _rng)
-		for res in got:
-			_add_loot(String(res), int(got[res]), e)
+		var got := LootService.body_loot(floor_number, LootService.creature_rank(e.is_boss, e.ai_role, e.job), ItemLibrary.theme_of(e.type_id),
+			int(Game.tower_cleared.get(str(floor_number), 0)) == 0, LootService.greed_bonus(heroes.map(func(x): return x.hero)), _rng, Game._next_uid)
+		drop_loot(e.position, got["items"], got["res"])
 		return
 	var drops: Dictionary = EnemyDefs.DROPS.get(e.type_id, {})
 	for res in drops:
@@ -1738,6 +1748,7 @@ func _tick_interact(delta: float) -> void:
 		m.rescue_progress = 0.0                   # let go of F or walked away: start again
 		if m.order != "rescue":
 			m.rescue_target = null
+	_tick_master_loot(m, delta, lifting == null)  # D-121: hold F at a glowing body
 
 
 ## F pressed (not held): escape when the squad stands at the extraction point.
@@ -1828,6 +1839,7 @@ func tick(delta: float) -> void:
 	_tick_boss_wards()
 	_tick_gathering(delta)
 	_tick_pista_a(delta, foes)
+	_tick_loot(delta)                             # pista D: bodies, F to loot, allies loot what they stand on
 	_fog_t -= delta
 	if _fog_t <= 0.0:
 		_fog_t = CombatRules.FOG_EVERY
@@ -1943,7 +1955,8 @@ func _wipe() -> void:
 
 ## A hero fell (not dead yet): the relic drops where they lie; an escorted villager waits there.
 func _on_hero_down(h: SandboxHero) -> void:
-	for o in heroes:                              # D-081: seeing an ally (or the Master) fall shakes the others
+	_drop_pack(h)                                 # D-124: their loot falls with them
+	for o in heroes:                             # D-081: seeing an ally (or the Master) fall shakes the others
 		if o != h:
 			shake(o, "master_down" if h.hero != null and h.hero.is_master else "ally_down")
 	if carrier == h:
@@ -2096,6 +2109,7 @@ func _end_mission(state: Mission) -> void:
 	var entries: Array = []
 	for h in heroes:
 		entries.append({"hero": h.hero, "alive": not h.dead, "contrib": h.contrib})
+	_settle_loot(outcome)                         # D-124: packs home (or lost) before the floor reward
 	if real_squad and not reward_given:
 		reward_given = true
 		if floor_number < 0:
@@ -2160,6 +2174,7 @@ func result_text() -> String:
 		lines.append("Lost in the tower: %s" % _res_line(results.get("lost_loot", ledger)))
 	else:
 		lines.append("Gathered and dropped (kept): %s" % _res_line(results.get("loot", {})))
+	lines.append_array(loot_lines())              # D-124: the backpacks
 	if mission_state == Mission.ESCAPED and not is_wilds():
 		lines.append("No completion reward: the objective was not finished.")
 	if mission_state == Mission.SUCCESS and real_squad:
@@ -2734,3 +2749,262 @@ func camp_kit_available() -> bool:
 		if h.alive and h.hero != null and int(h.hero.bag.get(CampDefs.KIT_ID, 0)) > 0:
 			return true
 	return false
+
+
+# --- pista D (D-120..D-128): loot on the bodies, backpacks, meals ----------------------------------
+
+## Leaves loot on the floor (a body, or the pack of a fallen hero). Nothing is left when it is empty.
+func drop_loot(at: Vector2, items: Array, res: Dictionary, source: String = "body", owner_name: String = "") -> LootBag:
+	if items.is_empty() and res.is_empty():
+		return null
+	var b := LootBag.new()
+	b.items = items.duplicate()
+	b.res = res.duplicate()
+	b.source = source
+	b.owner_name = owner_name
+	b.position = at
+	_world.add_child(b)
+	loot_bags.append(b)
+	if source == "body":
+		loot_stats["bodies"] = int(loot_stats["bodies"]) + 1
+		loot_stats["items"] = int(loot_stats["items"]) + items.size()
+		loot_stats["junk"] = int(loot_stats["junk"]) + items.filter(func(it): return ItemDefs.is_junk(it)).size()
+		var best := LootService.best_rarity(items)
+		if best != "" and best != "junk" and best != "common" and not SimMode.on:
+			FloatingText.spawn(b, tr(String(ItemDefs.RARITIES[best]["name"])), ItemDefs.rarity_color(best), false, 1.4)
+	return b
+
+
+## D-124: the items a hero carries in this run.
+func pack_of(h: SandboxHero) -> Array:
+	if not packs.has(h):
+		packs[h] = []
+	return packs[h]
+
+
+func pack_room(h: SandboxHero) -> int:
+	return LootService.pack_slots(h.hero) - pack_of(h).size()
+
+
+## Takes item `idx` (-1 = all that fits, plus the materials) from a bag into the looter's pack, else the
+## nearest standing ally's with room (allies = false: only the looter's). Message for the loot window.
+func take_loot(bag: LootBag, idx: int, looter: SandboxHero, allies: bool = true) -> String:
+	if not is_instance_valid(bag) or looter == null:
+		return ""
+	var msg := ""
+	if idx < 0:
+		for k in bag.res:
+			_add_loot(String(k), int(bag.res[k]), bag)
+		bag.res = {}
+	var left: Array = []
+	var taken := 0
+	for i in bag.items.size():
+		var it: Dictionary = bag.items[i]
+		if idx >= 0 and i != idx:
+			left.append(it)
+			continue
+		var who := _pack_with_room(looter, allies)
+		if who == null:
+			left.append(it)
+			msg = tr("No room in the backpacks")
+			continue
+		pack_of(who).append(it)
+		taken += 1
+		if who != looter and msg == "":
+			msg = tr("%s carries it") % who.hero.display_name()
+	bag.items = left
+	loot_stats["looted"] = int(loot_stats["looted"]) + taken
+	if bag.is_empty():
+		_remove_bag(bag)
+	return msg if msg != "" else (tr("Taken") if taken > 0 else "")
+
+
+func _pack_with_room(looter: SandboxHero, allies: bool) -> SandboxHero:
+	if looter.alive and pack_room(looter) > 0:
+		return looter
+	if not allies:
+		return null
+	var best: SandboxHero = null
+	for h in heroes:
+		if h.alive and not h.downed and pack_room(h) > 0 and (best == null or h.position.distance_to(looter.position) < best.position.distance_to(looter.position)):
+			best = h
+	return best
+
+
+func _remove_bag(bag: LootBag) -> void:
+	loot_bags.erase(bag)
+	if _loot_win != null and is_instance_valid(_loot_win) and _loot_win.bag == bag:
+		_loot_win.queue_free()
+		_loot_win = null
+	bag.queue_free()
+
+
+## The nearest bag with something in it within r (only where the squad has seen).
+func _bag_near(at: Vector2, r: float) -> LootBag:
+	var best: LootBag = null
+	for b in loot_bags:
+		if is_instance_valid(b) and not b.is_empty() and b.position.distance_to(at) <= r \
+				and (best == null or b.position.distance_to(at) < best.position.distance_to(at)):
+			best = b
+	return best
+
+
+## AI looting rule (LootDefs.LOOT_SAFE_RADIUS): no living creature near `at`.
+func loot_safe(at: Vector2) -> bool:
+	return not enemies.any(func(e): return e.alive and e.position.distance_to(at) <= LootDefs.LOOT_SAFE_RADIUS)
+
+
+## Defense and survival: the AI never leaves its post to loot (LootDefs.HOLD_MISSIONS).
+func loot_holds_post() -> bool:
+	return LootDefs.HOLD_MISSIONS.has(mission_type)
+
+
+## D-121: the Master holds F next to a glowing body for LOOT_HOLD s (not while lifting an ally).
+func _tick_master_loot(m: SandboxHero, delta: float, free_hands: bool) -> void:
+	var bag := _bag_near(m.position, LootDefs.LOOT_RANGE)
+	for b in loot_bags:
+		if is_instance_valid(b):
+			b.prompt = b == bag
+			if b != bag:
+				b.hold = 0.0
+	if bag == null or not free_hands or not interact_held:
+		_loot_hold = 0.0
+		if bag != null:
+			bag.hold = 0.0
+		return
+	_loot_hold += delta
+	bag.hold = _loot_hold / LootDefs.LOOT_HOLD
+	if _loot_hold >= LootDefs.LOOT_HOLD:
+		_loot_hold = 0.0
+		bag.hold = 0.0
+		open_loot(bag)
+
+
+## Opens the loot window (the game keeps running). Headless (simulator): takes everything that fits.
+func open_loot(bag: LootBag) -> void:
+	if SimMode.on or not is_inside_tree():
+		take_loot(bag, -1, master_hero)
+		return
+	if _loot_win != null and is_instance_valid(_loot_win):
+		if _loot_win.bag == bag:
+			return
+		_loot_win.queue_free()
+	_loot_win = LootWindow.new(bag, self)
+	add_child(_loot_win)
+
+
+## Fog hides the bags; the window closes when the Master walks away; autonomous heroes with nothing to
+## fight loot the body they stand on (greedy ones reach further, D-125).
+func _tick_loot(delta: float) -> void:
+	for b in loot_bags.duplicate():
+		if not is_instance_valid(b):
+			loot_bags.erase(b)
+			continue
+		b.visible = not SimMode.on and (fog == null or fog.is_explored(map.cell_of(b.position)))
+	if _loot_win != null and is_instance_valid(_loot_win) and (master_hero == null or not is_instance_valid(_loot_win.bag)
+			or master_hero.position.distance_to(_loot_win.bag.position) > LootDefs.LOOT_RANGE * 2.5):
+		_loot_win.queue_free()
+		_loot_win = null
+	for h in heroes:
+		if h == master_hero or not h.alive or h.downed or h.target != null or h.is_casting() or not loot_safe(h.position):
+			_auto_loot.erase(h)
+			continue
+		var reach := LootDefs.AUTO_LOOT_RANGE * (float(LootDefs.GREEDY["loot_range_mult"]) if LootService.is_greedy(h.hero) and not loot_holds_post() else 1.0)
+		var b := _bag_near(h.position, reach)
+		if b == null or (pack_room(h) <= 0 and b.res.is_empty()):
+			_auto_loot.erase(h)
+			continue
+		_auto_loot[h] = float(_auto_loot.get(h, 0.0)) + delta
+		if float(_auto_loot[h]) >= LootDefs.AUTO_LOOT_TIME:
+			_auto_loot.erase(h)
+			take_loot(b, -1, h, false)
+
+
+## D-124: a fallen hero drops their pack where they fell; anyone may pick it up.
+func _drop_pack(h: SandboxHero) -> void:
+	var items: Array = packs.get(h, [])
+	packs.erase(h)
+	if not items.is_empty():
+		drop_loot(h.position, items, {}, "pack", h.hero.display_name() if h.hero != null else "")
+
+
+## D-124 at the end: on success or escape every pack goes home (the bodies near the squad are swept
+## first); on a wipe, or with a test squad, the packs are lost. Unlooted bodies stay in the tower.
+func _settle_loot(outcome: String) -> void:
+	if not loot_report.is_empty() or floor_number <= 0:
+		return
+	var lost := 0
+	if outcome != "failed" and real_squad:
+		var swept: Array = []
+		for b in loot_bags.duplicate():
+			if is_instance_valid(b) and heroes.any(func(x): return x.alive and x.position.distance_to(b.position) <= LootDefs.END_SWEEP):
+				swept.append_array(b.items)
+				for k in b.res:
+					_add_loot(String(k), int(b.res[k]), null)
+				_remove_bag(b)
+		var list: Array = []
+		for h in packs:
+			if (h as SandboxHero).dead:
+				lost += (packs[h] as Array).size()
+			elif not (packs[h] as Array).is_empty():
+				list.append({"hero": (h as SandboxHero).hero, "items": packs[h]})
+		var lead: SandboxHero = master_hero if master_hero != null else (heroes[0] if not heroes.is_empty() else null)
+		if not swept.is_empty() and lead != null:
+			list.append({"hero": lead.hero, "items": swept})
+			loot_stats["looted"] = int(loot_stats["looted"]) + swept.size()
+		loot_report = Game.deliver_packs(list)
+	else:
+		for h in packs:
+			lost += (packs[h] as Array).size()
+		loot_report = {"items": [], "failed": true}
+	for b in loot_bags:
+		if is_instance_valid(b):
+			lost += b.items.size()
+	loot_report["lost"] = lost
+
+
+## Result screen lines about the backpacks.
+func loot_lines() -> Array:
+	var out: Array = []
+	if loot_report.is_empty():
+		return out
+	if bool(loot_report.get("failed", false)):
+		if int(loot_report.get("lost", 0)) > 0:
+			out.append(tr("Lost in the tower with the backpacks: %d item(s)") % int(loot_report["lost"]))
+		return out
+	var its: Array = loot_report.get("items", [])
+	out.append(tr("Brought home in the backpacks: %d item(s)") % its.size())
+	for i in mini(its.size(), 8):
+		out.append("  · %s" % String(its[i]))
+	if its.size() > 8:
+		out.append("  · …")
+	if int(loot_report.get("left_behind", 0)) > 0:
+		out.append(tr("%d item(s) left behind: the stash is full") % int(loot_report["left_behind"]))
+	if int(loot_report.get("lost", 0)) > 0:
+		out.append(tr("%d item(s) left on the floor: nobody looted them") % int(loot_report["lost"]))
+	for c in loot_report.get("caught", []):
+		out.append(String(c))
+	return out
+
+
+## D-128: a hero eats the first meal in their bag when the expedition starts (a buff for the whole run).
+func _eat_meal(h: SandboxHero) -> void:
+	var hd: HeroData = h.hero
+	if hd == null:
+		return
+	for id in LootDefs.CONSUMABLES:
+		var meal: Dictionary = (LootDefs.CONSUMABLES[id] as Dictionary).get("meal", {})
+		if meal.is_empty() or int(hd.bag.get(id, 0)) <= 0:
+			continue
+		hd.bag[id] = int(hd.bag[id]) - 1
+		if int(hd.bag[id]) <= 0:
+			hd.bag.erase(id)
+		h.max_hp = roundi(float(h.max_hp) * (1.0 + float(meal.get("hp_pct", 0.0))))
+		h.hp = h.max_hp
+		for st in ["atk", "mag"]:
+			if h.stats.has(st):
+				h.stats[st] = roundi(float(h.stats[st]) * (1.0 + float(meal.get(st + "_pct", 0.0))))
+		h.set_meta("meal", id)
+		if not SimMode.on:
+			FloatingText.spawn(h, tr("Well fed"), Color(0.95, 0.75, 0.4), false, 1.6)
+		return

@@ -4,17 +4,20 @@ extends RefCounted
 ## An item instance is a plain Dictionary made by ItemGen (saved inside the hero or the stash), so
 ## there is one inventory model and no dangling references. Numbers are tuning placeholders.
 
-const SLOTS := ["main_hand", "off_hand", "head", "chest", "hands", "legs", "feet", "ring1", "ring2", "amulet", "special"]
+const SLOTS := ["main_hand", "off_hand", "head", "chest", "hands", "legs", "feet", "ring1", "ring2", "amulet", "special", "bag"]
 const SLOT_NAMES := {"main_hand": "Main hand", "off_hand": "Off hand", "head": "Head", "chest": "Chest", "hands": "Hands",
-    "legs": "Legs", "feet": "Feet", "ring1": "Ring", "ring2": "Ring", "amulet": "Amulet", "special": "Special"}
+    "legs": "Legs", "feet": "Feet", "ring1": "Ring", "ring2": "Ring", "amulet": "Amulet", "special": "Special", "bag": "Bag"}
 
-## affixes = random affixes; mult = base stat multiplier; unique = gets a unique power (legendary+).
+## affixes = random properties; mult = base stat multiplier; quality = how strong the properties roll
+## (x the affix range); unique = gets a unique power. D-122: a fixed base + 1-2 random properties by
+## rarity (green 1, blue and up 2, stronger the rarer). D-123: grey junk is never worn, only salvaged.
 const RARITIES := {
-    "common": {"name": "Common", "affixes": 0, "mult": 1.0, "color": Color(0.85, 0.85, 0.85), "weight": 60.0},
-    "uncommon": {"name": "Uncommon", "affixes": 1, "mult": 1.1, "color": Color(0.45, 0.9, 0.45), "weight": 28.0},
-    "rare": {"name": "Rare", "affixes": 2, "mult": 1.2, "color": Color(0.4, 0.6, 1.0), "weight": 9.0},
-    "epic": {"name": "Epic", "affixes": 3, "mult": 1.35, "color": Color(0.75, 0.4, 1.0), "weight": 2.5},
-    "legendary": {"name": "Legendary", "affixes": 4, "mult": 1.5, "color": Color(1.0, 0.6, 0.15), "weight": 0.45},
+    "junk": {"name": "Junk", "affixes": 0, "mult": 0.6, "quality": 0.0, "color": Color(0.55, 0.55, 0.55), "weight": 0.0, "junk": true},
+    "common": {"name": "Common", "affixes": 0, "mult": 1.0, "quality": 1.0, "color": Color(0.92, 0.92, 0.92), "weight": 60.0},
+    "uncommon": {"name": "Uncommon", "affixes": 1, "mult": 1.1, "quality": 1.0, "color": Color(0.45, 0.9, 0.45), "weight": 28.0},
+    "rare": {"name": "Rare", "affixes": 2, "mult": 1.2, "quality": 1.1, "color": Color(0.4, 0.6, 1.0), "weight": 9.0},
+    "epic": {"name": "Epic", "affixes": 2, "mult": 1.35, "quality": 1.3, "color": Color(0.75, 0.4, 1.0), "weight": 2.5},
+    "legendary": {"name": "Legendary", "affixes": 2, "mult": 1.5, "quality": 1.55, "color": Color(1.0, 0.6, 0.15), "weight": 0.45},
     "unique": {"name": "Unique", "affixes": 2, "mult": 1.6, "color": Color(1.0, 0.22, 0.22), "weight": 0.0, "unique": true},
     "mythic": {"name": "Mythic", "affixes": 3, "mult": 1.7, "color": Color(1.0, 0.25, 0.3), "weight": 0.0, "unique": true},   # old saves only
 }
@@ -30,17 +33,36 @@ const BASES := {
     "greataxe": {"name": "Greataxe", "kind": "weapon", "slot": "main_hand", "two_handed": true, "stats": {"atk": 11}, "classes": ["class.warrior"]},
     "dagger": {"name": "Dagger", "kind": "weapon", "slot": "main_hand", "stats": {"atk": 4, "crit": 0.04}, "classes": ["class.rogue"]},
     "mace": {"name": "Mace", "kind": "weapon", "slot": "main_hand", "stats": {"atk": 5, "mag": 2}, "classes": ["class.cleric", "class.warrior"]},
-    "bow": {"name": "Longbow", "kind": "weapon", "slot": "main_hand", "two_handed": true, "stats": {"atk": 8}, "classes": ["class.ranger"]},
+    "bow": {"name": "Longbow", "kind": "weapon", "slot": "main_hand", "two_handed": true, "stats": {"atk": 8}, "classes": ["class.ranger"], "visual_base": "bow"},
+    # D-127: the bows D-082 reserved for items (interval_pct < 0 = slower shots)
+    "recurve": {"name": "Recurve bow", "kind": "weapon", "slot": "main_hand", "two_handed": true, "stats": {"atk": 8, "crit": 0.03}, "classes": ["class.ranger"], "visual_base": "bow"},
+    "longbow": {"name": "Great bow", "kind": "weapon", "slot": "main_hand", "two_handed": true, "stats": {"atk": 11, "interval_pct": -0.08}, "classes": ["class.ranger"], "visual_base": "bow"},
+    "crossbow": {"name": "Crossbow", "kind": "weapon", "slot": "main_hand", "two_handed": true, "stats": {"atk": 13, "interval_pct": -0.15}, "classes": ["class.ranger"], "visual_base": "bow"},
     "staff": {"name": "Staff", "kind": "weapon", "slot": "main_hand", "two_handed": true, "stats": {"mag": 9}, "classes": ["class.mage", "class.cleric"]},
     "wand": {"name": "Wand", "kind": "weapon", "slot": "main_hand", "stats": {"mag": 5}, "classes": ["class.mage"]},
-    "shield": {"name": "Shield", "kind": "armor", "slot": "off_hand", "stats": {"def": 4}, "classes": ["class.warrior", "class.cleric", "class.commoner"]},
-    "helm": {"name": "Helm", "kind": "armor", "slot": "head", "stats": {"def": 2}, "classes": []},
-    "hood": {"name": "Hood", "kind": "armor", "slot": "head", "stats": {"mres": 2}, "classes": []},
-    "mail": {"name": "Mail shirt", "kind": "armor", "slot": "chest", "stats": {"def": 4, "hp": 10}, "classes": []},
-    "robe": {"name": "Robe", "kind": "armor", "slot": "chest", "stats": {"mres": 4, "mag": 1}, "classes": []},
-    "gloves": {"name": "Gloves", "kind": "armor", "slot": "hands", "stats": {"def": 1, "atk": 1}, "classes": []},
-    "greaves": {"name": "Greaves", "kind": "armor", "slot": "legs", "stats": {"def": 2}, "classes": []},
-    "boots": {"name": "Boots", "kind": "armor", "slot": "feet", "stats": {"def": 1, "move": 4.0}, "classes": []},
+    "shield": {"name": "Shield", "kind": "armor", "slot": "off_hand", "stats": {"def": 4}, "classes": ["class.warrior", "class.cleric", "class.commoner"],
+        "block": {"chance": 0.12, "reduce": 0.5, "arc_deg": 120.0}},
+    "kite_shield": {"name": "Kite shield", "kind": "armor", "slot": "off_hand", "stats": {"def": 6}, "classes": ["class.warrior", "class.cleric"],
+        "block": {"chance": 0.15, "reduce": 0.5, "arc_deg": 120.0}},
+    "bronze_shield": {"name": "Bronze shield", "kind": "armor", "slot": "off_hand", "stats": {"def": 5, "hp": 6}, "classes": ["class.warrior", "class.cleric"],
+        "block": {"chance": 0.12, "reduce": 0.6, "arc_deg": 140.0}},
+    # D-126 armour by class: "armor" = plate (blacksmith: warriors), leather (tanner: rogues and archers),
+    # cloth (tailor: mages and clerics). ItemLibrary.ARMOR_BY_CLASS says who wears what.
+    "helm": {"name": "Helm", "kind": "armor", "slot": "head", "stats": {"def": 2}, "classes": [], "armor": "plate"},
+    "hood": {"name": "Hood", "kind": "armor", "slot": "head", "stats": {"mres": 2}, "classes": [], "armor": "cloth"},
+    "mail": {"name": "Mail shirt", "kind": "armor", "slot": "chest", "stats": {"def": 4, "hp": 10}, "classes": [], "armor": "plate"},
+    "robe": {"name": "Robe", "kind": "armor", "slot": "chest", "stats": {"mres": 4, "mag": 1}, "classes": [], "armor": "cloth"},
+    "gloves": {"name": "Gauntlets", "kind": "armor", "slot": "hands", "stats": {"def": 1, "atk": 1}, "classes": [], "armor": "plate"},
+    "greaves": {"name": "Greaves", "kind": "armor", "slot": "legs", "stats": {"def": 2}, "classes": [], "armor": "plate"},
+    "boots": {"name": "Boots", "kind": "armor", "slot": "feet", "stats": {"def": 1, "move": 4.0}, "classes": [], "armor": "leather"},
+    "leather_cap": {"name": "Leather cap", "kind": "armor", "slot": "head", "stats": {"def": 1, "crit": 0.01}, "classes": [], "armor": "leather"},
+    "leather_vest": {"name": "Leather armour", "kind": "armor", "slot": "chest", "stats": {"def": 3, "hp": 6}, "classes": [], "armor": "leather"},
+    "leather_pants": {"name": "Leather trousers", "kind": "armor", "slot": "legs", "stats": {"def": 1, "move": 2.0}, "classes": [], "armor": "leather"},
+    "cloth_pants": {"name": "Woven trousers", "kind": "armor", "slot": "legs", "stats": {"mres": 2}, "classes": [], "armor": "cloth"},
+    "sandals": {"name": "Sandals", "kind": "armor", "slot": "feet", "stats": {"mres": 1, "move": 3.0}, "classes": [], "armor": "cloth"},
+    # D-124 bags: more backpack slots in the tower (stat "pack"); only the tanner makes them.
+    "satchel": {"name": "Satchel", "kind": "bag", "slot": "bag", "stats": {"pack": 2}, "classes": [], "no_drop": true},
+    "backpack": {"name": "Backpack", "kind": "bag", "slot": "bag", "stats": {"pack": 4}, "classes": [], "no_drop": true},
     "ring": {"name": "Ring", "kind": "jewel", "slot": "ring", "stats": {"crit": 0.02}, "classes": []},
     "amulet": {"name": "Amulet", "kind": "jewel", "slot": "amulet", "stats": {"mres": 2, "status_resist": 0.03}, "classes": []},
     "charm": {"name": "Trinket", "kind": "jewel", "slot": "special", "stats": {"hp": 8}, "classes": []},
@@ -74,8 +96,9 @@ static func starter_kit(class_id: String) -> Dictionary:
     var out: Dictionary = STARTER_OUTFIT.duplicate()
     out.merge(STARTER_WEAPONS.get(class_id, {}))
     return out
-const CRAFTABLE := {"weapon": ["sword", "greataxe", "dagger", "mace", "bow", "staff", "wand"],
-    "armor": ["shield", "helm", "hood", "mail", "robe", "gloves", "greaves", "boots"]}
+## The old forge recipes (forge_weapon / forge_armor): the blacksmith only makes metal (D-126).
+const CRAFTABLE := {"weapon": ["sword", "greataxe", "dagger", "mace"],
+    "armor": ["shield", "kite_shield", "helm", "mail", "gloves", "greaves"]}
 
 ## group = only one affix of a group per item; kinds = item kinds it can roll on.
 const AFFIXES := {
@@ -127,7 +150,7 @@ static func rarity_color(r: String) -> Color:
 
 ## D-060: 8 slots are open now (they match the Dragon Regalia frames); hands, ring2 and special exist
 ## in the data and saves but stay locked until opened (nothing is generated or equipped for them).
-const ACTIVE_SLOTS := ["main_hand", "off_hand", "head", "chest", "hands", "legs", "feet", "ring1", "amulet", "special"]   # D-077: + hands, trinket
+const ACTIVE_SLOTS := ["main_hand", "off_hand", "head", "chest", "hands", "legs", "feet", "ring1", "amulet", "special", "bag"]   # D-077: + hands, trinket; D-124: + bag
 
 
 static func slot_open(slot: String) -> bool:
@@ -137,6 +160,16 @@ static func slot_open(slot: String) -> bool:
 ## True when a base goes into an open slot (loot and crafting only make these for now).
 static func base_open(base_id: String) -> bool:
     return not slots_for(base_id).is_empty() and not bool(BASES[base_id].get("starter", false))   # D-082b: the kit is never loot
+
+
+## D-124: a base that can come out of a corpse (bags are only made by the tanner).
+static func base_droppable(base_id: String) -> bool:
+    return base_open(base_id) and not bool(BASES[base_id].get("no_drop", false))
+
+
+## D-123: grey junk is never worn, only salvaged.
+static func is_junk(item: Dictionary) -> bool:
+    return String(item.get("rarity", "")) == "junk"
 
 
 ## Which open equipment slots a base can go in.

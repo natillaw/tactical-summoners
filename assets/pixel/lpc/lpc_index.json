@@ -5559,6 +5559,394 @@
      }
     }
    ]
+  },
+  "weapon_bow_recurve": {
+   "name": "Recurve",
+   "licenses": [
+    "CC-BY-SA 3.0"
+   ],
+   "authors": [
+    "Daniel Eddeland (daneeklu)",
+    "Johannes Sj\u00f6lund (wulax)",
+    "Pierre Vigier (pvigier)",
+    "gr3yh47"
+   ],
+   "layers": [
+    {
+     "z": -1,
+     "files": {
+      "male": {
+       "default": {
+        "shoot": "weapon_bow_recurve/layer_1/male/shoot.png",
+        "hurt": "weapon_bow_recurve/layer_1/male/hurt.png"
+       }
+      },
+      "female": {
+       "default": {
+        "shoot": "weapon_bow_recurve/layer_1/female/shoot.png",
+        "hurt": "weapon_bow_recurve/layer_1/female/hurt.png"
+       }
+      }
+     }
+    },
+    {
+     "z": 140,
+     "files": {
+      "male": {
+       "default": {
+        "shoot": "weapon_bow_recurve/layer_2/male/shoot.png",
+        "hurt": "weapon_bow_recurve/layer_2/male/hurt.png"
+       }
+      },
+      "female": {
+       "default": {
+        "shoot": "weapon_bow_recurve/layer_2/female/shoot.png",
+        "hurt": "weapon_bow_recurve/layer_2/female/hurt.png"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "weapon_bow_great": {
+   "name": "Great",
+   "licenses": [
+    "CC-BY-SA 3.0"
+   ],
+   "authors": [
+    "Daniel Eddeland (daneeklu)",
+    "Johannes Sj\u00f6lund (wulax)",
+    "Pierre Vigier (pvigier)",
+    "gr3yh47"
+   ],
+   "layers": [
+    {
+     "z": -1,
+     "files": {
+      "male": {
+       "default": {
+        "hurt": "weapon_bow_great/layer_1/male/hurt.png"
+       }
+      },
+      "female": {
+       "default": {
+        "hurt": "weapon_bow_great/layer_1/female/hurt.png"
+       }
+      }
+     }
+    },
+    {
+     "z": 140,
+     "files": {
+      "male": {
+       "default": {
+        "shoot": "weapon_bow_great/layer_2/male/shoot.png",
+        "hurt": "weapon_bow_great/layer_2/male/hurt.png"
+       }
+      },
+      "female": {
+       "default": {
+        "shoot": "weapon_bow_great/layer_2/female/shoot.png",
+        "hurt": "weapon_bow_great/layer_2/female/hurt.png"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "weapon_crossbow": {
+   "name": "Crossbow",
+   "licenses": [
+    "CC0"
+   ],
+   "authors": [
+    "bluecarrot16",
+    "drjamgo@hotmail.com"
+   ],
+   "layers": [
+    {
+     "z": -1,
+     "files": {
+      "male": {
+       "default": {
+        "walk": "weapon_crossbow/layer_1/male/walk.png",
+        "thrust": "weapon_crossbow/layer_1/male/thrust.png",
+        "hurt": "weapon_crossbow/layer_1/male/hurt.png"
+       }
+      },
+      "female": {
+       "default": {
+        "walk": "weapon_crossbow/layer_1/female/walk.png",
+        "thrust": "weapon_crossbow/layer_1/female/thrust.png",
+        "hurt": "weapon_crossbow/layer_1/female/hurt.png"
+       }
+      }
+     }
+    },
+    {
+     "z": 140,
+     "files": {
+      "male": {
+       "default": {
+        "walk": "weapon_crossbow/layer_2/male/walk.png",
+        "thrust": "weapon_crossbow/layer_2/male/thrust.png",
+        "hurt": "weapon_crossbow/layer_2/male/hurt.png"
+       }
+      },
+      "female": {
+       "default": {
+        "walk": "weapon_crossbow/layer_2/female/walk.png",
+        "thrust": "weapon_crossbow/layer_2/female/thrust.png",
+        "hurt": "weapon_crossbow/layer_2/female/hurt.png"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "shield_kite": {
+   "name": "Kite",
+   "licenses": [
+    "CC-BY-SA 3.0",
+    "GPL 2.0",
+    "GPL 3.0"
+   ],
+   "authors": [
+    "DarkwallLKE",
+    "Michael Whitlock (bigbeargames)",
+    "Tuomo Untinen (reemax)"
+   ],
+   "layers": [
+    {
+     "z": 110,
+     "files": {
+      "male": {
+       "default": {
+        "walk": "shield_kite/layer_1/male/walk.png",
+        "slash": "shield_kite/layer_1/male/slash.png",
+        "thrust": "shield_kite/layer_1/male/thrust.png"
+       }
+      },
+      "female": {
+       "default": {
+        "walk": "shield_kite/layer_1/female/walk.png",
+        "slash": "shield_kite/layer_1/female/slash.png",
+        "thrust": "shield_kite/layer_1/female/thrust.png"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "shield_spartan": {
+   "name": "Spartan Shield",
+   "licenses": [
+    "OGA-BY 3.0"
+   ],
+   "authors": [
+    "Sander Frenken (castelonia)",
+    "bluecarrot16"
+   ],
+   "layers": [
+    {
+     "z": 2,
+     "files": {
+      "male": {
+       "default": {
+        "walk": "shield_spartan/layer_1/male/walk.png",
+        "slash": "shield_spartan/layer_1/male/slash.png",
+        "thrust": "shield_spartan/layer_1/male/thrust.png",
+        "shoot": "shield_spartan/layer_1/male/shoot.png",
+        "spellcast": "shield_spartan/layer_1/male/spellcast.png",
+        "hurt": "shield_spartan/layer_1/male/hurt.png"
+       }
+      },
+      "female": {
+       "default": {
+        "walk": "shield_spartan/layer_1/female/walk.png",
+        "slash": "shield_spartan/layer_1/female/slash.png",
+        "thrust": "shield_spartan/layer_1/female/thrust.png",
+        "shoot": "shield_spartan/layer_1/female/shoot.png",
+        "spellcast": "shield_spartan/layer_1/female/spellcast.png",
+        "hurt": "shield_spartan/layer_1/female/hurt.png"
+       }
+      }
+     }
+    },
+    {
+     "z": 110,
+     "files": {
+      "male": {
+       "default": {
+        "walk": "shield_spartan/layer_2/male/walk.png",
+        "slash": "shield_spartan/layer_2/male/slash.png",
+        "thrust": "shield_spartan/layer_2/male/thrust.png",
+        "shoot": "shield_spartan/layer_2/male/shoot.png",
+        "spellcast": "shield_spartan/layer_2/male/spellcast.png",
+        "hurt": "shield_spartan/layer_2/male/hurt.png"
+       }
+      },
+      "female": {
+       "default": {
+        "walk": "shield_spartan/layer_2/female/walk.png",
+        "slash": "shield_spartan/layer_2/female/slash.png",
+        "thrust": "shield_spartan/layer_2/female/thrust.png",
+        "shoot": "shield_spartan/layer_2/female/shoot.png",
+        "spellcast": "shield_spartan/layer_2/female/spellcast.png",
+        "hurt": "shield_spartan/layer_2/female/hurt.png"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "backpack_satchel": {
+   "name": "Square pack",
+   "licenses": [
+    "CC-BY-SA 3.0",
+    "GPL 3.0"
+   ],
+   "authors": [
+    "Benjamin K. Smith (BenCreating)",
+    "macmanmatty"
+   ],
+   "layers": [
+    {
+     "z": 110,
+     "files": {
+      "male": {
+       "default": {
+        "walk": "backpack_satchel/layer_1/male/walk.png",
+        "slash": "backpack_satchel/layer_1/male/slash.png",
+        "thrust": "backpack_satchel/layer_1/male/thrust.png",
+        "shoot": "backpack_satchel/layer_1/male/shoot.png",
+        "spellcast": "backpack_satchel/layer_1/male/spellcast.png",
+        "hurt": "backpack_satchel/layer_1/male/hurt.png"
+       }
+      },
+      "female": {
+       "default": {
+        "walk": "backpack_satchel/layer_1/female/walk.png",
+        "slash": "backpack_satchel/layer_1/female/slash.png",
+        "thrust": "backpack_satchel/layer_1/female/thrust.png",
+        "shoot": "backpack_satchel/layer_1/female/shoot.png",
+        "spellcast": "backpack_satchel/layer_1/female/spellcast.png",
+        "hurt": "backpack_satchel/layer_1/female/hurt.png"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "backpack_pack": {
+   "name": "Backpack",
+   "licenses": [
+    "CC-BY-SA 3.0",
+    "GPL 3.0"
+   ],
+   "authors": [
+    "Benjamin K. Smith (BenCreating)",
+    "macmanmatty"
+   ],
+   "layers": [
+    {
+     "z": 110,
+     "files": {
+      "male": {
+       "default": {
+        "walk": "backpack_pack/layer_1/male/walk.png",
+        "slash": "backpack_pack/layer_1/male/slash.png",
+        "thrust": "backpack_pack/layer_1/male/thrust.png",
+        "shoot": "backpack_pack/layer_1/male/shoot.png",
+        "spellcast": "backpack_pack/layer_1/male/spellcast.png",
+        "hurt": "backpack_pack/layer_1/male/hurt.png"
+       }
+      },
+      "female": {
+       "default": {
+        "walk": "backpack_pack/layer_1/female/walk.png",
+        "slash": "backpack_pack/layer_1/female/slash.png",
+        "thrust": "backpack_pack/layer_1/female/thrust.png",
+        "shoot": "backpack_pack/layer_1/female/shoot.png",
+        "spellcast": "backpack_pack/layer_1/female/spellcast.png",
+        "hurt": "backpack_pack/layer_1/female/hurt.png"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "pants_dyed": {
+   "name": "Pants",
+   "licenses": [
+    "CC-BY-SA 3.0",
+    "GPL 3.0",
+    "OGA-BY 3.0"
+   ],
+   "authors": [
+    "ElizaWy",
+    "JaidynReiman",
+    "Joe White",
+    "Johannes Sj\u00f6lund (wulax)",
+    "Matthew Krohn (makrohn)",
+    "Stephen Challener (Redshrike)",
+    "bluecarrot16"
+   ],
+   "layers": [
+    {
+     "z": 20,
+     "files": {
+      "male": {
+       "navy": {
+        "idle": "pants_dyed/layer_1/male/navy/idle.png",
+        "combat_idle": "pants_dyed/layer_1/male/navy/combat_idle.png",
+        "walk": "pants_dyed/layer_1/male/navy/walk.png",
+        "run": "pants_dyed/layer_1/male/navy/run.png",
+        "slash": "pants_dyed/layer_1/male/navy/slash.png",
+        "thrust": "pants_dyed/layer_1/male/navy/thrust.png",
+        "shoot": "pants_dyed/layer_1/male/navy/shoot.png",
+        "spellcast": "pants_dyed/layer_1/male/navy/spellcast.png",
+        "hurt": "pants_dyed/layer_1/male/navy/hurt.png"
+       },
+       "walnut": {
+        "idle": "pants_dyed/layer_1/male/walnut/idle.png",
+        "combat_idle": "pants_dyed/layer_1/male/walnut/combat_idle.png",
+        "walk": "pants_dyed/layer_1/male/walnut/walk.png",
+        "run": "pants_dyed/layer_1/male/walnut/run.png",
+        "slash": "pants_dyed/layer_1/male/walnut/slash.png",
+        "thrust": "pants_dyed/layer_1/male/walnut/thrust.png",
+        "shoot": "pants_dyed/layer_1/male/walnut/shoot.png",
+        "spellcast": "pants_dyed/layer_1/male/walnut/spellcast.png",
+        "hurt": "pants_dyed/layer_1/male/walnut/hurt.png"
+       }
+      },
+      "female": {
+       "navy": {
+        "idle": "pants_dyed/layer_1/female/navy/idle.png",
+        "combat_idle": "pants_dyed/layer_1/female/navy/combat_idle.png",
+        "walk": "pants_dyed/layer_1/female/navy/walk.png",
+        "run": "pants_dyed/layer_1/female/navy/run.png",
+        "slash": "pants_dyed/layer_1/female/navy/slash.png",
+        "thrust": "pants_dyed/layer_1/female/navy/thrust.png",
+        "shoot": "pants_dyed/layer_1/female/navy/shoot.png",
+        "spellcast": "pants_dyed/layer_1/female/navy/spellcast.png",
+        "hurt": "pants_dyed/layer_1/female/navy/hurt.png"
+       },
+       "walnut": {
+        "idle": "pants_dyed/layer_1/female/walnut/idle.png",
+        "combat_idle": "pants_dyed/layer_1/female/walnut/combat_idle.png",
+        "walk": "pants_dyed/layer_1/female/walnut/walk.png",
+        "run": "pants_dyed/layer_1/female/walnut/run.png",
+        "slash": "pants_dyed/layer_1/female/walnut/slash.png",
+        "thrust": "pants_dyed/layer_1/female/walnut/thrust.png",
+        "shoot": "pants_dyed/layer_1/female/walnut/shoot.png",
+        "spellcast": "pants_dyed/layer_1/female/walnut/spellcast.png",
+        "hurt": "pants_dyed/layer_1/female/walnut/hurt.png"
+       }
+      }
+     }
+    }
+   ]
   }
  }
 }

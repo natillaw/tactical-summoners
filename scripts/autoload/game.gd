@@ -1322,11 +1322,11 @@ func salvage(uid: int) -> Dictionary:
         return {}
     var it: Dictionary = stash[i]
     stash.remove_at(i)
-    var n := 1 + ItemDefs.RARITY_ORDER.find(String(it["rarity"]))
-    var res := "ingot" if String(ItemDefs.BASES[String(it["base"])]["kind"]) != "jewel" else "materials"
-    hq_outputs[res] = mini(storage_cap(), int(hq_outputs.get(res, 0)) + n)
+    var got := LootService.salvage_yield(it)                 # D-123: grey junk has its own table
+    for res in got:
+        hq_outputs[res] = mini(storage_cap(), int(hq_outputs.get(res, 0)) + int(got[res]))
     _commit()
-    return {res: n}
+    return got
 
 
 const BAG_SLOTS := 3                 # different consumables a hero can carry
@@ -1335,7 +1335,7 @@ const BAG_STACK := 3                 # of each
 
 ## Moves one consumable from town storage into the hero's bag (carried into the tower).
 func pack_consumable(h: HeroData, res: String) -> String:
-    if not (res in ["potion", "antidote", "con_potion_major", "elixir_strength", "elixir_speed", "elixir_defense"]):
+    if not LootDefs.CONSUMABLES.has(res):                     # D-128: the carry list lives in LootDefs
         return "cannot be carried"
     if int(hq_outputs.get(res, 0)) <= 0:
         return "none in storage"
@@ -1828,3 +1828,95 @@ func _migrate(data: Dictionary) -> Dictionary:
         data["tower_maps"] = {}
     data["version"] = SAVE_VERSION
     return data
+
+
+# --- pista D (D-121..D-129): loot brought home, greed, books ---------------------------------------
+
+## D-124: the squad is out of the tower (success or escape). packs = [{"hero": HeroData, "items": [...]}].
+## Every pack goes to the Master's stash; a greedy hero may keep pieces back (D-125, hero.hoard) and the
+## Master notices with LootDefs.GREEDY.discover. Items with no stash room are left in the tower.
+## Returns {"items": [labels], "left_behind": n, "kept": n, "caught": [text]}.
+func deliver_packs(packs: Array) -> Dictionary:
+    var rep := {"items": [], "left_behind": 0, "kept": 0, "caught": []}
+    for p in packs:
+        var h: HeroData = p.get("hero")
+        var split := LootService.greedy_split(h, p.get("items", []), rng)
+        for it in split["given"]:
+            if stash.size() >= stash_cap():
+                rep["left_behind"] = int(rep["left_behind"]) + 1
+                continue
+            stash.append(it)
+            (rep["items"] as Array).append(ItemDefs.item_label(it))
+        for it in split["kept"]:
+            var seen: bool = rng.randf() < float(LootDefs.GREEDY["discover"])
+            it["caught"] = seen
+            h.hoard.append(it)
+            rep["kept"] = int(rep["kept"]) + 1
+            if seen:
+                var line := "%s tried to keep %s for themself." % [h.display_name(), String(it.get("name", "?"))]
+                (rep["caught"] as Array).append(line)
+                log_town(line)
+    _commit()
+    return rep
+
+
+## D-125: heroes the Master caught hoarding loot.
+func hoard_suspects() -> Array:
+    return heroes.values().filter(func(h): return (h as HeroData).hoard.any(func(it): return bool(it.get("caught", false))))
+
+
+## D-125: the Master searches a greedy hero: everything hoarded goes to the stash (room permitting) and
+## the hero takes it badly (deterministic Trust/Obedience deltas). Returns how many items came back.
+func confiscate_hoard(h: HeroData) -> int:
+    if h == null or h.hoard.is_empty():
+        return 0
+    var back := 0
+    var keep: Array = []
+    for it in h.hoard:
+        if stash.size() < stash_cap():
+            it.erase("caught")
+            stash.append(it)
+            back += 1
+        else:
+            keep.append(it)
+    h.hoard = keep
+    h.add_event("loot_confiscated", {"items": back}, int(LootDefs.GREEDY["confiscate_trust"]), int(LootDefs.GREEDY["confiscate_obedience"]))
+    _commit()
+    return back
+
+
+## D-129: uses a book from town storage. book_xp: one level; book_skill: +1 bonus skill choice;
+## book_trade: +1 level in `prof` (a profession the hero knows; pista B points it at villagers);
+## book_plan: Game.apply_master_plan when the town has it (pista B), else it stays in storage.
+## "" on success, else why not (the book is not spent).
+func use_book(book: String, h: HeroData, prof: String = "") -> String:
+    if int(hq_outputs.get(book, 0)) <= 0:
+        return "none in storage"
+    match book:
+        "book_xp":
+            if h == null or h.is_max_level():
+                return "already at the level cap"
+            h.add_xp(maxi(1, h.xp_to_next() - h.xp))
+        "book_skill":
+            if h == null:
+                return "choose a hero"
+            h.bonus_skill_choice += 1
+        "book_trade":
+            if h == null or not h.knows_prof(prof):
+                return "the hero has no such profession"
+            if h.prof_level(prof) >= ProfessionDefs.MAX_LEVEL:
+                return "already a master"
+            var p: Dictionary = h.professions[prof]
+            p["lvl"] = int(p["lvl"]) + 1
+            p["xp"] = 0.0
+        "book_plan":
+            if not has_method("apply_master_plan"):
+                return "kept: master plans unlock buildings when the town is ready for them"
+            var why := String(call("apply_master_plan"))
+            if why != "":
+                return why
+        _:
+            return "not a book"
+    hq_outputs[book] = int(hq_outputs[book]) - 1
+    _commit()
+    return ""
