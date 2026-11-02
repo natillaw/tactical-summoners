@@ -1049,6 +1049,9 @@ func workplace_prof(bid: String) -> String:
     if bid == "library":
         return "scholar"
     var rid := job_of(bid)
+    if rid == "":                                     # an order-only bench with no order still has its trade
+        var jobs: Array = TownTables.info(bid).get("jobs", [])
+        rid = String(jobs[0]) if not jobs.is_empty() else ""
     return "" if rid == "" else String(EconomyDefs.recipe(rid)["prof"])
 
 
