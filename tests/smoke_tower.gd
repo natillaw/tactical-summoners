@@ -75,7 +75,7 @@ func _ready() -> void:
                 sb.heroes[0].position = sb.clues[sb.clues.size() - 1].position
                 sb.tick(0.1)
             "survival", "defense":
-                for i in 120:                         # floor 3 holds 150 s (master prompt D)
+                for i in 200:                         # floor 3 holds 210 s, floor 9 survives 300 s (D-084)
                     _kill_all(sb)
                     if sb.shrine != null:
                         for h in sb.heroes:

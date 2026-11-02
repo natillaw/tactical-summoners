@@ -1889,7 +1889,10 @@ func _update_mission(delta: float) -> void:
 	var limit := float(TowerExpedition.get_floor_config(floor_number).get("time_limit", 0.0)) if floor_number > 0 else 0.0
 	if limit > 0.0 and elapsed >= limit:
 		FloatingText.spawn(heroes[0], "Too late!", Color(1.0, 0.4, 0.3), false, 2.5)
-		_end_mission(Mission.ESCAPED)                  # the captive is lost; the squad walks out
+		if mission_type == "escape":
+			_end_mission(Mission.FAILED)               # D-084: the pass closes; too slow is a loss
+		else:
+			_end_mission(Mission.ESCAPED)              # the captive is lost; the squad walks out
 		return
 	if mission_type != "retrieval" and mission_type != "rescue":
 		if living_heroes().is_empty():
