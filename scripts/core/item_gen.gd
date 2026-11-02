@@ -74,6 +74,16 @@ static func generate(rng: RandomNumberGenerator, uid: int, ilvl: int, rarity: St
     return item
 
 
+## D-082b: one white starter item (no affixes, item level 1, the base's own minimum stats).
+static func starter(base_id: String, uid: int) -> Dictionary:
+    var base: Dictionary = ItemDefs.BASES[base_id]
+    var it := {"uid": uid, "base": base_id, "name": String(base["name"]), "rarity": "common", "ilvl": 1,
+        "stats": (base["stats"] as Dictionary).duplicate(), "affixes": [], "power": {}, "unique": "", "set": "", "source": "starter"}
+    if base.has("visual_base"):
+        it["visual_base"] = String(base["visual_base"])
+    return it
+
+
 ## D-077 drop: a base from the enemy family's theme, named after it ("Cutthroat's Dagger").
 static func generate_drop(rng: RandomNumberGenerator, uid: int, ilvl: int, rarity: String, theme: String) -> Dictionary:
     var th: Dictionary = ItemLibrary.THEMES.get(theme, ItemLibrary.THEMES["beast"])

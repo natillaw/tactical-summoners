@@ -62,7 +62,7 @@ func _draw() -> void:
         var label := "%d %s" % [j + 1, tr(String(command_names[j])) if command_names[j] != "" else "—"]
         if float(command_cd[j]) > 0.0:
             label = "%d  %ds" % [j + 1, ceili(float(command_cd[j]))]
-        draw_string(ThemeDB.fallback_font, mid + Vector2(-50, 5), label, HORIZONTAL_ALIGNMENT_CENTER, 100, 12, Color(0.05, 0.04, 0.03))
+        draw_string(ThemeDB.fallback_font, mid + Vector2(-30, 3), label, HORIZONTAL_ALIGNMENT_CENTER, 60, 8, Color(0.05, 0.04, 0.03))
     # inner ring: pings
     for i in n:
         var k: String = AiDefs.PING_ORDER[i]
@@ -70,12 +70,12 @@ func _draw() -> void:
         var at := centre + Vector2.RIGHT.rotated(ang) * AiDefs.PING_WHEEL_INNER * 0.62
         var on: bool = hover.get("ping", "") == k
         var col: Color = AiDefs.PINGS[k]["color"]
-        draw_circle(at, 17.0 if on else 14.0, Color(col, 0.95 if on else 0.6))
+        draw_circle(at, 10.0 if on else 8.5, Color(col, 0.95 if on else 0.6))
         if _icons.has(k):
-            draw_texture_rect(_icons[k], Rect2(at - Vector2(8, 8), Vector2(16, 16)), false)
+            draw_texture_rect(_icons[k], Rect2(at - Vector2(5, 5), Vector2(10, 10)), false)
     draw_circle(centre, AiDefs.PING_WHEEL_DEAD, Color(0.1, 0.1, 0.1, 0.8))
     if hover.has("ping"):
-        draw_string(ThemeDB.fallback_font, centre + Vector2(-90, AiDefs.PING_WHEEL_OUTER + 22), tr(String(AiDefs.PINGS[hover["ping"]]["name"])), HORIZONTAL_ALIGNMENT_CENTER, 180, 16, Color.WHITE)
+        draw_string(ThemeDB.fallback_font, centre + Vector2(-60, AiDefs.PING_WHEEL_OUTER + 14), tr(String(AiDefs.PINGS[hover["ping"]]["name"])), HORIZONTAL_ALIGNMENT_CENTER, 120, 11, Color.WHITE)
     elif hover.has("command"):
         var nm: String = command_names[int(hover["command"])]
-        draw_string(ThemeDB.fallback_font, centre + Vector2(-90, AiDefs.PING_WHEEL_OUTER + 22), tr(nm) if nm != "" else tr("not learned yet"), HORIZONTAL_ALIGNMENT_CENTER, 180, 16, Color(1.0, 0.85, 0.4))
+        draw_string(ThemeDB.fallback_font, centre + Vector2(-60, AiDefs.PING_WHEEL_OUTER + 14), tr(nm) if nm != "" else tr("not learned yet"), HORIZONTAL_ALIGNMENT_CENTER, 120, 11, Color(1.0, 0.85, 0.4))

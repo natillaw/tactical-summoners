@@ -13,11 +13,17 @@ const CONTROLS := [
     ["1-5 / Shift+1-5", "Drive a hero (focus + direct control)"], ["Tab", "Squad view, everyone autonomous"],
     ["G", "Select the whole squad"], ["Right click", "Move (attack / rescue in squad view)"],
     ["Q", "Basic attack at the mouse (hero you drive)"], ["W E R", "Skills (hold to aim, release to cast)"],
-    ["A", "Attack-move"], ["H", "Hold"], ["F", "Follow"], ["C", "Regroup"], ["X", "Retreat (picks up the fallen nearby)"], ["S", "Stop"], ["T", "Skills: auto / manual"],
-    ["M", "Whole map (the fog stays)"], ["I", "Details panel"], ["F3", "Debug overlay (debug builds)"], ["Esc", "This menu"],
+    ["A", "Attack-move"], ["H", "Hold"], ["V", "Follow"], ["C", "Regroup"], ["X", "Retreat (picks up the fallen nearby)"], ["S", "Stop"], ["T", "Skills: auto / manual"],
+    ["F", "Interact: hold next to a fallen ally to lift them, gather, escape at the exit"], ["Shift + click", "Quick ping (hold: ping wheel)"],
+    ["1 2 3", "Master commands"], ["Space", "Dash"], ["Y", "Camera: locked on the Master / free"], ["B (hold)", "Centre on the Master"],
+    ["F1-F5", "Centre on a party member (double tap: follow)"], ["Arrows / screen edges / middle drag", "Move the free camera"], ["Wheel", "Zoom (whole steps)"],
+    ["F11 / Alt+Enter", "Full screen"], ["M", "Whole map (the fog stays)"], ["I", "Details panel"], ["F10", "Debug overlay (debug builds)"], ["Esc", "This menu"],
 ]
 
 var leave_label: String = "Back to the town"
+## D-082b display options (saved in SETTINGS): full screen and, in a window, the mouse kept inside it.
+static var fullscreen: bool = false
+static var confine_mouse: bool = false
 var _box: VBoxContainer
 
 
@@ -30,6 +36,24 @@ static func load_settings() -> void:
     CombatFeel.shake_scale = float(cf.get_value("feel", "shake", 1.0))
     Ambience.quality = int(cf.get_value("feel", "effects", 2))
     TranslationServer.set_locale(String(cf.get_value("ui", "lang", "es")))
+    fullscreen = bool(cf.get_value("display", "fullscreen", false))
+    confine_mouse = bool(cf.get_value("display", "confine_mouse", false))
+    apply_display()
+
+
+## Applies the display options (headless runs keep their window as it is).
+static func apply_display() -> void:
+    if DisplayServer.get_name().begins_with("headless"):
+        return
+    DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen else DisplayServer.WINDOW_MODE_WINDOWED)
+    Input.mouse_mode = Input.MOUSE_MODE_CONFINED if confine_mouse and not fullscreen else Input.MOUSE_MODE_VISIBLE
+
+
+## F11 / Alt+Enter and the Options button.
+static func toggle_fullscreen() -> void:
+    fullscreen = not fullscreen
+    apply_display()
+    save_settings()
 
 
 static func save_settings() -> void:
@@ -39,6 +63,8 @@ static func save_settings() -> void:
     cf.set_value("feel", "shake", CombatFeel.shake_scale)
     cf.set_value("feel", "effects", Ambience.quality)
     cf.set_value("ui", "lang", TranslationServer.get_locale().substr(0, 2))
+    cf.set_value("display", "fullscreen", fullscreen)
+    cf.set_value("display", "confine_mouse", confine_mouse)
     cf.save(SETTINGS)
 
 
@@ -122,12 +148,20 @@ func show_options() -> void:
     for k in [2, 3, 4]:
         var scale_k: int = k
         hb.add_child(UIKit.button("x%d" % k, func():
-            DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
-            DisplayServer.window_set_size(Vector2i(640, 360) * scale_k), Vector2(56, 32)))
-    hb.add_child(UIKit.button("Full", func():
-        var full := DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN
-        DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED if full else DisplayServer.WINDOW_MODE_FULLSCREEN), Vector2(64, 32)))
+            fullscreen = false
+            apply_display()
+            DisplayServer.window_set_size(Vector2i(640, 360) * scale_k)
+            save_settings(), Vector2(56, 32)))
+    hb.add_child(UIKit.button("Full screen (F11)", func(): toggle_fullscreen(), Vector2(120, 32)))
     _box.add_child(hb)
+    var cm := CheckBox.new()
+    cm.text = "Keep the mouse inside the window"
+    cm.button_pressed = confine_mouse
+    cm.toggled.connect(func(on: bool):
+        confine_mouse = on
+        apply_display()
+        save_settings())
+    _box.add_child(cm)
     _box.add_child(UIKit.label("The picture always scales by whole numbers (crisp pixels).", 12, UIKit.MUTED))
     _box.add_child(UIKit.button("Back", show_main, Vector2(480, 36)))
 

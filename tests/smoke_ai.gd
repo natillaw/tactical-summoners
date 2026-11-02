@@ -529,7 +529,7 @@ func _bandits() -> void:
 func _wheel_and_keys() -> void:
     var c := Vector2(400, 300)
     check(PingWheel.pick_at(c, c).is_empty(), "releasing the wheel in its centre cancels")
-    check(String(PingWheel.pick_at(c, c + Vector2(0, -50)).get("ping", "")) == AiDefs.PING_ORDER[0], "the top of the inner ring is '%s'" % AiDefs.PING_ORDER[0])
-    check(String(PingWheel.pick_at(c, c + Vector2(50, 0)).get("ping", "")) == AiDefs.PING_ORDER[2], "the right of the inner ring is '%s'" % AiDefs.PING_ORDER[2])
-    check(int(PingWheel.pick_at(c, c + Vector2(0, -100)).get("command", -1)) == 0, "the outer ring holds the Commands (top = command 1)")
+    check(String(PingWheel.pick_at(c, c + Vector2(0, -30)).get("ping", "")) == AiDefs.PING_ORDER[0], "the top of the inner ring is '%s'" % AiDefs.PING_ORDER[0])
+    check(String(PingWheel.pick_at(c, c + Vector2(30, 0)).get("ping", "")) == AiDefs.PING_ORDER[2], "the right of the inner ring is '%s'" % AiDefs.PING_ORDER[2])
+    check(int(PingWheel.pick_at(c, c + Vector2(0, -60)).get("command", -1)) == 0, "the outer ring holds the Commands (top = command 1)")
     check(AiDefs.PING_ORDER.size() == 8 and AiDefs.PING_ORDER.all(func(k): return AiDefs.PINGS.has(k)), "the wheel has the 8 pings")

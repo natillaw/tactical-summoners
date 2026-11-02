@@ -39,7 +39,7 @@ func _ready() -> void:
     sb.select_slot(2)
     sb.update_camera_targets()
     check(sb.selected.size() == 1 and sb.selected[0] == sb.heroes[2] and sb.follow_slot == 2, "key 3 selects hero 3 and follows it")
-    check(sb.camera_target.is_equal_approx(sb.heroes[2].position) and is_equal_approx(sb.camera_zoom_target, SandboxScreen.FOLLOW_ZOOM), "camera targets the focused hero")
+    check(sb.camera_target.distance_to(sb.heroes[2].position) < 80.0 and is_equal_approx(sb.camera_zoom_target, float(CameraDefs.ZOOM_STEPS[0])), "camera targets the focused hero (framed above the HUD, whole zoom step)")
     sb.group_view()
     sb.update_camera_targets()
     check(sb.follow_slot == -1 and sb.selected.size() == 1, "Tab returns to group view without changing selection")

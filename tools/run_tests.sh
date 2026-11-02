@@ -43,6 +43,7 @@ suites=(
   "master|res://tests/smoke_master.tscn --quit-after 3000|ALL PASSED"
   "combat ai|res://tests/smoke_ai.tscn|ALL PASSED"
   "bots|res://tests/smoke_bots.tscn|ALL PASSED"
+  "fixes|res://tests/smoke_fixes.tscn|ALL PASSED"
 )
 bad=0
 for s in "${suites[@]}"; do

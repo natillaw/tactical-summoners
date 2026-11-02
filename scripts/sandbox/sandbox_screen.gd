@@ -78,6 +78,17 @@ const SCOUT_EVERY := 2.0
 const SCOUT_REACH := 10                         # cells an idle explorer looks around itself for fog
 var camera_target: Vector2 = Vector2.ZERO
 var camera_zoom_target: float = 1.0
+## D-082b camera (CameraDefs): "locked" follows the Master, "free" moves by edges / arrows / middle drag,
+## "follow" = a hero picked with a double tap of its F-key. The zoom only changes when the player asks.
+var cam_mode: String = "locked"
+var cam_free_pos: Vector2 = Vector2.ZERO
+var cam_follow: int = -1
+var cam_zoom_i: int = CameraDefs.ZOOM_DEFAULT
+var center_held: bool = false
+var _hero_tap: Dictionary = {}               # slot -> time of the last press of its F-key
+var _mid_drag: bool = false
+var _explored_rect: Rect2 = Rect2()
+var _edges: EdgeIndicators = null
 
 var _viewport: SubViewport
 var _world: Node2D
@@ -207,13 +218,15 @@ func _build_squad() -> void:
 	var squad: Array = Game.party_heroes()
 	# bug fix (beta playthrough): a party with as many heroes as the floor lets in is real (it used to
 	# need all 5, so a 1-hero floor sent a throwaway test squad and kept nothing)
-	real_squad = squad.size() >= (TowerExpedition.party_max(floor_number) if floor_number > 0 else Game.PARTY_SIZE) and not squad.is_empty()
+	# D-082b: any real party goes (it used to need the floor's full size, and a smaller one silently sent a
+	# throwaway test squad); the player was warned before entering (TowerExpedition.squad_report)
+	real_squad = not squad.is_empty()
 	if not real_squad:
 		squad = []
 		for entry in TEST_SQUAD:
 			squad.append(HeroGenerator.generate(int(entry[0]), int(entry[1])))
-	if floor_number > 0:
-		squad = squad.slice(0, TowerExpedition.party_max(floor_number))   # master prompt D: squad size per floor
+	if floor_number != 0:
+		squad = squad.slice(0, int(TowerExpedition.squad_report(floor_number, squad)["goes"]))   # the first N go in
 	for i in squad.size():
 		var h := SandboxHero.new(squad[i], i)
 		h.squad = heroes
@@ -929,6 +942,7 @@ func visible_enemies() -> Array:
 ## heroes fall back to) and, for idle explorers with no foe in sight, the nearest unexplored spot within
 ## reach of them and of the driven hero (they scout, they do not wander off alone).
 func _direct_autonomy() -> void:
+	_update_explored_rect()
 	var alive := heroes.filter(func(h): return h.alive)
 	if alive.is_empty():
 		return
@@ -996,6 +1010,8 @@ func _build_ui() -> void:
 	_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_squad_label = UIKit.label("", 12, UIKit.MUTED)
 	_squad_label.custom_minimum_size = Vector2(240, 0)
+	_edges = EdgeIndicators.new(self)                # D-082b: off-screen heroes and pings, under the HUD
+	add_child(_edges)
 	_hud = ExpeditionHud.new(self)
 	add_child(_hud)
 
@@ -1120,34 +1136,178 @@ func _locked() -> bool:
 
 
 ## Pure data: where the camera wants to be. update_camera() eases toward it each frame.
+## Pure data: where the camera wants to be (FeelCamera eases toward it). D-082b: the zoom is the player's
+## whole step only (never changed by the camera itself); the followed unit is framed above the HUD.
 func update_camera_targets() -> void:
 	if heroes.is_empty():
 		return
+	camera_zoom_target = float(CameraDefs.ZOOM_STEPS[cam_zoom_i])
 	if _look_t > 0.0 and _look_at != Vector2.INF:
 		camera_target = _look_at
 		return
 	if overview:
 		var ws: Vector2 = map.world_size()
-		var vs := Vector2(_viewport.size) if _viewport != null and _viewport.size.x > 0 else Vector2(1280, 670)
+		var vs := Vector2(_viewport.size) if _viewport != null and _viewport.size.x > 0 else Vector2(640, 360)
 		camera_target = ws * 0.5
-		camera_zoom_target = minf(vs.x / ws.x, vs.y / ws.y)
+		camera_zoom_target = minf(vs.x / ws.x, vs.y / ws.y)        # M: whole-map view, asked by the player
 		return
-	if follow_slot >= 0:
-		camera_target = heroes[follow_slot].position
-		camera_zoom_target = FOLLOW_ZOOM
+	if center_held:
+		camera_target = _framed(camera_focus_unit())
 		return
-	var lo := heroes[0].position
-	var hi := heroes[0].position
+	match cam_mode:
+		"free":
+			camera_target = cam_free_pos
+		"follow":
+			if cam_follow >= 0 and cam_follow < heroes.size() and not heroes[cam_follow].dead:
+				camera_target = _framed(heroes[cam_follow])
+			else:
+				cam_mode = "locked"
+				camera_target = _framed(camera_focus_unit())
+		_:
+			camera_target = _framed(camera_focus_unit())
+
+
+## Who the locked camera follows: the Master; without one (test squads) the driven / focused hero, else
+## the first one still on the map.
+func camera_focus_unit() -> SandboxHero:
+	if master_hero != null:
+		return master_hero
+	if follow_slot >= 0 and follow_slot < heroes.size():
+		return heroes[follow_slot]
+	var c := controlled()
+	if c != null:
+		return c
 	for h in heroes:
-		lo = lo.min(h.position)
-		hi = hi.max(h.position)
-	camera_target = (lo + hi) * 0.5
-	var view := _viewport.size if _viewport != null and _viewport.size.x > 0 else Vector2i(1280, 670)
-	var need := (hi - lo) + Vector2(180, 150)
-	var z := clampf(minf(view.x / need.x, view.y / need.y), GROUP_ZOOM_MIN, GROUP_ZOOM_MAX)
-	z = GROUP_ZOOM_MAX if z >= 0.9 else GROUP_ZOOM_MIN          # whole steps only (D-063)
-	if absf(z - camera_zoom_target) > camera_zoom_target * ZOOM_HYSTERESIS or z >= GROUP_ZOOM_MAX or z <= GROUP_ZOOM_MIN:
-		camera_zoom_target = z
+		if not h.dead:
+			return h
+	return heroes[0]
+
+
+## Camera centre that shows `u` centred in the part of the screen the HUD does not cover, a little ahead of
+## where it walks, and never closer than CameraDefs.BOTTOM_MIN of the screen height to the bottom of it.
+func _framed(u: SandboxHero) -> Vector2:
+	var z := maxf(0.05, camera_zoom_target)
+	var view := Vector2(_viewport.size) if _viewport != null and _viewport.size.x > 0 else Vector2(640, 360)
+	var hud := hud_bottom()
+	var lead := (u.velocity * CameraDefs.LOOK_AHEAD).limit_length(CameraDefs.LOOK_AHEAD_MAX)
+	var c := u.position + Vector2(0, -12) + lead + Vector2(0, hud * 0.5 / z)
+	# the unit's place on screen: y_screen = view.y / 2 + (u.y - c.y) * z; keep it inside the safe band
+	var lo := view.y * CameraDefs.BOTTOM_MIN
+	var hi := view.y - hud - view.y * CameraDefs.BOTTOM_MIN
+	var ys := view.y * 0.5 + (u.position.y - c.y) * z
+	if hi > lo:
+		ys = clampf(ys, lo, hi)
+	c.y = u.position.y - (ys - view.y * 0.5) / z
+	return c
+
+
+## Height of the HUD band at the bottom of the screen (canvas pixels; 0 without a HUD).
+func hud_bottom() -> float:
+	return _hud.bottom_inset() if _hud != null and is_instance_valid(_hud) and _hud.visible else 0.0
+
+
+func world_to_screen(p: Vector2) -> Vector2:
+	var view := Vector2(_viewport.size) if _viewport != null else size
+	return (p - camera.position - camera.offset) * camera.zoom.x + view * 0.5
+
+
+## Y: locked on the Master <-> free. Switching to free starts where the camera is.
+func toggle_camera_mode() -> void:
+	if cam_mode == "locked":
+		cam_mode = "free"
+		cam_free_pos = camera.position
+	else:
+		cam_mode = "locked"
+	cam_follow = -1
+
+
+## F1-F5: centres the camera on that party member (F1 = the Master); a double tap follows them until the
+## camera is moved, Y or the centre key. The press time comes from the caller (tests pass their own).
+func camera_hero_key(slot_i: int, now: float = -1.0) -> void:
+	if slot_i < 0 or slot_i >= heroes.size() or heroes[slot_i].dead:
+		return
+	if now < 0.0:
+		now = Time.get_ticks_msec() / 1000.0
+	var last := float(_hero_tap.get(slot_i, -99.0))
+	_hero_tap[slot_i] = now
+	overview = false
+	_look_t = 0.0
+	if now - last <= CameraDefs.DOUBLE_TAP:
+		cam_mode = "follow"
+		cam_follow = slot_i
+		return
+	cam_mode = "free"
+	cam_follow = -1
+	cam_free_pos = _framed(heroes[slot_i])
+
+
+## Moves the free camera (edges, arrows, middle drag) and keeps it on the map and near what the party
+## has explored (the fog is respected: it never shows unexplored ground far away).
+func camera_pan(world_delta: Vector2) -> void:
+	if cam_mode != "free":
+		cam_mode = "free"
+		cam_free_pos = camera.position
+	cam_follow = -1
+	cam_free_pos = _clamp_free(cam_free_pos + world_delta)
+
+
+## Jumps the camera to a world point (minimap, edge markers).
+func camera_jump(p: Vector2) -> void:
+	cam_mode = "free"
+	cam_follow = -1
+	cam_free_pos = _clamp_free(p)
+
+
+func _clamp_free(p: Vector2) -> Vector2:
+	var r := Rect2(Vector2.ZERO, map.world_size())
+	if _explored_rect.size.x > 0.0:
+		r = r.intersection(_explored_rect)
+	return Vector2(clampf(p.x, r.position.x, r.end.x), clampf(p.y, r.position.y, r.end.y))
+
+
+## Bounding box of the explored cells (+ CameraDefs.EXPLORED_MARGIN), refreshed with the autonomy pass.
+func _update_explored_rect() -> void:
+	if fog == null:
+		_explored_rect = Rect2()
+		return
+	var lo := Vector2i(map.width, map.height)
+	var hi := Vector2i(-1, -1)
+	for y in map.height:
+		for x in map.width:
+			if fog.is_explored(Vector2i(x, y)):
+				lo = lo.min(Vector2i(x, y))
+				hi = hi.max(Vector2i(x, y))
+	if hi.x < 0:
+		_explored_rect = Rect2()
+		return
+	var m := CameraDefs.EXPLORED_MARGIN
+	_explored_rect = Rect2(map.center_of(lo - Vector2i(m, m)), Vector2(hi - lo + Vector2i(2 * m, 2 * m)) * float(NavMap.CELL))
+
+
+func _free_camera_input(delta: float) -> void:
+	var dir := Vector2.ZERO
+	if Input.is_key_pressed(KEY_LEFT):
+		dir.x -= 1.0
+	if Input.is_key_pressed(KEY_RIGHT):
+		dir.x += 1.0
+	if Input.is_key_pressed(KEY_UP):
+		dir.y -= 1.0
+	if Input.is_key_pressed(KEY_DOWN):
+		dir.y += 1.0
+	if cam_mode == "free" and get_window() != null and get_window().has_focus() and not DisplayServer.get_name().begins_with("headless"):
+		var mp := get_local_mouse_position()
+		var e := CameraDefs.EDGE_PX
+		if Rect2(Vector2.ZERO, size).has_point(mp):
+			if mp.x <= e:
+				dir.x -= 1.0
+			elif mp.x >= size.x - e:
+				dir.x += 1.0
+			if mp.y <= e:
+				dir.y -= 1.0
+			elif mp.y >= size.y - e:
+				dir.y += 1.0
+	if dir != Vector2.ZERO:
+		camera_pan(dir.normalized() * CameraDefs.PAN_SPEED * delta / maxf(0.05, camera.zoom.x))
 
 
 func screen_to_world(p: Vector2) -> Vector2:
@@ -1576,10 +1736,7 @@ func _physics_process(delta: float) -> void:
 func _step_camera(delta: float) -> void:
 	_look_t = maxf(0.0, _look_t - delta)
 	update_camera_targets()
-	var lead := Vector2.ZERO
-	if follow_slot >= 0 and follow_slot < heroes.size() and not overview:
-		lead = (heroes[follow_slot].velocity * LOOK_AHEAD).limit_length(LOOK_AHEAD_MAX)
-	camera.target_position = camera_target + lead
+	camera.target_position = camera_target             # the look-ahead is in the framing (_framed)
 	camera.target_zoom = camera_zoom_target
 	camera.step(delta)
 
@@ -2092,6 +2249,7 @@ func _process(delta: float) -> void:
 		_ping_hold += delta                       # Shift + click held: it becomes the wheel
 		if _ping_hold >= AiDefs.PING_WHEEL_HOLD:
 			open_wheel(_ping_press)
+	_free_camera_input(delta)
 	if _dragging:
 		var m := get_local_mouse_position()
 		_band.position = _drag_start.min(m)
@@ -2103,7 +2261,23 @@ func _process(delta: float) -> void:
 # --- input ---------------------------------------------------------------------------------
 
 func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseMotion and _mid_drag:
+		camera_pan(-(event as InputEventMouseMotion).relative / maxf(0.05, camera.zoom.x))   # middle drag
+		return
 	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_MIDDLE:
+			_mid_drag = mb.pressed
+			return
+		if mb.pressed and (mb.button_index == MOUSE_BUTTON_WHEEL_UP or mb.button_index == MOUSE_BUTTON_WHEEL_DOWN):
+			var step := 1 if mb.button_index == MOUSE_BUTTON_WHEEL_UP else -1   # whole zoom steps only
+			cam_zoom_i = clampi(cam_zoom_i + step, 0, CameraDefs.ZOOM_STEPS.size() - 1)
+			return
+		if mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT and _edges != null and not mb.shift_pressed:
+			var to := _edges.hit(mb.position)
+			if to != Vector2.INF:
+				camera_jump(to)                      # click on an edge marker: jump there
+				return
 		if event.button_index == MOUSE_BUTTON_LEFT and _locked():
 			# D-082: in a Master squad the left click pings (Shift + click quick, held = the wheel; A then click = attack)
 			if event.pressed and _arming_ping != "":
@@ -2266,6 +2440,15 @@ func _input(event: InputEvent) -> void:
 			interact_release()
 		get_viewport().set_input_as_handled()
 		return
+	if event.keycode == CameraDefs.KEY_CENTER:
+		center_held = event.pressed                # hold: centred on the Master while held
+		if not event.pressed and cam_mode == "free":
+			cam_free_pos = camera.position          # stays where the Master is when released
+		cam_follow = -1 if event.pressed else cam_follow
+		if event.pressed and cam_mode == "follow":
+			cam_mode = "locked"
+		get_viewport().set_input_as_handled()
+		return
 	if event.keycode == KEY_SPACE and event.pressed:
 		dash_selected()
 		get_viewport().set_input_as_handled()
@@ -2286,8 +2469,12 @@ func _input(event: InputEvent) -> void:
 		KEY_TAB:
 			overview = false
 			group_view()
-		KEY_F3:
+		CameraDefs.KEY_DEBUG:
 			toggle_debug_overlay()
+		CameraDefs.KEY_TOGGLE:
+			toggle_camera_mode()
+		KEY_F1, KEY_F2, KEY_F3, KEY_F4, KEY_F5:
+			camera_hero_key(CameraDefs.HERO_KEYS.find(event.keycode))
 		KEY_M:
 			overview = not overview
 		KEY_G:

@@ -584,7 +584,7 @@ func _add_tower_buttons() -> void:
     # D-066: the repeatable Wilds (the town's materials) and the tower (gear and rarities), gated by the Hall
     var tier := Game.wilds_tier()
     var wcfg := DungeonDefs.config(tier)
-    var wilds := UIKit.button("%s  ·  repeatable  ·  materials" % String(wcfg["name"]), func(): navigate.emit("sandbox", -tier), Vector2(320, 38))
+    var wilds := UIKit.button("%s  ·  repeatable  ·  materials" % String(wcfg["name"]), func(): enter_floor(-tier), Vector2(320, 38))
     wilds.focus_mode = Control.FOCUS_NONE
     wilds.alignment = HORIZONTAL_ALIGNMENT_LEFT
     wilds.tooltip_text = "%s\nA new map every run; leave by the entrance (X) to keep what you carry. Half a day passes." % String(wcfg["intro"])
@@ -597,12 +597,12 @@ func _add_tower_buttons() -> void:
         var floor_num := f
         var cfg := TowerExpedition.get_floor_config(f)
         var done := int(Game.tower_cleared.get(str(f), 0))
-        var btn := UIKit.button("%s  ·  %s  ·  %s%s" % [String(cfg["name"]), String(cfg["mission"]).capitalize(), String(cfg["difficulty"]),
-            "  ✓" if done > 0 else ""], func(): navigate.emit("sandbox", floor_num), Vector2(320, 32))
+        var btn := UIKit.button("%s  ·  %s  ·  %s  ·  %s%s" % [String(cfg["name"]), String(cfg["mission"]).capitalize(), String(cfg["difficulty"]),
+            tr("squad %d") % TowerExpedition.party_max(f), "  ✓" if done > 0 else ""], func(): enter_floor(floor_num), Vector2(320, 32))
         btn.focus_mode = Control.FOCUS_NONE
         btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
         btn.tooltip_text = "%s
-Recommended: %d heroes. Explored: %s" % [String(cfg.get("intro", "")), TowerExpedition.RECOMMENDED_HEROES,
+Squad: %d heroes (the first ones of your party go in). Explored: %s" % [String(cfg.get("intro", "")), TowerExpedition.party_max(f),
             "yes" if Game.floor_explored(f) != "" else "not yet"]
         _show_risk(btn, f, true)
         _panel_box.add_child(btn)
@@ -611,18 +611,63 @@ Recommended: %d heroes. Explored: %s" % [String(cfg.get("intro", "")), TowerExpe
     _panel_box.add_child(grid)
     for f in range(TowerExpedition.SLICE_FLOORS + 1, 11):
         var floor_num := f
-        var btn := UIKit.button("F%d" % f, func(): navigate.emit("sandbox", floor_num), Vector2(56, 30))
+        var btn := UIKit.button("F%d" % f, func(): enter_floor(floor_num), Vector2(56, 30))
         btn.focus_mode = Control.FOCUS_NONE
         btn.tooltip_text = String(TowerExpedition.get_floor_config(f)["name"]) + " (beyond the demo: not tuned yet)"
         _show_risk(btn, f, false)
         grid.add_child(btn)
     if Game.party_heroes().size() < Game.PARTY_SIZE:
-        var warn := UIKit.label("Each floor lets in up to its squad size; with fewer heroes than that, a test squad goes and nothing is kept (Menu -> Party).", 13, Color(1.0, 0.7, 0.5))
+        var warn := UIKit.label("Each floor takes its own squad size: the first heroes of your party go in (Menu -> Party).", 13, Color(1.0, 0.7, 0.5))
         warn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
         warn.custom_minimum_size = Vector2(150, 0)  # px
         _panel_box.add_child(warn)
     _add_expedition_buttons()
     _add_merchant_buttons()
+
+
+## D-082b: before entering, the floor's squad size against the party. Short: a clear warning with
+## "Complete the party" or "Enter anyway" (the design allows a smaller squad). More heroes than the floor
+## takes: says who stays out. What this says is what SandboxScreen deploys (TowerExpedition.squad_report).
+var _squad_dialog: Control = null
+
+
+func enter_floor(floor_num: int) -> void:
+    var r := TowerExpedition.squad_report(floor_num, Game.party_heroes())
+    if not bool(r["short"]) and not bool(r["extra"]):
+        navigate.emit("sandbox", floor_num)
+        return
+    if _squad_dialog != null and is_instance_valid(_squad_dialog):
+        _squad_dialog.queue_free()
+    var center := CenterContainer.new()
+    add_child(center)
+    UIKit.fill(center)
+    center.z_index = 90
+    _squad_dialog = center
+    var pc := PanelContainer.new()
+    center.add_child(pc)
+    var vb := VBoxContainer.new()
+    vb.add_theme_constant_override("separation", 8)
+    pc.add_child(vb)
+    var text := ""
+    if bool(r["short"]):
+        text = tr("This floor takes %d heroes and your party has %d. %d will go in.") % [int(r["size"]), int(r["have"]), int(r["goes"])]
+    else:
+        text = tr("This floor takes %d heroes: only the first %d of your party go in (the Master first); the other %d stay in town.") % [int(r["size"]), int(r["goes"]), int(r["have"]) - int(r["goes"])]
+    var l := UIKit.label(text, 15)
+    l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    l.custom_minimum_size = Vector2(380, 0)
+    vb.add_child(l)
+    var row := HBoxContainer.new()
+    row.add_theme_constant_override("separation", 8)
+    vb.add_child(row)
+    if bool(r["short"]):
+        row.add_child(UIKit.button("Complete the party", func():
+            center.queue_free()
+            navigate.emit("party", 0), Vector2(170, 34)))
+    row.add_child(UIKit.button("Enter anyway" if bool(r["short"]) else "Enter", func():
+        center.queue_free()
+        navigate.emit("sandbox", floor_num), Vector2(130, 34)))
+    row.add_child(UIKit.button("Cancel", func(): center.queue_free(), Vector2(100, 34)))
 
 
 ## D-079: the only thing the player sees of the soft block: "Risk: N% (band)" in the band's colour and at

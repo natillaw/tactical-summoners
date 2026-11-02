@@ -50,7 +50,7 @@ func _ready() -> void:
         if m == null or str(m.look.get(k, "")) != str(wanted[k]):
             same_look = false
     check(same_look and m.look["body"] == body, "the look is exactly the one in the preview")
-    check(m != null and m.equipment.is_empty() and LpcWardrobe.layers_for(m.look, m.hero_class).has(LpcWardrobe.STARTER_OUTFIT["chest"]),
+    check(m != null and String(m.equipment.get("chest", {}).get("base", "")) == "plain_shirt" and LpcWardrobe.layers_for(m.look, m.hero_class, ItemVisuals.equipment_layers(m.equipment)).has(LpcWardrobe.STARTER_OUTFIT["chest"]),
         "the Master wears the plain starter outfit of every summon")
     check(m != null and Game.party[0] == m.id and m.innate.is_empty(), "the Master takes slot 1 and has no summon gifts")
     mc.queue_free()
@@ -186,7 +186,7 @@ func _d081() -> void:
     var back := HeroData.from_dict(elf)
     check(back.look["race"] == "human" and back.look["ears"] == "" and back.look["hair"] == hair,
         "a saved elf Master migrates to human and keeps the rest of the look")
-    check(Game.SAVE_VERSION == 18 and Game._migrate({"version": 17})["version"] == 18, "save v17 -> v18")
+    check(Game.SAVE_VERSION >= 18 and Game._migrate({"version": 17})["version"] == Game.SAVE_VERSION, "save v17 -> v18 (and on to the current version)")
 
     Game.new_game()
     var m := Game.create_master({"first": "Lead", "last": "Er", "class": "class.warrior", "trait": "trait.brave"})

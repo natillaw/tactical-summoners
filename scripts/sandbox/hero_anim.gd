@@ -60,9 +60,16 @@ static func _fresh_tween(sprite: AnimatedSprite2D) -> Tween:
 
 ## Melee: side lunge frames + forward tween. Ranged: ready pose + draw-back/release tween.
 ## Returns seconds during which idle/walk must not override the pose (0 if nothing played).
-static func play_attack(sprite: AnimatedSprite2D, facing: String, last_side: String, ranged: bool, lead: bool = false) -> float:
+## offhand (D-082b, two daggers): the second blow. Facing up or down the sprite is mirrored for it, so the
+## other hand strikes; sideways the same swing plays again (the off-hand dagger is the one in front).
+static func play_attack(sprite: AnimatedSprite2D, facing: String, last_side: String, ranged: bool, lead: bool = false, offhand: bool = false) -> float:
     if sprite == null or not sprite.is_inside_tree():
         return 0.0
+    if offhand and (facing == "up" or facing == "down"):
+        sprite.flip_h = true
+        sprite.get_tree().create_timer(LOCK_ATTACK).timeout.connect(func():
+            if is_instance_valid(sprite):
+                sprite.flip_h = false)
     var v := dir_vec(facing)
     var side := side_of(facing, last_side)
     var t := _fresh_tween(sprite)

@@ -131,6 +131,8 @@ func _ready() -> void:
     var spent := 0
     var same := 0
     for enc in m4.encounters:
+        if enc.get("filler", false):
+            continue                              # D-082b: density fillers are on top of the threat budget
         for id in enc["members"]:
             spent += EnemyDefs.threat_of(String(id))
         if (enc["members"] as Array).size() == TowerExpedition.party_max(4) and String(enc["zone"]) != "objective":

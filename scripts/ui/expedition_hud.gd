@@ -33,6 +33,17 @@ func _init(screen: SandboxScreen = null) -> void:
     mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
+## D-082b: height of the HUD band at the bottom (the camera frames the Master above it).
+func bottom_inset() -> float:
+    var h := 0.0
+    for k in ["bl", "bc", "br"]:
+        if _corners.has(k):
+            var pc: Control = _corners[k]
+            if pc.visible:
+                h = maxf(h, size.y - pc.position.y)
+    return h
+
+
 func _ready() -> void:
     UIKit.fill(self)
     _skill_tex = load(AssetCatalog.SKILL_ICONS) if ResourceLoader.exists(AssetCatalog.SKILL_ICONS) else null

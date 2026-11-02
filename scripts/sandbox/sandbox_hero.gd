@@ -75,6 +75,7 @@ var basic_attacks: int = 0                # stats (tests): basic attacks started
 var blows: int = 0
 var shots_fired: int = 0
 var shots_hit: int = 0
+var blocks: int = 0                       # D-082b: blows the shield blocked
 
 ## Order state (D-040, D-082): "auto" | "move" | "attack" | "attack_move" | "hold" | "follow" | "retreat" | "rescue" | "defend".
 var order: String = "auto"
@@ -1059,8 +1060,41 @@ func _busy_mult(t: Node) -> float:
 ## Weapon the hero swings: the equipped main-hand base, else the class's default (look only).
 func weapon_id() -> String:
 	if hero != null and hero.equipment.has("main_hand"):
-		return String(hero.equipment["main_hand"].get("base", "fist"))
+		var it: Dictionary = hero.equipment["main_hand"]
+		return String(it.get("visual_base", it.get("base", "fist")))   # D-082b: the kit's weapons look like their base
+	if hero != null and not hero.equipment.is_empty():
+		return "fist"                                # carries items but no weapon: bare hands (what is seen)
 	return String(CombatVFX.CLASS_WEAPON.get(hero.hero_class if hero != null else "", "fist"))
+
+
+## D-082b: the weapon pattern (AiDefs.WEAPON_PATTERN) needs both hands for two daggers: with items, the
+## off hand must hold a dagger too; a hero without items fights with its class default (a rogue: two).
+func weapon_pattern() -> Dictionary:
+	var pat: Dictionary = AiDefs.WEAPON_PATTERN.get(weapon_id(), {})
+	if pat.is_empty() or hero == null or hero.equipment.is_empty():
+		return pat
+	var off: Dictionary = hero.equipment.get("off_hand", {})
+	return pat if String(off.get("visual_base", off.get("base", ""))) == "dagger" else {}
+
+
+## D-082b shield (warriors): a small chance to block a FRONTAL blow (within the shield's arc of where the
+## hero faces); a blocked blow loses a fixed share. Numbers in ItemDefs.BASES[...]["block"].
+func take_hit(info: DamageInfo) -> int:
+	var blk: Dictionary = item_mods.get("block", {})
+	if not blk.is_empty() and alive and info != null and info.source != null and is_instance_valid(info.source) and info.source is Node2D:
+		if is_frontal((info.source as Node2D).position, float(blk.get("arc_deg", 120.0))) and combat_rng.randf() < float(blk["chance"]):
+			info.amount *= 1.0 - float(blk["reduce"])
+			blocks += 1
+			FloatingText.spawn(self, tr("Blocked"), Color(0.7, 0.7, 0.72), false, 0.9)
+	return super.take_hit(info)
+
+
+## True when `from` is in front of the hero (within arc_deg around where it faces).
+func is_frontal(from: Vector2, arc_deg: float) -> bool:
+	var to := from - position
+	if to.length() < 0.5:
+		return true
+	return HeroAnim.dir_vec(facing).dot(to.normalized()) >= cos(deg_to_rad(arc_deg) * 0.5)
 
 
 func _basic_attack(t: SandboxEnemy) -> void:
@@ -1091,7 +1125,7 @@ func _basic_attack(t: SandboxEnemy) -> void:
 ## D-082 weapon pattern (AiDefs.WEAPON_PATTERN): one blow, or several (two daggers: left, then right
 ## `gap` s later), each `mult` of the hero's power. On-hit effects and flat armour apply to every blow.
 func _melee_blows(t: SandboxEnemy, aim: Vector2) -> void:
-	var pat: Dictionary = AiDefs.WEAPON_PATTERN.get(weapon_id(), {})
+	var pat := weapon_pattern()
 	var hits := int(pat.get("hits", 1))
 	var mult := float(pat.get("mult", 1.0))
 	for k in hits:
@@ -1101,8 +1135,7 @@ func _melee_blows(t: SandboxEnemy, aim: Vector2) -> void:
 		_later(float(pat["gap"]) * float(k), func():
 			if not alive or not is_instance_valid(t) or not t.alive or position.distance_to(t.position) > attack_range() + t.body_radius + 10.0:
 				return                               # the second dagger finds nothing within reach
-			_side = "left" if _side == "right" else "right"
-			_anim_lock = HeroAnim.play_attack(_sprite, facing, _side, false)
+			_anim_lock = HeroAnim.play_attack(_sprite, facing, _side, false, false, true)   # the other hand
 			var wf2: Dictionary = CombatVFX.WEAPON_FX.get(weapon_id(), CombatVFX.WEAPON_FX["fist"])
 			CombatVFX.play(get_parent(), t.position + Vector2(0, -12), String(wf2["hit"]), float(wf2.get("scale", 1.0)), _side == "left")
 			_land_basic(t, DamageInfo.make(float(power()) * mult * _busy_mult(t), String(stats.get("kind", "physical")), self, crit_chance, combat_rng), t.position + Vector2(0, -12)))
