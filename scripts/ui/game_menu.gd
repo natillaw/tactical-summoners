@@ -15,7 +15,7 @@ const CONTROLS := [
     ["Q", "Basic attack at the mouse (hero you drive)"], ["W E R", "Skills (hold to aim, release to cast)"],
     ["A", "Attack-move"], ["H", "Hold"], ["V", "Follow"], ["C", "Regroup"], ["X", "Retreat (picks up the fallen nearby)"], ["S", "Stop"], ["T", "Skills: auto / manual"],
     ["F", "Interact: hold next to a fallen ally to lift them, gather, escape at the exit"], ["Shift + click", "Quick ping (hold: ping wheel)"],
-    ["1 2 3", "Master commands"], ["Space", "Dash"], ["D", "Master: drink a healing potion (5 min cooldown)"], ["Y", "Camera: locked on the Master / free"], ["B (hold)", "Centre on the Master"],
+    ["1 2 3", "Master commands"], ["Space", "Dash"], ["D", "Master: drink a healing potion (5 min cooldown)"], ["F", "Town: click to walk, click a building to go in, F at a door"], ["Y", "Camera: locked on the Master / free"], ["B (hold)", "Centre on the Master"],
     ["F1-F5", "Centre on a party member (double tap: follow)"], ["Arrows / screen edges / middle drag", "Move the free camera"], ["Wheel", "Zoom (whole steps)"],
     ["F11 / Alt+Enter", "Full screen"], ["M", "Whole map (the fog stays)"], ["I", "Details panel"], ["F10", "Debug overlay (debug builds)"], ["Esc", "This menu"],
 ]

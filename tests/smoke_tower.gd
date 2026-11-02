@@ -95,8 +95,13 @@ func _ready() -> void:
     town.size = Vector2(1280, 720)
     await get_tree().process_frame
     check(town.heroes.size() == Game.heroes.size() and town.view != null, "town shows every hero")
+    if town.master_th != null:                    # owner 2026-11-02: the Master walks there; stand him at the door
+        town.master_th.position = town.map.center_of(town.map.door_of("tower_gate"))
     town.click_at(town.map.center_of((TownTables.info("tower_gate")["plot"] as Rect2i).position))
-    check(town.selected == "tower_gate", "clicking a building selects it")
+    check(town.selected == "tower_gate", "clicking a building (with the Master at its door) goes in")
+    if town.master_th != null:
+        town.click_at(town.map.center_of(town.map.door_of("town_hall")) + Vector2(0, 40))
+        check(town.selected == "" and town.master_th.walking(), "clicking the ground walks the Master there")
     Game.hq_outputs["materials"] = 1000
     Game.town_buildings["town_hall"] = 2          # the alchemy lab needs a level-2 Summoner's Hall
     var lvl_before := Game.building_level("alchemy")

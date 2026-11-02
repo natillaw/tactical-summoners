@@ -360,6 +360,17 @@ func _init() -> void:
     for i in gk.builder_count():
         gk.construction.append({"bid": "warehouse", "to": 9, "work_left": 999.0})
     check(String(gk.construction_block("farm")).contains("builder"), "one building site per builder")
+    var alc := _hero(gk, {"alchemist": 3})
+    gk.town_buildings["alchemy"] = 2
+    gk.assign_work(alc, "alchemy")
+    gk.hq_outputs["potion"] = 0
+    gk.pass_time(24)
+    check(int(gk.hq_outputs["potion"]) == 0 and gk.job_of("alchemy") == "", "without the Master's order the alchemist brews nothing")
+    check(gk.order_craft("alchemy", "brew_potion", 2) == "", "the Master orders two healing potions")
+    gk.pass_time(48)
+    check(int(gk.hq_outputs["potion"]) == 2 and not gk.craft_left.has("alchemy"), "the order is brewed and the bench rests (%d potions)" % int(gk.hq_outputs["potion"]))
+    gk.hq_outputs["herb"] = 0
+    check(String(gk.order_craft("alchemy", "brew_potion", 0)).contains("materials"), "no materials, no order")
     check(EconomyDefs.expedition_hours(1200.0) == 48 and EconomyDefs.expedition_hours(5.0) == 1, "20 real minutes in the tower = 2 town days")
     check(is_equal_approx(EconomyDefs.REAL_SECONDS_PER_HOUR * 24.0, 1200.0), "20 real minutes in the town = 1 town day")
 

@@ -131,6 +131,15 @@ const RECIPES := {
     "serve": {"name": "Run the tavern", "building": "common", "prof": "tavernkeeper", "min": 0, "work": 0.0, "in": {}, "out": {}, "service": true},
 }
 
+## Owner 2026-11-02: basic work runs on its own; everything else (potions, medicine, meals, elixirs,
+## gear, jewels, bags, arrows) is made only when the Master orders it inside the building.
+const AUTO_RECIPES := ["grow_grain", "grow_herbs", "fell_wood", "dig_stone", "dig_ore", "cook_meal", "make_materials", "smelt_iron"]
+
+
+static func is_auto(rid: String) -> bool:
+    return AUTO_RECIPES.has(rid) or bool(recipe(rid).get("service", false))
+
+
 # --- construction (D-048) ------------------------------------------------------------------------
 const BUILD_HOURS_PER_LEVEL := 6.0    # hours of a 1.0-efficiency builder per target level
 

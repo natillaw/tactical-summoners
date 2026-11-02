@@ -559,6 +559,12 @@ Rama `feat/integracion` desde `feat/d083-headless-sim`; merges en orden Sim Lab 
 - **Joyería:** 6 joyas nuevas con estadística propia (anillos de rubí, zafiro y hierro; colgantes del corazón y del sol; cadena veloz) + afijos al azar. **Trinkets** con pasiva por probabilidad, una o más por clase (runa de sangre: 5 % al golpear te curas el daño del golpe; baluarte, sombra, halcón, maná, piedad, espinas, trébol). La pasiva solo funciona para sus clases. Iconos del pack rpg_icons.
 - Las enfermedades siguen como estaban (bajan atributos; la herida infectada solo se cura en el hospital).
 
+### D-143 — Pueblo con el Máster y crafteo por encargo (2026-11-02, dueño: "el pueblo debería estar en cámara del máster… si quiero una poción debo ir a craftear con los materiales")
+- **Cámara siempre en el Máster** en el pueblo (sin cámara libre ni arrastre). Clic en el suelo: el Máster camina. Clic en un edificio: camina hasta la puerta y entra; **F** en una puerta también entra. El interior muestra al Máster junto a la puerta. Sin Máster (cuentas viejas, pruebas) se mantiene la vista directa.
+- **Encargo + artesano:** dentro del edificio, el libro de recetas encarga N piezas (`Game.order_craft`); el héroe artesano asignado las fabrica con su tiempo de trabajo. Sin artesano no se hace nada.
+- **Solo lo básico es automático** (`EconomyDefs.AUTO_RECIPES`: grano, hierbas, leña, piedra, mineral, comida del pueblo, materiales, lingotes) y los servicios (hospital, taberna). Pociones, medicina, antídotos, elixires, comidas de expedición, equipo, joyas, bolsas y flechas **solo por encargo**; terminado el encargo el banco descansa. "Crear todo" = lo que pagan los materiales del almacén.
+- El hospital sigue admitiendo enfermos solo (D-047); la medicina ahora sale solo por encargo en la alquimia.
+
 ## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)
 
 | ID | Tema | Lo que existe / origen | Pregunta abierta |
