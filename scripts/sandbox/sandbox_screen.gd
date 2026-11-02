@@ -219,6 +219,7 @@ func _ready() -> void:
 	if not heroes.is_empty():
 		var leader: SandboxHero = heroes[0]
 		leader.say(HeroChatter.get_entry_line(leader.hero), 5.5)
+	DevCommands.apply_to(self)                    # D-146: /god, /fly and /speed carry over to a new floor
 
 
 func _build_squad() -> void:
@@ -1048,8 +1049,9 @@ func update_fog() -> void:
 		lookers[i].credit("explored", float(found[i]))
 	for e in enemies:
 		if e.alive:
-			e.visible = not e.dormant and (fog.is_visible(map.cell_of(e.position)) or e.spotted_t > 0.0)   # D-082 spotted
+			e.visible = not e.dormant and (fog_off or fog.is_visible(map.cell_of(e.position)) or e.spotted_t > 0.0)   # D-082 spotted
 	if _fog_view != null:
+		_fog_view.visible = not fog_off
 		_fog_view.refresh()
 
 
@@ -1345,6 +1347,8 @@ func _update_explored_rect() -> void:
 
 
 func _free_camera_input(delta: float) -> void:
+	if DevCommands.console_open:
+		return                                   # D-146: the arrows browse the console history
 	var dir := Vector2.ZERO
 	if Input.is_key_pressed(KEY_LEFT):
 		dir.x -= 1.0
@@ -1479,6 +1483,9 @@ func order_move_selected(world_point: Vector2) -> void:
 		if n > 1 and i > 0:
 			offset = Vector2.RIGHT.rotated(TAU * float(i - 1) / float(n - 1)) * FORMATION_RADIUS
 		var p := map.find_path(selected[i].position, world_point + offset)
+		if selected[i].dev_fly:
+			p.clear()
+			p.append(world_point + offset)                # D-146 /fly: any point, walls included
 		if p.is_empty():
 			FloatingText.spawn(selected[i], "can't reach", Color(1.0, 0.6, 0.4), false)
 		selected[i].order_move(p)
@@ -1817,7 +1824,8 @@ func tick(delta: float) -> void:
 	var targets := heroes.filter(func(h): return not h.dead)
 	for e in foes:
 		e._allies = foes                          # supports heal from this list
-		e.tick(delta, targets, map)
+		if not ai_frozen:                         # D-146 dev console /ai freeze
+			e.tick(delta, targets, map)
 	for h in heroes:
 		if not h.alive and selected.has(h):
 			selected.erase(h)
@@ -2442,8 +2450,8 @@ func _exit_tree() -> void:
 
 
 ## F3 (debug builds only): bodies, strike/attack/perception ranges, paths, targets and AI state.
-func toggle_debug_overlay() -> void:
-	if not OS.is_debug_build():
+func toggle_debug_overlay(dev: bool = false) -> void:
+	if not OS.is_debug_build() and not dev:      # D-146: the unlocked dev console works in exported builds
 		return
 	if debug_overlay == null:
 		debug_overlay = CombatDebugDraw.new(self)
@@ -2522,7 +2530,7 @@ func squad_key(key: int) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if not (event is InputEventKey) or event.echo:
+	if not (event is InputEventKey) or event.echo or DevCommands.console_open:
 		return
 	if event.keycode == KEY_Q:
 		_q_held = event.pressed
@@ -3027,3 +3035,59 @@ func _eat_meal(h: SandboxHero) -> void:
 		if not SimMode.on:
 			FloatingText.spawn(h, tr("Well fed"), Color(0.95, 0.75, 0.4), false, 1.6)
 		return
+
+
+# --- D-146 dev console hooks (DevCommands calls these; the rules stay here) -----------------------
+
+var ai_frozen: bool = false                       # /ai freeze: creatures stop thinking and moving
+var fog_off: bool = false                         # /fog off: every creature shown, fog not drawn (memory untouched)
+
+
+func dev_set_fog(on: bool) -> void:
+	fog_off = not on
+	update_fog()
+
+
+func dev_open_secret() -> void:
+	if secret == null or secret_done:
+		return
+	secret_done = true
+	secret.visible = false
+	var m: SandboxHero = master_hero if master_hero != null else (heroes[0] if not heroes.is_empty() else null)
+	if m != null:
+		FloatingText.spawn(m, "A secret!", Color(1.0, 0.85, 0.4), true, 2.0)
+
+
+## /objective complete: the goal of this mission counts as met. Carry missions put the relic (or the
+## villager) on the Master, so the extraction is still walked; the others end on the next tick.
+func dev_complete_objective() -> String:
+	var m: SandboxHero = master_hero if master_hero != null else (heroes[0] if not heroes.is_empty() else null)
+	match mission_type:
+		"retrieval", "rescue":
+			if carrier == null and m != null:
+				relic.position = m.position          # picked up on the next tick, through the normal path
+			return "Objetivo en manos del Máster: ve a la extracción"
+		"combat":
+			for e in living_enemies():
+				e.immune = false
+				e.die()
+		"boss":
+			if boss != null and boss.alive:
+				boss.immune = false
+				boss.die()
+		"sabotage":
+			for t in totems:
+				if t.alive:
+					t.die()
+		"exploration":
+			for c in clues:
+				c.visible = false
+		"survival", "defense":
+			mission_timer = survive_time() if mission_type == "survival" else hold_time()
+		"escape":
+			var goal := map.center_of(map.relic_cell)
+			for h in heroes:
+				if h.alive:
+					h.stop()
+					h.position = map.nearest_walkable(goal)
+	return "Objetivo cumplido (%s)" % mission_type

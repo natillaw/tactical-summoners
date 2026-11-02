@@ -5,7 +5,7 @@ extends Node
 signal changed
 
 const DEFAULT_SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 20
+const SAVE_VERSION := 21
 const PARTY_SIZE := 5            # slots 0-2 = front row, slots 3-4 = back row; D-080: slot 0 is the Master
 const MASTER_BED := "town_hall"   # D-080: the Master sleeps in the Hall (no dorm bed)
 const XP_PER_BOOK := 100
@@ -32,6 +32,7 @@ var hardcore: bool = false           # D-081: chosen once at the creator; the Ma
 var game_over: bool = false          # D-081: a hardcore game whose Master died (kept, only for the summary)
 var game_over_info: Dictionary = {}  # {"floors", "heroes", "seconds", "cause"} for the end screen
 var play_seconds: float = 0.0        # D-081: time played (end screen)
+var cheated: bool = false            # D-146: the dev console was unlocked or a cheat used in this game (saved, never cleared)
 var synergy_codex: Dictionary = {}   # D-090: synergy id -> true once discovered (SynergyDefs)
 var skill_books: Dictionary = {}     # skill id -> copies owned (D-046)
 var tower_cleared: Dictionary = {}   # floor (str) -> times completed (D-031: every floor is unlocked) # floor_num (str) -> {"seed": int, "width": int, "height": int, "grid_rows": Array}
@@ -813,6 +814,15 @@ func get_or_create_tower_floor_map(floor_num: int) -> ProceduralMap:
     return pmap
 
 
+## D-146 dev console /seed N: the floor is generated again from that seed (its explored memory goes too).
+func dev_regen_floor(floor_num: int, f_seed: int) -> void:
+    var cfg := TowerExpedition.get_floor_config(floor_num)
+    var pmap := ProceduralMap.new(int(cfg["width"]), int(cfg["height"]), f_seed, floor_num)
+    tower_maps[str(floor_num)] = {"seed": f_seed, "width": pmap.width, "height": pmap.height, "gen": pmap.gen_version,
+        "snapshot": pmap.to_snapshot(), "explored": ""}
+    _commit()
+
+
 ## Fog of war memory (D-056): explored cells of a floor, bit-packed + base64 (a 92x80 floor = ~1.3 KB).
 func floor_explored(floor_num: int) -> String:
     return String((tower_maps.get(str(floor_num), {}) as Dictionary).get("explored", ""))
@@ -1553,6 +1563,7 @@ func new_game() -> void:
     game_over = false
     game_over_info = {}
     play_seconds = 0.0
+    cheated = false
     synergy_codex = {}
     gems = SummonConfig.START_GEMS
     stones = 5
@@ -1634,6 +1645,7 @@ func save_game() -> bool:
         "onboarded": onboarded,
         "hardcore": hardcore, "game_over": game_over, "game_over_info": game_over_info, "play_seconds": play_seconds,
         "synergy_codex": synergy_codex,
+        "cheated": cheated,
     }
     return _write_atomic(JSON.stringify(data))
 
@@ -1693,6 +1705,7 @@ func apply_save(data: Dictionary) -> void:
     game_over = bool(data.get("game_over", false))
     game_over_info = (data.get("game_over_info", {}) as Dictionary).duplicate()
     play_seconds = float(data.get("play_seconds", 0.0))
+    cheated = bool(data.get("cheated", false))       # D-146
     synergy_codex = (data.get("synergy_codex", {}) as Dictionary).duplicate() if data.get("synergy_codex", {}) is Dictionary else {}   # D-090
     gems = int(data.get("gems", 0))
     stones = int(data.get("stones", 0))
@@ -1885,6 +1898,8 @@ func _migrate(data: Dictionary) -> Dictionary:
         # threat budgets). Floors saved before keep their old creatures in the snapshot, so they are
         # generated again; what was cleared (tower_cleared) and the rewards stay.
         data["tower_maps"] = {}
+    if v < 21:
+        data["cheated"] = false           # v20 -> v21 (D-146): games saved before the dev console are clean
     data["version"] = SAVE_VERSION
     return data
 

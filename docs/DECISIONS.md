@@ -579,6 +579,12 @@ Rama `feat/integracion` desde `feat/d083-headless-sim`; merges en orden Sim Lab 
 - **Juice:** perfiles propios para cada skill de criatura y cada disparo básico (`JuiceDefs.ENEMY`, ids `eskill.*`), leídos por `JuicePlayer.resolve`. Skills de héroe: todas tienen perfil (comprobado por `juice`).
 - **Barras de vida de criaturas:** bajan al instante, la parte blanca espera 0,3 s y se drena; destello blanco al recibir (cierra el pendiente de D-111).
 
+### D-146 — Consola de desarrollo con clave (2026-11-02, dueño: "consola de desarrollo para testear a mano los pisos 1–10 sin reiniciar la partida al morir")
+- **Acceso:** la tecla bajo Esc (` / º, por posición física) abre y cierra la consola (autoload `DevConsole`). Abrirla no activa nada: solo acepta `/key <clave>`; lo demás responde "bloqueado". En el código solo está el **SHA-256** de la clave (`DevCommands.KEY_HASH`); la clave nunca sale en la consola, el historial ni los logs. Desbloqueo solo en memoria hasta cerrar el juego. 3 claves malas = 30 s bloqueada.
+- **Marca:** desbloquear o usar cualquier cheat pone `Game.cheated = true` (guardado v21, nunca se borra salvo partida nueva) y añade una línea a `user://cheat_log.txt`.
+- **Una capa:** `scripts/dev/dev_commands.gd` llama a las APIs de cada sistema (Game, SandboxScreen, Combatant, HeroData); no duplica reglas. Comandos: ver `/help`. `/revive` solo levanta a los derribados: los muertos siguen muertos (D-011). `/quicksave` usa `user://dev_quicksave.json`, nunca el guardado normal. `/floor goto|reset|respawn` reconstruyen la pantalla del piso (los nodos, oleadas, zonas y mecanismos del anterior se liberan con ella); misma seed (`Game.tower_maps`).
+- `/god` (todo golpe hace 0) y `/fly` (línea recta a través de muros; al apagarlo el Máster sale a la celda libre más cercana) no dejan estado al apagarse y se mantienen al cambiar de piso.
+
 ## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)
 
 | ID | Tema | Lo que existe / origen | Pregunta abierta |

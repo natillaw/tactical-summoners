@@ -4,6 +4,7 @@ extends Control
 var _content: Control
 var _currency: Label
 var _bar: Control
+var dev_next_map: NavMap = null     # D-146 dev console: the next floor screen reuses this map (Wilds /floor reset)
 
 ## 2026-11-02: every screen has its own header or HUD, so the global currency bar stays hidden (it doubled
 ## the town bar and covered the title and the expedition HUD).
@@ -127,6 +128,9 @@ func _show_screen_now(screen: String, arg: int = 0) -> void:
             s.back_requested.connect(back)
         "sandbox":
             s = SandboxScreen.new(arg)          # 0 = training ground, 1-10 = tower floors, -tier = the Wilds (D-066)
+            if dev_next_map != null:
+                (s as SandboxScreen).map = dev_next_map
+                dev_next_map = null
             s.back_requested.connect(back)
         "hq":
             var hq_screen := HQScreen.new()

@@ -47,6 +47,7 @@ suites=(
   "fixes|res://tests/smoke_fixes.tscn|ALL PASSED"
   "pista a|res://tests/smoke_pista_a.tscn --quit-after 3000|ALL PASSED"
   "loot|res://tests/smoke_loot.tscn|ALL PASSED"
+  "dev console|res://tests/smoke_dev_console.tscn --quit-after 3000|ALL PASSED"
   "sim|-s res://tools/sim/run_sim.gd -- --config tools/sim/configs/test_smoke.json --check-determinism --quiet|ALL PASSED"
 )
 bad=0

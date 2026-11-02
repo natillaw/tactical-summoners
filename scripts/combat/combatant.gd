@@ -25,6 +25,7 @@ var poison_mult: float = 1.0         # D-079: "hazard" countered (antidote, Pois
 var soft_in: float = 1.0             # D-079 soft block: damage taken x (PowerCalc.floor_effect, set once per floor)
 var soft_out: float = 1.0            # D-079 soft block: damage dealt x
 var surround_mult: float = 1.0       # D-084: damage taken x when surrounded (SandboxScreen._update_surrounded)
+var dev_god: bool = false            # D-146 dev console /god: every hit does 0 (turning it off leaves nothing behind)
 var dmg_mult: float = 1.0            # D-081: the Master leads, the others carry (MasterDefs.DAMAGE_MULT)
 var resistances: Dictionary = {}    # P-29 hook (pending): element -> fraction resisted (0..1); no content yet
 var crit_chance: float = 0.0
@@ -57,6 +58,8 @@ func setup_combat(p_max_hp: int, p_armor: int, p_mres: int, p_crit: float, p_res
 ## The one way to hurt a unit. Returns the damage dealt (0 if absorbed, dead or downed).
 func take_hit(info: DamageInfo) -> int:
     if dead:
+        return 0
+    if dev_god and not downed:
         return 0
     if downed:
         agony = maxf(0.0, agony - CombatRules.AGONY_HIT_PENALTY)

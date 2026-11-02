@@ -23,6 +23,7 @@ config/features=PackedStringArray("4.7")
 Game="*res://scripts/autoload/game.gd"
 UiSfx="*res://scripts/autoload/ui_sfx.gd"
 Music="*res://scripts/autoload/ui_sfx.gd"
+DevConsole="*res://scripts/autoload/dev_console.gd"
 
 [display]
 
