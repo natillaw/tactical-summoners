@@ -307,7 +307,7 @@ func _face_to(p: Vector2) -> void:
 
 
 func _say(text: String) -> void:
-    _bubble = text
+    _bubble = StringsEs.tx(text)
     _bubble_t = 3.5
 
 

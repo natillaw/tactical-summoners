@@ -252,15 +252,12 @@ func add_xp(amount: int) -> int:
 
 # --- active skills (D-043..D-046) -----------------------------------------------------------
 
-## Makes sure the hero knows one skill of its current class: new heroes and heroes that just got
-## a class from promotion learn their class starter (D-044, picked with the hero seed).
+## D-142 (replaces D-044): heroes start with only Q (the basic attack); W, E and R come from the level
+## choices at 2, 5 and 10. Kept as the hook new heroes, promotions and loads call: it only trims a loadout
+## that somehow holds more than MAX_SLOTS. Known skills of saved heroes are never taken away (D-004).
 func ensure_skills() -> void:
-    var has_class_skill := false
-    for s in skills:
-        if hero_class == "class.none" or String(SkillDefs.info(s).get("class", "")) == hero_class:
-            has_class_skill = true
-    if not has_class_skill:
-        learn_skill(SkillDefs.starter_for(hero_class, hero_seed), false)
+    while loadout.size() > SkillDefs.MAX_SLOTS:
+        loadout.pop_back()
 
 
 ## Learns a skill (level choice, book, trainer). Fills a free W/E/R slot. False if already known

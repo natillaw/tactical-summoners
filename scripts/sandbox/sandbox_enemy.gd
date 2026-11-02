@@ -58,7 +58,7 @@ var _support_cd: float = 0.0
 var _back_cd: float = 0.0
 var on_hit_status: Dictionary = {}
 var _allies: Array = []             # living creatures (supports heal them), set each tick by the screen
-## D-065 creature skills (EnemyDefs.SKILLS): cast like a hero's, with a visible wind-up a stun breaks.
+## D-065 creature skills (EnemyDefs.SKILLS): cast like a hero's, with a visible wind-up that only an interrupt skill breaks (D-142).
 var skills: Array = []
 var skill_cd: Dictionary = {}       # skill id -> seconds left
 var casting_skill: String = ""      # the WINDUP is this skill's cast ("" = a basic strike)
@@ -328,7 +328,8 @@ func is_telegraphing() -> bool:
     return state == State.WINDUP
 
 
-## D-042: only control effects (stun, knock-back, "interrupt") break a wind-up. Returns true if one broke.
+## D-142: only the interrupt skills (SkillDefs.INTERRUPTERS, effect "interrupt") break a wind-up; a stun
+## pauses it and a knock-back no longer breaks it. Also used when the creature flees. True if one broke.
 func interrupt() -> bool:
     if state != State.WINDUP:
         return false
@@ -399,8 +400,7 @@ func tick(delta: float, heroes: Array, map: NavMap) -> void:
     if _flash > 0.0:
         _flash = maxf(0.0, _flash - delta)
     _anim_lock = maxf(0.0, _anim_lock - delta)
-    if not can_act():
-        interrupt()                       # a stun breaks the wind-up (D-042)
+    if not can_act():                     # D-142: a stun pauses the wind-up, it no longer breaks it
         _update_sprite()
         queue_redraw()
         return
@@ -446,7 +446,7 @@ func tick(delta: float, heroes: Array, map: NavMap) -> void:
             if job == "scout" and alerted and _scout_tick(delta, map):
                 pass                              # running to raise the alarm: no fighting on the way
             elif _try_skill(heroes, t):
-                pass                              # started a cast (wind-up visible, a stun breaks it)
+                pass                              # started a cast (wind-up visible, an interrupt breaks it)
             elif t == null:
                 state = State.IDLE
                 _wander(delta, map)
@@ -998,12 +998,6 @@ func _land_strike(heroes: Array) -> void:
     for h in heroes:
         if is_instance_valid(h) and not h.dead and h.position.distance_to(_aim) <= strike_radius:
             var dmg_info := DamageInfo.make(float(atk) * (EnemyDefs.HEAVY_MULT if windup_time >= EnemyDefs.HEAVY_WINDUP else 1.0), "physical", self, crit_chance, combat_rng)
-            var wall := _tank_wall(h, heroes) if role == "ranged" else null
-            if wall != null:                      # D-090 Shield Wall: the warrior catches the shot
-                dmg_info.amount *= 1.0 - float(SynergyDefs.param("tank_wall", "reduce", 0.5))
-                wall.take_hit(dmg_info)
-                wall.synergy("tank_wall")
-                continue
             h.take_hit(dmg_info)
             if not on_hit_status.is_empty() and h.alive:
                 h.apply_status(String(on_hit_status["id"]), float(on_hit_status["dur"]), float(on_hit_status.get("mag", 0.0)), self)
@@ -1016,25 +1010,6 @@ func _land_strike(heroes: Array) -> void:
 
 ## Light blows only flash a heavy creature; a blow worth STAGGER_PCT of its health makes it flinch.
 const STAGGER_PCT := 0.06
-
-
-## D-090 Shield Wall: a warrior standing next to another warrior, between this shooter and the hero.
-func _tank_wall(h: SandboxHero, heroes: Array) -> SandboxHero:
-    var lane := float(SynergyDefs.param("tank_wall", "lane", 24.0))
-    var pair := float(SynergyDefs.param("tank_wall", "pair_radius", 70.0))
-    for w in heroes:
-        if w == h or not is_instance_valid(w) or not w.alive or w.hero == null or w.hero.hero_class != "class.warrior":
-            continue
-        if position.distance_to(w.position) >= position.distance_to(h.position):
-            continue
-        var q := Geometry2D.get_closest_point_to_segment(w.position, position, h.position)
-        if q.distance_to(w.position) > lane:
-            continue
-        for w2 in heroes:
-            if w2 != w and is_instance_valid(w2) and w2.alive and w2.hero != null and w2.hero.hero_class == "class.warrior" \
-                    and w2.position.distance_to(w.position) <= pair:
-                return w
-    return null
 
 
 func _on_hit(info: DamageInfo, dmg: int) -> void:
@@ -1112,7 +1087,7 @@ func _draw() -> void:
         var k := 1.0 - clampf(_timer / maxf(0.01, total), 0.0, 1.0)
         var r := telegraph_radius()
         if r <= 0.0:
-            # a help spell (heal, ward, rally): a ring on the caster fills up; stun it before it closes
+            # a help spell (heal, ward, rally): a ring on the caster fills up; interrupt it before it closes
             draw_arc(Vector2(0, -6), body_radius + 10.0, -PI / 2.0, -PI / 2.0 + TAU * k, 32, Color(0.4, 1.0, 0.6), 3.0)
         else:
             draw_set_transform(_aim - position, 0.0, Vector2(1.0, 0.55))

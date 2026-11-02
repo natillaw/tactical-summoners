@@ -120,7 +120,7 @@ const STATUS := {
     "root": {"name": "Rooted", "blocks": ["move"], "debuff": true, "color": Color(0.6, 0.45, 0.25)},
     "slow": {"name": "Slowed", "move": 0.6, "debuff": true, "color": Color(0.5, 0.7, 1.0)},
     "weaken": {"name": "Weakened", "out_dmg": 0.75, "debuff": true, "color": Color(0.7, 0.5, 0.8)},
-    "marked": {"name": "Marked", "in_dmg": 1.25, "debuff": true, "color": Color(1.0, 0.4, 0.7)},
+    "marked": {"name": "Marked", "in_dmg": 1.15, "debuff": true, "color": Color(1.0, 0.4, 0.7)},
     "regen": {"name": "Regenerating", "hot": true, "no_resist": true, "color": Color(0.4, 1.0, 0.6)},
     "shield": {"name": "Shielded", "absorb": true, "no_resist": true, "color": Color(0.6, 0.85, 1.0)},
     "empowered": {"name": "Empowered", "out_dmg": 1.3, "color": Color(1.0, 0.45, 0.2)},
