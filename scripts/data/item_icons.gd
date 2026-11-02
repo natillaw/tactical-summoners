@@ -18,7 +18,7 @@ const BASES := {
 }
 ## Consumables and books (Raven): 92 tent, 401 arrows, 563 stew, 485 roast, 96/98/102 books, 304 plan.
 const CONSUMABLES := {"potion": 80, "antidote": 81, "medicine": 81, "con_potion_major": 80,
-    "meal_stew": "r:563", "meal_roast": "r:485", "camp_kit": "r:92", "arrows": "r:401",
+    "meal_stew": "r:563", "meal_roast": "r:485", "meal_broth": "r:563", "meal_feast": "r:485", "camp_kit": "r:92", "arrows": "r:401",
     "book_xp": "r:96", "book_skill": "r:98", "book_trade": "r:102", "book_plan": "r:304"}
 
 
@@ -32,7 +32,11 @@ const RPG := {
     "leather_pants": 211, "cloth_pants": 212, "sandals": 229, "satchel": 287, "backpack": 289, "ring": 249,
     "amulet": 254, "charm": 256, "plain_shirt": 181, "plain_pants": 213, "plain_shoes": 222, "plain_sword": 1,
     "plain_shield": 143, "plain_dagger": 81, "plain_offhand_dagger": 84, "plain_bow": 101, "plain_staff": 87,
-    "plain_club": 25, "potion": 302, "con_potion_major": 303, "antidote": 282, "medicine": 284,
+    "plain_club": 25,
+    # owner 2026-11-02: jeweller variety and the trinket runes (Icon261-270 runestones, 274 clover)
+    "ruby_band": 246, "sapphire_band": 250, "iron_band": 242, "heart_pendant": 257, "sun_pendant": 254, "swift_chain": 251,
+    "blood_rune": 265, "bulwark_rune": 261, "shadow_rune": 268, "hawk_rune": 267, "mana_rune": 266, "mercy_rune": 263,
+    "thorn_rune": 262, "lucky_clover": 274, "potion": 302, "con_potion_major": 303, "antidote": 282, "medicine": 284,
 }
 static var _rpg_cache: Dictionary = {}
 
@@ -128,6 +132,9 @@ static func tooltip(item: Dictionary, vs: Dictionary = {}) -> String:
                 lines.append("%s 0  ▼ -%s" % [String(k).to_upper(), _num(float(other[k]))])
     for a in item.get("affixes", []):
         lines.append("· %s" % str(a.get("name", a)) if a is Dictionary else "· %s" % str(a))
+    var proc := ItemDefs.proc_text(String(item.get("base", "")))
+    if proc != "":
+        lines.append("✦ " + proc)                        # trinket passive (owner 2026-11-02)
     if String(item.get("set", "")) != "":
         lines.append("Set: %s" % String(ItemDefs.SETS.get(String(item["set"]), {}).get("name", item["set"])))
     return "\n".join(lines)

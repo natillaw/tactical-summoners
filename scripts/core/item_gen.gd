@@ -211,6 +211,9 @@ static func describe(item: Dictionary) -> String:
         parts.append("%s %s" % [_fmt(String(a["stat"]), float(a["value"])), a["stat"]])
     if String(item.get("unique", "")) != "":
         parts.append(String(ItemDefs.UNIQUES[String(item["unique"])]["desc"]))
+    var proc := ItemDefs.proc_text(String(item.get("base", "")))
+    if proc != "":
+        parts.append(proc)
     if String(item.get("set", "")) != "":
         parts.append("Set: " + String(ItemDefs.SETS[String(item["set"])]["name"]))
     return ", ".join(parts)

@@ -59,7 +59,7 @@ func _ready() -> void:
     for i in 40:
         brute.tick(0.05, sb.heroes, sb.map)
     check(h.hp == hp0, "a hero who stepped out of the circle takes nothing")
-    # D-143 telegraph shapes and looks
+    # D-145 telegraph shapes and looks
     check(brute.telegraph_shape() == "cone", "Slam marks a cone in front of the brute")
     check(EnemyDefs.strike_shape("ranged", "archer", "arrow")["shape"] == "line" and EnemyDefs.strike_shape("ranged", "caster", "fireball")["shape"] == "circle"
         and EnemyDefs.strike_shape("brute", "", "")["shape"] == "cone" and EnemyDefs.strike_shape("swarm", "", "")["shape"] == "circle",

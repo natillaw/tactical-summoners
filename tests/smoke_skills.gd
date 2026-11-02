@@ -261,6 +261,13 @@ func _ready() -> void:
     h._potion_cd = 0.0
     h._use_consumables(0.05)
     check(not h.has_status("poison") and not h.hero.bag.has("antidote") and h.was_poisoned, "a carried antidote cures poison (and the poisoning is remembered for after the mission)")
+    h.hero.bag["potion"] = 1
+    h.hp = h.max_hp / 5
+    h._potion_cd = 0.0
+    h._use_consumables(0.05)
+    check(h.hero.bag.has("potion") and h.drink_potion().contains("ready"), "a second healing potion waits the 5-minute cooldown (owner 2026-11-02)")
+    h.heal_potion_cd = 0.0
+    check(h.drink_potion() == "" and not h.hero.bag.has("potion"), "after the cooldown the potion can be drunk again")
     h.hp = h.max_hp
 
     # every skill in the data is well formed

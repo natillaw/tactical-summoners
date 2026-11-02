@@ -28,7 +28,7 @@ func _ready() -> void:
 	_res_label = UIKit.label("", 18, UIKit.ACCENT)
 	header.add_child(_res_label)
 	header.add_child(UIKit.button("To the town", func(): explore_requested.emit(), Vector2(130, 40)))
-	header.add_child(UIKit.button("Process HQ Turn", _on_process_turn, Vector2(170, 40)))
+	# owner 2026-11-02: no "pass a day" button (skipping time while crafting or building is cheating)
 	root.add_child(header)
 
 	_status_label = UIKit.label("Assign heroes to facilities based on their past-life occupations to generate resources and build relationships.", 15, UIKit.MUTED)

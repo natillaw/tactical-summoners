@@ -54,6 +54,17 @@ func _ready() -> void:
         tag.scale = Vector2.ONE * 0.5
         tag.position = s.position + Vector2(-8, 4)
         room.add_child(tag)
+    var m: HeroData = Game.master()
+    if m != null:                                 # owner 2026-11-02: the Master is inside, by the door
+        var ms := AnimatedSprite2D.new()
+        ms.sprite_frames = SpriteComposer.build_frames(m)
+        ms.offset = SpriteComposer.feet_offset(m)
+        ms.scale = Vector2.ONE * 0.5
+        var sp0: Array = spots[0]
+        ms.position = Vector2(float(sp0[0]) - 26.0, float(sp0[1]) + 14.0)
+        ms.name = "Master"
+        room.add_child(ms)
+        ms.play("idle_up" if ms.sprite_frames.has_animation("idle_up") else "idle")
     var title := UIKit.label("%s  ·  %s" % [tr(String(TownTables.info(building_id)["name"])),
         (tr("%d working here") % workers.size()) if not workers.is_empty() else tr("nobody works here: assign a hero to make anything")], 15,
         UIKit.ACCENT if not workers.is_empty() else Color(1.0, 0.65, 0.5))
