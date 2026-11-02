@@ -107,11 +107,11 @@ const STATUS := {
     "empowered": {"name": "Empowered", "out_dmg": 1.3, "color": Color(1.0, 0.45, 0.2)},
     "hasted": {"name": "Hasted", "move": 1.25, "no_resist": true, "color": Color(0.6, 1.0, 0.9)},       # elixir of speed (D-077)
     "fortified": {"name": "Fortified", "in_dmg": 0.8, "no_resist": true, "color": Color(0.8, 0.8, 0.6)},  # elixir of defence (D-077)
-    "warded": {"name": "Warded by shamans", "in_dmg": 0.6, "no_resist": true, "color": Color(0.5, 0.8, 1.0)},
+    "warded": {"name": "Warded by shamans", "in_dmg": 0.5, "no_resist": true, "color": Color(0.5, 0.8, 1.0)},
     "wounded": {"name": "Wounded", "max_hp": WOUNDED_MAX_HP, "no_resist": true, "color": Color(0.8, 0.3, 0.3)},
     "focused": {"name": "Focusing fire", "out_dmg": MasterDefs.FOCUS_OUT_DMG, "no_resist": true, "color": Color(1.0, 0.75, 0.3)},   # D-081 command
     "rallied": {"name": "Rallied", "in_dmg": MasterDefs.RALLY_IN_DMG, "no_resist": true, "color": Color(0.6, 0.9, 1.0)},              # D-081 command
-    "inspired": {"name": "Inspired", "out_dmg": 1.15, "no_resist": true, "color": Color(1.0, 0.6, 0.3)},       # D-082 bandit leader
+    "inspired": {"name": "Inspired", "out_dmg": 1.25, "no_resist": true, "color": Color(1.0, 0.6, 0.3)},       # D-082 bandit leader
     "panicked": {"name": "Panicking", "blocks": ["act"], "debuff": true, "no_resist": true, "color": Color(0.95, 0.95, 0.5)},     # D-081 panic
 }
 
@@ -175,7 +175,7 @@ static func resolve(info: DamageInfo, target: Combatant) -> int:
     if info.can_crit and info.rng != null and info.rng.randf() < info.crit_chance:
         info.crit = true
         amount *= CRIT_MULT
-    amount *= target.incoming_mult() * target.soft_in      # D-079 soft block (1.0 unless the squad is short)
+    amount *= target.incoming_mult() * target.soft_in * target.surround_mult   # D-079 soft block; D-084 surrounded
     if info.element != "":
         amount *= 1.0 - clampf(float(target.resistances.get(info.element, 0.0)), 0.0, 0.9)   # P-29 hook
     info.final = mitigate(amount, info.kind, target.armor, target.mres)

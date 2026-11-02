@@ -28,7 +28,7 @@ const PICKUP_RADIUS := 40.0
 const EXTRACT_RADIUS := 56.0
 const REWARD_GEMS := 100          # placeholder rewards (T-020): real tuning comes with the economy
 const REWARD_STONES := 1
-const SURVIVE_TIME := 75.0        # survival: seconds to hold out
+const SURVIVE_TIME := 75.0        # survival: seconds to hold out (default; a floor sets its own "survive_time", D-084)
 const HOLD_TIME := 60.0           # defense: seconds a hero must stand at the shrine
 const SHRINE_RADIUS := 120.0
 const WAVE_EVERY := 12.0
@@ -163,8 +163,9 @@ func _ready() -> void:
 	_viewport.add_child(_world)
 	var ground := SandboxMapView.new(map)
 	ground.z_index = -10                         # floor < zones (-5) < ground effects (-4) < units (0) < air effects (20)
-	_world.add_child(ground)
-	if SandboxMapView.has_camps(map) and BosqueArt.available():
+	if not SimMode.on:                           # D-083 headless simulator: no map art
+		_world.add_child(ground)
+	if not SimMode.on and SandboxMapView.has_camps(map) and BosqueArt.available():
 		for fire in BosqueArt.campfires(map, (map as ProceduralMap).seed_value):
 			_world.add_child(fire)
 			Ambience.add_light(_world, fire.position + Vector2(0, -6), Color(1.0, 0.6, 0.25), 80)   # phase 8                   # master prompt I: animated campfires in the bandit camps
@@ -174,8 +175,9 @@ func _ready() -> void:
 	fog = FogMap.new(map.width, map.height)
 	if floor_number > 0:
 		fog.unpack(Game.floor_explored(floor_number))     # what this account already explored here
-	_fog_view = FogView.new(fog)
-	_world.add_child(_fog_view)
+	if not SimMode.on:                           # D-083: fog of war still rules sight, it is just not drawn
+		_fog_view = FogView.new(fog)
+		_world.add_child(_fog_view)
 	camera = FeelCamera.new()
 	camera.process_callback = Camera2D.CAMERA2D_PROCESS_PHYSICS
 	camera.bounds = Rect2(Vector2.ZERO, map.world_size())
@@ -190,7 +192,7 @@ func _ready() -> void:
 	get_tree().physics_interpolation = true
 
 	mission_type = String(TowerExpedition.get_floor_config(floor_number)["mission"]) if floor_number != 0 else "retrieval"
-	_rng.seed = hash(floor_number) ^ 0x5eed
+	_rng.seed = hash(floor_number) ^ 0x5eed ^ SimMode.run_seed   # D-083: run_seed is 0 in the game
 	relic = SandboxRelic.new("captive" if mission_type == "rescue" else "relic")
 	relic.position = map.center_of(map.relic_cell)      # never the extraction cell (F-003)
 	_world.add_child(relic)
@@ -386,7 +388,17 @@ func _spawn_encounter(enc: Dictionary) -> void:
 	var group: Array = []
 	var cells: Array = enc["cells"]
 	var tactics := tactics_on()
+	var order: Array = []                         # D-083 simulator: config "enemies.count" (1.0 in the game)
+	var want := cells.size()
+	if not is_equal_approx(SimMode.enemy_count, 1.0):
+		want = roundi(float(cells.size()) * SimMode.enemy_count)
+		if String(enc["zone"]) == "objective":
+			want = maxi(1, want)                     # the goal keeps its boss / first guard
 	for i in cells.size():
+		var copies := want / cells.size() + (1 if i < want % cells.size() else 0)
+		for k in copies:
+			order.append(i)
+	for i in order:
 		var e := _spawn_enemy(cells[i], String(enc["members"][i]))
 		e.tactical = tactics
 		e.home = e.position
@@ -459,10 +471,36 @@ func _assign_lookouts() -> void:
 			fastest.job = "scout"
 
 
+var _surround_t: float = 0.0
+
+
+## D-084: a hero with SURROUND_MIN+ awake foes within SURROUND_RADIUS takes SURROUND_MULT damage (formation
+## and pulling one group at a time pay off; charging into a camp does not).
+func _update_surrounded(foes: Array) -> void:
+	for h in heroes:
+		var n := 0
+		if h.alive:
+			for e in foes:
+				if e.alerted and not e.dormant and e.position.distance_to(h.position) <= AiDefs.SURROUND_RADIUS:
+					n += 1
+		h.surround_mult = AiDefs.SURROUND_MULT if n >= AiDefs.SURROUND_MIN else 1.0
+
+
+var _spawned: int = 0                            # D-083: spawn order, part of each creature's dice seed
+
+
 func _spawn_enemy(c: Vector2i, type_id: String) -> SandboxEnemy:
 	var e := SandboxEnemy.new()
 	e.setup_type(type_id, floor_number)
 	e.position = map.center_of(c)
+	_spawned += 1
+	e.spawn_seed = hash([SimMode.run_seed, floor_number, _spawned])
+	if not is_equal_approx(SimMode.enemy_hp, 1.0):          # D-083 simulator multipliers (1.0 in the game)
+		e.base_max_hp = maxi(1, roundi(float(e.base_max_hp) * SimMode.enemy_hp))
+		e.max_hp = e.base_max_hp
+		e.hp = e.max_hp
+	if not is_equal_approx(SimMode.enemy_dmg, 1.0):
+		e.atk = maxi(1, roundi(float(e.atk) * SimMode.enemy_dmg))
 	e.died.connect(_on_enemy_died)
 	e.hero_list = heroes
 	_world.add_child(e)
@@ -683,7 +721,7 @@ func _altar_tick(delta: float) -> void:
 				a.done = false
 			if frac < AltarDefs.PHASE3_AT:                 # phase 3: the altar moves after each window
 				var old: BaronAltar = altars[0]
-				altars[0] = _place_altar(1.0 if randf() < 0.5 else -1.0)
+				altars[0] = _place_altar(1.0 if (hash([floor_number, int(elapsed), altars.size(), SimMode.run_seed]) & 1) == 0 else -1.0)   # D-083: seeded, was randf()
 				old.queue_free()
 	else:
 		if frac < AltarDefs.PHASE2_AT and altars.size() < 2 and frac >= AltarDefs.PHASE3_AT:
@@ -806,6 +844,11 @@ func _secret_tick() -> void:
 
 
 ## Defense: seconds at the shrine (a floor may set "hold_time"; else HOLD_TIME).
+## D-084: survival length per floor (floor 9 was 75 s: won without a fight).
+func survive_time() -> float:
+	return float(TowerExpedition.get_floor_config(floor_number).get("survive_time", SURVIVE_TIME)) if floor_number > 0 else SURVIVE_TIME
+
+
 func hold_time() -> float:
 	return float(TowerExpedition.get_floor_config(floor_number).get("hold_time", HOLD_TIME)) if floor_number > 0 else HOLD_TIME
 
@@ -1002,6 +1045,14 @@ func update_fog() -> void:
 
 
 func _build_ui() -> void:
+	if SimMode.on:                               # D-083 headless simulator: no HUD (labels only, never shown)
+		_info = Label.new()
+		_squad_label = Label.new()
+		add_child(_info)
+		add_child(_squad_label)
+		_info.visible = false
+		_squad_label.visible = false
+		return
 	Ambience.add_vignette(self)                  # phase 8: under the HUD, over the world
 	# D-063: the expedition HUD (party, skills, orders, objective, minimap, boss). The old text panel lives
 	# on as the Details panel (I): _info and _squad_label are refreshed as before.
@@ -1764,6 +1815,10 @@ func tick(delta: float) -> void:
 	_tick_interact(delta)
 	_separate()
 	_separate_enemies()
+	_surround_t -= delta
+	if _surround_t <= 0.0:
+		_surround_t = 0.25
+		_update_surrounded(foes)
 	_tick_boss_wards()
 	_tick_gathering(delta)
 	_fog_t -= delta
@@ -1828,7 +1883,7 @@ func _update_mission(delta: float) -> void:
 					if h.alive and h.position.distance_to(shrine.position) <= SHRINE_RADIUS:
 						h.credit("objective", delta / hold_time() * 3.0)
 				shrine.progress = clampf(mission_timer / hold_time(), 0.0, 1.0)
-			if mission_timer >= (SURVIVE_TIME if mission_type == "survival" else hold_time()) and not living_heroes().is_empty():
+			if mission_timer >= (survive_time() if mission_type == "survival" else hold_time()) and not living_heroes().is_empty():
 				_end_mission(Mission.SUCCESS)
 				return
 	var limit := float(TowerExpedition.get_floor_config(floor_number).get("time_limit", 0.0)) if floor_number > 0 else 0.0
@@ -2131,6 +2186,8 @@ func result_text() -> String:
 
 
 func _show_result() -> void:
+	if SimMode.on:
+		return                                   # D-083 headless simulator: the runner reads the result
 	var center := CenterContainer.new()
 	add_child(center)
 	UIKit.fill(center)
@@ -2197,8 +2254,10 @@ func _separate_enemies() -> void:
 		for j in range(i + 1, live.size()):
 			var b: SandboxEnemy = live[j]
 			var d := b.position - a.position
-			var dist := d.length()
 			var gap := (a.body_radius + b.body_radius) * 0.95
+			if absf(d.x) >= gap or absf(d.y) >= gap:
+				continue                                 # D-083: cheap reject (same result, far fewer square roots)
+			var dist := d.length()
 			if dist < gap and dist > 0.01:
 				var share := b.mass / (a.mass + b.mass)
 				var push := d / dist * (gap - dist)
@@ -2580,7 +2639,7 @@ func _mission_objective() -> String:
 			var left := clues.filter(func(c): return c.visible).size()
 			return "discover the clues (%d left)" % left
 		"survival":
-			return "survive %d s" % maxi(0, int(SURVIVE_TIME - mission_timer))
+			return "survive %d s" % maxi(0, int(survive_time() - mission_timer))
 		"defense":
 			return "keep a hero at the shrine (%d%%)" % int(shrine.progress * 100.0)
 		"rescue":

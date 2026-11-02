@@ -47,23 +47,27 @@ func _ready() -> void:
     Game.tower_maps["7"] = {"seed": 99, "width": 56, "height": 52}            # a floor saved before v2
     var legacy := Game.get_or_create_tower_floor_map(7)
     check(legacy.gen_version == 1 and legacy.width == 56, "a floor saved before v2 keeps being built by generator 1")
-    var mig := Game._migrate({"version": 9, "tower_maps": {"3": {"seed": 5, "width": 48, "height": 44}}})
-    check(int(mig["tower_maps"]["3"]["gen"]) == 1 and mig["tower_maps"]["3"].has("explored") and int(mig["version"]) == Game.SAVE_VERSION,
-        "save v9 -> v10: old floors are marked generator 1, nothing rerolled")
+    # v9 -> v10 marks old floors as generator 1, but v11 -> v12 (bandit tower, master prompt D) wipes
+    # tower_maps on purpose so pre-bandit floors are generated again; a v9 save ends with none.
+    var mig10 := Game._migrate({"version": 9, "tower_maps": {"3": {"seed": 5, "width": 48, "height": 44}}, "tower_cleared": {"3": true}})
+    check((mig10["tower_maps"] as Dictionary).is_empty() and (mig10["tower_cleared"] as Dictionary).has("3") and int(mig10["version"]) == Game.SAVE_VERSION,
+        "save v9 -> current: old floors are regenerated (v12), what was cleared stays")
     Game.tower_maps.erase("7")
 
-    # --- a real expedition screen on floor 1 -------------------------------------------------
-    var sb := SandboxScreen.new(1)
+    # --- a real expedition screen (floor 5: it lets 5 heroes in; D-082b deploys the floor's party size) ---
+    var sb := SandboxScreen.new(5)
     add_child(sb)
     sb.size = Vector2(1280, 720)
     await get_tree().process_frame
-    check(sb.enemies.size() >= 12, "floor 1 spawns its encounters (%d creatures)" % sb.enemies.size())
+    check(sb.enemies.size() >= 12, "floor 5 spawns its encounters (%d creatures)" % sb.enemies.size())
     var far: Array = sb.enemies.filter(func(e): return e.position.distance_to(sb.heroes[0].position) > 900.0)
     check(not far.is_empty() and far.all(func(e): return not e.visible), "creatures far from the squad are hidden by the fog")
     var explored_before := sb.fog.explored_fraction()
     sb.overview = true
-    for i in 30:
-        sb.tick(1.0 / 30.0)
+    sb.set_physics_process(false)
+    for i in 30:                                   # camera + fog only: since D-082 the heroes explore on their own
+        sb._step_camera(1.0 / 30.0)
+        sb.update_fog()
     check(is_equal_approx(sb.fog.explored_fraction(), explored_before) and far.all(func(e): return not e.visible),
         "zooming out to the whole-map view reveals nothing (sight is the heroes', not the camera's)")
     sb.overview = false

@@ -53,7 +53,7 @@ func _ready() -> void:
             sheet = n
     check(sheet != null and sheet._tabs != null and sheet._tabs.get_tab_count() == 6, "the hero sheet has 6 tabs (summary, skills, equipment, progression, profession, relations)")
     # expedition HUD and keys
-    main.call("show_screen", "sandbox", 1)
+    main.call("show_screen", "sandbox", 5)        # floor 5 lets 5 heroes in (D-082b: floor 1 = 1 hero)
     await get_tree().process_frame
     await get_tree().process_frame
     var sb: SandboxScreen = null

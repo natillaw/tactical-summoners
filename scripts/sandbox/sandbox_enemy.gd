@@ -92,8 +92,13 @@ func _init() -> void:
     setup_combat(60, 3, 2, 0.05, 0.0, 1)
 
 
+## D-083: set by SandboxScreen from the run seed and the spawn order, so the same expedition rolls the same
+## dice (it used to mix in the instance id, which changes every run). 0 = spawned elsewhere (tests).
+var spawn_seed: int = 0
+
+
 func _ready() -> void:
-    combat_rng.seed = hash(position) ^ get_instance_id()
+    combat_rng.seed = hash(position) ^ (spawn_seed if spawn_seed != 0 else get_instance_id())
 
 
 ## T-024: swaps the placeholder circle for a Pixel Crawler mob. Falls back to the circle when
@@ -101,6 +106,12 @@ func _ready() -> void:
 func setup_type(id: String, floor_num: int = 0) -> void:
     type_id = id
     _apply_def(id, floor_num)
+    if SimMode.on:
+        # D-083 headless simulator: the size and name the art would give, without the art
+        if _sprite == null:
+            enemy_name = id.capitalize() if EnemySprites.is_voxel(id) or EnemySprites.has_processed(id) else enemy_name
+            apply_size(CombatRules.size_class_of(id))
+        return
     var f := EnemySprites.build_frames(id)
     if f == null or _sprite != null:
         return
@@ -155,7 +166,8 @@ func scale_stats(k: float) -> void:
 
 
 ## Wakes this creature and its whole encounter (spotted a hero, or one of them was hurt).
-func alert() -> void:
+## noise (D-084): the fight also wakes idle creatures of other groups within AiDefs.NOISE_RADIUS (no chain).
+func alert(noise: bool = true) -> void:
     if alerted and not dormant:
         return
     alerted = true
@@ -163,7 +175,12 @@ func alert() -> void:
     visible = true
     for m in group_mates:
         if is_instance_valid(m) and m != self and m.alive and not m.alerted:
-            m.alert()
+            m.alert(noise)
+    if noise:
+        for o in _allies:
+            if is_instance_valid(o) and o != self and o.alive and not o.alerted and not o.dormant and not group_mates.has(o) \
+                    and o.position.distance_to(position) <= AiDefs.NOISE_RADIUS:
+                o.alert(false)
 
 
 ## Size class from the measured art (CombatRules.SIZE): bigger creatures reach further, telegraph

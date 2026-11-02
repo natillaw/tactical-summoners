@@ -44,12 +44,13 @@ suites=(
   "combat ai|res://tests/smoke_ai.tscn|ALL PASSED"
   "bots|res://tests/smoke_bots.tscn|ALL PASSED"
   "fixes|res://tests/smoke_fixes.tscn|ALL PASSED"
+  "sim|-s res://tools/sim/run_sim.gd -- --config tools/sim/configs/test_smoke.json --check-determinism --quiet|ALL PASSED"
 )
 bad=0
 for s in "${suites[@]}"; do
   IFS='|' read -r name args ok <<< "$s"
   # shellcheck disable=SC2086
-  out=$(timeout 180 "$GODOT" --headless --path . $args 2>&1); code=$?
+  out=$(timeout 400 "$GODOT" --headless --path . $args 2>&1); code=$?
   if [ $code -eq 0 ] && grep -qF "$ok" <<< "$out" && ! grep -q "FAIL  " <<< "$out" && ! grep -q "SCRIPT ERROR" <<< "$out"; then
     echo "PASS  $name" | tee -a "$LOG"
   else

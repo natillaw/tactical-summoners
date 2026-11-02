@@ -138,7 +138,7 @@ func _ready() -> void:
     add_child(sb5)
     await get_tree().process_frame
     sb5.set_physics_process(false)
-    check(sb5._mission_objective() == "defeat Grove Warlord", "the boss objective names the floor's boss (%s)" % sb5._mission_objective())
+    check(sb5._mission_objective() == "defeat %s" % String(TowerExpedition.get_floor_config(5)["boss_name"]), "the boss objective names the floor's boss (%s)" % sb5._mission_objective())
     # #8: the boss fights in phases (calls its warband, then enrages)
     var b: SandboxEnemy = sb5.boss
     for s in sb5.shamans:                            # D-065: shamans ward the boss; out of the way for this check

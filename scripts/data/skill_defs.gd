@@ -102,8 +102,8 @@ const SKILLS := {
     "rain_of_arrows": {"name": "Rain of Arrows", "class": "class.ranger", "cost": 80, "cd": 30.0, "cast": 1.0, "range": 260.0, "target": "target_aoe", "radius": 120.0,
         "effects": [{"t": "damage", "mult": 2.2, "kind": "power"}, {"t": "status", "id": "slow", "dur": 3.0}], "desc": "A storm of arrows over a wide area."},
     # --- cleric (mana)
-    "heal": {"name": "Heal", "class": "class.cleric", "cost": 20, "cd": 5.0, "cast": 0.6, "range": 200.0, "target": "ally_low",
-        "effects": [{"t": "heal", "mult": 2.4}], "desc": "Heal the most wounded ally in range."},
+    "heal": {"name": "Heal", "class": "class.cleric", "cost": 20, "cd": 4.0, "cast": 0.6, "range": 200.0, "target": "ally_low",
+        "effects": [{"t": "heal", "mult": 3.0}], "desc": "Heal the most wounded ally in range."},
     "smite": {"name": "Smite", "class": "class.cleric", "cost": 15, "cd": 7.0, "cast": 0.0, "range": 200.0, "target": "enemy",
         "effects": [{"t": "damage", "mult": 1.6, "kind": "magical"}], "desc": "Holy light burns a foe (magic)."},
     "holy_radiance": {"name": "Holy Radiance", "class": "class.cleric", "cost": 35, "cd": 16.0, "cast": 0.0, "range": 0.0, "target": "self",
