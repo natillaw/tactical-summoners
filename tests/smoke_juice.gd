@@ -20,7 +20,7 @@ func _ready() -> void:
     # --- every skill and basic attack has a profile --------------------------------------------
     var missing: Array = SkillDefs.SKILLS.keys().filter(func(id): return not JuiceDefs.has_skill(String(id)))
     check(missing.is_empty(), "every skill has its own juice profile %s" % str(missing))
-    var classes: Array = ["warrior", "rogue", "ranger", "mage", "cleric", "commoner"]
+    var classes: Array = ["warrior", "rogue", "archer", "mage", "cleric", "commoner"]
     check(classes.all(func(c): return JuiceDefs.BASIC.has("basic." + c)), "every class has a basic-attack profile")
     var bad: Array = JuiceDefs.all_ids().filter(func(id): return JuiceProfile.get_profile(String(id)) == null)
     check(bad.is_empty(), "every profile id builds a JuiceProfile %s" % str(bad))

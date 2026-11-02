@@ -58,7 +58,7 @@ El informe queda en `docs/reports/sim/<fecha>_<nombre>/`: `resumen.md`, `runs.cs
 }
 ```
 
-- **Clases**: warrior, rogue, ranger (arquero), mage, cleric, commoner (también en español). **Rareza** = alias de estrellas (common 1 … legendary 5; P-09 sigue pendiente).
+- **Clases**: warrior, rogue, archer (arquero; `ranger` y `explorador` se aceptan como alias), mage, cleric, commoner (también en español). **Rareza** = alias de estrellas (common 1 … legendary 5; P-09 sigue pendiente).
 - **Gear**: un preset de `gear_presets.json` (`kit_blanco`, `sin_nada`, `tier1`, `tier2`, `tier3`), o una lista de ítems de `ItemDefs.BASES`. Las propiedades al azar las pone `ItemGen` con `gear_seed`; `"stats"` fija valores a mano y `"affixes": []` quita los afijos.
 - **overrides / sweep**: cualquier constante como `Clase.CONSTANTE` (o una clave dentro de una tabla: `Clase.TABLA.clave`). Se aplica en tiempo de ejecución en una copia parcheada del script que se carga en cada proceso antes de compilar el juego; el repo no se toca. Un `sweep` también acepta rutas de la config (`bot.retreat_hp`, `enemies.hp`).
 - Alertas: piso imposible (< 10 %), trivial (> 95 %) y **ventaja táctica corta**: el táctico debe sacar ≥ 30 puntos al loco con la misma build (`alerts.tactical_gap`).

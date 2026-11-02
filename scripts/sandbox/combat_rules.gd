@@ -69,23 +69,23 @@ static func auto_dodge_chance(agi: int, level: int) -> float:
     return clampf(DODGE_PER_AGI_LEVEL * float(agi) * float(maxi(0, level - 1)), 0.0, DODGE_MAX)
 
 
-## Fog of war sight (D-056), in map cells. Scouts (ranger, rogue) see further; equipment can add
+## Fog of war sight (D-056), in map cells. Scouts (archer, rogue) see further; equipment can add
 ## "vision" later. A downed hero still lights its own surroundings a little.
 const VISION_CELLS := 6
 const SCOUT_VISION_BONUS := 2
-const SCOUT_CLASSES := ["class.ranger", "class.rogue"]
+const SCOUT_CLASSES := ["class.archer", "class.rogue"]
 const DOWNED_VISION := 2
 const FOG_EVERY := 0.15          # seconds between sight updates
 ## D-090: sight = the class base + perception. Perception = (INT + TEM) / PERCEPTION_DIV cells (+ items'
 ## "perception"); with average attributes (5 + 5) it is 1, so the averages match the old 6 / 8 cells.
-const CLASS_VISION := {"class.warrior": 5, "class.rogue": 7, "class.ranger": 7, "class.mage": 5,
+const CLASS_VISION := {"class.warrior": 5, "class.rogue": 7, "class.archer": 7, "class.mage": 5,
     "class.cleric": 5, "class.commoner": 5, "class.none": 5}
 const PERCEPTION_DIV := 10
 const PERCEPTION_MAX := 3
 ## D-090 stealth (0..STEALTH_MAX): how far a creature notices a hero = its perception x (1 - stealth), never
 ## below DETECT_MIN of it. Class base + items' "stealth" + BUSH_STEALTH while standing in a bush. A creature
 ## that is not yet fighting also needs a clear line of sight (trees and walls hide the hero).
-const CLASS_STEALTH := {"class.rogue": 0.35, "class.ranger": 0.25, "class.mage": 0.05, "class.cleric": 0.05}
+const CLASS_STEALTH := {"class.rogue": 0.35, "class.archer": 0.25, "class.mage": 0.05, "class.cleric": 0.05}
 const BUSH_STEALTH := 0.4
 const STEALTH_MAX := 0.65
 const DETECT_MIN := 0.35

@@ -82,7 +82,7 @@ func _ready() -> void:
     var n0 := _fx_count(world)
     h._basic_attack(e1)
     check(_fx_count(world) > n0, "a basic attack shows its weapon effect (%s)" % h.weapon_id())
-    h.hero.hero_class = "class.ranger"
+    h.hero.hero_class = "class.archer"
     n0 = _fx_count(world)
     e1.position = base + Vector2(160, 0)
     h._basic_attack(e1)

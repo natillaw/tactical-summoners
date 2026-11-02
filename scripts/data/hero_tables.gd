@@ -53,7 +53,7 @@ const CLASSES := {
     "class.rogue": {"name": "Rogue", "reach": "melee",
         "desc": "Swift and agile striker dealing rapid physical damage.",
         "base": {"hp": 85, "atk": 14, "mag": 3, "def": 5, "spd": 15}},
-    "class.ranger": {"name": "Ranger", "reach": "ranged",
+    "class.archer": {"name": "Archer", "reach": "ranged",
         "desc": "Backline marksman striking foes from afar.",
         "base": {"hp": 80, "atk": 12, "mag": 4, "def": 5, "spd": 12}},
     "class.cleric": {"name": "Cleric", "reach": "melee",
@@ -66,6 +66,16 @@ const CLASSES := {
 ## D-035: attribute profile per class. attrs/growth order = ATTR_KEYS (FUE, AGI, VIT, INT, TEM).
 ## weapon/focus = flat physical/magic power of the class kit until real equipment exists (D-039);
 ## armor/mres = flat class defences; kind = damage type of the basic attack. Tuning placeholders.
+## Task 03b: the ranger ("explorador") is now the archer. Old ids found in saves and simulator configs
+## are read through canonical_class().
+const CLASS_ALIASES := {"class.ranger": "class.archer", "class.explorador": "class.archer", "class.arquero": "class.archer"}
+
+
+## The current class id for `id` (old aliases -> new id; anything else unchanged).
+static func canonical_class(id: String) -> String:
+    return String(CLASS_ALIASES.get(id, id))
+
+
 const ATTR_KEYS := ["fue", "agi", "vit", "int", "tem"]
 const ATTR_NAMES := {"fue": "FUE", "agi": "AGI", "vit": "VIT", "int": "INT", "tem": "TEM"}
 ## legacy stat key each attribute inherits its personal variance / trait modifier from
@@ -75,13 +85,13 @@ const CLASS_COMBAT := {
     "class.commoner": {"attrs": [5, 5, 6, 3, 5], "growth": [0.6, 0.6, 0.7, 0.3, 0.5], "weapon": 3, "focus": 1, "armor": 2, "mres": 0, "kind": "physical"},
     "class.warrior": {"attrs": [8, 4, 9, 2, 6], "growth": [1.0, 0.4, 1.1, 0.2, 0.6], "weapon": 6, "focus": 0, "armor": 6, "mres": 1, "kind": "physical"},
     "class.rogue": {"attrs": [6, 9, 5, 3, 4], "growth": [0.8, 1.1, 0.6, 0.3, 0.4], "weapon": 5, "focus": 0, "armor": 1, "mres": 0, "kind": "physical"},
-    "class.ranger": {"attrs": [6, 8, 5, 4, 5], "growth": [0.8, 1.0, 0.6, 0.4, 0.5], "weapon": 5, "focus": 1, "armor": 1, "mres": 1, "kind": "physical"},
+    "class.archer": {"attrs": [6, 8, 5, 4, 5], "growth": [0.8, 1.0, 0.6, 0.4, 0.5], "weapon": 5, "focus": 1, "armor": 1, "mres": 1, "kind": "physical"},
     "class.cleric": {"attrs": [4, 4, 7, 7, 8], "growth": [0.4, 0.4, 0.8, 0.9, 1.0], "weapon": 2, "focus": 5, "armor": 3, "mres": 3, "kind": "magical"},
     "class.mage": {"attrs": [2, 5, 4, 10, 6], "growth": [0.2, 0.5, 0.5, 1.2, 0.7], "weapon": 1, "focus": 6, "armor": 0, "mres": 2, "kind": "magical"},
 }
 
 const BIRTH_CLASS_WEIGHTS := {
-    "class.commoner": 35, "class.warrior": 15, "class.rogue": 15, "class.ranger": 15, "class.cleric": 10, "class.mage": 10,
+    "class.commoner": 35, "class.warrior": 15, "class.rogue": 15, "class.archer": 15, "class.cleric": 10, "class.mage": 10,
 }
 const PROMOTION_CLASS_POOL := []
 

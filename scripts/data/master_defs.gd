@@ -26,7 +26,7 @@ const BEARDS := ["", "beard_trimmed"]          # male bodies only, like the summ
 const CLASSES := {
     "class.warrior": {"role": "Tank", "text": "Holds the front line and takes the blows meant for the others."},
     "class.rogue": {"role": "Scout", "text": "Fast and light: finds the way, strikes first and gets out."},
-    "class.ranger": {"role": "Damage", "text": "Fights from a distance and picks off what threatens the squad."},
+    "class.archer": {"role": "Damage", "text": "Fights from a distance and picks off what threatens the squad."},
     "class.mage": {"role": "Damage", "text": "Fragile, but its spells hit the hardest of all."},
     "class.cleric": {"role": "Support", "text": "Keeps the squad standing with healing and protection."},
     "class.commoner": {"role": "Damage", "text": "No training, no limits: a bit of everything, eager to learn."},

@@ -54,7 +54,7 @@ func _init() -> void:
     for s in [3, 11, 25, 40]:
         rng.seed = s
         looks.append(LpcWardrobe.random_look(rng, "elf" if s == 25 else "human"))
-    var classes := ["class.warrior", "class.rogue", "class.mage", "class.ranger"]
+    var classes := ["class.warrior", "class.rogue", "class.mage", "class.archer"]
     var anims: Array = LpcComposer.index()["anims"]
     var strip := Image.create(64 * 13, 64 * anims.size() * looks.size(), false, Image.FORMAT_RGBA8)
     strip.fill(Color(0.33, 0.45, 0.3))

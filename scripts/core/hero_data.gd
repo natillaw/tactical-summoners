@@ -563,7 +563,7 @@ static func from_dict(d: Dictionary) -> HeroData:
     h.stars = clampi(int(d.get("stars", 1)), 1, HeroTables.MAX_STARS)
     h.level = maxi(1, int(d.get("level", 1)))
     h.xp = int(d.get("xp", 0))
-    h.hero_class = str(d.get("class", "class.none"))
+    h.hero_class = HeroTables.canonical_class(str(d.get("class", "class.none")))   # 03b: class.ranger -> class.archer
     if not HeroTables.CLASSES.has(h.hero_class):
         h.hero_class = "class.none"
     h.appearance = (d.get("appearance", {}) as Dictionary).duplicate()

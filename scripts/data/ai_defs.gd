@@ -27,7 +27,7 @@ const WRONG_TARGET_CHANCE := 0.07
 
 ## Role of each class (layer 3).
 const ROLE_BY_CLASS := {
-    "class.warrior": "tank", "class.rogue": "dps", "class.mage": "dps", "class.ranger": "scout",
+    "class.warrior": "tank", "class.rogue": "dps", "class.mage": "dps", "class.archer": "scout",
     "class.cleric": "healer", "class.commoner": "support", "class.none": "support",
 }
 ## tank: goes to the front and peels the foe hitting the weakest ally within PROTECT_RADIUS.

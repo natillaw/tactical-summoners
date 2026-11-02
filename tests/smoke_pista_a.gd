@@ -67,12 +67,12 @@ func _ready() -> void:
     var war: SandboxHero = sb.heroes[0]
     var mage: SandboxHero = sb.heroes[1]
     var rogue: SandboxHero = sb.heroes[2]
-    var ranger: SandboxHero = sb.heroes[3]
+    var archer: SandboxHero = sb.heroes[3]
     var cleric: SandboxHero = sb.heroes[4] if sb.heroes.size() > 4 else sb.heroes[1]
     _as(war, "class.warrior")
     _as(mage, "class.mage")
     _as(rogue, "class.rogue")
-    _as(ranger, "class.ranger")
+    _as(archer, "class.archer")
     _as(cleric, "class.cleric")
     var e1: SandboxEnemy = sb.enemies[0]
     var e2: SandboxEnemy = sb.enemies[1]
@@ -149,7 +149,7 @@ func _ready() -> void:
 
     # --- 3 resources and costs ----------------------------------------------------------------
     check(rogue.resource_kind() == "energy" and is_equal_approx(rogue.resource_max(), 100.0), "rogue: energy 100")
-    check(war.resource_kind() == "fury" and ranger.resource_kind() == "concentration" and mage.resource_kind() == "mana", "warrior fury, archer concentration, mage mana")
+    check(war.resource_kind() == "fury" and archer.resource_kind() == "concentration" and mage.resource_kind() == "mana", "warrior fury, archer concentration, mage mana")
     var com := HeroGenerator.generate(777, 1)
     com.hero_class = "class.commoner"
     check(SkillDefs.resource_of("class.commoner") == "none" and SkillDefs.cost_for("shove", "class.commoner") == 0.0, "commoner: no resource, no cost")
@@ -188,35 +188,35 @@ func _ready() -> void:
     rogue.combo = 5
     rogue.cds.clear()
     check(not rogue._auto_skill([e1]), "the AI never casts what it cannot pay")
-    ranger.res = 0.0
-    ranger.path.clear()
-    ranger._still_t = 1.0
-    ranger.combat_t = 0.0
-    ranger.tick(1.0)
-    var still_gain := ranger.res
-    ranger.res = 0.0
-    ranger.path.append(ranger.position + Vector2(200, 0))
-    ranger.tick(1.0)
-    check(still_gain > ranger.res, "concentration regenerates faster standing still (%.1f vs %.1f)" % [still_gain, ranger.res])
-    ranger.path.clear()
-    check(ranger.arrows_left() == AiDefs.ARROWS_START, "the archer enters with a full quiver (%d)" % ranger.arrows_left())
-    ranger._draw_target = e1
-    ranger._release_shot()
-    check(ranger.arrows_left() == AiDefs.ARROWS_START - 1, "every shot spends an arrow")
+    archer.res = 0.0
+    archer.path.clear()
+    archer._still_t = 1.0
+    archer.combat_t = 0.0
+    archer.tick(1.0)
+    var still_gain := archer.res
+    archer.res = 0.0
+    archer.path.append(archer.position + Vector2(200, 0))
+    archer.tick(1.0)
+    check(still_gain > archer.res, "concentration regenerates faster standing still (%.1f vs %.1f)" % [still_gain, archer.res])
+    archer.path.clear()
+    check(archer.arrows_left() == AiDefs.ARROWS_START, "the archer enters with a full quiver (%d)" % archer.arrows_left())
+    archer._draw_target = e1
+    archer._release_shot()
+    check(archer.arrows_left() == AiDefs.ARROWS_START - 1, "every shot spends an arrow")
     e1.arrows_in = 4
-    ranger._arrow_corpses.append(e1)
+    archer._arrow_corpses.append(e1)
     e1.dead = true
     e1.alive = false
-    ranger.position = e1.position + Vector2(10, 0)
-    ranger._pick_up_arrows()
-    check(ranger.arrows_left() == AiDefs.ARROWS_START - 1 + ceili(4 * AiDefs.ARROW_RECOVER), "arrows are taken back from the bodies")
-    ranger.arrows = 0
-    check(not ranger.is_ranged(), "with no arrows the archer fights up close")
-    ranger.arrows = AiDefs.ARROWS_START
-    for x in ranger._shots:
+    archer.position = e1.position + Vector2(10, 0)
+    archer._pick_up_arrows()
+    check(archer.arrows_left() == AiDefs.ARROWS_START - 1 + ceili(4 * AiDefs.ARROW_RECOVER), "arrows are taken back from the bodies")
+    archer.arrows = 0
+    check(not archer.is_ranged(), "with no arrows the archer fights up close")
+    archer.arrows = AiDefs.ARROWS_START
+    for x in archer._shots:
         if is_instance_valid(x):
             x.free()
-    ranger._shots.clear()
+    archer._shots.clear()
 
     # --- 4 camp ---------------------------------------------------------------------------------
     for e in sb.enemies:
@@ -278,9 +278,9 @@ func _ready() -> void:
     SquadSynergies.update(sb.heroes, [], null, null, map)
     check(war.syn_in < 1.0 and mage.syn_in < 1.0 and Game.synergy_codex.has("friends"), "bond: friends near each other take less damage")
     rogue.position = base + Vector2(0, 100)
-    ranger.position = base + Vector2(0, 160)
+    archer.position = base + Vector2(0, 160)
     SquadSynergies.update(sb.heroes, [], null, null, map)
-    check(rogue.synergy_vision == 1 and ranger.synergy_vision == 1 and Game.synergy_codex.has("shared_sight"), "exploration: two scouts share sight")
+    check(rogue.synergy_vision == 1 and archer.synergy_vision == 1 and Game.synergy_codex.has("shared_sight"), "exploration: two scouts share sight")
     check(float(chef.contrib.get("syn_cook", 0.0)) >= 1.0, "camp: the chef cooked for the camp (synergy fired)")
     check(SynergyDefs.SYNERGIES.has("gather_pair") and String(SynergyDefs.info("gather_pair")["type"]) == "gather", "gathering: defined (its effect belongs to gather_node, pista C)")
     _fresh(e1, base)

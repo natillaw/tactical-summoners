@@ -46,7 +46,7 @@ const SET_NAMES := {1: "Coppervein", 2: "Steelguard", 3: "Moonsilver", 4: "Runef
 const ARMOR_BY_CLASS := {
     "class.warrior": ["plate", "leather"],
     "class.rogue": ["leather"],
-    "class.ranger": ["leather"],
+    "class.archer": ["leather"],
     "class.mage": ["cloth"],
     "class.cleric": ["cloth"],
     "class.commoner": ["leather", "cloth"],
@@ -86,7 +86,7 @@ const CURSES := {
 ## Light class rules: these classes cannot equip these bases at all (everything else may, at
 ## NOVICE_EFF if the class is not trained with it).
 const FORBIDDEN := {"greataxe": ["class.mage", "class.cleric"], "staff": ["class.warrior"], "wand": ["class.warrior"],
-    "bow": [], "shield": ["class.mage", "class.ranger"]}
+    "bow": [], "shield": ["class.mage", "class.archer"]}
 
 ## Uniques (secret objectives): chance per completed secret; once per account.
 const UNIQUE_CHANCE := 0.02

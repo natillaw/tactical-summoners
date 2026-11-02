@@ -18,7 +18,7 @@ const SKILLS := {
         "desc": "Hit every enemy around you."},
     "class.rogue": {"name": "Quick Slash", "kind": "target", "mult": 2.2, "range": 70.0, "cooldown": 9.0,
         "desc": "One heavy strike on a nearby enemy."},
-    "class.ranger": {"name": "Rapid Shot", "kind": "target", "mult": 1.9, "range": 220.0, "cooldown": 10.0,
+    "class.archer": {"name": "Rapid Shot", "kind": "target", "mult": 1.9, "range": 220.0, "cooldown": 10.0,
         "desc": "Swift double shot from distance."},
     "class.cleric": {"name": "Holy Radiance", "kind": "self_heal", "heal": 0.35, "cooldown": 16.0,
         "desc": "Channel holy light to heal 35% max HP."},

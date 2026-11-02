@@ -40,7 +40,7 @@ static func _pair_scouts(a: SandboxHero, b: SandboxHero, d: float, foes: Array, 
         a.synergy_vision = v
         b.synergy_vision = v
         _note_once(a, "shared_sight")
-    if ((ca == "class.rogue" and cb == "class.ranger") or (ca == "class.ranger" and cb == "class.rogue")) \
+    if ((ca == "class.rogue" and cb == "class.archer") or (ca == "class.archer" and cb == "class.rogue")) \
             and d <= float(SynergyDefs.param("trap_sense", "radius", 200.0)):
         var reveal := float(SynergyDefs.param("trap_sense", "reveal", 200.0))
         for e in foes:

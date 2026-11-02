@@ -51,7 +51,7 @@ const SYNERGIES := {
 }
 ## Character clashes that count as "incompatible" whatever the relationship.
 const CLASHING_TRAITS := [["trait.reckless", "trait.cautious"], ["trait.honorable", "trait.cunning"], ["trait.cheerful", "trait.gloomy"]]
-const SCOUT_CLASSES := ["class.ranger", "class.rogue"]
+const SCOUT_CLASSES := ["class.archer", "class.rogue"]
 const DISCOVER_COLOR := Color(1.0, 0.85, 0.35)
 
 

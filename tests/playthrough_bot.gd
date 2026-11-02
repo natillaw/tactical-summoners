@@ -27,7 +27,7 @@ var MATRIX := OS.get_environment("PT_MATRIX") != ""
 var LOCO := false
 var QUIET := false
 const MATRIX_CONTENT := [0, 1, 3, 5, 10]          # 0 = the Wilds (tier 1)
-const MATRIX_SQUAD := ["class.warrior", "class.warrior", "class.ranger", "class.mage", "class.cleric"]
+const MATRIX_SQUAD := ["class.warrior", "class.warrior", "class.archer", "class.mage", "class.cleric"]
 ## D-080: the Master the bot creates; it drives the Master like a player (the other four act on their own).
 const BOT_MASTER := {"first": "Bot", "last": "Master", "class": "class.warrior", "trait": "trait.stubborn",
     "look": {"race": "human", "body": "male", "skin": "light", "eyes": "blue", "hair": "hair_plain", "hair_color": "black", "beard": ""}}

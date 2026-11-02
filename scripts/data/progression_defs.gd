@@ -86,5 +86,5 @@ const SACRIFICE := {
     4: {"materials": 120, "core": 2, "venom": 3},
     5: {"materials": 200, "core": 3, "ingot": 5},
 }
-const SACRIFICE_CLASS := {"class.warrior": {"bone": 1}, "class.rogue": {"venom": 1}, "class.ranger": {"silk": 1},
+const SACRIFICE_CLASS := {"class.warrior": {"bone": 1}, "class.rogue": {"venom": 1}, "class.archer": {"silk": 1},
     "class.mage": {"spore": 2}, "class.cleric": {"herb": 2}, "class.commoner": {"materials": 5}, "class.none": {"materials": 5}}

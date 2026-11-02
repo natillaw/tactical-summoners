@@ -115,7 +115,7 @@
   "trust": 32
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/4",
@@ -145,7 +145,7 @@
   "trust": 55
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/4",
@@ -319,7 +319,7 @@
   "trust": 58
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/3",
@@ -492,7 +492,7 @@
   "trust": 40
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/2",
@@ -637,7 +637,7 @@
   "trust": 55
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/1",
@@ -927,7 +927,7 @@
   "trust": 67
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/2",
@@ -1015,7 +1015,7 @@
   "trust": 51
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/1",
@@ -1217,7 +1217,7 @@
   "trust": 53
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/1",
@@ -1450,7 +1450,7 @@
   "trust": 72
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/1",
@@ -1769,7 +1769,7 @@
   "trust": 38
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/3",
@@ -2145,7 +2145,7 @@
   "trust": 70
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/1",
@@ -2667,7 +2667,7 @@
   "trust": 48
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/3",
@@ -2725,7 +2725,7 @@
   "trust": 25
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/1",
@@ -3335,7 +3335,7 @@
   "trust": 67
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/4",
@@ -3537,7 +3537,7 @@
   "trust": 67
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/5",
@@ -3595,7 +3595,7 @@
   "trust": 51
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/4",
@@ -3885,7 +3885,7 @@
   "trust": 59
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/1",
@@ -4060,7 +4060,7 @@
   "trust": 61
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/5",
@@ -4089,7 +4089,7 @@
   "trust": 56
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/5",
@@ -4379,7 +4379,7 @@
   "trust": 52
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/1",
@@ -4465,7 +4465,7 @@
   "trust": 69
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/4",
@@ -4579,7 +4579,7 @@
   "trust": 54
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/2",
@@ -4785,7 +4785,7 @@
   "trust": 29
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/4",
@@ -4869,7 +4869,7 @@
   "trust": 37
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/3",
@@ -5075,7 +5075,7 @@
   "trust": 61
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/2",
@@ -5132,7 +5132,7 @@
   "trust": 64
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/1",
@@ -5480,7 +5480,7 @@
   "trust": 52
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/4",
@@ -5625,7 +5625,7 @@
   "trust": 51
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/1",
@@ -5684,7 +5684,7 @@
   "trust": 42
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/1",
@@ -5739,7 +5739,7 @@
   "trust": 56
  },
  {
-  "class": "class.ranger",
+  "class": "class.archer",
   "composure": 100,
   "look_v3": {
    "body": "Body/3",

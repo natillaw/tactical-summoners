@@ -138,7 +138,7 @@ func _ready() -> void:
     h.combat_t = SkillDefs.COMBAT_LINGER
     h.tick(1.0)
     check(h.res - calm > 0.0 and h.res - calm < calm, "D-090: while fighting it comes back slower still")
-    check(SkillDefs.resource_of("class.warrior") == "fury" and SkillDefs.resource_of("class.ranger") == "concentration" and SkillDefs.resource_of("class.rogue") == "energy"
+    check(SkillDefs.resource_of("class.warrior") == "fury" and SkillDefs.resource_of("class.archer") == "concentration" and SkillDefs.resource_of("class.rogue") == "energy"
         and SkillDefs.resource_of("class.cleric") == "mana" and SkillDefs.resource_of("class.commoner") == "none", "class resources follow D-090")
 
     # --- effect types ------------------------------------------------------------------------

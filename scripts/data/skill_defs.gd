@@ -36,7 +36,7 @@ const RESOURCES := {
     "mana": {"name": "Mana", "color": Color(0.35, 0.55, 1.0), "base": 60, "per_attr": "int", "per": 6, "start": 1.0, "regen": 1.5, "regen_combat": 1.0, "decay": 0.0, "on_hit": 0.0, "on_hurt": 0.0},
     "none": {"name": "None", "color": Color(0.6, 0.6, 0.6), "base": 0, "start": 0.0, "regen": 0.0, "decay": 0.0, "on_hit": 0.0, "on_hurt": 0.0},
 }
-const CLASS_RESOURCE := {"class.warrior": "fury", "class.rogue": "energy", "class.ranger": "concentration",
+const CLASS_RESOURCE := {"class.warrior": "fury", "class.rogue": "energy", "class.archer": "concentration",
     "class.mage": "mana", "class.cleric": "mana", "class.commoner": "none", "class.none": "none"}
 ## Rogue combo points: every basic attack and every skill with "combo": n builds them (max COMBO_MAX);
 ## a "finisher" skill needs at least 1 and spends them all, x (1 + FINISHER_PER_COMBO x points).
@@ -51,7 +51,7 @@ const KITS := {
     "class.commoner": {"start": ["improvised_strike", "second_breath", "shove"], "learn": ["rally", "dirty_trick", "second_breath", "improvised_strike", "shove"]},
     "class.warrior": {"start": ["cleave", "shield_bash", "war_cry"], "learn": ["charge", "shield_wall", "whirlwind", "rallying_shout", "earthshatter", "cleave", "shield_bash", "war_cry"]},
     "class.rogue": {"start": ["quick_slash", "poison_blade", "shadow_step"], "learn": ["eviscerate", "backstab", "smoke_bomb", "fan_of_knives", "kidney_shot", "quick_slash", "poison_blade", "shadow_step"]},
-    "class.ranger": {"start": ["rapid_shot", "snare_shot", "volley"], "learn": ["hunters_mark", "bear_trap", "piercing_shot", "concussive_shot", "rain_of_arrows", "rapid_shot", "snare_shot", "volley"]},
+    "class.archer": {"start": ["rapid_shot", "snare_shot", "volley"], "learn": ["hunters_mark", "bear_trap", "piercing_shot", "concussive_shot", "rain_of_arrows", "rapid_shot", "snare_shot", "volley"]},
     "class.cleric": {"start": ["heal", "smite", "holy_radiance"], "learn": ["blessing", "purify", "sanctuary", "judgement", "mass_heal", "heal", "smite", "holy_radiance"]},
     "class.mage": {"start": ["fire_burst", "frost_bolt", "arcane_shield"], "learn": ["frost_nova", "blink", "chain_burn", "meteor", "arcane_torrent", "fire_burst", "frost_bolt", "arcane_shield"]},
 }
@@ -102,22 +102,22 @@ const SKILLS := {
         "effects": [{"t": "status", "id": "stun", "dur": 2.0}, {"t": "interrupt"}], "desc": "Finisher: stun a foe (longer with more combo points)."},
     "eviscerate": {"name": "Eviscerate", "class": "class.rogue", "cost": 35, "finisher": true, "cd": 10.0, "cast": 0.0, "range": 60.0, "target": "enemy",
         "effects": [{"t": "damage", "mult": 2.2, "kind": "power"}], "desc": "Finisher: one brutal strike, stronger with every combo point."},
-    # --- ranger (focus)
-    "rapid_shot": {"name": "Rapid Shot", "class": "class.ranger", "cost": 25, "cd": 7.0, "cast": 0.0, "range": 220.0, "target": "enemy",
+    # --- archer (concentration)
+    "rapid_shot": {"name": "Rapid Shot", "class": "class.archer", "cost": 25, "cd": 7.0, "cast": 0.0, "range": 220.0, "target": "enemy",
         "effects": [{"t": "damage", "mult": 1.8, "kind": "power"}], "desc": "Swift double shot from distance."},
-    "snare_shot": {"name": "Snare Shot", "class": "class.ranger", "cost": 30, "cd": 12.0, "cast": 0.0, "range": 220.0, "target": "enemy",
+    "snare_shot": {"name": "Snare Shot", "class": "class.archer", "cost": 30, "cd": 12.0, "cast": 0.0, "range": 220.0, "target": "enemy",
         "effects": [{"t": "damage", "mult": 0.6, "kind": "power"}, {"t": "status", "id": "root", "dur": 2.5}], "desc": "Pin a charging foe in place."},
-    "volley": {"name": "Volley", "class": "class.ranger", "cost": 40, "cd": 14.0, "cast": 0.5, "range": 240.0, "target": "target_aoe", "radius": 75.0,
+    "volley": {"name": "Volley", "class": "class.archer", "cost": 40, "cd": 14.0, "cast": 0.5, "range": 240.0, "target": "target_aoe", "radius": 75.0,
         "effects": [{"t": "damage", "mult": 1.1, "kind": "power"}], "desc": "Arrows rain on a group (short aim)."},
-    "hunters_mark": {"name": "Hunter's Mark", "class": "class.ranger", "cost": 20, "cd": 15.0, "cast": 0.0, "range": 260.0, "target": "enemy",
+    "hunters_mark": {"name": "Hunter's Mark", "class": "class.archer", "cost": 20, "cd": 15.0, "cast": 0.0, "range": 260.0, "target": "enemy",
         "effects": [{"t": "status", "id": "marked", "dur": 8.0}], "desc": "The target takes 25% more damage from everyone."},
-    "bear_trap": {"name": "Bear Trap", "class": "class.ranger", "cost": 35, "cd": 20.0, "cast": 0.0, "range": 0.0, "target": "self",
+    "bear_trap": {"name": "Bear Trap", "class": "class.archer", "cost": 35, "cd": 20.0, "cast": 0.0, "range": 0.0, "target": "self",
         "effects": [{"t": "zone", "radius": 50.0, "dur": 15.0, "status": "root", "sdur": 2.5, "foes": true, "once": true}], "desc": "A trap at your feet roots the first foes that step in."},
-    "piercing_shot": {"name": "Piercing Shot", "class": "class.ranger", "cost": 45, "cd": 12.0, "cast": 0.4, "range": 260.0, "target": "enemy",
+    "piercing_shot": {"name": "Piercing Shot", "class": "class.archer", "cost": 45, "cd": 12.0, "cast": 0.4, "range": 260.0, "target": "enemy",
         "effects": [{"t": "damage", "mult": 2.6, "kind": "true"}], "desc": "Ignores armor."},
-    "concussive_shot": {"name": "Concussive Shot", "class": "class.ranger", "cost": 30, "cd": 14.0, "cast": 0.0, "range": 220.0, "target": "enemy",
+    "concussive_shot": {"name": "Concussive Shot", "class": "class.archer", "cost": 30, "cd": 14.0, "cast": 0.0, "range": 220.0, "target": "enemy",
         "effects": [{"t": "knockback", "dist": 60.0}, {"t": "interrupt"}, {"t": "status", "id": "slow", "dur": 3.0}], "desc": "Knock a foe back and break its wind-up."},
-    "rain_of_arrows": {"name": "Rain of Arrows", "class": "class.ranger", "cost": 80, "cd": 30.0, "cast": 1.0, "range": 260.0, "target": "target_aoe", "radius": 120.0,
+    "rain_of_arrows": {"name": "Rain of Arrows", "class": "class.archer", "cost": 80, "cd": 30.0, "cast": 1.0, "range": 260.0, "target": "target_aoe", "radius": 120.0,
         "effects": [{"t": "damage", "mult": 2.2, "kind": "power"}, {"t": "status", "id": "slow", "dur": 3.0}], "desc": "A storm of arrows over a wide area."},
     # --- cleric (mana)
     "heal": {"name": "Heal", "class": "class.cleric", "cost": 20, "cd": 4.0, "cast": 0.6, "range": 200.0, "target": "ally_low",

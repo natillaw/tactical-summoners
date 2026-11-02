@@ -1831,7 +1831,7 @@ func _apply_effect(eff: Dictionary, foes: Array, friends: Array, centre: Vector2
 			var sdur := float(eff["dur"]) * (1.0 + SkillDefs.FINISHER_PER_COMBO * float(_cur_combo))
 			for u in (foes if not foes.is_empty() else friends):
 				u.apply_status(String(eff["id"]), sdur, mag, self)
-				if String(eff["id"]) == "marked" and hero != null and hero.hero_class == "class.ranger" and u.get("spotted_t") != null:
+				if String(eff["id"]) == "marked" and hero != null and hero.hero_class == "class.archer" and u.get("spotted_t") != null:
 					u.set("spotted_t", maxf(float(u.get("spotted_t")), sdur))   # D-090 Hunter's Eye: seen through the fog
 					u.set("marked_by", self)
 		"heal":
