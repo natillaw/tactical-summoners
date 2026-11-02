@@ -69,6 +69,25 @@ func _shots_memorial() -> void:
     await _shot("memorial_epitaph", 0.6)
 
 
+func _shots_inventory() -> void:
+    var rng := RandomNumberGenerator.new()
+    rng.seed = 11
+    var r := ["common", "uncommon", "rare", "epic", "legendary", "junk"]
+    var bases := ["sword", "bow", "staff", "helm", "mail", "robe", "gloves", "boots", "ring", "amulet", "shield", "dagger", "greaves", "hood"]
+    for i in 14:
+        var it := ItemGen.generate(rng, 5000 + i, 5, r[i % r.size()] if r[i % r.size()] != "junk" else "common", bases[i])
+        if i % 6 == 5:
+            it["rarity"] = "junk"
+        Game.stash.append(it)
+    Game.changed.emit()
+    _main.call("show_screen", "inventory", 0)
+    await _shot("inventory", 1.0)
+    var inv: Node = _find("InventoryScreen")
+    inv.set("_tab", "forge")
+    inv.call("refresh")
+    await _shot("inventory_forge", 0.5)
+
+
 func _shots_screens() -> void:
     for scr in ["memorial", "inventory", "roster", "party"]:
         _main.call("show_screen", scr, 0)

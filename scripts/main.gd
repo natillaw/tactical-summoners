@@ -7,7 +7,7 @@ var _bar: Control
 
 ## Screens with their own header or HUD hide the global currency bar (2026-11-02: it doubled the town bar
 ## and covered the title and the expedition HUD).
-const NO_BAR := ["title", "town", "sandbox", "master", "master_edit", "game_over", "welcome", "memorial"]
+const NO_BAR := ["title", "town", "sandbox", "master", "master_edit", "game_over", "welcome", "memorial", "inventory"]
 
 
 func _ready() -> void:
