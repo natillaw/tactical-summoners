@@ -826,8 +826,8 @@ func _try_dodge(enemies: Array, map: NavMap) -> bool:
 		if not e.alive or not e.is_telegraphing() or e.windup_left() < CombatRules.DODGE_REACTION:
 			continue
 		var aim: Vector2 = e.aim_point()
-		var r: float = e.strike_radius
-		if position.distance_to(aim) > r + 4.0:
+		var r: float = e.telegraph_radius()
+		if not e.in_telegraph(position):           # D-145: circle, cone or line
 			continue
 		var key: int = e.get_instance_id()
 		if int(_dodge_seen.get(key, -1)) == int(e.strike_seq):
