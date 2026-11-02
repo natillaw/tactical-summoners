@@ -753,6 +753,8 @@ func construction_block(bid: String) -> String:
         return "upgrade the Summoner's Hall first (level cap %d)" % hall
     if construction.any(func(p): return String(p["bid"]) == bid):
         return "already under construction"
+    if construction.size() >= builder_count():
+        return "every builder is busy (one building per builder)"
     if int(hq_outputs.get("materials", 0)) < cost:
         return "needs %d materials" % cost
     return ""
@@ -770,6 +772,12 @@ func complete_construction(bid: String, to: int) -> void:
     log_town("%s reached level %d." % [TownTables.info(bid)["name"], to])
     if TownTables.is_dorm(bid):
         assign_beds()
+
+
+## Owner 2026-11-02: one building site per builder (heroes who know the trade or work the site);
+## at least one, so a new town can always queue its first building.
+func builder_count() -> int:
+    return maxi(1, heroes.values().filter(func(h): return (h as HeroData).knows_prof("builder") or (h as HeroData).hq_assignment == "construction").size())
 
 
 func builders() -> Array:
@@ -1101,6 +1109,8 @@ func start_batch(bid: String, rid: String) -> String:
     var r: Dictionary = EconomyDefs.recipe(rid)
     if r.get("service", false):
         return ""
+    if building_level(bid) < int(r.get("blvl", 0)):           # owner 2026-11-02: better dishes need a better kitchen
+        return "needs %s level %d" % [TownTables.info(bid).get("name", bid), int(r["blvl"])]
     if not has_resources(r["in"]):
         var missing: Array = []
         for k in r["in"]:

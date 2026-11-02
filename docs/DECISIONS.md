@@ -551,6 +551,14 @@ Rama `feat/integracion` desde `feat/d083-headless-sim`; merges en orden Sim Lab 
 - Rediseños: título, barra de recursos y barra inferior con nombres en el pueblo, menú Construir con imagen y emblema de cada edificio, paneles de edificio, Memorial (jardín de lápidas con epitafios), inventario (muñeco + mochila), ficha del héroe con ranuras de equipo.
 - Héroes del pueblo: el tiempo libre se queda en la plaza (radio 8×5 celdas), van a la fuente, se sientan en los bancos y muestran emociones. **Necesidades y deseos propios: pendiente de diseño → P-30.**
 
+### D-142 — Progresión pueblo ↔ torre (2026-11-02, dueño: "que el jugador no pueda progresar tanto en la torre si descuida su pueblo, pero no bloquearlo")
+- **Tiempo:** pueblo 20 min reales = 1 día (`EconomyDefs.REAL_SECONDS_PER_HOUR` 50). Torre y Tierras Salvajes: 20 min = 2 días (`TOWER_SECONDS_PER_HOUR` 25, `expedition_hours(segundos)`, mínimo 1 h). **Sin botón "Pasar día"** (pueblo y HQ): saltar tiempo mientras se craftea o construye era trampa. Crafteo, obras y hospital ya consumen horas de trabajo (`work`, `work_left`).
+- **Obras:** una obra a la vez por constructor (`Game.builder_count`, mínimo 1).
+- **Pociones:** solo de alquimia (los cofres de los pisos 1-2 dan hierbas en vez de pociones). Enfriamiento de 5 min por héroe (`LootDefs.HEAL_POTION_CD`); los héroes beben solos por debajo del 25 %; el Máster solo con la tecla **D** (el bot del simulador la pulsa por él).
+- **Cocina:** las comidas de expedición dependen del nivel de la cocina (`blvl`): guiso Nv1, asado Nv2, caldo de hueso Nv3 (+12 % armadura y resistencia mágica), festín del cazador Nv4.
+- **Joyería:** 6 joyas nuevas con estadística propia (anillos de rubí, zafiro y hierro; colgantes del corazón y del sol; cadena veloz) + afijos al azar. **Trinkets** con pasiva por probabilidad, una o más por clase (runa de sangre: 5 % al golpear te curas el daño del golpe; baluarte, sombra, halcón, maná, piedad, espinas, trébol). La pasiva solo funciona para sus clases. Iconos del pack rpg_icons.
+- Las enfermedades siguen como estaban (bajan atributos; la herida infectada solo se cura en el hospital).
+
 ## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)
 
 | ID | Tema | Lo que existe / origen | Pregunta abierta |

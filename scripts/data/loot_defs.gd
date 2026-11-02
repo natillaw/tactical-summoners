@@ -13,8 +13,8 @@ extends RefCounted
 ## something); boss = the miniboss/boss {id: [chance, min, max]}; first = only on the first clear.
 ## "first_chance" overrides a boss chance on the first clear (legendary fragment 2% -> 10%).
 const FLOORS := {
-    1: {"drops": {"essence": [0.04, 1, 1]}, "chest": {"essence": [1, 1], "potion": [1, 2]}},
-    2: {"drops": {"essence": [0.04, 1, 1]}, "chest": {"essence": [1, 2], "potion": [1, 1]}},
+    1: {"drops": {"essence": [0.04, 1, 1]}, "chest": {"essence": [1, 1], "herb": [2, 3]}},   # owner 2026-11-02: potions only from alchemy
+    2: {"drops": {"essence": [0.04, 1, 1]}, "chest": {"essence": [1, 2], "herb": [2, 2]}},
     3: {"drops": {"essence": [0.05, 1, 1]}, "chest": {"essence": [2, 2]}},
     4: {"drops": {"essence": [0.06, 1, 1], "mat_enchanted_cloth": [0.03, 1, 1]}, "chest": {"essence": [2, 2], "mat_enchanted_cloth": [1, 1]}},
     5: {"drops": {"mat_enchanted_cloth": [0.12, 1, 1], "essence": [0.05, 1, 1]}, "chest": {"mat_enchanted_cloth": [3, 3], "essence": [2, 2]},
@@ -83,6 +83,15 @@ const SALVAGE_JUNK := {"weapon": {"ore": 2}, "armor": {"hide": 1, "materials": 1
 const GREEDY := {"trait": "trait.greedy", "loot_bonus": 0.25, "max_bonus": 0.5, "loot_range_mult": 2.0,
     "keep_chance": 0.25, "discover": 0.4, "confiscate_trust": -8, "confiscate_obedience": 4}
 
+## Owner 2026-11-02: healing potions are a town product (alchemy only) with a long per-hero cooldown.
+## Heroes drink on their own below HEAL_POTION_AT; the Master only when the player presses POTION_KEY
+## (the headless bot presses it for the Master at the same threshold).
+const HEAL_POTION_CD := 300.0          # seconds between two healing potions of one hero (5 min)
+const HEAL_POTION_AT := 0.25           # fraction of max HP under which a hero drinks
+const HEAL_POTION := 0.4               # healing potion: fraction of max HP
+const HEAL_POTION_MAJOR := 0.6         # greater potion
+const POTION_KEY := KEY_D
+
 ## D-128 what a hero may carry in the bag (HeroData.bag), with what it does. "meal": eaten when the
 ## expedition starts, a buff for the whole run (fractions of max HP / attack / magic). camp_kit and arrows
 ## are for pista A (camp, ammunition): carried and kept until that system reads them.
@@ -90,6 +99,8 @@ const CONSUMABLES := {
     "potion": {}, "antidote": {}, "con_potion_major": {}, "elixir_strength": {}, "elixir_speed": {}, "elixir_defense": {},
     "meal_stew": {"meal": {"hp_pct": 0.10}, "desc": "+10% max HP for the whole expedition."},
     "meal_roast": {"meal": {"atk_pct": 0.08, "mag_pct": 0.08}, "desc": "+8% attack and magic for the whole expedition."},
+    "meal_broth": {"meal": {"def_pct": 0.12, "mres_pct": 0.12}, "desc": "+12% armour and magic resistance for the whole expedition."},
+    "meal_feast": {"meal": {"hp_pct": 0.08, "atk_pct": 0.05, "mag_pct": 0.05, "def_pct": 0.05}, "desc": "+8% max HP, +5% attack, magic and armour for the whole expedition."},
     "camp_kit": {"desc": "Set up a camp in the tower (rest point)."},
     "arrows": {"desc": "A quiver of arrows for archers."},
 }

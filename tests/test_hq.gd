@@ -345,7 +345,25 @@ func _init() -> void:
     check(ms < 4000, "40 heroes x 240 town hours simulate in %d ms (< 4000)" % ms)
     check(gp.heroes.size() == 40, "nobody vanished during the long run")
 
-    for x in [g, g2, g3, gp]:
+    # owner 2026-11-02: town-tower link (kitchen level gates meals, one site per builder, time scale)
+    var gk := _game(31)
+    gk.town_buildings["kitchen"] = 1
+    for res in ["grain", "herb", "bone"]:
+        gk.hq_outputs[res] = 50
+    check(String(gk.start_batch("kitchen", "cook_broth")).contains("level 3"), "bone broth needs a level-3 kitchen")
+    gk.town_buildings["kitchen"] = 3
+    check(gk.start_batch("kitchen", "cook_broth") == "", "a level-3 kitchen cooks bone broth")
+    gk.town_buildings["town_hall"] = 5
+    gk.town_buildings["farm"] = 1
+    gk.hq_outputs["materials"] = 100000
+    gk.construction.clear()
+    for i in gk.builder_count():
+        gk.construction.append({"bid": "warehouse", "to": 9, "work_left": 999.0})
+    check(String(gk.construction_block("farm")).contains("builder"), "one building site per builder")
+    check(EconomyDefs.expedition_hours(1200.0) == 48 and EconomyDefs.expedition_hours(5.0) == 1, "20 real minutes in the tower = 2 town days")
+    check(is_equal_approx(EconomyDefs.REAL_SECONDS_PER_HOUR * 24.0, 1200.0), "20 real minutes in the town = 1 town day")
+
+    for x in [g, g2, g3, gp, gk]:
         x.free()
     for p in ["user://test_hq.json", "user://test_hq.json.bak", "user://test_hq.json.tmp"]:
         if FileAccess.file_exists(p):
