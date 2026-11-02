@@ -35,6 +35,12 @@ var moving: String = ""            # D-050: building being placed ("" = not in m
 var placing_new: bool = false
 var _res_row: HBoxContainer = null
 var _menu: GameMenu = null
+## Owner 2026-11-02: the town is walked with the Master (camera on the Master, no free camera). Click the
+## ground to walk, click a building to walk to its door and go in; F at a door goes in too.
+var master_th: TownHero = null
+var _master_pos: Vector2 = Vector2.ZERO
+var _goal_bid: String = ""
+const DOOR_REACH := 26.0                 # map px from a door's centre that counts as "at the door"
 const RES_ICONS := [["res_food", "food", "Meals: everyone eats every day"], ["res_wood", "wood", "Wood: construction and the workshop"],
     ["res_stone", "stone", "Stone: construction"], ["res_gem", "@gems", "Gems: summoning"],
     ["res_promotion_stone", "@stones", "Promotion stones"], ["res_skill_book", "@books", "Training books"]]
@@ -158,6 +164,13 @@ func rebuild() -> void:
         i += 1
     for th in heroes:
         th.town_heroes = heroes
+    master_th = null
+    for th in heroes:
+        if th.hero.is_master:
+            master_th = th
+            th.player_controlled = true
+            th.position = _master_pos if _master_pos != Vector2.ZERO else map.center_of(map.door_of("town_hall")) + Vector2(0, 14)
+            camera.position = _clamp_cam(th.position * WORLD_SCALE)
     if camera.position == Vector2.ZERO:
         # first view: the whole town fits on screen
         var ws := map.world_size()
@@ -191,6 +204,14 @@ var _occ_t: float = 0.0
 
 func _process(delta: float) -> void:
     Game.town_tick(delta)
+    if master_th != null and is_instance_valid(master_th):
+        _master_pos = master_th.position
+        camera.position = _clamp_cam(master_th.position * WORLD_SCALE)
+        if _goal_bid != "" and not master_th.walking():
+            var bid := _goal_bid
+            _goal_bid = ""
+            if master_th.position.distance_to(map.center_of(map.door_of(bid))) <= DOOR_REACH * 1.5:
+                select_building(bid)             # arrived: go in
     _occ_t -= delta
     if _occ_t <= 0.0 and view != null:
         _occ_t = 0.5
@@ -233,7 +254,7 @@ func _build_ui() -> void:
             [RPG % 97, "Party", "Party: the five who go up the tower", func(): navigate.emit("party", 0)],
             [RPG % 289, "Inventory", "Inventory and equipment stash", func(): navigate.emit("inventory", 0)],
             [RPG % 294, "Build", "Build: place a building near the village", show_build_menu],
-            [AssetCatalog.world("tower_portal"), "Tower", "Tower gate: choose a floor", func(): select_building("tower_gate")],
+            [AssetCatalog.world("tower_portal"), "Tower", "Tower gate: the Master walks there", func(): walk_to_building("tower_gate")],
             [UIC % "Icon42_1", "Memorial", "Memorial of the fallen", func(): navigate.emit("memorial", 0)],
             [UIC % "Icon55_1", "Menu", "Menu (Esc)", func(): open_menu()]]:
         row.add_child(_dock_button(String(q[0]), String(q[1]), String(q[2]), q[3]))
@@ -1134,7 +1155,8 @@ func _gui_input(event: InputEvent) -> void:
         var mm := event as InputEventMouseMotion
         if _dragging and (mm.position - _drag_from).length() > 6.0:
             _moved = true
-            camera.position = _clamp_cam(_cam_from - (mm.position - _drag_from) / camera.zoom.x)
+            if master_th == null:                   # owner 2026-11-02: with a Master the camera stays on him
+                camera.position = _clamp_cam(_cam_from - (mm.position - _drag_from) / camera.zoom.x)
         _update_hover(screen_to_world(mm.position))
         if moving != "" and view != null:
             view.ghost_cell = _ghost_cell(screen_to_world(mm.position))
@@ -1145,10 +1167,52 @@ func click_at(world: Vector2) -> void:
     if map == null:
         return
     var th := hero_at(world)
-    if th != null:
+    if th != null and th != master_th:
         open_hero(th)
         return
-    select_building(map.building_at(map.cell_of(world)))
+    var bid := map.building_at(map.cell_of(world))
+    if master_th == null:
+        select_building(bid)                      # no Master yet (new account, tests): the old direct view
+    elif bid != "":
+        walk_to_building(bid)
+    else:
+        select_building("")
+        _goal_bid = ""
+        master_th.go_to(world)
+
+
+## The Master walks to a building's door and goes in on arrival (owner 2026-11-02).
+func walk_to_building(bid: String) -> void:
+    if master_th == null or map == null:
+        select_building(bid)
+        return
+    select_building("")
+    var door := map.center_of(map.door_of(bid))
+    if master_th.position.distance_to(door) <= DOOR_REACH:
+        select_building(bid)
+        return
+    _goal_bid = bid
+    if not master_th.go_to(door + Vector2(0, 10)):
+        _goal_bid = ""
+        UIKit.toast(self, tr("No way there"))
+
+
+## F: go into the building whose door the Master stands at.
+func enter_nearest() -> String:
+    if master_th == null or map == null:
+        return ""
+    var best := ""
+    var best_d := DOOR_REACH
+    for bid in TownTables.ids():
+        if not map.is_placed(bid):
+            continue
+        var d := master_th.position.distance_to(map.center_of(map.door_of(bid)))
+        if d <= best_d:
+            best_d = d
+            best = bid
+    if best != "":
+        select_building(best)
+    return best
 
 
 ## Visible town hero under a world point (feet at the node origin, body ~30 px above).
@@ -1228,6 +1292,9 @@ func open_menu() -> void:
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
+    if event is InputEventKey and event.pressed and not event.echo and (event as InputEventKey).keycode == KEY_F and moving == "":
+        enter_nearest()
+        return
     if event is InputEventKey and event.pressed and (event as InputEventKey).keycode == KEY_ESCAPE and moving == "":
         open_menu()
         return
