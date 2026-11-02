@@ -103,7 +103,9 @@ func _ready() -> void:
         e1.state = SandboxEnemy.State.WINDUP
         e1._timer = 0.5
         _give(h, sid)
-        check(h.use_skill_slot(0, foes, squad) and e1.state == SandboxEnemy.State.RECOVER, "%s breaks the wind-up" % sid)
+        var used := h.use_skill_slot(0, foes, squad)
+        h._tick_pending(0.5)                                         # arrows and bolts fly before they land
+        check(used and e1.state == SandboxEnemy.State.RECOVER, "%s breaks the wind-up" % sid)
     _fresh(e1, base + Vector2(40, 0))
     e1.apply_status("slow", 3.0)
     e1.state = SandboxEnemy.State.WINDUP
@@ -352,7 +354,7 @@ func _ready() -> void:
         "party": ["", "", "", "", ""], "heroes": [old], "hq_outputs": {"food": 1, "materials": 2, "medicine": 3}, "town_buildings": TownTables.start_levels(),
         "tower_maps": {}, "tower_cleared": {}}
     Game.apply_save(v7)
-    check(Game.skill_books.is_empty() and (Game.heroes[hd.id] as HeroData).skills.size() == 1, "a v7 save loads: empty book shelf, heroes get their starter")
+    check(Game.skill_books.is_empty() and (Game.heroes[hd.id] as HeroData).skills.is_empty(), "a v7 save loads: empty book shelf, no starter (D-142)")
 
     check(not get_tree().paused and is_equal_approx(Engine.time_scale, 1.0), "no pause and no time-slow")
     print("== %s ==" % ("ALL PASSED" if fails == 0 else "%d FAILED" % fails))
