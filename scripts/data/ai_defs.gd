@@ -85,10 +85,11 @@ const PINGS := {
     "danger": {"name": "Danger! Fall back", "icon": "order_retreat", "color": Color(1.0, 0.75, 0.2), "life": 4.0},
     "spotted": {"name": "Enemy spotted", "icon": "order_attack_move", "color": Color(1.0, 0.25, 0.55), "life": 8.0},
     "help": {"name": "Help / lift", "icon": "order_move", "color": Color(0.5, 1.0, 0.9), "life": 5.0},
+    "camp": {"name": "Camp here", "icon": "order_hold", "color": Color(1.0, 0.65, 0.3), "life": 5.0},   # D-090 (CampDefs)
     # quick ping on bare ground (not on the wheel)
     "move": {"name": "Go here", "icon": "order_move", "color": Color(0.95, 0.95, 0.95), "life": 3.0},
 }
-const PING_ORDER := ["regroup", "attack", "defend", "explore", "gather", "danger", "spotted", "help"]
+const PING_ORDER := ["regroup", "attack", "defend", "explore", "gather", "danger", "spotted", "help", "camp"]
 ## A ping order lasts this long; then the hero goes back to its own judgement (Auto).
 const PING_ORDER_TIME := 14.0
 const DEFEND_RADIUS := 120.0        # a "defend" ping fights what comes this close to the spot
@@ -117,6 +118,20 @@ const BANDIT_AI := {
 }
 ## Brute: goes for the highest threat it has taken (damage dealt to it); threat decays THREAT_DECAY per s.
 const THREAT_DECAY := 0.15
+## D-090 aggro: every creature keeps a threat table. Damage dealt to it adds THREAT_PER_DAMAGE per point,
+## healing an ally adds THREAT_PER_HEAL per point healed to every awake creature within THREAT_HEAL_RADIUS
+## of the healed ally that is already fighting; both x THREAT_CLASS_MULT of the hero's class (warrior x2).
+## A taunt (War Cry) forces the target for its duration and puts the taunter TAUNT_TOP x above the top.
+## Creatures with no special role (and the brutes) follow the table; it switches only when another hero
+## passes the current one by THREAT_SWITCH (no flip-flopping between two close values).
+const THREAT_PER_DAMAGE := 1.0
+const THREAT_PER_HEAL := 0.5
+const THREAT_HEAL_RADIUS := 320.0
+const THREAT_CLASS_MULT := {"class.warrior": 2.0}
+const TAUNT_TOP := 1.1
+const THREAT_SWITCH := 1.1
+## Archer creatures (bandido_arquero): the hero in range with a clear shot, nearest first.
+const ARCHER_PICK_RANGE := 1.0      # x its strike range
 ## Assassin: hunts these classes first (unless taunted).
 const ASSASSIN_PREY := ["class.cleric", "class.mage"]
 const ASSASSIN_REACH := 2.0         # x perception for its prey
@@ -167,6 +182,17 @@ const SHOT_SPEED := 520.0           # px/s of a hero's basic shot (arrow or bolt
 const SHOT_WIDTH := 4.0             # half-width of the arrow, added to the body it can touch
 const ARROW_STICK := 0.6            # seconds a landed arrow stays stuck before it fades
 const ARROW_TRAIL := 0.12           # seconds of trail behind a flying arrow
+## D-090 finite arrows: an archer enters with ARROWS_START (+ the "arrows" it carries in its bag: making and
+## buying them is pista D). Each shot spends one; an arrow that lands in a creature can be taken back from
+## its body (ARROW_RECOVER of them, walking within ARROW_PICKUP px; the AI goes for bodies within ARROW_SEEK
+## when calm). With none left the archer fights up close at NO_ARROW_MULT. ARROWS_LOW = shown over the hero.
+const ARROWS_START := 60
+const ARROW_BAG_ID := "arrows"
+const ARROW_RECOVER := 0.75
+const ARROW_PICKUP := 36.0
+const ARROW_SEEK := 320.0
+const NO_ARROW_MULT := 0.5
+const ARROWS_LOW := 12
 
 
 ## Seconds between two decisions of an autonomous hero (Composure 0-100).
