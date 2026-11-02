@@ -362,7 +362,7 @@ func _init() -> void:
     check(String(gk.construction_block("farm")).contains("builder"), "one building site per builder")
     var alc := _hero(gk, {"alchemist": 3})
     gk.town_buildings["alchemy"] = 2
-    gk.assign_work(alc, "alchemy")
+    check(gk.assign_work(alc, "alchemy") == "", "an alchemist can work at an idle alchemy lab (%s)" % gk.last_reason)
     gk.hq_outputs["potion"] = 0
     gk.pass_time(24)
     check(int(gk.hq_outputs["potion"]) == 0 and gk.job_of("alchemy") == "", "without the Master's order the alchemist brews nothing")
