@@ -560,6 +560,12 @@ Rama `feat/integracion` desde `feat/d083-headless-sim`; merges en orden Sim Lab 
 - **Botín:** gear por criatura **3 % normal** y **20 % élite** (antes 10 % / 35 %). El jefe del **piso 10** suelta **siempre un hacha épica** (morada; base `greataxe`), además de su botín normal (`LootDefs.BOSS_GUARANTEED`).
 - **Frases de héroes** en español: entrada a piso, pueblo, respuestas a pings y el altar del Barón (`StringsEs.ES_D142`); `SandboxHero.say` y `TownHero._say` traducen.
 
+### D-143 — Telegrafías variadas, skills de criatura visibles y juice de ataques enemigos (2026-11-02, dueño)
+- **Formas:** el golpe básico marca **círculo** (en el objetivo), **cono** (delante de la criatura) o **línea** (desde la criatura a través del objetivo) según su rol (`EnemyDefs.strike_shape`): magos/chamanes círculo, arqueros/escupidores línea, brutos y guardias cono, el resto círculo pequeño. Las skills llevan su propio `shape`: Golpe brutal (Slam) = cono de 120°, Disparo apuntado = línea; el resto, círculo. Solo recibe quien sigue dentro de la forma (`SandboxEnemy.in_telegraph`); los héroes esquivan según la forma.
+- **La skill se ve al soltarse** (`look` en `EnemyDefs.SKILLS`): bola de fuego que vuela y explota, flecha a lo largo de la línea, meteoro desde el cielo, nube de esporas, golpe de suelo; el daño llega cuando el proyectil llega. Bandidos con ataque propio (`CombatVFX.ENEMY_FX`): arquero flechas, mago bolas de fuego, chamán orbes, brutos tajos.
+- **Juice:** perfiles propios para cada skill de criatura y cada disparo básico (`JuiceDefs.ENEMY`, ids `eskill.*`), leídos por `JuicePlayer.resolve`. Skills de héroe: todas tienen perfil (comprobado por `juice`).
+- **Barras de vida de criaturas:** bajan al instante, la parte blanca espera 0,3 s y se drena; destello blanco al recibir (cierra el pendiente de D-111).
+
 ## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)
 
 | ID | Tema | Lo que existe / origen | Pregunta abierta |
