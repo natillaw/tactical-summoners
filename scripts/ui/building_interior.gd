@@ -54,8 +54,8 @@ func _ready() -> void:
         tag.scale = Vector2.ONE * 0.5
         tag.position = s.position + Vector2(-8, 4)
         room.add_child(tag)
-    var title := UIKit.label("%s  ·  %s" % [TownTables.info(building_id)["name"],
-        ("%d working here" % workers.size()) if not workers.is_empty() else "nobody works here: assign a hero to make anything"], 15,
+    var title := UIKit.label("%s  ·  %s" % [tr(String(TownTables.info(building_id)["name"])),
+        (tr("%d working here") % workers.size()) if not workers.is_empty() else tr("nobody works here: assign a hero to make anything")], 15,
         UIKit.ACCENT if not workers.is_empty() else Color(1.0, 0.65, 0.5))
     title.position = Vector2(10, 6)
     add_child(title)
