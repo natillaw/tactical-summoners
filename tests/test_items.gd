@@ -164,6 +164,25 @@ func _init() -> void:
     check(master.has("epic"), "a master smith in a great forge can make epic gear")
     check(not big_forge_apprentice.has("rare") and not big_forge_apprentice.has("epic"), "a great forge does not make an apprentice a master")
 
+    # owner 2026-11-02: jeweller variety and trinkets with chance-based passives per class
+    var base_st := {"hp": 100, "atk": 5, "mag": 0, "def": 0, "mres": 0, "crit": 0.0, "status_resist": 0.0, "interval": 1.0, "move": 70.0}
+    var rune := {"base": "blood_rune", "stats": {"hp": 6}}
+    var w_st: Dictionary = ItemDefs.apply_equipment(base_st, {"special": rune}, "class.warrior")
+    var m_st: Dictionary = ItemDefs.apply_equipment(base_st, {"special": rune}, "class.mage")
+    check(((w_st["mods"] as Dictionary).get("trinket_procs", []) as Array).size() == 1, "a warrior's blood rune carries its passive")
+    check(not (m_st["mods"] as Dictionary).has("trinket_procs"), "a trinket passive only works for its classes")
+    var jewels: Array = ItemDefs.BASES.keys().filter(func(b): return String(ItemDefs.BASES[b]["kind"]) == "jewel")
+    check(jewels.size() >= 14 and jewels.all(func(b): return ItemIcons.RPG.has(String(b)) and ItemLibrary.recipes().has(ItemLibrary.recipe_id("jeweler", String(b), 1))),
+        "every jewel and trinket has its own icon and a jeweller recipe")
+    var procs: Array = ItemDefs.BASES.keys().filter(func(b): return (ItemDefs.BASES[b] as Dictionary).has("proc"))
+    check(procs.size() >= 8 and procs.all(func(b): return ItemDefs.proc_text(String(b)) != "" and ItemDefs.TRINKET_PROCS.has(String(ItemDefs.BASES[b]["proc"]["type"]))),
+        "every trinket passive has a description")
+    var classes_covered := {}
+    for b in procs:
+        for c in ItemDefs.BASES[b]["classes"]:
+            classes_covered[c] = true
+    check(["class.warrior", "class.rogue", "class.archer", "class.mage", "class.cleric"].all(func(c): return classes_covered.has(c)), "every combat class has its own trinket")
+
     g.free()
     print("== %s ==" % ("ALL PASSED" if fails == 0 else "%d FAILED" % fails))
     quit(1 if fails > 0 else 0)

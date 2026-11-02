@@ -235,7 +235,6 @@ func _build_ui() -> void:
             [RPG % 294, "Build", "Build: place a building near the village", show_build_menu],
             [AssetCatalog.world("tower_portal"), "Tower", "Tower gate: choose a floor", func(): select_building("tower_gate")],
             [UIC % "Icon42_1", "Memorial", "Memorial of the fallen", func(): navigate.emit("memorial", 0)],
-            [UIC % "Icon49_1", "Pass a day", "Pass a day: the village works, eats, sleeps and heals for 24 hours", func(): Game.pass_time(24)],
             [UIC % "Icon55_1", "Menu", "Menu (Esc)", func(): open_menu()]]:
         row.add_child(_dock_button(String(q[0]), String(q[1]), String(q[2]), q[3]))
     dock.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE)

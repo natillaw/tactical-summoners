@@ -141,9 +141,8 @@ var item_mods: Dictionary = {}
 var was_downed: bool = false        # for the expedition's after-effects (Game.after_expedition)
 var was_poisoned: bool = false
 var _potion_cd: float = 0.0
-const POTION_AT := 0.35             # drinks a potion below this HP fraction (bounded autonomy)
-const POTION_HEAL := 0.4
-const POTION_CD := 8.0
+const POTION_CD := 8.0               # shared pause after any consumable (antidotes, elixirs)
+var heal_potion_cd: float = 0.0      # owner 2026-11-02: LootDefs.HEAL_POTION_CD between healing potions
 var _fx: float = 0.0                # skill visual timer
 var _fx_to: Vector2 = Vector2.ZERO
 var _fx_radius: float = 0.0
@@ -1067,6 +1066,7 @@ func _use_consumables(delta: float) -> void:
 		was_poisoned = true
 	if hero == null:
 		return
+	heal_potion_cd = maxf(0.0, heal_potion_cd - delta)
 	_potion_cd = maxf(0.0, _potion_cd - delta)
 	if _potion_cd > 0.0:
 		return
@@ -1079,20 +1079,33 @@ func _use_consumables(delta: float) -> void:
 				FloatingText.spawn(self, String(ex[0]).replace("_", " "), Color(0.9, 0.8, 1.0), false)
 				_potion_cd = 0.5
 				return
-	if float(hp) < float(max_hp) * POTION_AT and int(hero.bag.get("con_potion_major", 0)) > 0:
-		_spend("con_potion_major")
-		heal(roundi(float(max_hp) * 0.6))
-		FloatingText.spawn(self, "greater potion", Color(0.5, 1.0, 0.6), false)
-	elif float(hp) < float(max_hp) * POTION_AT and int(hero.bag.get("potion", 0)) > 0:
-		_spend("potion")
-		heal(roundi(float(max_hp) * POTION_HEAL))
-		CombatVFX.play(get_parent(), position + Vector2(0, -14), "heal", 1.0)
-		FloatingText.spawn(self, "potion", Color(0.5, 1.0, 0.6), false)
-	elif has_status("poison") and int(hero.bag.get("antidote", 0)) > 0:
+	var auto_heal := not hero.is_master or SimMode.on       # the Master drinks on the player's key (D)
+	if auto_heal and float(hp) < float(max_hp) * LootDefs.HEAL_POTION_AT and drink_potion() == "":
+		return
+	if has_status("poison") and int(hero.bag.get("antidote", 0)) > 0:
 		_spend("antidote")
 		statuses.erase("poison")
 		CombatVFX.play(get_parent(), position + Vector2(0, -18), "sparkle_small", 1.0)
 		FloatingText.spawn(self, "antidote", Color(0.6, 1.0, 0.5), false)
+
+
+## Drinks the best healing potion in the bag. "" when drunk, otherwise why not (no potion, cooldown).
+func drink_potion() -> String:
+	if hero == null or not alive:
+		return "cannot drink now"
+	var id := "con_potion_major" if int(hero.bag.get("con_potion_major", 0)) > 0 else ("potion" if int(hero.bag.get("potion", 0)) > 0 else "")
+	if id == "":
+		return "no healing potions (alchemy brews them)"
+	if heal_potion_cd > 0.0:
+		return "potion ready in %ds" % ceili(heal_potion_cd)
+	if hp >= max_hp:
+		return "already at full health"
+	_spend(id)
+	heal_potion_cd = LootDefs.HEAL_POTION_CD
+	heal(roundi(float(max_hp) * (LootDefs.HEAL_POTION_MAJOR if id == "con_potion_major" else LootDefs.HEAL_POTION)))
+	CombatVFX.play(get_parent(), position + Vector2(0, -14), "heal", 1.0)
+	FloatingText.spawn(self, "greater potion" if id == "con_potion_major" else "potion", Color(0.5, 1.0, 0.6), false)
+	return ""
 
 
 func _spend(res: String) -> void:
@@ -1298,6 +1311,8 @@ func _on_dealt(t: Combatant, dealt: int) -> void:
 		if t.alive and combat_rng.randf() < float(p["chance"]):
 			t.apply_status(String(p["on_hit_status"]), float(p["dur"]), float(power()) * float(p["mult"]), self)
 			CombatVFX.play(t.get_parent(), t.position + Vector2(0, -14), "spark_fire" if String(p["on_hit_status"]) == "burn" else "frost_burst", 0.6)
+	if dealt > 0:
+		_trinket_on_deal(t, dealt)
 	if not t.alive and item_mods.has("kill_heal"):
 		heal(roundi(float(max_hp) * float(item_mods["kill_heal"])))
 		CombatVFX.play(get_parent(), position + Vector2(0, -14), "heal", 0.7)
@@ -2037,6 +2052,69 @@ func _fire_fx(at: Vector2, radius: float) -> void:
 	queue_redraw()
 
 
+# --- trinket passives (owner 2026-11-02; ItemDefs.BASES "proc") --------------------------------
+
+## Chance-based passives that fire when this hero lands a blow (basic attack or skill damage).
+func _trinket_on_deal(t: Combatant, dealt: int) -> void:
+	for p in item_mods.get("trinket_procs", []):
+		var pr: Dictionary = p
+		if combat_rng.randf() >= float(pr["chance"]):
+			continue
+		match String(pr["type"]):
+			"leech_strike":
+				heal(roundi(float(dealt) * float(pr["frac"])))
+				CombatVFX.play(get_parent(), position + Vector2(0, -14), "heal", 0.7)
+			"echo_strike":
+				if t.alive:
+					t.take_hit(DamageInfo.make(float(dealt) * float(pr["frac"]), "true", self))
+			"mark_on_hit":
+				if t.alive:
+					t.apply_status("marked", float(pr["dur"]), 0.0, self)
+			"cd_reduce":
+				for sid in cds:
+					cds[sid] = maxf(0.0, float(cds[sid]) - float(pr["secs"]))
+			"mend_ally":
+				var low: Combatant = null
+				for u in (squad if not squad.is_empty() else [self]):
+					if is_instance_valid(u) and (u as Combatant).alive and (low == null or float(u.hp) / float(u.max_hp) < float(low.hp) / float(low.max_hp)):
+						low = u
+				if low != null and low.hp < low.max_hp:
+					credit("healing", float(low.heal(roundi(float(low.max_hp) * float(pr["pct"])))))
+					CombatVFX.play(low.get_parent(), low.position + Vector2(0, -14), "heal", 0.7)
+			_:
+				continue
+		if not SimMode.on:
+			FloatingText.spawn(self, tr(String(ItemDefs.BASES.get(_proc_base(String(pr["type"])), {}).get("name", "")) ), Color(0.95, 0.85, 0.45), false, 0.8)
+
+
+## Chance-based passives that fire when this hero is hurt.
+func _trinket_on_hurt(info: DamageInfo, dmg: int) -> void:
+	for p in item_mods.get("trinket_procs", []):
+		var pr: Dictionary = p
+		var ty := String(pr["type"])
+		if not (ty in ["shield_on_hurt", "stun_on_hurt", "regen_on_hurt"]) or combat_rng.randf() >= float(pr["chance"]):
+			continue
+		match ty:
+			"shield_on_hurt":
+				apply_status("shield", float(pr["dur"]), float(max_hp) * float(pr["pct"]), self)
+			"stun_on_hurt":
+				if info.kind != "physical" or not (info.source is SandboxEnemy) or not is_instance_valid(info.source):
+					continue
+				(info.source as Combatant).apply_status("stun", float(pr["dur"]), 0.0, self)
+			"regen_on_hurt":
+				apply_status("regen", float(pr["dur"]), float(max_hp) * float(pr["pct"]), self)
+		if not SimMode.on and dmg > 0:
+			FloatingText.spawn(self, tr(String(ItemDefs.BASES.get(_proc_base(ty), {}).get("name", ""))), Color(0.95, 0.85, 0.45), false, 0.8)
+
+
+## The trinket base that carries a passive type (for the floating text).
+static func _proc_base(ty: String) -> String:
+	for b in ItemDefs.BASES:
+		if String((ItemDefs.BASES[b] as Dictionary).get("proc", {}).get("type", "")) == ty:
+			return String(b)
+	return ""
+
+
 # --- Combatant hooks ------------------------------------------------------------------------
 
 func _on_hit(info: DamageInfo, dmg: int) -> void:
@@ -2045,6 +2123,8 @@ func _on_hit(info: DamageInfo, dmg: int) -> void:
 	if dmg > 0 and item_mods.has("thorns") and info.source is SandboxEnemy and info.kind == "physical" and is_instance_valid(info.source):
 		(info.source as Combatant).take_hit(DamageInfo.make(float(dmg) * float(item_mods["thorns"]), "true", self))
 	gain_resource(float(SkillDefs.RESOURCES[res_kind]["on_hurt"]))
+	if dmg > 0 and alive:
+		_trinket_on_hurt(info, dmg)
 	if rescue_progress > 0.0:
 		rescue_progress = 0.0                         # D-036: taking damage interrupts the rescue (AI or held F)
 		FloatingText.spawn(self, "interrupted", Color(1.0, 0.6, 0.4), false)
