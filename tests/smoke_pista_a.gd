@@ -20,6 +20,14 @@ func _as(h: SandboxHero, cls: String) -> void:
     h.role = AiDefs.role_of(cls)
 
 
+## One camp kit: pista D's item in a hero's bag when it exists, else the test counter.
+func _give_kit(sb: SandboxScreen) -> void:
+    if CampDefs.kit_is_item():
+        sb.heroes[0].hero.bag[CampDefs.KIT_ID] = 1
+    else:
+        sb.camp_test_kits = 1
+
+
 func _fresh(e: SandboxEnemy, at: Vector2) -> void:
     e.base_max_hp = 5000
     e.max_hp = 5000
@@ -219,7 +227,7 @@ func _ready() -> void:
         h.position = spot + Vector2(float(h.slot) * 20.0, 0)
         h.target = null
         h.statuses.clear()
-    sb.camp_test_kits = 1
+    _give_kit(sb)
     check(sb.start_camp(spot) == "" and sb.camp != null, "camp: starts with a kit and nobody around")
     _fresh(e1, spot + Vector2(150, 0))
     e1.alerted = true
@@ -231,7 +239,7 @@ func _ready() -> void:
     check(sb.camp_refusal(spot) == "no camp kit", "the kit was spent")
     e1.alive = false
     e1.position = Vector2(-5000, -5000)
-    sb.camp_test_kits = 1
+    _give_kit(sb)
     war.hp = war.max_hp / 3
     war.hero.bag["food"] = 1
     mage.res = 0.0
