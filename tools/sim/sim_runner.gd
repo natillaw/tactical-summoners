@@ -165,6 +165,8 @@ func _collect(sb: SandboxScreen, cfg: Dictionary, floor_num: int, seed_v: int, t
         "FAILED":
             if sb.master_lost:
                 reason = "master_lost"
+            elif float(TowerExpedition.get_floor_config(floor_num).get("time_limit", 0.0)) > 0.0 and sb.elapsed >= float(TowerExpedition.get_floor_config(floor_num).get("time_limit", 0.0)):
+                reason = "time_limit"
             elif sb.living_heroes().is_empty() or sb.heroes.all(func(h): return h.dead or h.downed):
                 reason = "wipe"
             else:
