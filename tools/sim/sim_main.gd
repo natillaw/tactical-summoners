@@ -9,10 +9,12 @@ const SimParty := preload("res://tools/sim/sim_party.gd")
 const SimReport := preload("res://tools/sim/sim_report.gd")
 
 var quiet := false
+var cancel_file := ""             # D-130: the Sim Lab creates this file to stop the run (workers are killed)
 
 
 func main(tree: SceneTree, args: Dictionary) -> void:
     quiet = args.has("quiet")
+    cancel_file = String(args.get("cancel-file", ""))
     if not args.has("config"):
         _fail(tree, ["usage: godot --headless --path . -s res://tools/sim/run_sim.gd -- --config tools/sim/configs/<file>.json"])
         return
@@ -138,6 +140,11 @@ func _run_all(tree: SceneTree, variants: Array, work: String, workers: int) -> D
             running += 1
             next += 1
         await tree.create_timer(0.1).timeout
+        if cancel_file != "" and FileAccess.file_exists(cancel_file):
+            for j in jobs:
+                if int(j["pid"]) > 0 and not j["done"] and OS.is_process_running(int(j["pid"])):
+                    OS.kill(int(j["pid"]))
+            return {"error": "cancelled"}
         for j in jobs:
             if j["pid"] > 0 and not j["done"] and not OS.is_process_running(int(j["pid"])):
                 j["done"] = true
