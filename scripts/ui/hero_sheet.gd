@@ -154,6 +154,7 @@ func _skills() -> VBoxContainer:
     var v := VBoxContainer.new()
     var res := String(SkillDefs.RESOURCES[SkillDefs.resource_of(hero.hero_class)]["name"])
     v.add_child(UIKit.label("Q = basic attack · W E R = skills · resource: %s" % res, 12, UIKit.MUTED))
+    v.add_child(UIKit.button(tr("Synergy codex"), func(): _overlay(SynergyCodex.new()), Vector2(140, 26)))   # D-090
     for sid in hero.skills:
         var sk := SkillDefs.info(sid)
         var row := HBoxContainer.new()
@@ -163,7 +164,7 @@ func _skills() -> VBoxContainer:
         var slot_i := hero.loadout.find(sid)
         var col := VBoxContainer.new()
         col.add_theme_constant_override("separation", 0)
-        col.add_child(UIKit.label("[%s] %s" % [SandboxScreen.SKILL_KEYS[slot_i] if slot_i >= 0 and slot_i < 3 else "-", String(sk["name"])], 14,
+        col.add_child(UIKit.label("[%s] %s" % [SandboxScreen.SKILL_KEYS[slot_i] if slot_i >= 0 and slot_i < SkillDefs.MAX_SLOTS else "-", String(sk["name"])], 14,
             UIKit.ACCENT if slot_i >= 0 else UIKit.TEXT))
         var d := UIKit.label("%d %s · %.0fs · %s" % [int(sk["cost"]), res.to_lower(), float(sk["cd"]), String(sk["desc"])], 12, UIKit.MUTED)
         d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -179,18 +180,11 @@ func _skills() -> VBoxContainer:
         v.add_child(row)
     for i in hero.skill_choices.size():
         var c: Dictionary = hero.skill_choices[i]
-        v.add_child(UIKit.label("Level %d: choose one" % int(c["level"]), 14, UIKit.ACCENT))
-        var opts := HBoxContainer.new()
-        for sid in c["options"]:
-            var idx := i
-            var id := String(sid)
-            var b := UIKit.button(String(SkillDefs.info(id)["name"]), func():
-                hero.choose_skill(idx, id)
-                Game._commit()
-                _done("Learned %s." % String(SkillDefs.info(id)["name"])), Vector2(140, 30))
-            b.tooltip_text = String(SkillDefs.info(id)["desc"])
-            opts.add_child(b)
-        v.add_child(opts)
+        var idx := i
+        v.add_child(UIKit.button(tr("Level %d: choose a skill (%d options)") % [int(c["level"]), (c["options"] as Array).size()], func():
+            var scr := SkillChoiceScreen.make(hero, idx)          # D-090 choice screen
+            scr.chosen.connect(func(id: String): _done("Learned %s." % String(SkillDefs.info(id)["name"])))
+            _overlay(scr), Vector2(240, 30)))
     var tb := Game.training_block(hero)
     v.add_child(UIKit.label("Training Grounds", 20, UIKit.ACCENT))
     if tb != "":
@@ -207,6 +201,22 @@ func _skills() -> VBoxContainer:
             row.add_child(b)
         v.add_child(row)
     return v
+
+
+## D-090: a panel over everything (skill choice, synergy codex), centred on the screen.
+func _overlay(panel: Control) -> void:
+    var layer := CanvasLayer.new()
+    layer.layer = 50
+    get_tree().root.add_child(layer)
+    var dim := ColorRect.new()
+    dim.color = Color(0, 0, 0, 0.55)
+    dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+    layer.add_child(dim)
+    var centre := CenterContainer.new()
+    centre.set_anchors_preset(Control.PRESET_FULL_RECT)
+    layer.add_child(centre)
+    centre.add_child(panel)
+    panel.tree_exited.connect(func(): layer.queue_free())
 
 
 # --- Equipment (8 open slots, D-060) --------------------------------------------------------------

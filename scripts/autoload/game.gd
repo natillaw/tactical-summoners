@@ -32,6 +32,7 @@ var hardcore: bool = false           # D-081: chosen once at the creator; the Ma
 var game_over: bool = false          # D-081: a hardcore game whose Master died (kept, only for the summary)
 var game_over_info: Dictionary = {}  # {"floors", "heroes", "seconds", "cause"} for the end screen
 var play_seconds: float = 0.0        # D-081: time played (end screen)
+var synergy_codex: Dictionary = {}   # D-090: synergy id -> true once discovered (SynergyDefs)
 var skill_books: Dictionary = {}     # skill id -> copies owned (D-046)
 var tower_cleared: Dictionary = {}   # floor (str) -> times completed (D-031: every floor is unlocked) # floor_num (str) -> {"seed": int, "width": int, "height": int, "grid_rows": Array}
 # Town simulation state (HQ Phase 1, save v9). Rules live in TownSim / EconomyDefs.
@@ -1519,6 +1520,7 @@ func new_game() -> void:
     game_over = false
     game_over_info = {}
     play_seconds = 0.0
+    synergy_codex = {}
     gems = SummonConfig.START_GEMS
     stones = 5
     books = 5
@@ -1598,6 +1600,7 @@ func save_game() -> bool:
         "stash": stash,
         "onboarded": onboarded,
         "hardcore": hardcore, "game_over": game_over, "game_over_info": game_over_info, "play_seconds": play_seconds,
+        "synergy_codex": synergy_codex,
     }
     return _write_atomic(JSON.stringify(data))
 
@@ -1657,6 +1660,7 @@ func apply_save(data: Dictionary) -> void:
     game_over = bool(data.get("game_over", false))
     game_over_info = (data.get("game_over_info", {}) as Dictionary).duplicate()
     play_seconds = float(data.get("play_seconds", 0.0))
+    synergy_codex = (data.get("synergy_codex", {}) as Dictionary).duplicate() if data.get("synergy_codex", {}) is Dictionary else {}   # D-090
     gems = int(data.get("gems", 0))
     stones = int(data.get("stones", 0))
     books = int(data.get("books", 0))

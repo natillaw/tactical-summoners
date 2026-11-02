@@ -111,6 +111,19 @@ var res_kind: String = "stamina"
 var res: float = 0.0
 var res_max: float = 100.0
 var slots: Array = []               # skill ids, keys W E R (D-059; Q = basic attack)
+var combo: int = 0                  # D-090: rogue combo points (SkillDefs.COMBO_MAX), spent by finishers
+var arrows: int = -1                # D-090: arrows left in the quiver (-1 = no bow: nothing to count)
+var combat_t: float = 0.0           # D-090: seconds left "in combat" (SkillDefs.COMBAT_LINGER): resource regen/decay
+var in_bush: bool = false           # D-090: standing in a bush (set by the screen): + stealth, half see-through
+var synergy_vision: int = 0         # D-090 Shared Sight (set by the screen)
+var syn_out: float = 1.0            # D-090 bond synergies (set by the screen): rivals = more damage dealt
+var syn_in: float = 1.0             # friends = less damage taken
+var syn_crit: float = 0.0           # mentor = more critical chance
+var _arrow_corpses: Array = []      # creatures carrying this hero's arrows (recoverable once they are dead)
+var _still_t: float = 0.0
+var _syn_shown: Dictionary = {}     # synergy id -> seconds before its name floats again over this hero
+var _cur_combo: int = 0             # combo points of the finisher being resolved
+var _cur_aoe: bool = false          # the skill being resolved hits an area (Safe Sweep)
 var cds: Dictionary = {}            # skill id -> seconds until ready
 var casting: String = ""            # skill being cast ("" = none)
 var cast_left: float = 0.0
@@ -175,13 +188,38 @@ func _ready() -> void:
 
 
 ## Sight radius in cells for the fog of war (CombatRules.VISION_CELLS; scouts see further).
+## D-090: class base (CombatRules.CLASS_VISION) + perception + items + floor modifier + Shared Sight.
 func vision_cells() -> int:
 	if downed:
 		return CombatRules.DOWNED_VISION
-	var v := CombatRules.VISION_CELLS + int(item_mods.get("vision", 0)) + vision_mod
-	if hero != null and CombatRules.SCOUT_CLASSES.has(hero.hero_class):
-		v += CombatRules.SCOUT_VISION_BONUS
-	return v
+	if hero == null:
+		return CombatRules.VISION_CELLS + vision_mod
+	var base := int(CombatRules.CLASS_VISION.get(hero.hero_class, CombatRules.VISION_CELLS))
+	return base + perception() + int(item_mods.get("vision", 0)) + vision_mod + synergy_vision
+
+
+## D-090: (INT + TEM) / PERCEPTION_DIV cells (+ items' "perception"), capped.
+func perception() -> int:
+	if hero == null:
+		return 0
+	var a: Dictionary = hero.attributes()
+	var p := roundi(float(int(a.get("int", 0)) + int(a.get("tem", 0))) / float(CombatRules.PERCEPTION_DIV))
+	return clampi(p + int(item_mods.get("perception", 0)), 0, CombatRules.PERCEPTION_MAX)
+
+
+## D-090: how hard the hero is to notice (0..STEALTH_MAX): class + items + a bush.
+func stealth() -> float:
+	if hero == null:
+		return 0.0
+	var st := float(CombatRules.CLASS_STEALTH.get(hero.hero_class, 0.0)) + float(item_mods.get("stealth", 0.0))
+	if in_bush:
+		st += CombatRules.BUSH_STEALTH
+	return clampf(st, 0.0, CombatRules.STEALTH_MAX)
+
+
+## D-090: the distance at which a creature with this perception notices the hero.
+func detect_range(enemy_perception: float) -> float:
+	return enemy_perception * maxf(CombatRules.DETECT_MIN, 1.0 - stealth())
 
 
 func credit(kind: String, amount: float) -> void:
@@ -370,8 +408,17 @@ func tick(delta: float) -> void:
 	_anim_lock = maxf(0.0, _anim_lock - delta)
 	for sid in cds:
 		cds[sid] = maxf(0.0, float(cds[sid]) - delta)
+	combat_t = maxf(0.0, combat_t - delta)
+	if target != null and is_instance_valid(target) and target.alive:
+		combat_t = SkillDefs.COMBAT_LINGER
+	_still_t = _still_t + delta if path.is_empty() else 0.0
+	for sid in _syn_shown:
+		_syn_shown[sid] = float(_syn_shown[sid]) - delta
+	if _sprite != null:
+		_sprite.modulate.a = 0.55 if in_bush else 1.0   # D-090: half see-through inside a bush
 	_tick_resource(delta)
 	_use_consumables(delta)
+	_pick_up_arrows()
 	_repath = maxf(0.0, _repath - delta)
 	_dodge_t = maxf(0.0, _dodge_t - delta)
 	dash_cd = maxf(0.0, dash_cd - delta)
@@ -441,17 +488,21 @@ func _set_walk_rate(k: float) -> void:
 
 
 func is_ranged() -> bool:
+	return _class_ranged() and not (arrows == 0 and uses_bow())   # D-090: no arrows left = fights up close
+
+
+func _class_ranged() -> bool:
 	return String(HeroTables.CLASSES[hero.hero_class]["reach"]) == "ranged"
 
 
 func attack_range() -> float:
-	if uses_bow():                                   # D-082: longer, never beyond what the hero sees
+	if uses_bow() and arrows != 0:                   # D-082: longer, never beyond what the hero sees (D-090: with arrows)
 		return minf(AiDefs.BOW_RANGE, float(vision_cells() * NavMap.CELL) * 0.9)
 	return CombatRules.HERO_RANGED_RANGE if is_ranged() else CombatRules.HERO_MELEE_RANGE
 
 
 func uses_bow() -> bool:
-	return is_ranged() and String(CombatVFX.WEAPON_FX.get(weapon_id(), {}).get("proj", "")) == "arrow"
+	return _class_ranged() and String(CombatVFX.WEAPON_FX.get(weapon_id(), {}).get("proj", "")) == "arrow"
 
 
 func is_drawing() -> bool:
@@ -565,6 +616,11 @@ func combat_tick(enemies: Array, map: NavMap) -> void:
 				"follow", "hold":
 					pass
 				_:
+					var quiver := arrow_corpse(AiDefs.ARROW_SEEK) if arrows >= 0 and arrows < AiDefs.ARROWS_START else null
+					if quiver != null and order == "auto" and think:
+						path = map.find_path(position, quiver.position)   # D-090: goes to pick its arrows up
+						auto_path = true
+						return
 					if auto_path:
 						path.clear()
 						auto_path = false
@@ -1135,6 +1191,8 @@ func _melee_blows(t: SandboxEnemy, aim: Vector2) -> void:
 	var mult := float(pat.get("mult", 1.0))
 	for k in hits:
 		if k == 0:
+			if arrows == 0 and uses_bow():
+				mult *= AiDefs.NO_ARROW_MULT              # D-090: an archer with an empty quiver punches
 			_land_basic(t, DamageInfo.make(float(power()) * mult * _busy_mult(t), String(stats.get("kind", "physical")), self, crit_chance, combat_rng), aim)
 			continue
 		_later(float(pat["gap"]) * float(k), func():
@@ -1143,7 +1201,9 @@ func _melee_blows(t: SandboxEnemy, aim: Vector2) -> void:
 			_anim_lock = HeroAnim.play_attack(_sprite, facing, _side, false, false, true)   # the other hand
 			var wf2: Dictionary = CombatVFX.WEAPON_FX.get(weapon_id(), CombatVFX.WEAPON_FX["fist"])
 			CombatVFX.play(get_parent(), t.position + Vector2(0, -12), String(wf2["hit"]), float(wf2.get("scale", 1.0)), _side == "left")
-			_land_basic(t, DamageInfo.make(float(power()) * mult * _busy_mult(t), String(stats.get("kind", "physical")), self, crit_chance, combat_rng), t.position + Vector2(0, -12)))
+			var info2 := DamageInfo.make(float(power()) * mult * _busy_mult(t), String(stats.get("kind", "physical")), self, crit_chance, combat_rng)
+			info2.set_meta("extra_blow", true)
+			_land_basic(t, info2, t.position + Vector2(0, -12)))
 
 
 ## Releases the drawn shot (D-082): toward the target's position now (autonomy, with aim error by AGI,
@@ -1171,6 +1231,8 @@ func _release_shot() -> void:
 	if not uses_bow():
 		_anim_lock = HeroAnim.play_attack(_sprite, facing, _side, true)
 	var wf: Dictionary = CombatVFX.WEAPON_FX.get(weapon_id(), CombatVFX.WEAPON_FX["fist"])
+	if arrows > 0:
+		arrows -= 1                                  # D-090: a finite quiver
 	var shot := ArrowShot.make(position, dir, attack_range() + 30.0, String(wf.get("proj", "arrow")))
 	shot.set_meta("info", DamageInfo.make(float(power()), String(stats.get("kind", "physical")), self, crit_chance, combat_rng))
 	var parent := get_parent()
@@ -1195,6 +1257,10 @@ func _tick_shots(delta: float) -> void:
 			var info: DamageInfo = s.get_meta("info")
 			info.amount *= _busy_mult(hit)
 			_land_basic(hit as SandboxEnemy, info, hit.position + Vector2(0, -12))
+			if arrows >= 0 and hit.get("arrows_in") != null:
+				hit.set("arrows_in", int(hit.get("arrows_in")) + 1)   # D-090: recoverable from the body
+				if not _arrow_corpses.has(hit):
+					_arrow_corpses.append(hit)
 			var wf: Dictionary = CombatVFX.WEAPON_FX.get(weapon_id(), CombatVFX.WEAPON_FX["fist"])
 			CombatVFX.play(get_parent(), hit.position + Vector2(0, -12), String(wf["hit"]), float(wf.get("scale", 1.0)))
 		if s.done and not s.is_inside_tree():
@@ -1210,7 +1276,11 @@ func _land_basic(t: SandboxEnemy, info: DamageInfo, aim: Vector2) -> void:
 	if not is_instance_valid(t) or not t.alive:
 		return                                   # the target died while the shot was in flight
 	blows += 1
+	combat_t = SkillDefs.COMBAT_LINGER
+	synergy_before_hit(t, info)
 	var dealt := t.take_hit(info)
+	if res_kind == "energy" and not info.has_meta("extra_blow"):
+		combo = mini(SkillDefs.COMBO_MAX, combo + SkillDefs.COMBO_PER_BASIC)
 	if info.crit:
 		CombatVFX.play(get_parent(), aim + Vector2(0, -8), "crit", 0.8)
 		CombatFeel.freeze(_sprite, "crit")
@@ -1280,8 +1350,10 @@ func _auto_skill(enemies: Array) -> bool:
 	for want in order_of:
 		for i in slots.size():
 			var sk := slot_skill(i)
-			if sk.is_empty() or skill_cd(i) > 0.0 or res < float(sk["cost"]):
+			if sk.is_empty() or skill_cd(i) > 0.0 or res < _cost(slots[i]):
 				continue
+			if bool(sk.get("finisher", false)) and not _finisher_worth():
+				continue                                 # D-090: a finisher waits for combo points
 			if _auto_kind(sk) != want:
 				continue
 			var aim := Vector2.INF
@@ -1390,18 +1462,96 @@ func _setup_skills() -> void:
 	if rd.has("per_attr"):
 		res_max += float(hero.attributes().get(String(rd["per_attr"]), 0)) * float(rd["per"])
 	res = res_max * float(rd["start"])
+	combo = 0
+	if uses_bow():
+		arrows = AiDefs.ARROWS_START + int(hero.bag.get(AiDefs.ARROW_BAG_ID, 0))   # D-090 (the arrow item: pista D)
 	slots.clear()
 	for sid in hero.loadout:
 		if SkillDefs.SKILLS.has(sid):
 			slots.append(String(sid))
 
 
+## D-090: regen (regen_combat while fighting, regen_still while standing still), decay out of combat.
 func _tick_resource(delta: float) -> void:
 	var rd: Dictionary = SkillDefs.RESOURCES[res_kind]
-	res += float(rd["regen"]) * delta
-	if target == null:
+	var fighting := combat_t > 0.0
+	var r := float(rd["regen"])
+	if fighting and rd.has("regen_combat"):
+		r = float(rd["regen_combat"])
+	if rd.has("regen_still") and _still_t >= 0.4:
+		r = float(rd["regen_still"])              # the archer's concentration
+	res += r * delta
+	if not fighting:
 		res -= float(rd["decay"]) * delta         # Fury cools down out of combat
 	res = clampf(res, 0.0, res_max)
+
+
+## D-090 for the UI (party frames, HUD): the class resource now / at most / which one.
+func resource_value() -> float:
+	return res
+
+
+func resource_max() -> float:
+	return res_max
+
+
+func resource_kind() -> String:
+	return res_kind
+
+
+func combo_points() -> int:
+	return combo
+
+
+## Arrows left (-1 = the hero does not use a bow).
+func arrows_left() -> int:
+	return arrows
+
+
+func in_combat() -> bool:
+	return combat_t > 0.0
+
+
+## A finisher is worth it with 3+ combo points, or 1+ on a foe about to fall.
+func _finisher_worth() -> bool:
+	if combo >= 3:
+		return true
+	return combo >= 1 and target != null and is_instance_valid(target) and float(target.hp) < float(target.max_hp) * 0.35
+
+
+## D-090: walks over the bodies that carry its arrows and takes ARROW_RECOVER of them back.
+func _pick_up_arrows() -> void:
+	if arrows < 0 or _arrow_corpses.is_empty():
+		return
+	var keep: Array = []
+	for c in _arrow_corpses:
+		if not is_instance_valid(c):
+			continue
+		if c.dead and position.distance_to(c.position) <= AiDefs.ARROW_PICKUP:
+			var n := ceili(float(int(c.get("arrows_in"))) * AiDefs.ARROW_RECOVER)
+			c.set("arrows_in", 0)
+			if n > 0:
+				arrows += n
+				FloatingText.spawn(self, "+%d %s" % [n, tr("arrows")], Color(0.9, 0.8, 0.55), false, 1.0)
+			continue
+		keep.append(c)
+	_arrow_corpses = keep
+
+
+## The nearest dead creature with this hero's arrows in it within `radius` (null = none).
+func arrow_corpse(radius: float) -> Node2D:
+	var best: Node2D = null
+	var best_d := radius
+	for c in _arrow_corpses:
+		if is_instance_valid(c) and c.dead and int(c.get("arrows_in")) > 0 and position.distance_to(c.position) < best_d:
+			best_d = position.distance_to(c.position)
+			best = c
+	return best
+
+
+## What a skill costs this hero (D-090: no resource = no cost).
+func _cost(id: String) -> float:
+	return 0.0 if res_kind == "none" else float(SkillDefs.info(id).get("cost", 0))
 
 
 func gain_resource(amount: float) -> void:
@@ -1418,14 +1568,15 @@ func skill_cd(i: int) -> float:
 
 func skill_ready(i: int = 0) -> bool:
 	var sk := slot_skill(i)
-	return alive and not sk.is_empty() and skill_cd(i) <= 0.0 and res >= float(sk["cost"]) and casting == ""
+	return alive and not sk.is_empty() and skill_cd(i) <= 0.0 and res >= _cost(slots[i]) and casting == "" \
+		and (not bool(sk.get("finisher", false)) or combo > 0)
 
 
 func is_casting() -> bool:
 	return casting != ""
 
 
-## Direct skill activation (D-059: W E R = slots 0-2; D-040 had them on Q W E R). Returns true if it fired or started its
+## Direct skill activation (D-059: W E R = slots 0-2; Q is the basic attack). Returns true if it fired or started its
 ## cast. Refused only for a concrete reason, never by a random roll (D-016); the reason is kept in
 ## last_refusal for the UI. allies = every hero of the squad (self included).
 func use_skill_slot(i: int, enemies: Array, allies: Array, aim: Vector2 = Vector2.INF) -> bool:
@@ -1444,13 +1595,23 @@ func use_skill_slot(i: int, enemies: Array, allies: Array, aim: Vector2 = Vector
 		return _refuse("stunned")
 	if skill_cd(i) > 0.0:
 		return _refuse("cooldown %.0fs" % ceilf(skill_cd(i)))
-	if res < float(sk["cost"]):
+	var cost := _cost(slots[i])
+	if res < cost:
 		return _refuse("not enough %s" % String(SkillDefs.RESOURCES[res_kind]["name"]).to_lower())
+	if bool(sk.get("finisher", false)) and combo <= 0:
+		return _refuse("no combo points")
 	var tgt := _skill_target(sk, enemies, allies)
 	if tgt == null:
 		return _refuse(last_refusal if last_refusal != "" else "no target in range")
-	res -= float(sk["cost"])
+	res -= cost
 	cds[slots[i]] = float(sk["cd"])
+	combat_t = SkillDefs.COMBAT_LINGER
+	if bool(sk.get("finisher", false)):
+		sk = sk.duplicate(true)
+		sk["_combo"] = combo                     # D-090: the finisher spends every point
+		combo = 0
+	elif sk.has("combo"):
+		combo = mini(SkillDefs.COMBO_MAX, combo + int(sk["combo"]))
 	if tgt != self:
 		_face(tgt.position - position)
 	var point := tgt.position
@@ -1551,8 +1712,7 @@ func _effects_have(sk: Dictionary, kinds: Array) -> bool:
 func interrupt_cast(reason: String = "interrupted") -> void:
 	if casting == "":
 		return
-	var sk := SkillDefs.info(casting)
-	res = minf(res_max, res + float(sk["cost"]))
+	res = minf(res_max, res + _cost(casting))
 	cds[casting] = minf(float(cds.get(casting, 0.0)), CAST_BREAK_CD)
 	casting = ""
 	cast_target = null
@@ -1622,6 +1782,8 @@ func _resolve_skill(sk: Dictionary, tgt: Combatant, point: Vector2, enemies: Arr
 	var foes: Array = []
 	var friends: Array = []
 	var centre := position
+	_cur_combo = int(sk.get("_combo", 0))
+	_cur_aoe = tmode == "self_aoe" or tmode == "target_aoe"
 	match tmode:
 		"enemy":
 			foes.append(tgt)
@@ -1639,6 +1801,8 @@ func _resolve_skill(sk: Dictionary, tgt: Combatant, point: Vector2, enemies: Arr
 			friends.append(tgt)
 	for eff in sk["effects"]:
 		_apply_effect(eff, foes, friends, centre, enemies, allies)
+	_cur_combo = 0
+	_cur_aoe = false
 	_skill_vfx(_firing, tmode, centre, float(sk.get("radius", sk["range"])), sk)
 	_anim_lock = HeroAnim.play_cast(_sprite, _side)
 
@@ -1654,20 +1818,33 @@ func _apply_effect(eff: Dictionary, foes: Array, friends: Array, centre: Vector2
 				var amount := base * float(eff["mult"]) * _busy_mult(f)
 				if eff.has("bonus_if_busy") and f.get("focus") != null and f.get("focus") != self:
 					amount *= float(eff["bonus_if_busy"])
-				_on_dealt(f, f.take_hit(DamageInfo.make(amount, kind, self, crit_chance, combat_rng)))
+				amount *= 1.0 + SkillDefs.FINISHER_PER_COMBO * float(_cur_combo)
+				var info := DamageInfo.make(amount, kind, self, crit_chance, combat_rng)
+				if _cur_aoe:
+					info.set_meta("aoe", true)               # Safe Sweep (taunt_aoe) reads it
+				synergy_before_hit(f, info)
+				_on_dealt(f, f.take_hit(info))
 		"status":
 			var mag := float(eff.get("mag", 0.0))
 			if eff.has("mult"):
 				mag = float(power()) * float(eff["mult"])
+			var sdur := float(eff["dur"]) * (1.0 + SkillDefs.FINISHER_PER_COMBO * float(_cur_combo))
 			for u in (foes if not foes.is_empty() else friends):
-				u.apply_status(String(eff["id"]), float(eff["dur"]), mag, self)
+				u.apply_status(String(eff["id"]), sdur, mag, self)
+				if String(eff["id"]) == "marked" and hero != null and hero.hero_class == "class.ranger" and u.get("spotted_t") != null:
+					u.set("spotted_t", maxf(float(u.get("spotted_t")), sdur))   # D-090 Hunter's Eye: seen through the fog
+					u.set("marked_by", self)
 		"heal":
 			for u in friends:
-				credit("healing", float(u.heal(roundi(float(stats["mag"]) * float(eff["mult"])))))
+				var healed := float(u.heal(roundi(float(stats["mag"]) * float(eff["mult"]))))
+				credit("healing", healed)
+				_heal_threat(enemies, u, healed)
 				CombatVFX.play(u.get_parent(), u.position + Vector2(0, -14), "heal", 0.9)
 		"heal_pct":
 			for u in friends:
-				credit("healing", float(u.heal(roundi(float(u.max_hp) * float(eff["pct"])))))
+				var healed2 := float(u.heal(roundi(float(u.max_hp) * float(eff["pct"]))))
+				credit("healing", healed2)
+				_heal_threat(enemies, u, healed2)
 				CombatVFX.play(u.get_parent(), u.position + Vector2(0, -14), "heal", 0.9)
 		"shield":
 			for u in friends:
@@ -1864,6 +2041,7 @@ func _fire_fx(at: Vector2, radius: float) -> void:
 
 func _on_hit(info: DamageInfo, dmg: int) -> void:
 	_flash = 0.15
+	combat_t = SkillDefs.COMBAT_LINGER
 	if dmg > 0 and item_mods.has("thorns") and info.source is SandboxEnemy and info.kind == "physical" and is_instance_valid(info.source):
 		(info.source as Combatant).take_hit(DamageInfo.make(float(dmg) * float(item_mods["thorns"]), "true", self))
 	gain_resource(float(SkillDefs.RESOURCES[res_kind]["on_hurt"]))
@@ -1968,6 +2146,11 @@ func _draw() -> void:
 	draw_rect(Rect2(-w * 0.5, -46, w * float(hp) / float(maxi(1, max_hp)), 4), Color(0.45, 0.85, 0.50))
 	draw_rect(Rect2(-w * 0.5, -42, w, 2), Color(0.1, 0.1, 0.1, 0.8))
 	draw_rect(Rect2(-w * 0.5, -42, w * res / maxf(1.0, res_max), 2), SkillDefs.RESOURCES[res_kind]["color"])
+	for k in combo:                              # D-090 rogue combo points: gold pips under the bars
+		draw_circle(Vector2(-w * 0.5 + 3.0 + float(k) * 6.0, -36.0), 2.0, Color(1.0, 0.85, 0.3))
+	if arrows >= 0 and arrows <= AiDefs.ARROWS_LOW:  # D-090: a running-out quiver shows its count
+		draw_string(ThemeDB.fallback_font, Vector2(w * 0.5 + 2.0, -38), "%d" % arrows, HORIZONTAL_ALIGNMENT_LEFT, -1, 10,
+			Color(1.0, 0.45, 0.35) if arrows == 0 else Color(0.95, 0.85, 0.6))
 	if casting != "":
 		var total := float(SkillDefs.info(casting)["cast"])
 		draw_rect(Rect2(-18, -58, 36, 4), Color(0.1, 0.1, 0.1, 0.85))
@@ -1998,6 +2181,81 @@ func _draw() -> void:
 func agony_text() -> String:
 	var s := ceili(agony)
 	return "%d:%02d" % [s / 60, s % 60]
+
+
+# --- D-090 synergies, aggro, bonds -------------------------------------------------------------------
+
+## A synergy fired with this hero: counted (contrib "syn_<id>", read by the simulator), recorded in the
+## codex the first time ("Synergy discovered!") and, at most every SYN_SHOW_EVERY s, named over the hero.
+const SYN_SHOW_EVERY := 6.0
+
+
+func synergy(id: String) -> void:
+	credit("syn_" + id, 1.0)
+	var nm := tr(String(SynergyDefs.info(id).get("name", id)))
+	if SynergyDefs.discover(id):
+		FloatingText.spawn(self, "%s %s" % [tr("Synergy discovered!"), nm], SynergyDefs.DISCOVER_COLOR, true, 2.5)
+		say("%s %s" % [tr("Synergy discovered!"), nm], 3.0)
+		_syn_shown[id] = SYN_SHOW_EVERY
+	elif float(_syn_shown.get(id, 0.0)) <= 0.0:
+		FloatingText.spawn(self, nm, Color(SynergyDefs.DISCOVER_COLOR, 0.85), false, 0.9)
+		_syn_shown[id] = SYN_SHOW_EVERY
+
+
+## Combos and formation on a blow this hero is about to land (basic attack or skill damage).
+func synergy_before_hit(t: Combatant, info: DamageInfo) -> void:
+	if t == null or not is_instance_valid(t) or not t.alive or info == null:
+		return
+	info.crit_chance += syn_crit                            # mentor
+	if hero != null and hero.hero_class == "class.rogue" and t.has_status("stun"):
+		info.crit_chance = 1.0                               # Opening: a stunned foe is an open book
+		synergy("stun_crit")
+	if t.has_status("frozen") and info.kind == "physical":
+		info.amount *= float(SynergyDefs.param("shatter", "mult", 1.5))
+		t.statuses.erase("frozen")
+		CombatVFX.play(t.get_parent(), t.position + Vector2(0, -14), "frost_burst", 1.0)
+		synergy("shatter")
+	if _flanking(t):
+		info.crit_chance += float(SynergyDefs.param("flank", "crit", 0.15))
+		synergy("flank")
+	info.can_crit = info.rng != null and info.crit_chance > 0.0
+
+
+## Flanking: another standing hero fights the same foe from the opposite side (angle >= angle_deg).
+func _flanking(t: Combatant) -> bool:
+	var r := float(SynergyDefs.param("flank", "radius", 90.0))
+	if position.distance_to(t.position) > r:
+		return false
+	var mine := (position - t.position)
+	if mine.length() < 1.0:
+		return false
+	var lim := cos(deg_to_rad(float(SynergyDefs.param("flank", "angle_deg", 120.0))))
+	for a in squad:
+		if not is_instance_valid(a) or a == self or not a.alive or a.target != t or a.position.distance_to(t.position) > r:
+			continue
+		var other: Vector2 = a.position - t.position
+		if other.length() > 1.0 and mine.normalized().dot(other.normalized()) <= lim:
+			return true
+	return false
+
+
+## D-090 aggro: healing an ally draws threat from the creatures already fighting near it.
+func _heal_threat(enemies: Array, healed_unit: Node2D, amount: float) -> void:
+	if amount <= 0.0 or healed_unit == null:
+		return
+	for e in enemies:
+		if is_instance_valid(e) and e.alive and e.alerted and e.focus != null and e.has_method("add_threat") \
+				and e.position.distance_to(healed_unit.position) <= AiDefs.THREAT_HEAL_RADIUS:
+			e.add_threat(self, amount * AiDefs.THREAT_PER_HEAL)
+
+
+## Bond synergies (rivals: more damage; friends: less damage taken) on top of the statuses.
+func outgoing_mult() -> float:
+	return super.outgoing_mult() * syn_out
+
+
+func incoming_mult() -> float:
+	return super.incoming_mult() * syn_in
 
 
 static func _wrap_words(text: String, width: int) -> Array:
