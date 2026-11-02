@@ -280,6 +280,16 @@ func _revive() -> void:
     sb.interact_held = false
     _run(sb, 5.0)
     check(d.downed, "without F nothing happens (the right click no longer rescues for the Master)")
+    # D-142: a cleric's F is Resurrection, a 4 s channel
+    var cls0 := m.hero.hero_class
+    m.hero.hero_class = "class.cleric"
+    check(String(m.f_action().get("name", "")) == "Resurrection" and is_equal_approx(m.revive_time(), 4.0), "a cleric's F is Resurrection: a 4 s channel (D-142)")
+    sb.interact_held = true
+    _run(sb, 4.3)
+    check(not d.downed and d.alive, "the cleric's Resurrection lifts the fallen ally")
+    sb.interact_held = false
+    m.hero.hero_class = cls0
+    d.take_hit(DamageInfo.make(99999.0, "true", null))
     # nobody lifts them: death at 120 s
     m.position = m.position + Vector2(0, 2000)
     m.position = sb.map.nearest_walkable(m.position)

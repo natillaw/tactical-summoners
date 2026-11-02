@@ -50,7 +50,11 @@ const ITEMS := {
 ## the gear came at the end of a cleared floor, straight into the stash: in play, enemies dropped nothing.
 ## Now each body may carry equipment (chance by rank: "elite" = a leader, a shaman or a caller), and
 ## everything stays on the body until a hero loots it. ITEM_RARITY_BONUS feeds ItemGen.roll_rarity.
-const CREATURE_ITEM_CHANCE := {"normal": 0.10, "elite": 0.35, "boss": 1.0}
+## D-142 (owner, 2026-11-02): gear on 3% of normal creatures and 20% of elites (was 10% / 35%).
+const CREATURE_ITEM_CHANCE := {"normal": 0.03, "elite": 0.20, "boss": 1.0}
+## D-142: a floor's boss ALWAYS carries these pieces too, on top of its normal loot (floor -> [{base, rarity}]).
+## Floor 10: an epic (purple) axe.
+const BOSS_GUARANTEED := {10: [{"base": "greataxe", "rarity": "epic"}]}
 const CREATURE_ITEMS := {"normal": 1, "elite": 1, "boss": 2}
 const ITEM_RARITY_BONUS := {"normal": 0.0, "elite": 1.0, "boss": 3.0}
 const JUNK_CHANCE := 0.35            # D-123: of the items a normal creature drops, this share is grey junk

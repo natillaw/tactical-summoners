@@ -114,7 +114,7 @@ func _ready() -> void:
     var sb3 := _make_screen()
     await get_tree().process_frame
     await get_tree().process_frame
-    check(sb3.heroes.all(func(x): return x.slots.size() >= 1 and SkillDefs.SKILLS.has(x.slots[0])), "every hero starts with an active skill (D-043)")
+    check(sb3.heroes.all(func(x): return x.slots.all(func(s): return SkillDefs.SKILLS.has(s))), "every equipped active is a known skill (D-142: new heroes start with only Q)")
     for cls in HeroTables.CLASSES:
         check(SkillDefs.KITS.has(cls) and SkillDefs.CLASS_RESOURCE.has(cls), "skill kit and resource defined for %s" % cls)
     _clear_enemies(sb3)

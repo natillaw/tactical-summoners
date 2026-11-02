@@ -61,6 +61,7 @@ const SKILL := {
     "smoke_bomb": {"particles": Color(0.55, 0.55, 0.6), "amount": 8, "spread": 180.0, "speed": 40.0, "kick": 0},
     "fan_of_knives": {"particles": Color(1.0, 0.92, 0.6), "amount": 4, "spread": 160.0, "speed": 120.0, "kick": 1},
     "kidney_shot": {"particles": Color(1.0, 0.92, 0.6), "amount": 5, "kick": 2},
+    "ambush": {"flash": Color(0.6, 0.5, 0.8), "particles": Color(1.0, 0.92, 0.6), "amount": 6, "kick": 2, "sound": "hit_slash"},
     "eviscerate": {"particles": Color(1.0, 0.92, 0.6), "extra": Color(0.85, 0.15, 0.15), "amount": 10, "kick": 3, "recoil": 1, "heavy": true, "sound": "hit_heavy"},
     # archer
     "rapid_shot": {"particles": Color(0.7, 0.52, 0.32), "amount": 3, "spread": 30.0, "speed": 100.0, "kick": 1, "sound": "hit_arrow"},
@@ -71,6 +72,7 @@ const SKILL := {
     # drawn shot: flash of the tensed bow on the archer + splinters at the target
     "piercing_shot": {"flash": Color(0.85, 0.95, 1.0), "particles": Color(0.7, 0.52, 0.32), "extra": Color(0.85, 0.95, 1.0), "amount": 8, "speed": 130.0, "kick": 3, "heavy": true, "sound": "hit_arrow_heavy"},
     "concussive_shot": {"particles": Color(0.8, 0.8, 0.85), "amount": 7, "kick": 3},
+    "interrupt_shot": {"particles": Color(0.8, 0.8, 0.85), "amount": 5, "kick": 2, "sound": "hit_arrow"},
     "rain_of_arrows": {"particles": Color(0.7, 0.52, 0.32), "amount": 3, "spread": 90.0, "kick": 1, "heavy": true},
     # cleric: golden sparks that rise, shield shine
     "heal": {"flash": Color(1.0, 0.95, 0.6), "particles": Color(1.0, 0.85, 0.35), "rise": true, "kick": 0},
@@ -90,6 +92,7 @@ const SKILL := {
     "chain_burn": {"flash": Color(1.0, 0.267, 0.0, 0.6), "particles": Color(1.0, 0.267, 0.0), "extra": Color(1.0, 0.75, 0.3), "amount": 7, "kick": 2, "sound": "hit_fire"},
     "meteor": {"flash": Color(1.0, 0.267, 0.0, 0.6), "particles": Color(1.0, 0.267, 0.0), "extra": Color(1.0, 0.75, 0.3), "amount": 14, "spread": 180.0, "speed": 120.0, "kick": 3, "heavy": true, "sound": "hit_fire_heavy"},
     "arcane_torrent": {"flash": Color(0.85, 0.92, 1.0), "particles": Color(0.85, 0.92, 1.0), "extra": Color(0.55, 0.7, 1.0), "amount": 9, "kick": 2, "heavy": true, "sound": "hit_lightning"},
+    "counterspell": {"flash": Color(0.75, 0.85, 1.0), "particles": Color(0.55, 0.7, 1.0), "amount": 6, "kick": 1, "sound": "hit_lightning"},
 }
 
 const TYPE := {

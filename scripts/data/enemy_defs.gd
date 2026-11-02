@@ -130,7 +130,7 @@ const TELEGRAPH_KIND := "true"
 ## Roles work as classes: swarm (skirmisher), melee (fighter), brute, guard (defender), ranged (archer),
 ## support (healer / shaman), plus two jobs given by the floor: scout (lookout: flees to raise the alarm)
 ## and the boss's shamans. A creature casts a skill like a hero: a visible wind-up (a ring on the caster
-## for help spells, the marked area for attacks) that a stun or an interrupt breaks; cooldown per skill.
+## for help spells, the marked area for attacks) that only an interrupt skill breaks (D-142); cooldown per skill.
 ## min_floor: the skill appears from that floor (floor 1 teaches the basics without enemy healers).
 ## Targets: ally_low = the most hurt creature in range (heals); ally_key = the boss if near, else the
 ## strongest creature (wards); allies = every creature around the caster; hero_area = an area at a hero
@@ -162,7 +162,7 @@ const SKILLS := {
     "crimson_wave": {"name": "Crimson Wave", "cast": 1.6, "cd": 0.0, "range": 9999.0, "target": "hero_area", "radius": 80.0, "min_floor": 99,
         "dmg_mult": 1.8, "desc": "The unshielded Baron strikes at his altar (AltarDefs): hold him, or leave the altar."},
     "blood_ritual": {"name": "Blood Ritual", "cast": 3.0, "cd": 18.0, "range": 0.0, "target": "self_heal", "below": 0.8, "min_floor": 1,
-        "heal_self_pct": 0.12, "desc": "Heals itself a lot: interrupt or stun it."},
+        "heal_self_pct": 0.12, "desc": "Heals itself a lot: interrupt it."},
 }
 ## Bosses get these on top of their own skills (make_boss). Each floor boss teaches a few mechanics.
 const BOSS_SKILLS := {"warlord": ["whirlwind", "meteor", "blood_ritual"],

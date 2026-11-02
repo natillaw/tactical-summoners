@@ -18,14 +18,9 @@ const SYNERGIES := {
         "desc": "A physical blow on a frozen foe shatters the ice: x1.5 damage, and the foe is free again."},
     "taunt_aoe": {"type": "combo", "name": "Safe Sweep",
         "desc": "While a foe is taunted, area damage from the other heroes draws no threat from it."},
-    "mark_fog": {"type": "combo", "name": "Hunter's Eye", "desc": "A foe marked by an archer stays visible through the fog."},
-    # --- formation
-    "flank": {"type": "formation", "name": "Flanking", "crit": 0.15, "angle_deg": 120.0, "radius": 90.0,
-        "desc": "Two heroes hitting the same foe from opposite sides: +15% critical chance."},
-    "back_to_back": {"type": "formation", "name": "Back to Back", "radius": 48.0, "foes": 2, "composure_mult": 0.5,
-        "desc": "Two heroes standing together with foes around them lose half the Composure (less panic)."},
-    "tank_wall": {"type": "formation", "name": "Shield Wall", "pair_radius": 70.0, "lane": 24.0, "reduce": 0.5,
-        "desc": "Two warriors side by side catch the shots flying at the heroes behind them (half damage, on the warrior)."},
+    "mark_fog": {"type": "combo", "name": "Hunter's Eye",
+        "desc": "A foe marked by an archer is revealed through the fog, and the whole squad deals it 15% more damage."},
+    # --- formation: flanking, back to back and the shield wall were removed (owner, 2026-11-02)
     # --- personality / bonds (relationship levels: HeroData.relationships)
     "rivals": {"type": "bond", "name": "Rivals", "rel_min": -60, "rel_max": -26, "radius": 200.0, "out_dmg": 1.08,
         "desc": "Rivals near each other try to outdo one another: +8% damage."},

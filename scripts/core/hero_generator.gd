@@ -5,7 +5,7 @@ extends RefCounted
 ## more traits/passives and a higher level cap - all of it procedural.
 
 
-const VERSION := 5   # 1 = Drop A. 2 adds Trust/Obedience/Composure. 3 adds the starting active skill (D-044) and the first profession from the past life (D-049, no new rolls); look/class/traits are unchanged. 5 adds the summon gifts (D-079, own RNG)
+const VERSION := 6   # 6 = no starting active (D-142: only Q). 1 = Drop A. 2 adds Trust/Obedience/Composure. 3 adds the starting active skill (D-044) and the first profession from the past life (D-049, no new rolls); look/class/traits are unchanged. 5 adds the summon gifts (D-079, own RNG)
 
 
 static func generate(hero_seed: int, stars: int) -> HeroData:
@@ -253,7 +253,7 @@ static func create_master(hero_seed: int, choices: Dictionary) -> HeroData:
 	h.obedience = MasterDefs.OBEDIENCE
 	h.skills = []
 	h.loadout = []
-	h.ensure_skills()                              # the starter of the chosen class
+	h.ensure_skills()                              # D-142: no starter, only Q
 	return h
 
 
