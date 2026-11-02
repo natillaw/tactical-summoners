@@ -34,7 +34,7 @@ func _ready() -> void:
     check(SkillDefs.SKILLS.keys().all(func(id): return CombatVFX.SKILL_FX.has(id)), "every skill has its own look")
     check(HeroTables.CLASSES.keys().all(func(c): return CombatVFX.WEAPON_FX.has(String(CombatVFX.CLASS_WEAPON.get(c, "")))), "every class has a basic-attack look")
     var weapons: Array = ItemDefs.BASES.keys().filter(func(b): return String(ItemDefs.BASES[b]["kind"]) == "weapon")
-    check(weapons.all(func(b): return CombatVFX.WEAPON_FX.has(b)), "every weapon base has a basic-attack look")
+    check(weapons.all(func(b): return CombatVFX.WEAPON_FX.has(String(ItemDefs.BASES[b].get("visual_base", b)))), "every weapon base has a basic-attack look (the kit's through its visual base)")
     check(CombatVFX.STATUS_FX.keys().all(func(s): return CombatRules.STATUS.has(s)), "status auras map to real statuses")
 
     # --- creature animations (and the 48 / 144 px frame fix) ----------------------------------------

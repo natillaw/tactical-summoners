@@ -135,3 +135,12 @@ static func all_paths() -> Array:
             "social_composure", "res_food", "res_wood", "res_stone", "res_gem", "star_full", "star_empty"]:
         out.append(icon(i))
     return out
+
+
+## D-082b: LPC shields available in ../_vendor/lpc for future items (sheet definition -> variants). Not
+## imported nor assigned yet; only the round wooden one (shield_round, brown) is in the game (starter kit).
+const LPC_SHIELDS_RESERVED := {
+    "weapons/shields/shield_round.json": ["black", "gold", "green", "silver", "yellow"],
+    "weapons/shields/shield_kite.json": [], "weapons/shields/shield_spartan.json": [],
+    "weapons/shields/heater": [], "weapons/shields/scutum": [], "weapons/shields/engrailed": [],
+}

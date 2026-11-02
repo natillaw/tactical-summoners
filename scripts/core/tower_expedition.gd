@@ -60,13 +60,22 @@ static func floor_advice(floor_num: int, hall_level: int) -> String:
     return "" if hall_level >= need else "suggested: Summoner's Hall %d (now %d). Without town gear this floor is very hard" % [need, hall_level]
 
 
-const RECOMMENDED_HEROES := 5          # D-017 squad; shown at the tower gate before entering
 const SLICE_FLOORS := 5                # vertical slice: floors 1-5 are the polished, playable ones
 
 
 ## How many heroes may enter (master prompt D; the party keeps its 5 slots, the first N go in).
 static func party_max(floor_num: int) -> int:
     return clampi(int(get_floor_config(floor_num).get("party", 5)), 1, 5)
+
+
+## D-082b: the one answer to "who goes in" (the tower gate, the dialog before entering and the expedition
+## screen all read it, so what the floor says and what is deployed always match). party = the heroes of the
+## party in slot order (the Master first). size = what the floor takes, have = party heroes, goes = how
+## many are deployed (the first ones), short / extra = fewer / more than the floor takes.
+static func squad_report(floor_num: int, party: Array) -> Dictionary:
+    var size := party_max(floor_num) if floor_num != 0 else 5
+    var have := party.size()
+    return {"size": size, "have": have, "goes": mini(size, have), "short": have < size, "extra": have > size}
 
 
 static func get_floor_config(floor_num: int) -> Dictionary:

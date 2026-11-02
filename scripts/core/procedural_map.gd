@@ -175,7 +175,84 @@ func _try_generate(rng: RandomNumberGenerator) -> bool:
 				grid.set_point_solid(Vector2i(x, y), true)
 	if not is_hq:
 		_seal_pockets()
+		if gen_version >= 2:
+			ensure_density()
 	return true
+
+
+## D-082b (owner: "on floor 2 there were almost no enemies after a long walk"): every floor gets at least
+## EnemyDefs.ENCOUNTER_MIN encounters (or ENCOUNTER_MIN_SHARE of its rooms past the entrance) and no room
+## further than ENCOUNTER_MAX_GAP px from one. Small filler patrols of the floor's creatures go into the
+## emptiest rooms. Deterministic (own RNG from the seed), and also run when a saved floor is loaded, so
+## floors made before the fix are filled the same way every time.
+func ensure_density() -> int:
+	if floor_number == 0 or room_zones.is_empty():
+		return 0
+	var cfg := TowerExpedition.get_floor_config(floor_number)
+	var foes: Array = cfg.get("foes", ["goblin"])
+	if String(cfg.get("mission", "")) == "boss" and foes.size() > 1:
+		foes = foes.slice(1)                                     # never a second boss
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_value ^ 0x0DE45E
+	var rooms: Array = room_zones.filter(func(z): return String(z["zone"]) != "entrance")
+	var want := maxi(EnemyDefs.ENCOUNTER_MIN, ceili(float(rooms.size()) * EnemyDefs.ENCOUNTER_MIN_SHARE))
+	var added := 0
+	for guard in rooms.size() * 2:
+		var worst: Dictionary = {}
+		var worst_d := -1.0
+		for z in rooms:
+			var c: Vector2 = center_of((z["rect"] as Rect2i).get_center())
+			var d := _nearest_encounter(c)
+			if d > worst_d:
+				worst_d = d
+				worst = z
+		var need_gap := worst_d > EnemyDefs.ENCOUNTER_MAX_GAP
+		if not need_gap and encounters.size() >= want:
+			break
+		var room: Dictionary = worst
+		if not need_gap:                                         # count: the emptiest room without a group
+			var empty: Array = rooms.filter(func(z): return _nearest_encounter(center_of((z["rect"] as Rect2i).get_center())) > float(NavMap.CELL) * 4.0)
+			if empty.is_empty():
+				break
+			room = empty[rng.randi() % empty.size()]
+		var size := rng.randi_range(int(EnemyDefs.FILLER_SIZE[0]), int(EnemyDefs.FILLER_SIZE[1]))
+		var cells := _open_cells(room["rect"], rng, size)
+		if cells.is_empty():
+			rooms.erase(room)
+			continue
+		var members := _compose(foes, cells.size(), rng, cfg.get("pack", []) as Array)
+		var zone := String(room["zone"])
+		encounters.append({"kind": "patrol" if cells.size() == 1 else "group", "zone": zone if zone != "objective" else "danger",
+			"members": members, "cells": cells, "patrol": [], "filler": true})
+		for c in cells:
+			enemy_spawn_cells.append(c)
+		added += 1
+	return added
+
+
+func _nearest_encounter(p: Vector2) -> float:
+	var best := INF
+	for e in encounters:
+		for c in e["cells"]:
+			best = minf(best, p.distance_to(center_of(c)))
+	return best
+
+
+## Walkable cells of a room reachable from the entrance, not taken by a creature, a spot or the goal.
+func _open_cells(room: Rect2i, rng: RandomNumberGenerator, count: int) -> Array:
+	var out: Array = []
+	var start := center_of(spawn_cells[0]) if not spawn_cells.is_empty() else Vector2.ZERO
+	for tries in count * 20:
+		if out.size() >= count:
+			break
+		var c := Vector2i(rng.randi_range(room.position.x + 1, room.end.x - 2), rng.randi_range(room.position.y + 1, room.end.y - 2))
+		if is_blocked_cell(c) or out.has(c) or enemy_spawn_cells.has(c) or c == goal_cell or treasure_cells.has(c) \
+				or resource_nodes.any(func(n): return n["cell"] == c):
+			continue
+		if out.is_empty() and find_path(start, center_of(c)).is_empty():
+			continue                                             # never in a place nobody can walk to
+		out.append(c)
+	return out
 
 
 ## B1: no walkable cell the pathfinder cannot reach from the entrance (a unit pushed into such a
@@ -436,6 +513,8 @@ static func from_snapshot(d: Dictionary, floor_num: int) -> ProceduralMap:
 			if m.grid_rows[y][x] == "#":
 				m.grid.set_point_solid(Vector2i(x, y), true)
 	m._seal_pockets()
+	if m.gen_version >= 2:
+		m.ensure_density()                                       # D-082b: floors saved before the fix too
 	return m
 
 

@@ -22,6 +22,13 @@ const BY_BASE := {
     "gloves": ["hands", "gloves", "metal"],
     "greaves": ["legs", "legs_plate", "metal"],
     "boots": ["feet", "boots_basic", "leather"],
+    # D-082b starter kit: the same LPC clothes every hero wore, now real items; the round wooden shield and
+    # the off-hand dagger (the LPC dagger mirrored by tools/import_lpc.py)
+    "plain_shirt": ["chest", "shirt_longsleeve", "tan"],
+    "plain_pants": ["legs", "pants", "brown"],
+    "plain_shoes": ["feet", "shoes_basic", "leather"],
+    "plain_shield": ["off_hand", "shield_round", "default"],
+    "plain_offhand_dagger": ["off_hand", "weapon_dagger_offhand", "default"],
 }
 ## Item level -> metal (tiers of D-077: copper/iron 1-10, steel 11-20, silver 21-30, gold 31+).
 const METAL_BY_ILVL := [[5, "copper"], [10, "iron"], [20, "steel"], [30, "silver"], [9999, "gold"]]
@@ -36,7 +43,7 @@ static func metal_for(ilvl: int) -> String:
 
 ## [piece, variant] for one item, or [] when it has no LPC look.
 static func layer_for(item: Dictionary) -> Array:
-    var v: Array = BY_BASE.get(String(item.get("visual_base", item.get("base", ""))), [])
+    var v: Array = _entry(item)
     if v.is_empty():
         return []
     var variant := String(v[2])
@@ -54,5 +61,15 @@ static func equipment_layers(equipment: Dictionary) -> Dictionary:
             continue
         var lay := layer_for(it)
         if not lay.is_empty():
-            out[String(BY_BASE[String((it as Dictionary).get("visual_base", it.get("base", "")))][0])] = lay
+            out[String(_entry(it)[0])] = lay
+    if not equipment.is_empty():
+        out["_items"] = true                     # D-082b: the hero carries real items: no default look fills gaps
     return out
+
+
+## The BY_BASE entry of an item: its own base first (the kit's shield and off-hand dagger), else its look.
+static func _entry(item: Dictionary) -> Array:
+    var b := String(item.get("base", ""))
+    if BY_BASE.has(b):
+        return BY_BASE[b]
+    return BY_BASE.get(String(item.get("visual_base", b)), [])

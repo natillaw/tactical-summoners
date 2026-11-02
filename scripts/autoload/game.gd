@@ -5,7 +5,7 @@ extends Node
 signal changed
 
 const DEFAULT_SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 18
+const SAVE_VERSION := 19
 const PARTY_SIZE := 5            # slots 0-2 = front row, slots 3-4 = back row; D-080: slot 0 is the Master
 const MASTER_BED := "town_hall"   # D-080: the Master sleeps in the Hall (no dorm bed)
 const XP_PER_BOOK := 100
@@ -101,6 +101,7 @@ func _accept_summon(h: HeroData, banner_id: String, banner: Dictionary, before4:
     h.add_event("summoned", {"banner": banner_id, "banner_version": int(banner["version"]), "pull": pull_count})
     h.add_memory("summoned", "Summoned from the %s banner into the order." % banner_id, "", 2)
     heroes[h.id] = h
+    give_kit(h)                                   # D-082b: white starter clothes + class weapon
     _signatures[h.signature()] = true
     _log_pull(h, banner_id, int(banner["version"]), before4, before5)
 
@@ -194,6 +195,7 @@ func _log_pull(h: HeroData, banner_id: String, banner_version: int, before4: int
 func recruit_wanderer() -> String:
     var h := _generate_unique(1)
     heroes[h.id] = h
+    give_kit(h)
     _signatures[h.signature()] = true
     h.add_memory("joined", "Arrived at the town as a wanderer looking for work.", "", 2)
     _commit()
@@ -492,6 +494,7 @@ func create_master(choices: Dictionary) -> HeroData:
         if not heroes.has(h.id) and not _signatures.has(h.signature()):
             break
     heroes[h.id] = h
+    give_kit(h)
     _signatures[h.signature()] = true
     var old := String(party[0])
     party[0] = h.id
@@ -1228,6 +1231,24 @@ func _layout_to_json() -> Dictionary:
 
 # --- equipment and consumables (D-039) -------------------------------------------------------
 
+## D-082b: every hero wears and carries real white items: the same plain clothes for all (and the Master)
+## and the class's simple weapon (ItemDefs.starter_kit). Only fills empty slots (never replaces gear), and
+## never the off hand while a two-handed weapon is held. Returns how many items it gave.
+func give_kit(h: HeroData) -> int:
+    var n := 0
+    var kit := ItemDefs.starter_kit(h.hero_class)
+    for slot in kit:
+        if h.equipment.has(slot):
+            continue
+        if slot == "off_hand" and h.equipment.has("main_hand") and bool(ItemDefs.BASES.get(String(h.equipment["main_hand"].get("base", "")), {}).get("two_handed", false)):
+            continue
+        if slot == "main_hand" and h.equipment.has("off_hand") and bool(ItemDefs.BASES[String(kit[slot])].get("two_handed", false)):
+            continue
+        h.equipment[slot] = ItemGen.starter(String(kit[slot]), _next_uid())
+        n += 1
+    return n
+
+
 func _next_uid() -> int:
     item_seq += 1
     return item_seq
@@ -1690,6 +1711,9 @@ func apply_save(data: Dictionary) -> void:
             patients.append(String(id))
     town_log = (t.get("log", []) as Array).duplicate()
     item_seq = int(t.get("item_seq", 0))
+    if int(data.get("kit_migration", 0)) == 1:   # v18 -> v19 (D-082b): the kit fills empty slots (after item_seq)
+        for hk in heroes:
+            give_kit(heroes[hk])
     var lay: Dictionary = t.get("layout", {})
     for bid in lay:
         var xy: Array = lay[bid]
@@ -1772,6 +1796,8 @@ func _migrate(data: Dictionary) -> Dictionary:
         data["exp_charges"] = ExpeditionDefs.CHARGES_MAX
         data["exp_charge_t"] = 0.0
         data["portal_upgrades"] = {}
+    if v < 19:
+        data["kit_migration"] = 1         # v18 -> v19 (D-082b): the starter kit goes into empty slots on load
     if v < 18:
         pass                              # v17 -> v18 (D-081): Leadership, memories and bond (0 / [] / 30 on load); an elf Master becomes human; hardcore off
     if v < 17:

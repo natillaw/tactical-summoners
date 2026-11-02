@@ -72,9 +72,9 @@ const REVIVE_RADIUS := 420.0        # how far an autonomous hero will go on its 
 ## option. PING_MODIFIER is the key held for both (configurable; the input action "ping" uses it).
 const PING_MODIFIER := KEY_SHIFT
 const PING_WHEEL_HOLD := 0.25
-const PING_WHEEL_INNER := 74.0      # px: inside = the 8 pings, outside (up to OUTER) = the 3 Commands
-const PING_WHEEL_OUTER := 124.0
-const PING_WHEEL_DEAD := 16.0       # px around the centre: releasing there cancels
+const PING_WHEEL_INNER := 44.0      # px (D-082b: ~60 % of the first size; the canvas stretch scales it with the UI)
+const PING_WHEEL_OUTER := 74.0
+const PING_WHEEL_DEAD := 10.0       # px around the centre: releasing there cancels
 ## The eight pings, in wheel order (clockwise from the top). life = seconds the marker stays on the map.
 const PINGS := {
     "regroup": {"name": "Regroup!", "icon": "order_follow", "color": Color(0.55, 0.95, 0.6), "life": 4.0},

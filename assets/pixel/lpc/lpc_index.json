@@ -5471,6 +5471,94 @@
      }
     }
    ]
+  },
+  "shield_round": {
+   "name": "Round Shield (wood)",
+   "licenses": [
+    "CC-BY-SA 3.0",
+    "GPL 3.0",
+    "OGA-BY 3.0"
+   ],
+   "authors": [
+    "DarkwallLKE",
+    "Johannes Sj\u00f6lund (wulax)",
+    "Michael Whitlock (bigbeargames)",
+    "Tuomo Untinen (reemax)"
+   ],
+   "layers": [
+    {
+     "z": 110,
+     "files": {
+      "male": {
+       "default": {
+        "walk": "shield_round/layer_1/male/walk.png",
+        "slash": "shield_round/layer_1/male/slash.png",
+        "thrust": "shield_round/layer_1/male/thrust.png"
+       }
+      },
+      "female": {
+       "default": {
+        "walk": "shield_round/layer_1/female/walk.png",
+        "slash": "shield_round/layer_1/female/slash.png",
+        "thrust": "shield_round/layer_1/female/thrust.png"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "weapon_dagger_offhand": {
+   "name": "Dagger (off hand, mirrored)",
+   "licenses": [
+    "CC-BY-SA 3.0",
+    "GPL 3.0",
+    "OGA-BY 3.0"
+   ],
+   "authors": [
+    "Johannes Sj\u00f6lund (wulax)",
+    "Matthew Krohn (makrohn)",
+    "bluecarrot16"
+   ],
+   "layers": [
+    {
+     "z": 140,
+     "files": {
+      "male": {
+       "default": {
+        "walk": "weapon_dagger_offhand/layer_1/male/walk.png",
+        "slash": "weapon_dagger_offhand/layer_1/male/slash.png",
+        "thrust": "weapon_dagger_offhand/layer_1/male/thrust.png",
+        "hurt": "weapon_dagger_offhand/layer_1/male/hurt.png"
+       }
+      },
+      "female": {
+       "default": {
+        "walk": "weapon_dagger_offhand/layer_1/female/walk.png",
+        "slash": "weapon_dagger_offhand/layer_1/female/slash.png",
+        "thrust": "weapon_dagger_offhand/layer_1/female/thrust.png",
+        "hurt": "weapon_dagger_offhand/layer_1/female/hurt.png"
+       }
+      }
+     }
+    },
+    {
+     "z": 9,
+     "files": {
+      "male": {
+       "default": {
+        "walk": "weapon_dagger_offhand/layer_2/male/walk.png",
+        "slash": "weapon_dagger_offhand/layer_2/male/slash.png"
+       }
+      },
+      "female": {
+       "default": {
+        "walk": "weapon_dagger_offhand/layer_2/female/walk.png",
+        "slash": "weapon_dagger_offhand/layer_2/female/slash.png"
+       }
+      }
+     }
+    }
+   ]
   }
  }
 }

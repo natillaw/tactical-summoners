@@ -88,6 +88,13 @@ const FLOOR_SCALE := 0.10         # +10% health per floor above the first (D-065
 ## 2026-10-31: damage climbs faster than health (enemies hit hard, they are not sponges): +FLOOR_ATK_SCALE
 ## per floor above the first. Without crafted armour floor 5+ hits are brutal.
 const FLOOR_ATK_SCALE := 0.22
+## D-082b: minimum content of a floor (ProceduralMap.ensure_density): at least ENCOUNTER_MIN encounters or
+## ENCOUNTER_MIN_SHARE of the rooms past the entrance, no room further than ENCOUNTER_MAX_GAP px (straight
+## line) from a group; fillers are FILLER_SIZE creatures of the floor.
+const ENCOUNTER_MIN := 6
+const ENCOUNTER_MIN_SHARE := 0.6
+const ENCOUNTER_MAX_GAP := 900.0
+const FILLER_SIZE := [1, 2]
 
 ## --- tactical targeting (2026-10-31: the Wilds and late floors punish mistakes) ---------------------
 ## A "tactical" creature (DungeonDefs / floor "tactics") does not just go for the nearest hero: it scores

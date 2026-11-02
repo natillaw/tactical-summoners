@@ -44,7 +44,36 @@ const BASES := {
     "ring": {"name": "Ring", "kind": "jewel", "slot": "ring", "stats": {"crit": 0.02}, "classes": []},
     "amulet": {"name": "Amulet", "kind": "jewel", "slot": "amulet", "stats": {"mres": 2, "status_resist": 0.03}, "classes": []},
     "charm": {"name": "Trinket", "kind": "jewel", "slot": "special", "stats": {"hp": 8}, "classes": []},
+    # D-082b starter kit (white, never looted or crafted: "starter"). Clothes have no stats; weapons the minimum.
+    "plain_shirt": {"name": "Plain shirt", "kind": "armor", "slot": "chest", "stats": {}, "classes": [], "starter": true},
+    "plain_pants": {"name": "Plain trousers", "kind": "armor", "slot": "legs", "stats": {}, "classes": [], "starter": true},
+    "plain_shoes": {"name": "Plain shoes", "kind": "armor", "slot": "feet", "stats": {}, "classes": [], "starter": true},
+    "plain_sword": {"name": "Simple sword", "kind": "weapon", "slot": "main_hand", "stats": {"atk": 1}, "classes": ["class.warrior"], "starter": true, "visual_base": "sword"},
+    "plain_shield": {"name": "Round wooden shield", "kind": "armor", "slot": "off_hand", "stats": {"def": 1}, "classes": ["class.warrior"], "starter": true,
+        "block": {"chance": 0.1, "reduce": 0.5, "arc_deg": 120.0}},
+    "plain_dagger": {"name": "Simple dagger", "kind": "weapon", "slot": "main_hand", "stats": {"atk": 1}, "classes": ["class.rogue"], "starter": true, "visual_base": "dagger"},
+    "plain_offhand_dagger": {"name": "Simple off-hand dagger", "kind": "weapon", "slot": "off_hand", "stats": {}, "classes": ["class.rogue"], "starter": true, "visual_base": "dagger"},
+    "plain_bow": {"name": "Simple bow", "kind": "weapon", "slot": "main_hand", "two_handed": true, "stats": {"atk": 1}, "classes": ["class.ranger"], "starter": true, "visual_base": "bow"},
+    "plain_staff": {"name": "Simple staff", "kind": "weapon", "slot": "main_hand", "two_handed": true, "stats": {"mag": 1}, "classes": ["class.mage", "class.cleric"], "starter": true, "visual_base": "staff"},
+    "plain_club": {"name": "Club", "kind": "weapon", "slot": "main_hand", "stats": {"atk": 1}, "classes": [], "starter": true, "visual_base": "mace"},
 }
+## D-082b: what every hero (and the Master) wears and carries when they join: real white items.
+const STARTER_OUTFIT := {"chest": "plain_shirt", "legs": "plain_pants", "feet": "plain_shoes"}
+const STARTER_WEAPONS := {
+    "class.warrior": {"main_hand": "plain_sword", "off_hand": "plain_shield"},
+    "class.rogue": {"main_hand": "plain_dagger", "off_hand": "plain_offhand_dagger"},
+    "class.ranger": {"main_hand": "plain_bow"},
+    "class.mage": {"main_hand": "plain_staff"},
+    "class.cleric": {"main_hand": "plain_staff"},
+    "class.commoner": {"main_hand": "plain_club"},
+}
+
+
+## slot -> base of the starter kit of a class.
+static func starter_kit(class_id: String) -> Dictionary:
+    var out: Dictionary = STARTER_OUTFIT.duplicate()
+    out.merge(STARTER_WEAPONS.get(class_id, {}))
+    return out
 const CRAFTABLE := {"weapon": ["sword", "greataxe", "dagger", "mace", "bow", "staff", "wand"],
     "armor": ["shield", "helm", "hood", "mail", "robe", "gloves", "greaves", "boots"]}
 
@@ -107,7 +136,7 @@ static func slot_open(slot: String) -> bool:
 
 ## True when a base goes into an open slot (loot and crafting only make these for now).
 static func base_open(base_id: String) -> bool:
-    return not slots_for(base_id).is_empty()
+    return not slots_for(base_id).is_empty() and not bool(BASES[base_id].get("starter", false))   # D-082b: the kit is never loot
 
 
 ## Which open equipment slots a base can go in.
@@ -140,6 +169,8 @@ static func apply_equipment(stats: Dictionary, equipment: Dictionary, class_id: 
         var all: Dictionary = (it.get("stats", {}) as Dictionary).duplicate()
         for a in it.get("affixes", []):
             all[String(a["stat"])] = float(all.get(String(a["stat"]), 0.0)) + float(a["value"])
+        if base.has("block") and class_id == "class.warrior":   # D-082b: shields block for warriors only (for now)
+            mods["block"] = base["block"]
         var power: Dictionary = it.get("power", {})
         if power.has("on_hit_status"):
             if not mods.has("procs"):
