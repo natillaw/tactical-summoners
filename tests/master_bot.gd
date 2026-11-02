@@ -25,7 +25,12 @@ var camp: bool = true                 # D-090 tactical: pings "Camp here" when t
 var camp_below: float = 0.55          # ...when the squad's health (or a caster's mana) is under this share
 var _wait_t: float = 0.0
 var _regroup_cd: float = 0.0
-var stats := {"pings": 0, "commands": 0, "skills": 0, "revives": 0, "retreats": 0, "dashes": 0, "camps": 0}
+var stats := {"pings": 0, "commands": 0, "skills": 0, "revives": 0, "retreats": 0, "dashes": 0, "camps": 0, "loots": 0}
+var loot: bool = true                 # pista D: walks to glowing bodies near the way and holds F
+const LOOT_SEEK := 220.0
+var _loot_t: float = 0.0              # time spent on the current body (gives up after LOOT_GIVE_UP s)
+var _loot_target: LootBag = null
+const LOOT_GIVE_UP := 6.0
 var _ping_cd: float = 0.0
 var _move_cd: float = 0.0
 var _last_goal: Vector2 = Vector2.INF
@@ -120,6 +125,8 @@ func think(sb: SandboxScreen, goal: Vector2, dt: float) -> int:
     if sb.camp != null and is_instance_valid(sb.camp):
         m.stop()                                      # D-090: sits by the fire until the camp ends
         return used
+    if loot and _loot(sb, m, dt):                     # pista D (D-121): a glowing body near the way: hold F on it
+        return used
     if tactical() and camp and _worn_out(sb) and sb.camp_refusal(m.position) == "":
         _ping(sb, "camp", m.position)
         stats["camps"] += 1
@@ -150,6 +157,41 @@ func _worn_out(sb: SandboxScreen) -> bool:
         if h.res_kind == "mana" and h.res_max > 0.0 and h.res < h.res_max * camp_below * 0.6:
             return true
     return n > 0 and hp / float(n) < camp_below
+
+## Pista D: walks to the nearest body with loot (only if a pack has room or it holds materials) and
+## holds F there; gives up on a body after LOOT_GIVE_UP s. Only when it is safe (SandboxScreen.loot_safe),
+## and in defense/survival without moving (loot_holds_post). True while busy looting.
+func _loot(sb: SandboxScreen, m: SandboxHero, dt: float) -> bool:
+    # the same rule as the autonomous heroes: nothing alive nearby and not fighting; in defense and
+    # survival only what lies at its feet (never off its post: the end-of-floor sweep takes the rest)
+    if m.target != null or m.is_casting() or not sb.loot_safe(m.position):
+        _loot_t = 0.0
+        return false
+    var seek := LootDefs.LOOT_RANGE * 0.8 if sb.loot_holds_post() else LOOT_SEEK
+    var best: LootBag = null
+    for b in sb.loot_bags:
+        if is_instance_valid(b) and not b.is_empty() and b.visible_to_bot and b.position.distance_to(m.position) <= seek \
+                and (best == null or b.position.distance_to(m.position) < best.position.distance_to(m.position)):
+            best = b
+    if best == null or (best.res.is_empty() and sb._pack_with_room(m, true) == null):
+        _loot_t = 0.0
+        return false
+    if best != _loot_target:
+        _loot_target = best
+        _loot_t = 0.0
+    _loot_t += dt
+    if _loot_t > LOOT_GIVE_UP:
+        best.visible_to_bot = false               # unreachable: leave it
+        _loot_t = 0.0
+        return false
+    if best.position.distance_to(m.position) <= LootDefs.LOOT_RANGE * 0.8:
+        sb.interact_held = true
+        m.stop()
+        if best.hold == 0.0:
+            stats["loots"] += 1
+    else:
+        _move(sb, best.position, false)
+    return true
 
 
 ## Retreat toward the exit like a player: X (the Master runs, the squad is pinged to come), then escape.

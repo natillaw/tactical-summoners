@@ -48,6 +48,7 @@ func refresh() -> void:
         c.queue_free()
     _body.add_child(_resources())
     _body.add_child(_stash())
+    _body.add_child(_books_and_hoards())
     _body.add_child(_forge())
 
 
@@ -68,7 +69,7 @@ func _panel(title: String, w: int) -> Array:
 func _resources() -> Control:
     var pv := _panel("Resources", 130)
     var v: VBoxContainer = pv[1]
-    var cats := {"basic": "Gathered", "processed": "Processed", "drop": "Creature drops", "consumable": "Supplies"}
+    var cats := {"basic": "Gathered", "processed": "Processed", "drop": "Creature drops", "consumable": "Supplies", "book": "Books"}
     for cat in cats:
         v.add_child(UIKit.label(String(cats[cat]), 14, UIKit.MUTED))
         for res in EconomyDefs.RESOURCES:
@@ -87,6 +88,15 @@ func _stash() -> Control:
     var h := _hero()
     if Game.stash.is_empty():
         v.add_child(UIKit.label("Empty: the tower and the forge fill it.", 12, UIKit.MUTED))
+    var junk: Array = Game.stash.filter(func(it): return ItemDefs.is_junk(it))
+    if not junk.is_empty():                                   # D-123: grey junk is only good for materials
+        v.add_child(UIKit.button(tr("Salvage all junk (%d)") % junk.size(), func():
+            var got := {}
+            for it in junk:
+                var g := Game.salvage(int(it["uid"]))
+                for k in g:
+                    got[k] = int(got.get(k, 0)) + int(g[k])
+            _msg.text = "Salvaged: %s" % SandboxScreen._res_line(got), Vector2(200, 26)))
     var grid := GridContainer.new()
     grid.columns = 8
     v.add_child(grid)
@@ -108,6 +118,17 @@ func _stash() -> Control:
                     _msg.text = "Salvaged: %s" % SandboxScreen._res_line(got)
                 UIKit.sound("click"))
         grid.add_child(cell)
+    if not Game.stash.is_empty():                             # names in their rarity colour (D-123)
+        var names := VBoxContainer.new()
+        names.add_theme_constant_override("separation", 0)
+        for it in Game.stash.slice(0, 12):
+            var l := ItemIcons.name_label(it, 10)
+            l.tooltip_text = ItemIcons.tooltip(it)
+            l.mouse_filter = Control.MOUSE_FILTER_STOP
+            names.add_child(l)
+        if Game.stash.size() > 12:
+            names.add_child(UIKit.label("…", 10, UIKit.MUTED))
+        v.add_child(names)
     if h != null:
         v.add_child(UIKit.label("%s wears:" % h.display_name(), 14, UIKit.ACCENT))
         var worn := GridContainer.new()
@@ -120,6 +141,52 @@ func _stash() -> Control:
             c.mouse_filter = Control.MOUSE_FILTER_STOP
             worn.add_child(c)
     return pv[0]
+
+
+## Pista D: books from the tower (D-129) and heroes caught keeping loot (D-125).
+func _books_and_hoards() -> Control:
+    var pv := _panel("Books", 200)
+    var v: VBoxContainer = pv[1]
+    var h := _hero()
+    var any := false
+    for b in LootDefs.BOOKS:
+        var n := int(Game.hq_outputs.get(b, 0))
+        if n <= 0:
+            continue
+        any = true
+        var row := HBoxContainer.new()
+        var ic := TextureRect.new()
+        ic.texture = ItemIcons.texture(String(b))
+        row.add_child(ic)
+        row.add_child(UIKit.label("%s ×%d" % [String(EconomyDefs.RESOURCES[b]["name"]), n], 12, UIKit.TEXT))
+        v.add_child(row)
+        var book := String(b)
+        if book == "book_trade":
+            for prof in (h.professions.keys() if h != null else []):
+                var p := String(prof)
+                v.add_child(UIKit.button(tr("+1 %s") % String(ProfessionDefs.info(p).get("name", p)), func(): _use_book(book, p), Vector2(190, 24)))
+        else:
+            v.add_child(UIKit.button(tr("Use") + (" · %s" % h.display_name() if h != null and book != "book_plan" else ""), func(): _use_book(book, ""), Vector2(190, 24)))
+    if not any:
+        v.add_child(UIKit.label("Rare drops in the tower: experience, skill tomes, trade manuals, master plans.", 11, UIKit.MUTED))
+    var caught := Game.hoard_suspects()
+    if not caught.is_empty():
+        v.add_child(UIKit.label("Kept loot back", 16, UIKit.BAD))
+        for x in caught:
+            var hx: HeroData = x
+            v.add_child(UIKit.label("%s: %d item(s)" % [hx.display_name(), hx.hoard.size()], 12, UIKit.TEXT))
+            v.add_child(UIKit.button(tr("Confiscate"), func(): _msg.text = tr("%d item(s) back in the stash.") % Game.confiscate_hoard(hx), Vector2(190, 24)))
+        var tip := UIKit.label("Or punish them: synthesis in the Summoner's Hall.", 11, UIKit.MUTED)
+        tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        tip.custom_minimum_size = Vector2(185, 0)
+        v.add_child(tip)
+    return pv[0]
+
+
+func _use_book(book: String, prof: String) -> void:
+    var why := Game.use_book(book, _hero(), prof)
+    _msg.text = why if why != "" else tr("Used: %s") % String(EconomyDefs.RESOURCES[book]["name"])
+    UIKit.sound("click")
 
 
 func _forge() -> Control:

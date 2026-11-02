@@ -46,7 +46,8 @@ func _initialize() -> void:
         all.append(g.roll_unique(1.0))
     var got := all.filter(func(n): return n != "")
     check(first != "" and got.size() == ItemDefs.UNIQUES.size(), "each unique drops once per account (%d of %d)" % [got.size(), ItemDefs.UNIQUES.size()])
-    check(ItemDefs.RARITY_ORDER.slice(0, 6) == ["common", "uncommon", "rare", "epic", "legendary", "unique"] and int(ItemDefs.RARITIES["legendary"]["affixes"]) == 4, "rarities white/green/blue/purple/orange/red; legendary has 4 affixes")
+    check(ItemDefs.RARITY_ORDER.slice(0, 6) == ["common", "uncommon", "rare", "epic", "legendary", "unique"] and int(ItemDefs.RARITIES["legendary"]["affixes"]) == 2 and ItemDefs.RARITIES.has("junk"),
+        "rarities grey/white/green/blue/purple/orange/red; legendary has 2 strong properties (D-122, D-123)")
     print("== %s ==" % ("ALL PASSED" if fails == 0 else "%d FAILED" % fails))
     quit(1 if fails > 0 else 0)
 

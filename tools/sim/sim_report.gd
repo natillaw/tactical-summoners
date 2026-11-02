@@ -44,6 +44,7 @@ static func aggregate(variants: Array, runs: Array) -> Array:
             row["reward"] = _res_means(rs, "reward")
             row["bot"] = _res_means(rs, "bot")
             row["pista_a"] = _res_means(rs.filter(func(r): return r.has("pista_a")), "pista_a")   # D-090
+            row["loot"] = _res_means(rs.filter(func(r): return r.has("loot")), "loot")   # pista D
             var killers := {}
             for r in rs:
                 for h in r["heroes"]:
@@ -191,6 +192,16 @@ static func markdown(name: String, variants: Array, rows: Array, speed: Dictiona
                 syn[String(k).trim_prefix("syn_")] = pa[k]
         L.append("| %s | %d | %.1f / %.1f | %.1f | %s |" % [r["variant"], r["floor"], float(pa.get("camps", 0)), float(pa.get("camps_interrupted", 0)),
             float(pa.get("arrows_left", 0)), _kv(syn, ", ", 1) if not syn.is_empty() else "—"])
+    L.append("")
+    L.append("## Botín de los cuerpos (pista D, media por run)")
+    L.append("")
+    L.append("| Variante | Piso | Cuerpos con botín | Ítems en cuerpos | Basura | Saqueados | A casa | Perdidos | Retenidos (avaricioso) | Saqueos del bot |")
+    L.append("|---|---|---|---|---|---|---|---|---|---|")
+    for r in rows:
+        var lo: Dictionary = r.get("loot", {})
+        L.append("| %s | %d | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f | %.2f | %.1f |" % [r["variant"], r["floor"], float(lo.get("bodies", 0)), float(lo.get("items", 0)),
+            float(lo.get("junk", 0)), float(lo.get("looted", 0)), float(lo.get("home", 0)), float(lo.get("lost", 0)), float(lo.get("greedy_kept", 0)),
+            float((r["bot"] as Dictionary).get("loots", 0))])
     L.append("")
     var any_k := rows.any(func(r): return not (r["killers"] as Dictionary).is_empty())
     if any_k:
