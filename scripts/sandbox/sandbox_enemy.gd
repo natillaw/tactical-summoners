@@ -600,7 +600,7 @@ func add_threat(h: Node, amount: float) -> void:
     if h == null or not is_instance_valid(h) or amount <= 0.0:
         return
     var cls: String = String(h.hero.hero_class) if h is SandboxHero and h.hero != null else ""
-    threat[h] = float(threat.get(h, 0.0)) + amount * AiDefs.THREAT_PER_DAMAGE * float(AiDefs.THREAT_CLASS_MULT.get(cls, 1.0))
+    threat[h] = float(threat.get(h, 0.0)) + amount * AiDefs.THREAT_PER_DAMAGE * float(AiDefs.THREAT_CLASS_MULT.get(cls.trim_prefix("class."), 1.0))
 
 
 ## D-090 for the UI: the hero this creature is going for (taunter first, else its focus; null = nobody).

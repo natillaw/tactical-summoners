@@ -127,7 +127,7 @@ const THREAT_DECAY := 0.15
 const THREAT_PER_DAMAGE := 1.0
 const THREAT_PER_HEAL := 0.5
 const THREAT_HEAL_RADIUS := 320.0
-const THREAT_CLASS_MULT := {"class.warrior": 2.0}
+const THREAT_CLASS_MULT := {"warrior": 2.0}   # keyed without "class." (simulator overrides: AiDefs.THREAT_CLASS_MULT.warrior)
 const TAUNT_TOP := 1.1
 const THREAT_SWITCH := 1.1
 ## Archer creatures (bandido_arquero): the hero in range with a clear shot, nearest first.
