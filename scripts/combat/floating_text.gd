@@ -13,6 +13,8 @@ const POP_TIME := 0.12               # big numbers (crits) pop in from 1.5x, nor
 
 
 static func spawn(unit: Node2D, p_text: String, p_color: Color, p_big: bool, p_life: float = LIFE) -> void:
+    if SimMode.on:
+        return                                    # D-083 headless simulator: nothing to draw
     if unit == null or not unit.is_inside_tree() or unit.get_parent() == null or not unit.is_visible_in_tree():
         return                                    # nothing pops out of the fog of war
     var f := FloatingText.new()

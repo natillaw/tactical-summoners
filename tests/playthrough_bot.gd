@@ -316,44 +316,7 @@ func _centre(list: Array) -> Vector2:
 
 ## Objective with full knowledge of the map (a replay: the player already knows the floor).
 func _goal(sb: SandboxScreen, c: Vector2, skip_targets: Array) -> Vector2:
-    var goal := Vector2.INF
-    match sb.mission_type:
-        "sabotage":
-            for t in sb.totems:
-                if t.alive and (goal == Vector2.INF or t.position.distance_to(c) < goal.distance_to(c)):
-                    goal = t.position
-            return goal
-        "escape":
-            return sb.map.center_of(sb.map.relic_cell)
-        "defense":
-            return sb.shrine.position if sb.shrine != null else goal
-        "combat":
-            var best_d := INF
-            for e in sb.living_enemies():
-                if skip_targets.has(e):
-                    continue
-                var d: float = e.position.distance_to(c)
-                if d < best_d:
-                    best_d = d
-                    goal = e.position
-        "exploration":
-            var best_d := INF
-            for cl in sb.clues:
-                if cl.visible and cl.position.distance_to(c) < best_d:
-                    best_d = cl.position.distance_to(c)
-                    goal = cl.position
-        "retrieval", "rescue":
-            goal = sb.relic.position if sb.carrier == null else sb.map.center_of(sb.map.extract_cell)
-        "boss":
-            if sb.boss != null:
-                goal = sb.boss.position
-        "farm":
-            var best_d := INF
-            for g in sb.nodes:
-                if is_instance_valid(g) and not g.taken and g.position.distance_to(c) < best_d:
-                    best_d = g.position.distance_to(c)
-                    goal = g.position
-    return goal
+    return MasterBot.mission_goal(sb, c, skip_targets)   # D-083: shared with the simulator
 
 
 ## Objective as a first-time player knows it: only what the squad has seen (fog of war).

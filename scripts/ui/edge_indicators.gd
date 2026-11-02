@@ -25,6 +25,9 @@ func _process(_delta: float) -> void:
     var view := size
     var bottom := view.y - sb.hud_bottom()
     var inner := Rect2(Vector2.ONE * CameraDefs.INDICATOR_MARGIN, Vector2(view.x, bottom) - Vector2.ONE * CameraDefs.INDICATOR_MARGIN * 2.0)
+    if inner.size.x <= 1.0 or inner.size.y <= 1.0:   # not laid out yet (first frame / headless): no markers
+        queue_redraw()
+        return
     for h in sb.heroes:
         if h.dead:
             continue

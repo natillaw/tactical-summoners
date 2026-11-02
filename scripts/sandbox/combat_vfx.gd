@@ -41,6 +41,8 @@ static func spawn_strip16(parent: Node2D, pos: Vector2, pack: String, fname: Str
 
 
 static func spawn_effect(parent: Node2D, pos: Vector2, pack: String, folder: String, fname: String, fw: int, fh: int, count: int, scale_factor: float = 2.0) -> void:
+    if SimMode.on:
+        return                       # D-083 headless simulator
     if parent == null:
         return
     var sf := create_strip_frames(pack, folder, fname, fw, fh, count, 14)
@@ -190,6 +192,8 @@ static func area_scale(key: String, radius: float) -> float:
 ## larger than one copy can cover, a ring of smaller copies at ~60% of the radius (ground perspective
 ## 0.55), slightly staggered so the blast ripples outwards. Returns how many copies were spawned.
 static func area_burst(parent: Node, centre: Vector2, radius: float, key: String, delay: float = 0.0) -> int:
+    if SimMode.on:
+        return 0                       # D-083 headless simulator
     if parent == null or frames_for(key) == null:
         return 0
     var sc := area_scale(key, radius)
@@ -214,6 +218,8 @@ static func _later(parent: Node, pos: Vector2, key: String, sc: float, delay: fl
 
 ## One-shot effect at a world point (frees itself). Returns the node (null if the art is missing).
 static func play(parent: Node, pos: Vector2, key: String, scale_mult: float = 1.0, flip: bool = false, rot: float = 0.0) -> AnimatedSprite2D:
+    if SimMode.on:
+        return null                       # D-083 headless simulator
     if parent == null or key == "":
         return null
     var a := _sprite(key, false, scale_mult)
@@ -230,6 +236,8 @@ static func play(parent: Node, pos: Vector2, key: String, scale_mult: float = 1.
 
 ## Looping effect stuck to a unit (status auras, cast circles, zones). The caller frees it.
 static func attach(unit: Node, key: String, offset: Vector2, scale_mult: float = 1.0, behind: bool = false) -> AnimatedSprite2D:
+    if SimMode.on:
+        return null                       # D-083 headless simulator
     if unit == null:
         return null
     var a := _sprite(key, true, scale_mult)
@@ -247,6 +255,8 @@ static func attach(unit: Node, key: String, offset: Vector2, scale_mult: float =
 ## A projectile that flies from `from` to `to` (rotated along its path) and plays `impact` there.
 ## Purely visual: the hit itself is resolved by the combat rules at once.
 static func projectile(parent: Node, from: Vector2, to: Vector2, key: String, impact: String = "", speed: float = 650.0, scale_mult: float = 1.0, impact_scale: float = 1.0) -> AnimatedSprite2D:
+    if SimMode.on:
+        return null                       # D-083 headless simulator
     if parent == null:
         return null
     var a := _sprite(key, true, scale_mult)

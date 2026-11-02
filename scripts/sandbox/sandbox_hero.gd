@@ -158,7 +158,12 @@ func _ready() -> void:
 	_setup_skills()
 	role = AiDefs.role_of(hero.hero_class)
 	persona = AiDefs.personality(hero.traits)
+	if SimMode.run_seed != 0:
+		combat_rng.seed = hash([hero.hero_seed, SimMode.run_seed, slot])   # D-083: each simulated run rolls its own dice
 	_think_t = combat_rng.randf() * AiDefs.DECIDE_JITTER * 3.0     # five heroes never think on the same tick
+	if SimMode.on:
+		art_scale = SpriteComposer.world_scale(hero)
+		return                                   # D-083 headless simulator: no sprite
 	_sprite = AnimatedSprite2D.new()
 	_sprite.sprite_frames = SpriteComposer.build_frames(hero)
 	_sprite.offset = SpriteComposer.feet_offset(hero)   # feet at the node origin (LPC 64 px / TPF 48 px)

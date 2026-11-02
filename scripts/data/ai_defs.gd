@@ -136,6 +136,13 @@ const FLEE_CHANCE := 0.35
 const FLEE_TIME := 6.0
 ## Horn: the "horn" bandit of a group sounds it HORN_DELAY s after being alerted (or at once under
 ## HORN_HP): every sleeping creature within HORN_RADIUS wakes and comes.
+## D-084 noise: a creature that joins a fight wakes the awake-but-idle creatures of OTHER groups within
+## NOISE_RADIUS (once; they do not spread it further). Charging into the middle of the camps pulls them all.
+const NOISE_RADIUS := 260.0
+## D-084 surrounded: SURROUND_MIN+ awake foes within SURROUND_RADIUS of a hero -> it takes SURROUND_MULT damage.
+const SURROUND_RADIUS := 72.0
+const SURROUND_MIN := 3
+const SURROUND_MULT := 1.25
 const HORN_DELAY := 5.0
 const HORN_HP := 0.6
 const HORN_RADIUS := 520.0
@@ -172,7 +179,7 @@ static func decide_interval(composure: int) -> float:
 static func aim_error_deg(agi: int, composure: int, panicked: bool) -> float:
     var e := maxf(AIM_MIN_DEG, AIM_BASE_DEG - AIM_PER_AGI * float(agi))
     e += AIM_COMPOSURE_DEG * (1.0 - clampf(float(composure) / 100.0, 0.0, 1.0))
-    return e * (AIM_PANIC_MULT if panicked else 1.0)
+    return e * (AIM_PANIC_MULT if panicked else 1.0) * SimMode.aim_error_mult   # D-083: 1.0 in the game
 
 
 static func role_of(class_id: String) -> String:

@@ -17,6 +17,8 @@ static var shake_scale: float = 1.0
 
 
 static func shake(from: Node, kind: String, dir: Vector2 = Vector2.ZERO) -> void:
+    if SimMode.on:
+        return
     if from == null or not from.is_inside_tree() or not SHAKE.has(kind) or shake_scale <= 0.0:
         return
     var cam := from.get_viewport().get_camera_2d()
@@ -28,6 +30,8 @@ static func shake(from: Node, kind: String, dir: Vector2 = Vector2.ZERO) -> void
 ## Holds a sprite's frame (and its pose tween) for a few hundredths of a second. The unit keeps
 ## moving and fighting: only the drawing stops.
 static func freeze(sprite: AnimatedSprite2D, kind: String) -> void:
+    if SimMode.on:
+        return
     if sprite == null or not sprite.is_inside_tree() or not FREEZE.has(kind):
         return
     var tw: Tween = null
@@ -47,6 +51,8 @@ static func freeze(sprite: AnimatedSprite2D, kind: String) -> void:
 
 ## The unit already moved (rules); its sprite starts at the old spot and slides home.
 static func slide(sprite: Node2D, from_offset: Vector2) -> void:
+    if SimMode.on:
+        return
     if sprite == null or not sprite.is_inside_tree() or from_offset.length() < 1.0:
         return
     if sprite.has_meta("anim_tween") and sprite.get_meta("anim_tween") is Tween:
@@ -61,6 +67,8 @@ static func slide(sprite: Node2D, from_offset: Vector2) -> void:
 
 ## Ground flash exactly as big as the area that was hit (the art around it is decoration).
 static func area_flash(parent: Node, centre: Vector2, radius: float, color: Color) -> void:
+    if SimMode.on:
+        return
     if parent == null or radius <= 0.0:
         return
     var f := AreaFlash.new()

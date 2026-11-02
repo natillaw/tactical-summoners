@@ -13,6 +13,16 @@ const PING_EVERY := {"loco": 1.0, "tactical": 2.5}
 const REVIVE_GO := 420.0
 
 var style: String = "tactical"
+## D-083 simulator knobs (tools/sim configs "bot"). Defaults = the D-082 behaviour.
+var engage: float = ENGAGE            # how close a visible foe must be to start fighting it
+var ping_every: float = -1.0          # seconds between attack pings (-1 = PING_EVERY of the style)
+var retreat_hp: float = 0.3           # tactical: the Master backs off below this share of health (0 = never)
+var use_commands: bool = true         # Commands (focus, regroup, hold fast)
+var use_skills: bool = true           # the Master's W E R
+var revive: bool = true               # tactical: walks over and lifts the fallen (hold F)
+var regroup_wait: float = 3.0         # D-084 tactical: waits up to this long for the squad before pulling a new group
+var _wait_t: float = 0.0
+var _regroup_cd: float = 0.0
 var stats := {"pings": 0, "commands": 0, "skills": 0, "revives": 0, "retreats": 0, "dashes": 0}
 var _ping_cd: float = 0.0
 var _move_cd: float = 0.0
@@ -54,34 +64,51 @@ func think(sb: SandboxScreen, goal: Vector2, dt: float) -> int:
         return 0
     var used := 0
     var foes: Array = sb.visible_enemies()
-    var near: SandboxEnemy = _nearest(foes, m.position, ENGAGE)
+    var near: SandboxEnemy = _nearest(foes, m.position, engage)
     # survival of the Master: step out of a marked area (dash on timing)
-    if _dodge(sb, m, foes):
+    if tactical() and _dodge(sb, m, foes):        # D-084: the "loco" never steps out of a marked area
         return used
     if tactical():
         used += _tactical_calls(sb, m, foes, near)
-        if _revive(sb, m, foes):
+        if revive and _revive(sb, m, foes):
             return used
-        if near != null and float(m.hp) < float(m.max_hp) * 0.3:
+        if near != null and float(m.hp) < float(m.max_hp) * retreat_hp and _ally_centre(sb, m) != Vector2.INF:   # alone: fight on (D-084)
             stats["retreats"] += 1
             _ping(sb, "danger", near.position)
-            _move(sb, m.position + (m.position - near.position).normalized() * 160.0, true)
+            # D-084: fall back behind the squad (toward the healer), not just away from the foe
+            var back := _ally_centre(sb, m)
+            if back == Vector2.INF or back.distance_to(near.position) < m.position.distance_to(near.position):
+                back = m.position + (m.position - near.position).normalized() * 160.0
+            _move(sb, back, true)
             return used
+        # D-084: a new, still idle group in sight and the squad strung out: gather first, then pull it
+        _regroup_cd -= dt
+        if near != null and not near.alerted and _wait_t < regroup_wait:
+            var far := sb.heroes.filter(func(h): return h.alive and not h.downed and h != m and h.position.distance_to(m.position) > 260.0)
+            if not far.is_empty():
+                _wait_t += dt
+                if _regroup_cd <= 0.0:
+                    _regroup_cd = 3.0
+                    _ping(sb, "regroup", m.position)
+                m.stop()
+                return used
+        if near == null or near.alerted:
+            _wait_t = 0.0
     if near != null:
-        var key := _priority(foes, m.position) if tactical() else near
+        var key := _priority(foes, m.position, engage) if tactical() else near
         if key == null:
             key = near
         if _ping_cd <= 0.0:
-            _ping_cd = float(PING_EVERY[style])
+            _ping_cd = ping_every if ping_every > 0.0 else float(PING_EVERY[style])
             _ping(sb, "attack", key.position, key)
-        if sb.use_command(0, key.position) > 0:         # focus fire whenever it is ready
+        if use_commands and sb.use_command(0, key.position) > 0:         # focus fire whenever it is ready
             stats["commands"] += 1
             used += 1
         if m.position.distance_to(key.position) > m.attack_range() * 0.9:
             _move(sb, key.position, false)
         else:
             m.aimed_attack(key.position, sb.living_enemies(), sb.map)   # Q at the foe
-        for i in m.slots.size():
+        for i in (m.slots.size() if use_skills else 0):
             if m.skill_ready(i):
                 sb.select_only([m])
                 if sb.use_skill_selected(i, key.position) > 0:
@@ -112,7 +139,7 @@ func retreat(sb: SandboxScreen) -> void:
         return
     if tactical():
         _dodge(sb, m, sb.visible_enemies())
-        if _revive(sb, m, sb.visible_enemies()):
+        if revive and _revive(sb, m, sb.visible_enemies()):
             if _ping_cd <= 0.0:
                 _ping_cd = 3.0
                 _ping(sb, "regroup", m.position)
@@ -145,6 +172,8 @@ func _tactical_calls(sb: SandboxScreen, m: SandboxHero, foes: Array, near: Sandb
                 _ping(sb, "danger", e.aim_point())
                 break
     # Commands: hold fast when someone panics; regroup when the squad is scattered in a fight
+    if not use_commands:
+        return used
     if sb.heroes.any(func(h): return h.alive and h.has_status("panicked")) and sb.use_command(2) > 0:
         stats["commands"] += 1
         used += 1
@@ -161,11 +190,11 @@ func _is_priority(e: SandboxEnemy) -> bool:
         or e.skills.has("mend") or e.skills.has("ward")
 
 
-func _priority(foes: Array, from: Vector2) -> SandboxEnemy:
+func _priority(foes: Array, from: Vector2, reach: float = ENGAGE) -> SandboxEnemy:
     var best: SandboxEnemy = null
     var best_s := INF
     for e in foes:
-        if not e.alive or e.position.distance_to(from) > ENGAGE * 1.3:
+        if not e.alive or e.position.distance_to(from) > reach * 1.3:
             continue
         var s: float = e.position.distance_to(from) - (250.0 if _is_priority(e) else 0.0)
         if s < best_s:
@@ -242,3 +271,121 @@ static func _nearest(foes: Array, from: Vector2, radius: float) -> SandboxEnemy:
         if e.alive and e.position.distance_to(from) < radius and (best == null or e.position.distance_to(from) < best.position.distance_to(from)):
             best = e
     return best
+
+
+## Where the mission wants the squad, with full knowledge of the floor (a replay: the player already knows
+## it). Shared by tests/playthrough_bot.gd and the simulator (tools/sim). INF = nothing to head for.
+static func mission_goal(sb: SandboxScreen, c: Vector2, skip_targets: Array = []) -> Vector2:
+    var goal := Vector2.INF
+    match sb.mission_type:
+        "sabotage":
+            for t in sb.totems:
+                if t.alive and (goal == Vector2.INF or t.position.distance_to(c) < goal.distance_to(c)):
+                    goal = t.position
+            return goal
+        "escape":
+            return sb.map.center_of(sb.map.relic_cell)
+        "defense":
+            return sb.shrine.position if sb.shrine != null else goal
+        "combat":
+            var best_d := INF
+            for e in sb.living_enemies():
+                if skip_targets.has(e):
+                    continue
+                var d: float = e.position.distance_to(c)
+                if d < best_d:
+                    best_d = d
+                    goal = e.position
+        "exploration":
+            var best_d := INF
+            for cl in sb.clues:
+                if cl.visible and cl.position.distance_to(c) < best_d:
+                    best_d = cl.position.distance_to(c)
+                    goal = cl.position
+        "retrieval", "rescue":
+            goal = sb.relic.position if sb.carrier == null else sb.map.center_of(sb.map.extract_cell)
+        "boss":
+            if sb.boss != null:
+                goal = sb.boss.position
+        "farm":
+            var best_d := INF
+            for g in sb.nodes:
+                if is_instance_valid(g) and not g.taken and g.position.distance_to(c) < best_d:
+                    best_d = g.position.distance_to(c)
+                    goal = g.position
+    return goal
+
+
+static func _ally_centre(sb: SandboxScreen, m: SandboxHero) -> Vector2:
+    var c := Vector2.ZERO
+    var n := 0
+    for h in sb.heroes:
+        if h != m and h.alive and not h.downed:
+            c += h.position
+            n += 1
+    return c / float(n) if n > 0 else Vector2.INF
+
+
+## D-084: the goal as a first-time player knows it (only what the squad has seen); INF = explore
+## (SandboxScreen._fog_frontier). seen = foes the squad has spotted at least once.
+static func known_goal(sb: SandboxScreen, c: Vector2, skip_targets: Array, seen: Dictionary, dead_ends: Dictionary = {}) -> Vector2:
+    var known := func(p: Vector2) -> bool: return sb.fog.is_explored(sb.map.cell_of(p))
+    var goal := Vector2.INF
+    match sb.mission_type:
+        "combat", "boss":
+            var best_d := INF
+            for e in sb.living_enemies():
+                if skip_targets.has(e) or not (seen.has(e) or sb.revealed_enemies().has(e)):
+                    continue
+                if sb.mission_type == "boss" and e != sb.boss and sb.boss != null and seen.has(sb.boss):
+                    continue
+                var d: float = e.position.distance_to(c)
+                if d < best_d:
+                    best_d = d
+                    goal = e.position
+        "exploration":
+            var best_d := INF
+            for cl in sb.clues:
+                if cl.visible and known.call(cl.position) and cl.position.distance_to(c) < best_d:
+                    best_d = cl.position.distance_to(c)
+                    goal = cl.position
+        "retrieval", "rescue":
+            if sb.carrier != null:
+                goal = sb.map.center_of(sb.map.extract_cell)
+            elif known.call(sb.relic.position):
+                goal = sb.relic.position
+        "sabotage":
+            for t in sb.totems:
+                if t.alive and known.call(t.position) and (goal == Vector2.INF or t.position.distance_to(c) < goal.distance_to(c)):
+                    goal = t.position
+        "escape":
+            if known.call(sb.map.center_of(sb.map.relic_cell)):
+                goal = sb.map.center_of(sb.map.relic_cell)
+        "defense":
+            if sb.shrine != null and known.call(sb.shrine.position):
+                goal = sb.shrine.position
+    if goal == Vector2.INF and not ["survival"].has(sb.mission_type):
+        goal = frontier(sb, sb.map.cell_of(c), dead_ends)
+    return goal
+
+
+## Nearest explored walkable cell next to never-seen fog, skipping dead ends (frontiers the squad reached
+## without revealing anything). Only what the squad has seen is used: the bot never knows the way.
+static func frontier(sb: SandboxScreen, from: Vector2i, dead_ends: Dictionary) -> Vector2:
+    var seen_c := {from: true}
+    var queue: Array[Vector2i] = [from]
+    var head := 0
+    while head < queue.size():
+        var cc: Vector2i = queue[head]
+        head += 1
+        for d in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+            var n: Vector2i = cc + d
+            if seen_c.has(n) or sb.map.is_blocked_cell(n):
+                continue
+            seen_c[n] = true
+            if not sb.fog.is_explored(n):
+                if not dead_ends.has(cc):
+                    return sb.map.center_of(cc)
+                continue
+            queue.append(n)
+    return Vector2.INF
