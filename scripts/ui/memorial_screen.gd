@@ -62,6 +62,8 @@ func _ready() -> void:
     UIKit.fill(_garden)
     _garden.mouse_filter = Control.MOUSE_FILTER_IGNORE
     _build_garden()
+    if not Game.memorial.is_empty():
+        _show_epitaph(Game.memorial[Game.memorial.size() - 1])    # the newest loss, open on arrival
 
 
 func _build_garden() -> void:

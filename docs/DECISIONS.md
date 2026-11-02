@@ -539,6 +539,18 @@ Rama `feat/integracion` desde `feat/d083-headless-sim`; merges en orden Sim Lab 
 - **03b:** el explorador/ranger pasa a **arquero** (`class.archer`, "Archer"/"Arquero"). `HeroTables.canonical_class` acepta `class.ranger`/`class.explorador` en guardados; el simulador acepta `ranger`, `explorador`, `arquero` y `archer`. Mismo peso y orden en `BIRTH_CLASS_WEIGHTS`: las semillas dan los mismos héroes.
 - **Guardado v20:** `synergy_codex` vacío; por héroe (y en las instantáneas del memorial) clase migrada, `hoard` = [], `bonus_skill_choice` = 0 y `bonus` = false en elecciones pendientes. C y el Sim Lab no guardan nada.
 
+### D-141 — Pase visual e interfaz (2026-11-02, dueño: lista de capturas "OK vamos a fixear bugs e implementar mejoras visuales")
+- **Una sola partida** (dueño: "no hay 'nueva partida', solo tienes 1 partida, no se puede reiniciar"): el título ofrece **Continuar** o, sin partida, **Comenzar**. Solo una partida hardcore terminada (D-081) puede **Empezar de nuevo**. El botón de depuración "Reset save" del menú de depuración se mantiene (no es del juego final).
+- **Sin filas delantera/trasera** en el escuadrón (dueño: "ya no es un juego de turnos y filas"): 5 puestos en línea (el 1, el Máster). El orden de `Game.party` no cambia.
+- **Cámara de los pisos más cerca:** zoom inicial 1,5 (pasos 1 / 1,5 / 2). Pueblo: zoom inicial 1.
+- **Capas:** árboles, rocas, troncos, arbustos, campamentos y el portal de salida son sprites ordenados por Y (antes horneados en el suelo: los héroes les pasaban por encima). Pueblo: edificios, anillo de árboles y decorado de la plaza también.
+- **Botín en el suelo:** icono real del objeto con aura del color de su rareza, rebote al caer, destellos y haz de luz desde raro.
+- **Salida y santuario legibles:** portal animado con "SALIDA"; el santuario es una piedra rúnica al lado del portal (antes encima) con su zona punteada.
+- **Iconos de equipo por base** (`ItemIcons.RPG`, pack `rpg_icons` autorizado por el dueño): ya no salen espadas para todo.
+- **Opciones:** Pantalla (ventana / completa / exclusiva, tamaño, VSync, límite y contador de FPS, ratón), Sonido (general, música, efectos, interfaz, silenciar en segundo plano), Juego (idioma, temblor, efectos, números de daño). La pantalla completa no funciona **dentro de la pestaña Game del editor** (ventana incrustada): el menú lo avisa; `tools/Play.ps1` abre el juego en su propia ventana.
+- Rediseños: título, barra de recursos y barra inferior con nombres en el pueblo, menú Construir con imagen y emblema de cada edificio, paneles de edificio, Memorial (jardín de lápidas con epitafios), inventario (muñeco + mochila), ficha del héroe con ranuras de equipo.
+- Héroes del pueblo: el tiempo libre se queda en la plaza (radio 8×5 celdas), van a la fuente, se sientan en los bancos y muestran emociones. **Necesidades y deseos propios: pendiente de diseño → P-30.**
+
 ## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)
 
 | ID | Tema | Lo que existe / origen | Pregunta abierta |
@@ -572,6 +584,7 @@ Rama `feat/integracion` desde `feat/d083-headless-sim`; merges en orden Sim Lab 
 | P-26 | **Política de duplicados, renombrar y liberar héroes** | Spec §9: recomendado = cada tirada es un héroe distinto, nombres repetidos con callsign (implementado) | Decidir si hay conversión en fragmentos, renombrado o liberación |
 | P-27 | **Pasivas en tiempo real** | 16 pasivas con texto heredado de turnos/filas | Reescribir para tiempo real |
 | P-28 | **Protocolo de agentes** | Antes: claims + STATE_HASH + `ts_sync.py` (archivado 2026-10-30). Ahora: ramas + PRs + evidencia | Confirmar el nuevo flujo |
+| P-30 | **Vida propia en el pueblo** (PENDIENTE, dueño 2026-11-02: "deberían tener necesidades o querer cosas por gusto, se tienen que sentir como personas reales; inspiración: el manhwa *Pick Me Up, Infinite Gacha*") | Hoy: `TownSim` (hambre/fatiga/estrés, trabajo, cama, taberna, hospital) + pasatiempos de `TownHero` (pasear, fuente, banco, charlar, entrenar) con emociones | ¿Qué necesidades/deseos (comida favorita, dinero propio, regalos, aficiones, quejas, peticiones al Máster)? ¿Afectan a Trust/Obedience o solo son vida visual? |
 | P-29 | **Resistencias elementales en el gear** (PENDIENTE, Nathaniel 2026-10-31) | "Resistencias elementales en el gear. Ej.: piso 80 'El Infierno', boss de fuego infernal; sin un mínimo de resistencia al fuego en el equipo, el boss elimina a la party. Debe dejar margen para estrategias de skill (esquivar, cortar casteos), no ser un check 100% duro." Hook sin contenido: `Combatant.resistances`, `DamageInfo.element`, `CombatRules.resolve` | Elementos, fuentes en el gear, mínimos por piso |
 
 ### Preguntas abiertas heredadas (de DESIGN_GAPS, todas conservadas)
