@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="JuiceProfile" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/juice_profile.gd" id="1_nmot0"]
+
+[resource]
+script = ExtResource("1_nmot0")
+id = "dot"
+particles = Color(0.7, 0.4, 0.9, 1)
+amount = 2
+kick = 0
+sound = ""

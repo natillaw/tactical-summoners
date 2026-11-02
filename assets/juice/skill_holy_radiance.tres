@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="JuiceProfile" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/juice_profile.gd" id="1_6cavn"]
+
+[resource]
+script = ExtResource("1_6cavn")
+id = "skill.holy_radiance"
+flash = Color(1, 0.95, 0.7, 1)
+particles = Color(1, 0.85, 0.35, 1)
+rise = true
+kick = 0

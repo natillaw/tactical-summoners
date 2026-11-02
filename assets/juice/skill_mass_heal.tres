@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="JuiceProfile" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/juice_profile.gd" id="1_2jr31"]
+
+[resource]
+script = ExtResource("1_2jr31")
+id = "skill.mass_heal"
+flash = Color(1, 0.95, 0.6, 1)
+particles = Color(1, 0.85, 0.35, 1)
+amount = 8
+rise = true
+kick = 0
