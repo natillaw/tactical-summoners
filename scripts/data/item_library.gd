@@ -28,7 +28,8 @@ const LINES := {
     "blacksmith": {"prof": "blacksmith", "bases": ["sword", "greataxe", "dagger", "mace", "shield", "kite_shield", "bronze_shield", "helm", "mail", "gloves", "greaves"],
         "cost": {"ingot": 3, "materials": 4}, "cost_t1": {"ore": 3, "materials": 3}, "time": 6.0, "name": "metal"},
     "workshop": {"prof": "carpenter", "bases": ["bow", "recurve", "longbow", "crossbow", "staff", "wand"], "cost": {"wood": 6, "materials": 3}, "time": 5.0, "name": "wood"},
-    "jeweler": {"prof": "jeweler", "bases": ["ring", "amulet", "charm"], "cost": {"ingot": 1, "materials": 2, "essence": 1}, "time": 6.0, "name": "gem"},
+    "jeweler": {"prof": "jeweler", "bases": ["ring", "ruby_band", "sapphire_band", "iron_band", "amulet", "heart_pendant", "sun_pendant", "swift_chain",
+        "charm", "blood_rune", "bulwark_rune", "shadow_rune", "hawk_rune", "mana_rune", "mercy_rune", "thorn_rune", "lucky_clover"], "cost": {"ingot": 1, "materials": 2, "essence": 1}, "time": 6.0, "name": "gem"},
     "tannery": {"prof": "leatherworker", "fallback": "workshop", "bases": ["leather_cap", "leather_vest", "leather_pants", "boots", "satchel", "backpack"],
         "cost": {"hide": 4, "materials": 2}, "time": 5.0, "name": "leather"},
     "tailor": {"prof": "tailor", "fallback": "workshop", "bases": ["hood", "robe", "cloth_pants", "sandals"],
@@ -55,11 +56,11 @@ const ARMOR_NAMES := {"plate": "plate", "leather": "leather", "cloth": "cloth"}
 
 ## Drop themes: which bases an enemy family drops and how they are named.
 const THEMES := {
-    "bandit": {"bases": ["dagger", "sword", "bow", "recurve", "crossbow", "leather_cap", "leather_vest", "leather_pants", "boots", "hood", "ring"],
+    "bandit": {"bases": ["dagger", "sword", "bow", "recurve", "crossbow", "leather_cap", "leather_vest", "leather_pants", "boots", "hood", "ring", "shadow_rune", "thorn_rune", "sun_pendant", "swift_chain"],
         "names": ["Cutthroat's", "Brigand's", "Bandit's", "Highwayman's"]},
-    "orc": {"bases": ["greataxe", "mace", "mail", "helm", "shield", "kite_shield", "bronze_shield", "gloves", "amulet"], "names": ["Tribal", "Orcish", "Warchief's", "Bonecrusher"]},
-    "undead": {"bases": ["sword", "staff", "robe", "cloth_pants", "sandals", "helm", "charm"], "names": ["Grave", "Bone", "Hollow", "Wight's"]},
-    "beast": {"bases": ["boots", "leather_cap", "leather_vest", "hood", "charm", "longbow"], "names": ["Hide", "Fang", "Pelt", "Wild"]},
+    "orc": {"bases": ["greataxe", "mace", "mail", "helm", "shield", "kite_shield", "bronze_shield", "gloves", "amulet", "blood_rune", "bulwark_rune", "ruby_band", "iron_band"], "names": ["Tribal", "Orcish", "Warchief's", "Bonecrusher"]},
+    "undead": {"bases": ["sword", "staff", "robe", "cloth_pants", "sandals", "helm", "charm", "mana_rune", "mercy_rune", "sapphire_band"], "names": ["Grave", "Bone", "Hollow", "Wight's"]},
+    "beast": {"bases": ["boots", "leather_cap", "leather_vest", "hood", "charm", "longbow", "lucky_clover", "hawk_rune", "heart_pendant"], "names": ["Hide", "Fang", "Pelt", "Wild"]},
 }
 static func theme_of(enemy_id: String) -> String:
     if enemy_id.begins_with("bandido") or enemy_id.begins_with("capitan") or enemy_id.begins_with("jefe_baron"):

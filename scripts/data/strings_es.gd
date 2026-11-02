@@ -306,6 +306,8 @@ static func install(locale: String = "es") -> void:
         t.add_message(String(k), String(ES_UI2[k]))
     for k in ES_D142:                                 # D-142 hero lines and skills (end of file)
         t.add_message(String(k), String(ES_D142[k]))
+    for k in ES_TOWN_TOWER:                           # town-tower link 2026-11-02 (end of file)
+        t.add_message(String(k), String(ES_TOWN_TOWER[k]))
     TranslationServer.add_translation(t)
     TranslationServer.set_locale(locale)
 
@@ -461,4 +463,36 @@ const ES_D142 := {
     "Resurrection": "Resurrección", "Resurrection!": "¡Resurrección!", "Hold F: %s": "Mantén F: %s",
     "F next to a fallen ally: a 4 s prayer lifts them (a hit breaks it).": "F junto a un aliado caído: una plegaria de 4 s lo levanta (un golpe la corta).",
     "Skills: Q is the basic attack; choose W, E and R at levels 2, 5 and 10.": "Habilidades: Q es el ataque básico; W, E y R se eligen en los niveles 2, 5 y 10.",
+}
+
+
+# --- town-tower link (owner 2026-11-02): potions, meals, jewels, trinkets, builders ---
+const ES_TOWN_TOWER := {
+    "no healing potions (alchemy brews them)": "sin pociones de curación (las prepara la alquimia)",
+    "already at full health": "ya tiene la vida completa",
+    "cannot drink now": "no puede beber ahora",
+    "No way there": "No hay camino hasta ahí",
+    "Tower gate: the Master walks there": "Puerta de la torre: el Máster camina hasta allí",
+    "missing materials (farm them in the tower or the Wilds)": "faltan materiales (consíguelos en la torre o en las Tierras Salvajes)",
+    "Town: click to walk, click a building to go in, F at a door": "Pueblo: clic para caminar, clic en un edificio para entrar, F en una puerta",
+    "Master: drink a healing potion (5 min cooldown)": "Máster: beber una poción de curación (enfriamiento 5 min)",
+    "greater potion": "poción mayor", "potion": "poción",
+    "every builder is busy (one building per builder)": "todos los constructores están ocupados (una obra por constructor)",
+    "Bone broths": "Caldos de hueso", "Hunter's feasts": "Festines del cazador",
+    "Cook bone broth": "Cocinar caldo de hueso", "Cook a hunter's feast": "Cocinar un festín del cazador",
+    "+12% armour and magic resistance for the whole expedition.": "+12 % de armadura y resistencia mágica durante toda la expedición.",
+    "+8% max HP, +5% attack, magic and armour for the whole expedition.": "+8 % de vida máx., +5 % de ataque, magia y armadura durante toda la expedición.",
+    "Ruby band": "Anillo de rubí", "Sapphire band": "Anillo de zafiro", "Iron band": "Anillo de hierro",
+    "Heart pendant": "Colgante del corazón", "Sun pendant": "Colgante del sol", "Swift chain": "Cadena veloz",
+    "Blood rune": "Runa de sangre", "Bulwark rune": "Runa del baluarte", "Shadow rune": "Runa de sombra",
+    "Hawk rune": "Runa del halcón", "Mana rune": "Runa de maná", "Mercy rune": "Runa de la piedad",
+    "Thorn rune": "Runa de espinas", "Lucky clover": "Trébol de la suerte",
+    "%d%% on hit: heal for the full damage of that hit": "%d %% al golpear: te curas todo el daño de ese golpe",
+    "%d%% when hit: a shield of 15%% max HP": "%d %% al recibir un golpe: escudo del 15 %% de la vida máx.",
+    "%d%% on hit: the blow echoes for 60%% more damage": "%d %% al golpear: el golpe resuena con un 60 %% de daño extra",
+    "%d%% on hit: marks the target (+25%% damage taken)": "%d %% al golpear: marca al objetivo (+25 %% de daño recibido)",
+    "%d%% on hit: skill cooldowns -2 s": "%d %% al golpear: enfriamientos de habilidades -2 s",
+    "%d%% on hit: heals the most hurt ally 12%% of max HP": "%d %% al golpear: cura al aliado más herido un 12 %% de su vida máx.",
+    "%d%% when hit in melee: stuns the attacker 1 s": "%d %% al recibir un golpe cuerpo a cuerpo: aturde al atacante 1 s",
+    "%d%% when hit: regenerate 3%% max HP per second for 5 s": "%d %% al recibir un golpe: regeneras un 3 %% de la vida máx. por segundo durante 5 s",
 }
