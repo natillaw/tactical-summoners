@@ -43,6 +43,7 @@ static func aggregate(variants: Array, runs: Array) -> Array:
             row["kept"] = _res_means(rs, "kept")
             row["reward"] = _res_means(rs, "reward")
             row["bot"] = _res_means(rs, "bot")
+            row["pista_a"] = _res_means(rs.filter(func(r): return r.has("pista_a")), "pista_a")   # D-090
             var killers := {}
             for r in rs:
                 for h in r["heroes"]:
@@ -177,6 +178,19 @@ static func markdown(name: String, variants: Array, rows: Array, speed: Dictiona
         L.append("| %s | %d | %s | %s | %s | %s | %s | %.1f / %.1f / %.1f / %.1f |" % [r["variant"], r["floor"], _kv(r["gathered"], ", ", 1), _kv(r["kept"], ", ", 1),
             _kv(r["reward"], ", ", 1), _pm(r["reward_items"], 1), _pm(r["consumables_used"], 1), float(b.get("pings", 0)), float(b.get("commands", 0)),
             float(b.get("skills", 0)), float(b.get("revives", 0))])
+    L.append("")
+    L.append("## Sinergias, campamentos y flechas (D-090, media por run)")
+    L.append("")
+    L.append("| Variante | Piso | Campamentos (hechos / interrumpidos) | Flechas al final | Sinergias activadas |")
+    L.append("|---|---|---|---|---|")
+    for r in rows:
+        var pa: Dictionary = r.get("pista_a", {})
+        var syn := {}
+        for k in pa:
+            if String(k).begins_with("syn_"):
+                syn[String(k).trim_prefix("syn_")] = pa[k]
+        L.append("| %s | %d | %.1f / %.1f | %.1f | %s |" % [r["variant"], r["floor"], float(pa.get("camps", 0)), float(pa.get("camps_interrupted", 0)),
+            float(pa.get("arrows_left", 0)), _kv(syn, ", ", 1) if not syn.is_empty() else "—"])
     L.append("")
     var any_k := rows.any(func(r): return not (r["killers"] as Dictionary).is_empty())
     if any_k:

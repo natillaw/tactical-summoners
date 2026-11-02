@@ -64,6 +64,8 @@ func _run(tree: SceneTree, host: Node, cfg: Dictionary, floor_num: int, seed_v: 
     bot.use_skills = bool(bc["use_skills"])
     bot.revive = bool(bc["revive"])
     bot.regroup_wait = float(bc["regroup_wait"])
+    bot.camp = bool(bc["camp"])
+    bot.camp_below = float(bc["camp_below"])
     var knows_map := bool(bc["knows_map"])
     var seen := {}
     var lost_t := 0.0
@@ -206,7 +208,20 @@ func _collect(sb: SandboxScreen, cfg: Dictionary, floor_num: int, seed_v: int, t
         "lost": (results.get("lost_loot", {}) as Dictionary).duplicate(), "reward": reward_res, "reward_items": reward_items,
         "unique": String(results.get("unique", "")), "stash_items": Game.stash.size(),
         "consumables_used": maxi(0, bag_before - _bag_total()), "kill_xp": sb.kill_xp,
+        "pista_a": _pista_a_stats(sb),
     }
+
+
+## D-090: synergies fired (by id), camps and arrows, for the report.
+static func _pista_a_stats(sb: SandboxScreen) -> Dictionary:
+    var out := {"camps": sb.camps_done, "camps_interrupted": sb.camps_interrupted, "arrows_left": 0, "combo_finishers": 0}
+    for h in sb.heroes:
+        if h.arrows >= 0:
+            out["arrows_left"] = int(out["arrows_left"]) + h.arrows
+        for k in h.contrib:
+            if String(k).begins_with("syn_"):
+                out[String(k)] = int(out.get(String(k), 0)) + int(h.contrib[k])
+    return out
 
 
 static func _bag_total() -> int:

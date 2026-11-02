@@ -532,4 +532,4 @@ func _wheel_and_keys() -> void:
     check(String(PingWheel.pick_at(c, c + Vector2(0, -30)).get("ping", "")) == AiDefs.PING_ORDER[0], "the top of the inner ring is '%s'" % AiDefs.PING_ORDER[0])
     check(String(PingWheel.pick_at(c, c + Vector2(30, 0)).get("ping", "")) == AiDefs.PING_ORDER[2], "the right of the inner ring is '%s'" % AiDefs.PING_ORDER[2])
     check(int(PingWheel.pick_at(c, c + Vector2(0, -60)).get("command", -1)) == 0, "the outer ring holds the Commands (top = command 1)")
-    check(AiDefs.PING_ORDER.size() == 8 and AiDefs.PING_ORDER.all(func(k): return AiDefs.PINGS.has(k)), "the wheel has the 8 pings")
+    check(AiDefs.PING_ORDER.size() == 9 and AiDefs.PING_ORDER.all(func(k): return AiDefs.PINGS.has(k)), "the wheel has the 9 pings (D-090: + camp)")

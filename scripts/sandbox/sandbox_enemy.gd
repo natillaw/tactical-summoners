@@ -79,7 +79,11 @@ var hero_list: Array = []           # every hero of the mission (live array, for
 var _alarm_to: SandboxEnemy = null
 ## D-082 bandit AI by role (AiDefs.BANDIT_AI): brute | assassin | archer | caster | leader | support | "".
 var ai_role: String = ""
-var threat: Dictionary = {}         # hero -> threat (damage it dealt to this creature); hook for the full aggro
+var threat: Dictionary = {}         # D-090 aggro: hero -> threat (damage dealt to it, healing near it; warriors x2)
+var arrows_in: int = 0              # D-090: heroes' arrows stuck in this creature (taken back from the body)
+var detect_mult: float = 1.0        # D-090: a camp fire nearby makes it notice heroes from further away (screen)
+var marked_by: Node2D = null        # D-090 Hunter's Eye: the archer whose mark keeps it visible in the fog
+var _map: NavMap = null
 var flee_t: float = 0.0             # running away (low health or broken morale)
 var _flee_rolled: bool = false
 var _leader_cd: float = 0.0
@@ -339,13 +343,20 @@ func interrupt() -> bool:
     return true
 
 
+## D-090: forces the target for `duration` and puts the taunter first in the threat table.
 func taunt(by: SandboxHero, duration: float) -> void:
     taunted_by = by
     taunt_t = maxf(taunt_t, duration)
+    var top := 0.0
+    for h in threat:
+        top = maxf(top, float(threat[h]))
+    threat[by] = maxf(float(threat.get(by, 0.0)), top * AiDefs.TAUNT_TOP + 1.0)
+    focus = by
 
 
 ## heroes = every hero that is not permanently dead (downed ones can still be hit by a strike).
 func tick(delta: float, heroes: Array, map: NavMap) -> void:
+    _map = map
     tick_combat(delta)
     if not alive:
         return
@@ -522,15 +533,24 @@ func _nearest_hero(heroes: Array) -> SandboxHero:
         return taunted_by
     var reach0 := perception * (EnemyDefs.ALERT_PERCEPTION if alerted else 1.0)
     match ai_role:
-        "brute":                              # D-082: the highest threat it has taken (hook for the full aggro)
+        "brute", "", "leader", "caster", "support":   # D-090: they follow the threat table
             var top := threat_target(reach0)
             if top != null:
                 return top
+        "archer":                             # D-090: whoever it has a clear shot at, nearest first
+            var shot: SandboxHero = null
+            for h in heroes:
+                if h.alive and _notices(h, reach0) and position.distance_to(h.position) <= strike_range * AiDefs.ARCHER_PICK_RANGE \
+                        and (_map == null or _map.has_line_of_sight(position + Vector2(0, -12), h.position + Vector2(0, -12))) \
+                        and (shot == null or position.distance_to(h.position) < position.distance_to(shot.position)):
+                    shot = h
+            if shot != null:
+                return shot
         "assassin":                           # D-082: the cleric or the mage first, from further away
             var prey: SandboxHero = null
             for h in heroes:
                 if h.alive and h.hero != null and AiDefs.ASSASSIN_PREY.has(h.hero.hero_class) \
-                        and position.distance_to(h.position) <= reach0 * AiDefs.ASSASSIN_REACH \
+                        and _notices(h, reach0 * AiDefs.ASSASSIN_REACH) \
                         and (prey == null or position.distance_to(h.position) < position.distance_to(prey.position)):
                     prey = h
             if prey != null:
@@ -547,8 +567,8 @@ func _nearest_hero(heroes: Array) -> SandboxHero:
         if not h.alive:
             continue                          # downed heroes are not chased (no executions, D-036)
         var d: float = position.distance_to(h.position)
-        if d >= reach:
-            continue
+        if not _notices(h, reach):
+            continue                          # D-090: stealth, bushes, trees in the way
         if k > 0.0:
             d -= k * _focus_bonus(h, heroes)
             if h == focus:
@@ -561,11 +581,49 @@ func _nearest_hero(heroes: Array) -> SandboxHero:
 
 # --- D-082 bandit roles ------------------------------------------------------------------------------
 
-## Threat (hook for the full aggro system, not built yet): damage a hero dealt to this creature, fading.
+## D-090: does this creature notice the hero within `reach`? reach x (1 - the hero's stealth), never below
+## CombatRules.DETECT_MIN of it, x detect_mult (a camp fire). Before the fight it also needs a clear line of
+## sight (trees and walls hide the hero); once fighting, a hero it already hates is never lost by stealth.
+func _notices(h: SandboxHero, reach: float) -> bool:
+    var d := position.distance_to(h.position)
+    if threat.has(h) and d < reach:
+        return true
+    if d >= h.detect_range(reach) * detect_mult:
+        return false
+    if not alerted and _map != null and not _map.has_line_of_sight(position + Vector2(0, -12), h.position + Vector2(0, -12)):
+        return false
+    return true
+
+
+## D-090 aggro: threat from a hero (damage dealt, healing near the fight), x the class multiplier.
 func add_threat(h: Node, amount: float) -> void:
     if h == null or not is_instance_valid(h) or amount <= 0.0:
         return
-    threat[h] = float(threat.get(h, 0.0)) + amount
+    var cls: String = String(h.hero.hero_class) if h is SandboxHero and h.hero != null else ""
+    threat[h] = float(threat.get(h, 0.0)) + amount * AiDefs.THREAT_PER_DAMAGE * float(AiDefs.THREAT_CLASS_MULT.get(cls.trim_prefix("class."), 1.0))
+
+
+## D-090 for the UI: the hero this creature is going for (taunter first, else its focus; null = nobody).
+func attention() -> SandboxHero:
+    if taunt_t > 0.0 and taunted_by != null and is_instance_valid(taunted_by) and taunted_by.alive:
+        return taunted_by
+    if focus != null and is_instance_valid(focus) and focus.alive and alerted:
+        return focus
+    return null
+
+
+func threat_of(h: Node) -> float:
+    return float(threat.get(h, 0.0))
+
+
+## [[hero, threat], ...] highest first (UI, tests).
+func threat_ranking() -> Array:
+    var out: Array = []
+    for h in threat:
+        if is_instance_valid(h) and h.alive:
+            out.append([h, float(threat[h])])
+    out.sort_custom(func(a, b): return float(a[1]) > float(b[1]))
+    return out
 
 
 func _tick_threat(delta: float) -> void:
@@ -586,6 +644,10 @@ func threat_target(reach: float) -> SandboxHero:
         if is_instance_valid(h) and h.alive and position.distance_to(h.position) <= reach and float(threat[h]) > best_v:
             best_v = float(threat[h])
             best = h
+    # D-090: keeps its current target until another hero passes it by THREAT_SWITCH
+    if best != null and focus != null and focus != best and threat.has(focus) and is_instance_valid(focus) and focus.alive \
+            and position.distance_to(focus.position) <= reach and best_v < float(threat[focus]) * AiDefs.THREAT_SWITCH:
+        return focus
     return best
 
 
@@ -935,7 +997,14 @@ const STRIKE_PROJECTILE_SPEED := 900.0
 func _land_strike(heroes: Array) -> void:
     for h in heroes:
         if is_instance_valid(h) and not h.dead and h.position.distance_to(_aim) <= strike_radius:
-            h.take_hit(DamageInfo.make(float(atk) * (EnemyDefs.HEAVY_MULT if windup_time >= EnemyDefs.HEAVY_WINDUP else 1.0), "physical", self, crit_chance, combat_rng))
+            var dmg_info := DamageInfo.make(float(atk) * (EnemyDefs.HEAVY_MULT if windup_time >= EnemyDefs.HEAVY_WINDUP else 1.0), "physical", self, crit_chance, combat_rng)
+            var wall := _tank_wall(h, heroes) if role == "ranged" else null
+            if wall != null:                      # D-090 Shield Wall: the warrior catches the shot
+                dmg_info.amount *= 1.0 - float(SynergyDefs.param("tank_wall", "reduce", 0.5))
+                wall.take_hit(dmg_info)
+                wall.synergy("tank_wall")
+                continue
+            h.take_hit(dmg_info)
             if not on_hit_status.is_empty() and h.alive:
                 h.apply_status(String(on_hit_status["id"]), float(on_hit_status["dur"]), float(on_hit_status.get("mag", 0.0)), self)
     if is_boss:
@@ -949,11 +1018,33 @@ func _land_strike(heroes: Array) -> void:
 const STAGGER_PCT := 0.06
 
 
+## D-090 Shield Wall: a warrior standing next to another warrior, between this shooter and the hero.
+func _tank_wall(h: SandboxHero, heroes: Array) -> SandboxHero:
+    var lane := float(SynergyDefs.param("tank_wall", "lane", 24.0))
+    var pair := float(SynergyDefs.param("tank_wall", "pair_radius", 70.0))
+    for w in heroes:
+        if w == h or not is_instance_valid(w) or not w.alive or w.hero == null or w.hero.hero_class != "class.warrior":
+            continue
+        if position.distance_to(w.position) >= position.distance_to(h.position):
+            continue
+        var q := Geometry2D.get_closest_point_to_segment(w.position, position, h.position)
+        if q.distance_to(w.position) > lane:
+            continue
+        for w2 in heroes:
+            if w2 != w and is_instance_valid(w2) and w2.alive and w2.hero != null and w2.hero.hero_class == "class.warrior" \
+                    and w2.position.distance_to(w.position) <= pair:
+                return w
+    return null
+
+
 func _on_hit(info: DamageInfo, dmg: int) -> void:
     _flash = 0.12
     alert()                                       # hurting one wakes its whole encounter
     if info != null and info.source is SandboxHero:
-        add_threat(info.source, float(dmg))
+        if info.has_meta("aoe") and taunt_t > 0.0 and taunted_by != null and info.source != taunted_by:
+            (info.source as SandboxHero).synergy("taunt_aoe")    # D-090 Safe Sweep: no threat while taunted
+        else:
+            add_threat(info.source, float(dmg))
     _check_flee()
     if is_boss and hp > 0:
         _check_boss_phase()
@@ -1006,6 +1097,15 @@ func _draw() -> void:
         bar_w = clampf(body_radius * 2.6, 26.0, 70.0)
     draw_rect(Rect2(-bar_w * 0.5, bar_y, bar_w, 4), Color(0.1, 0.1, 0.1, 0.8))
     draw_rect(Rect2(-bar_w * 0.5, bar_y, bar_w * float(hp) / float(maxi(1, max_hp)), 4), Color(0.9, 0.35, 0.35))
+    # D-090 attention: who it goes for (that hero's number, in its star colour); a taunt shows a red ring
+    var att := attention()
+    if att != null and att.hero != null:
+        var col := att.hero.star_color()
+        if taunt_t > 0.0:
+            draw_arc(Vector2(bar_w * 0.5 + 6.0, bar_y + 1.0), 6.0, 0.0, TAU, 16, Color(1.0, 0.3, 0.25), 2.0)
+        draw_string(ThemeDB.fallback_font, Vector2(bar_w * 0.5 + 2.5, bar_y + 5.0), str(att.slot + 1), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, col)
+    if has_status("marked") and marked_by != null:
+        draw_arc(Vector2(0, -12), body_radius + 6.0, 0.0, TAU, 24, Color(1.0, 0.4, 0.7, 0.8), 1.5)   # Hunter's Eye
     if state == State.WINDUP:
         # telegraph = the real strike area; the inner disc fills it as the blow approaches (lands when full)
         var total := windup_time if casting_skill == "" else float(EnemyDefs.SKILLS[casting_skill]["cast"])

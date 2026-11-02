@@ -21,9 +21,11 @@ var use_commands: bool = true         # Commands (focus, regroup, hold fast)
 var use_skills: bool = true           # the Master's W E R
 var revive: bool = true               # tactical: walks over and lifts the fallen (hold F)
 var regroup_wait: float = 3.0         # D-084 tactical: waits up to this long for the squad before pulling a new group
+var camp: bool = true                 # D-090 tactical: pings "Camp here" when the squad is worn out and it is safe
+var camp_below: float = 0.55          # ...when the squad's health (or a caster's mana) is under this share
 var _wait_t: float = 0.0
 var _regroup_cd: float = 0.0
-var stats := {"pings": 0, "commands": 0, "skills": 0, "revives": 0, "retreats": 0, "dashes": 0}
+var stats := {"pings": 0, "commands": 0, "skills": 0, "revives": 0, "retreats": 0, "dashes": 0, "camps": 0}
 var _ping_cd: float = 0.0
 var _move_cd: float = 0.0
 var _last_goal: Vector2 = Vector2.INF
@@ -115,6 +117,14 @@ func think(sb: SandboxScreen, goal: Vector2, dt: float) -> int:
                     stats["skills"] += 1
                     used += 1
         return used
+    if sb.camp != null and is_instance_valid(sb.camp):
+        m.stop()                                      # D-090: sits by the fire until the camp ends
+        return used
+    if tactical() and camp and _worn_out(sb) and sb.camp_refusal(m.position) == "":
+        _ping(sb, "camp", m.position)
+        stats["camps"] += 1
+        m.stop()
+        return used
     for g in sb.nodes:                                # a gathering spot at the Master's feet: hold F
         if is_instance_valid(g) and not g.taken and g.position.distance_to(m.position) <= GatherNode.RANGE:
             sb.interact_held = true
@@ -126,6 +136,20 @@ func think(sb: SandboxScreen, goal: Vector2, dt: float) -> int:
             _ping_cd = 8.0
             _ping(sb, "explore", m.position + (goal - m.position).normalized() * 200.0)
     return used
+
+
+## D-090: the squad needs a rest (average health, or a caster's mana, under camp_below).
+func _worn_out(sb: SandboxScreen) -> bool:
+    var hp := 0.0
+    var n := 0
+    for h in sb.heroes:
+        if not h.alive:
+            continue
+        hp += float(h.hp) / float(maxi(1, h.max_hp))
+        n += 1
+        if h.res_kind == "mana" and h.res_max > 0.0 and h.res < h.res_max * camp_below * 0.6:
+            return true
+    return n > 0 and hp / float(n) < camp_below
 
 
 ## Retreat toward the exit like a player: X (the Master runs, the squad is pinged to come), then escape.

@@ -50,6 +50,9 @@ func _ready() -> void:
         e.visible = false
     var h: SandboxHero = sb.heroes[0]
     var h1: SandboxHero = sb.heroes[1]
+    if h.res_kind == "none":                                        # D-090: commoners pay nothing; costs are tested with mana
+        h.res_kind = "mana"
+        h.res_max = 100.0
     var e1: SandboxEnemy = sb.enemies[0]
     var e2: SandboxEnemy = sb.enemies[1]
     var squad: Array = sb.heroes
@@ -117,19 +120,26 @@ func _ready() -> void:
 
     # --- class resources (D-041) -------------------------------------------------------------
     h.res_kind = "fury"
+    h.res_max = 100.0
     h.res = 0.0
     _fresh(e1, base + Vector2(40, 0))
     h._basic_attack(e1)
     check(h.res > 0.0, "Fury grows when the warrior hits")
     var fury := h.res
     h.target = null
+    h.combat_t = 0.0                  # D-090: out of combat
     h.tick(1.0)
     check(h.res < fury, "Fury cools down out of combat")
     h.res_kind = "mana"
     h.res = 0.0
     h.tick(1.0)
-    check(h.res > 0.0, "Mana regenerates")
-    check(SkillDefs.resource_of("class.warrior") == "fury" and SkillDefs.resource_of("class.ranger") == "focus" and SkillDefs.resource_of("class.cleric") == "mana", "class resources follow D-041")
+    var calm := h.res
+    check(calm > 0.0, "D-090: mana comes back slowly out of combat")
+    h.combat_t = SkillDefs.COMBAT_LINGER
+    h.tick(1.0)
+    check(h.res - calm > 0.0 and h.res - calm < calm, "D-090: while fighting it comes back slower still")
+    check(SkillDefs.resource_of("class.warrior") == "fury" and SkillDefs.resource_of("class.ranger") == "concentration" and SkillDefs.resource_of("class.rogue") == "energy"
+        and SkillDefs.resource_of("class.cleric") == "mana" and SkillDefs.resource_of("class.commoner") == "none", "class resources follow D-090")
 
     # --- effect types ------------------------------------------------------------------------
     _fresh(e1, base + Vector2(40, 0))
@@ -286,14 +296,14 @@ func _ready() -> void:
     var rt := HeroData.from_dict(JSON.parse_string(JSON.stringify(hd.to_dict())))
     check(rt.skills == hd.skills and rt.loadout == hd.loadout, "skills and loadout survive save/load")
 
-    # v7 hero (no skills saved) at level 12 -> starter + choices for levels 5 and 10
+    # v7 hero (no skills saved) at level 12 -> starter + choices for levels 2, 5 and 10 (D-090)
     var old := hd.to_dict()
     old.erase("skills")
     old.erase("loadout")
     old.erase("skill_choices")
     old["level"] = 12
     var mig := HeroData.from_dict(JSON.parse_string(JSON.stringify(old)))
-    check(mig.skills.size() == 1 and mig.skill_choices.size() == 2, "v7 hero migrates: starter skill + pending choices for levels 5 and 10")
+    check(mig.skills.size() == 1 and mig.skill_choices.size() == 3, "v7 hero migrates: starter skill + pending choices for levels 2, 5 and 10 (D-090)")
     check(mig.trust == hd.trust and mig.traits == hd.traits and mig.hero_name == hd.hero_name, "migration does not reroll the hero (D-004)")
 
     # --- skill books, Library, save v8 (D-046) --------------------------------------------------

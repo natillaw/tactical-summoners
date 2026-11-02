@@ -76,6 +76,25 @@ const SCOUT_VISION_BONUS := 2
 const SCOUT_CLASSES := ["class.ranger", "class.rogue"]
 const DOWNED_VISION := 2
 const FOG_EVERY := 0.15          # seconds between sight updates
+## D-090: sight = the class base + perception. Perception = (INT + TEM) / PERCEPTION_DIV cells (+ items'
+## "perception"); with average attributes (5 + 5) it is 1, so the averages match the old 6 / 8 cells.
+const CLASS_VISION := {"class.warrior": 5, "class.rogue": 7, "class.ranger": 7, "class.mage": 5,
+    "class.cleric": 5, "class.commoner": 5, "class.none": 5}
+const PERCEPTION_DIV := 10
+const PERCEPTION_MAX := 3
+## D-090 stealth (0..STEALTH_MAX): how far a creature notices a hero = its perception x (1 - stealth), never
+## below DETECT_MIN of it. Class base + items' "stealth" + BUSH_STEALTH while standing in a bush. A creature
+## that is not yet fighting also needs a clear line of sight (trees and walls hide the hero).
+const CLASS_STEALTH := {"class.rogue": 0.35, "class.ranger": 0.25, "class.mage": 0.05, "class.cleric": 0.05}
+const BUSH_STEALTH := 0.4
+const STEALTH_MAX := 0.65
+const DETECT_MIN := 0.35
+## Bushes (D-090): walkable cells of thick undergrowth next to the forest edge. BUSH_CHANCE of the walkable
+## cells touching BUSH_NEAR_TREES+ trees start a bush, which grows into BUSH_CLUSTER neighbours. Seeded by
+## the map; never on spawn, goal, extract or relic cells.
+const BUSH_CHANCE := 0.07
+const BUSH_NEAR_TREES := 2
+const BUSH_CLUSTER := 2
 
 const HERO_BODY := 11.0
 const HERO_MASS := 1.0
@@ -113,6 +132,9 @@ const STATUS := {
     "rallied": {"name": "Rallied", "in_dmg": MasterDefs.RALLY_IN_DMG, "no_resist": true, "color": Color(0.6, 0.9, 1.0)},              # D-081 command
     "inspired": {"name": "Inspired", "out_dmg": 1.25, "no_resist": true, "color": Color(1.0, 0.6, 0.3)},       # D-082 bandit leader
     "panicked": {"name": "Panicking", "blocks": ["act"], "debuff": true, "no_resist": true, "color": Color(0.95, 0.95, 0.5)},     # D-081 panic
+    "frozen": {"name": "Frozen", "blocks": ["move"], "debuff": true, "color": Color(0.6, 0.9, 1.0)},    # D-090: a heavy blow shatters it
+    "well_fed": {"name": "Well fed", "out_dmg": 1.1, "no_resist": true, "color": Color(1.0, 0.85, 0.5)},  # D-090 camp meal
+    "inspired_song": {"name": "Inspired by a song", "in_dmg": 0.9, "no_resist": true, "color": Color(0.8, 0.7, 1.0)},   # D-090 bard at the camp
 }
 
 
