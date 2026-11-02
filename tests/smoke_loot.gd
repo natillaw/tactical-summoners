@@ -73,14 +73,15 @@ func _drops() -> void:
         "gear chance per creature: 3% normal, 20% elite (D-142)")
     var n_items := 0
     var n_junk := 0
-    for i in 400:
+    rng.seed = 5
+    for i in 2000:
         var l := LootService.body_loot(2, "normal", "bandit", false, 0.0, rng, _uid_counter())
         n_items += (l["items"] as Array).size()
         n_junk += (l["items"] as Array).filter(func(it): return ItemDefs.is_junk(it)).size()
-    check(n_items >= 4 and n_items <= 30 and n_junk < n_items, "400 bandits (gear on 3%%, D-142): %d items on the bodies, %d of them junk" % [n_items, n_junk])
+    check(n_items >= 30 and n_items <= 90 and n_junk < n_items, "2000 bandits (gear on 3%%, D-142): %d items on the bodies, %d of them junk" % [n_items, n_junk])
     var greedy := 0
     rng.seed = 5
-    for i in 400:
+    for i in 2000:
         greedy += (LootService.body_loot(2, "normal", "bandit", false, 0.5, rng, _uid_counter())["items"] as Array).size()
     check(greedy > n_items, "a greedy squad finds more (%d > %d items)" % [greedy, n_items])
     check(LootService.creature_rank(false, "leader", "") == "elite" and LootService.creature_rank(false, "", "shaman") == "elite"

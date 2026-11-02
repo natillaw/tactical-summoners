@@ -111,6 +111,10 @@ func _autonomy() -> void:
     foe.scale_stats(40.0)
     foe.atk = 0
     var others: Array = sb.heroes.filter(func(h): return h != m)
+    for h in others:                                             # D-142: level-1 heroes have only Q; give them W E R
+        for sid in SkillDefs.KITS.get(h.hero.hero_class, SkillDefs.KITS["class.none"])["start"]:
+            h.hero.learn_skill(String(sid), false)
+        h._setup_skills()
     var res0 := {}
     for h in others:
         res0[h] = h.res
