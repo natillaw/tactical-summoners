@@ -2767,6 +2767,16 @@ func _bag_near(at: Vector2, r: float) -> LootBag:
 	return best
 
 
+## AI looting rule (LootDefs.LOOT_SAFE_RADIUS): no living creature near `at`.
+func loot_safe(at: Vector2) -> bool:
+	return not enemies.any(func(e): return e.alive and e.position.distance_to(at) <= LootDefs.LOOT_SAFE_RADIUS)
+
+
+## Defense and survival: the AI never leaves its post to loot (LootDefs.HOLD_MISSIONS).
+func loot_holds_post() -> bool:
+	return LootDefs.HOLD_MISSIONS.has(mission_type)
+
+
 ## D-121: the Master holds F next to a glowing body for LOOT_HOLD s (not while lifting an ally).
 func _tick_master_loot(m: SandboxHero, delta: float, free_hands: bool) -> void:
 	var bag := _bag_near(m.position, LootDefs.LOOT_RANGE)
@@ -2814,10 +2824,10 @@ func _tick_loot(delta: float) -> void:
 		_loot_win.queue_free()
 		_loot_win = null
 	for h in heroes:
-		if h == master_hero or not h.alive or h.downed or h.target != null or h.is_casting():
+		if h == master_hero or not h.alive or h.downed or h.target != null or h.is_casting() or not loot_safe(h.position):
 			_auto_loot.erase(h)
 			continue
-		var reach := LootDefs.AUTO_LOOT_RANGE * (float(LootDefs.GREEDY["loot_range_mult"]) if LootService.is_greedy(h.hero) else 1.0)
+		var reach := LootDefs.AUTO_LOOT_RANGE * (float(LootDefs.GREEDY["loot_range_mult"]) if LootService.is_greedy(h.hero) and not loot_holds_post() else 1.0)
 		var b := _bag_near(h.position, reach)
 		if b == null or (pack_room(h) <= 0 and b.res.is_empty()):
 			_auto_loot.erase(h)

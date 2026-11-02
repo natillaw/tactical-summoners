@@ -262,6 +262,26 @@ func _bodies() -> void:
     check(uids.all(func(u): return Game.stash_index(u) >= 0), "out of the tower: the backpacks go to the Master's stash")
     check(Game.stash_index(int(ring["uid"])) < 0 and int(sb.loot_report.get("lost", 0)) >= 1, "a dropped pack nobody picked up is lost (%d lost)" % int(sb.loot_report.get("lost", 0)))
     check(sb.loot_lines().size() >= 2 and res0 != null, "the result screen lists the loot brought home")
+    # AI looting rule: an ally on a body does not loot it while a creature is near; it does once safe
+    var foe: SandboxEnemy = sb.enemies.filter(func(e): return e.alive)[0]
+    var b2 := sb.drop_loot(sb.heroes[2].position, [ItemGen.generate(RandomNumberGenerator.new(), Game._next_uid(), 2, "rare", "dagger")], {})
+    foe.position = sb.heroes[2].position + Vector2(120, 0)
+    for i in roundi(2.0 / DT):
+        sb._tick_loot(DT)
+    var waited := is_instance_valid(b2) and not b2.is_empty()
+    foe.position = sb.heroes[2].position + Vector2(3000, 3000)
+    for i in roundi(6.0 / DT):                             # it may take a nearer body first
+        sb._tick_loot(DT)
+    var h2: SandboxHero = sb.heroes[2]
+    check(waited and not sb.loot_safe(h2.position + Vector2(3000, 3100)) and sb.loot_safe(h2.position) and b2.is_empty(),
+        "allies do not loot with a creature within %d px; they do once it is safe (waited %s, safe %s, looted %s, alive %s, target %s, room %d)"
+        % [int(LootDefs.LOOT_SAFE_RADIUS), waited, sb.loot_safe(h2.position), b2.is_empty(), h2.alive, h2.target != null, sb.pack_room(h2)])
+    sb.mission_type = "defense"
+    var bot := MasterBot.new("tactical")
+    var far := sb.drop_loot(sb.master_hero.position + Vector2(150, 0), [ItemGen.generate(RandomNumberGenerator.new(), Game._next_uid(), 2, "rare", "ring")], {})
+    check(sb.loot_holds_post() and not bot._loot(sb, sb.master_hero, 0.25) and is_instance_valid(far), "defense/survival: the bot never walks off its post to loot")
+    sb.mission_type = "combat"
+    check(bot._loot(sb, sb.master_hero, 0.25), "elsewhere, with nothing around, the bot goes for the body")
     sb.queue_free()
     await get_tree().process_frame
     # a wipe: everything in the packs is lost
