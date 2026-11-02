@@ -66,6 +66,31 @@ const BASES := {
     "ring": {"name": "Ring", "kind": "jewel", "slot": "ring", "stats": {"crit": 0.02}, "classes": []},
     "amulet": {"name": "Amulet", "kind": "jewel", "slot": "amulet", "stats": {"mres": 2, "status_resist": 0.03}, "classes": []},
     "charm": {"name": "Trinket", "kind": "jewel", "slot": "special", "stats": {"hp": 8}, "classes": []},
+    # owner 2026-11-02: jeweller variety. Each base has its own main stat; affixes add the random part.
+    "ruby_band": {"name": "Ruby band", "kind": "jewel", "slot": "ring", "stats": {"atk": 2}, "classes": []},
+    "sapphire_band": {"name": "Sapphire band", "kind": "jewel", "slot": "ring", "stats": {"mag": 2}, "classes": []},
+    "iron_band": {"name": "Iron band", "kind": "jewel", "slot": "ring", "stats": {"def": 2}, "classes": []},
+    "heart_pendant": {"name": "Heart pendant", "kind": "jewel", "slot": "amulet", "stats": {"hp": 12}, "classes": []},
+    "sun_pendant": {"name": "Sun pendant", "kind": "jewel", "slot": "amulet", "stats": {"atk": 1, "mag": 1, "crit": 0.01}, "classes": []},
+    "swift_chain": {"name": "Swift chain", "kind": "jewel", "slot": "amulet", "stats": {"move": 5.0, "interval_pct": 0.03}, "classes": []},
+    # owner 2026-11-02: trinkets with a chance-based passive ("proc", see TRINKET_PROCS). The passive only
+    # works for the classes listed (others get the stats at NOVICE_EFF and no passive).
+    "blood_rune": {"name": "Blood rune", "kind": "jewel", "slot": "special", "stats": {"hp": 6}, "classes": ["class.warrior"],
+        "proc": {"type": "leech_strike", "chance": 0.05, "frac": 1.0}},
+    "bulwark_rune": {"name": "Bulwark rune", "kind": "jewel", "slot": "special", "stats": {"def": 1}, "classes": ["class.warrior"],
+        "proc": {"type": "shield_on_hurt", "chance": 0.08, "pct": 0.15, "dur": 6.0}},
+    "shadow_rune": {"name": "Shadow rune", "kind": "jewel", "slot": "special", "stats": {"crit": 0.01}, "classes": ["class.rogue"],
+        "proc": {"type": "echo_strike", "chance": 0.10, "frac": 0.6}},
+    "hawk_rune": {"name": "Hawk rune", "kind": "jewel", "slot": "special", "stats": {"atk": 1}, "classes": ["class.archer"],
+        "proc": {"type": "mark_on_hit", "chance": 0.10, "dur": 4.0}},
+    "mana_rune": {"name": "Mana rune", "kind": "jewel", "slot": "special", "stats": {"mag": 1}, "classes": ["class.mage"],
+        "proc": {"type": "cd_reduce", "chance": 0.10, "secs": 2.0}},
+    "mercy_rune": {"name": "Mercy rune", "kind": "jewel", "slot": "special", "stats": {"mres": 1}, "classes": ["class.cleric"],
+        "proc": {"type": "mend_ally", "chance": 0.08, "pct": 0.12}},
+    "thorn_rune": {"name": "Thorn rune", "kind": "jewel", "slot": "special", "stats": {"def": 1}, "classes": [],
+        "proc": {"type": "stun_on_hurt", "chance": 0.08, "dur": 1.0}},
+    "lucky_clover": {"name": "Lucky clover", "kind": "jewel", "slot": "special", "stats": {"hp": 4}, "classes": [],
+        "proc": {"type": "regen_on_hurt", "chance": 0.06, "pct": 0.03, "dur": 5.0}},
     # D-082b starter kit (white, never looted or crafted: "starter"). Clothes have no stats; weapons the minimum.
     "plain_shirt": {"name": "Plain shirt", "kind": "armor", "slot": "chest", "stats": {}, "classes": [], "starter": true},
     "plain_pants": {"name": "Plain trousers", "kind": "armor", "slot": "legs", "stats": {}, "classes": [], "starter": true},
@@ -96,6 +121,32 @@ static func starter_kit(class_id: String) -> Dictionary:
     var out: Dictionary = STARTER_OUTFIT.duplicate()
     out.merge(STARTER_WEAPONS.get(class_id, {}))
     return out
+## Trinket passives (BASES "proc"): what each type does, for tooltips. %d = chance in percent.
+const TRINKET_PROCS := {
+    "leech_strike": "%d%% on hit: heal for the full damage of that hit",
+    "shield_on_hurt": "%d%% when hit: a shield of 15%% max HP",
+    "echo_strike": "%d%% on hit: the blow echoes for 60%% more damage",
+    "mark_on_hit": "%d%% on hit: marks the target (+25%% damage taken)",
+    "cd_reduce": "%d%% on hit: skill cooldowns -2 s",
+    "mend_ally": "%d%% on hit: heals the most hurt ally 12%% of max HP",
+    "stun_on_hurt": "%d%% when hit in melee: stuns the attacker 1 s",
+    "regen_on_hurt": "%d%% when hit: regenerate 3%% max HP per second for 5 s",
+}
+
+
+## Tooltip line of a trinket passive ("" for items without one); the class that can use it.
+static func proc_text(base_id: String) -> String:
+    var b: Dictionary = BASES.get(base_id, {})
+    if not b.has("proc"):
+        return ""
+    var p: Dictionary = b["proc"]
+    var txt := String(TranslationServer.translate(String(TRINKET_PROCS.get(String(p["type"]), "%d%%")))) % roundi(float(p["chance"]) * 100.0)
+    var cls: Array = b.get("classes", [])
+    if not cls.is_empty():
+        txt += " (%s)" % ", ".join(cls.map(func(c): return String(TranslationServer.translate(String(HeroTables.CLASSES.get(c, {}).get("name", c))))))
+    return txt
+
+
 ## The old forge recipes (forge_weapon / forge_armor): the blacksmith only makes metal (D-126).
 const CRAFTABLE := {"weapon": ["sword", "greataxe", "dagger", "mace"],
     "armor": ["shield", "kite_shield", "helm", "mail", "gloves", "greaves"]}
@@ -204,6 +255,10 @@ static func apply_equipment(stats: Dictionary, equipment: Dictionary, class_id: 
             all[String(a["stat"])] = float(all.get(String(a["stat"]), 0.0)) + float(a["value"])
         if base.has("block") and class_id == "class.warrior":   # D-082b: shields block for warriors only (for now)
             mods["block"] = base["block"]
+        if base.has("proc") and eff >= 1.0:              # trinket passives: only for their classes
+            if not mods.has("trinket_procs"):
+                mods["trinket_procs"] = []
+            (mods["trinket_procs"] as Array).append(base["proc"])
         var power: Dictionary = it.get("power", {})
         if power.has("on_hit_status"):
             if not mods.has("procs"):

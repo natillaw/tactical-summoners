@@ -166,7 +166,7 @@ const SKILLS := {
     "blood_ritual": {"name": "Blood Ritual", "cast": 3.0, "cd": 18.0, "range": 0.0, "target": "self_heal", "below": 0.8, "min_floor": 1,
         "heal_self_pct": 0.12, "desc": "Heals itself a lot: interrupt it."},
 }
-## D-143 telegraph shapes of the basic strike: "circle" (at the target), "cone" (a wedge in front of the
+## D-145 telegraph shapes of the basic strike: "circle" (at the target), "cone" (a wedge in front of the
 ## creature, angle in degrees, reach = distance to the target + strike radius), "line" (from the creature
 ## through the target, width px, length = strike range + LINE_EXTRA). Picked by role (strike_shape); a
 ## skill's own "shape" wins (its "radius" is then the cone's reach or the line's length).

@@ -35,8 +35,11 @@ const PROFESSIONS := {
 ## ItemLibrary line whose building runs it). Consumables for the other tracks: meals with a buff for the
 ## whole expedition (LootDefs.CONSUMABLES), the camp kit (pista A's camp) and quivers of arrows.
 const RECIPES := {
-    "cook_stew": {"name": "Cook hearty stew", "building": "kitchen", "prof": "cook", "min": 1, "work": 3.0, "in": {"grain": 2, "herb": 1}, "out": {"meal_stew": 2}},
-    "cook_roast": {"name": "Cook spiced roast", "building": "kitchen", "prof": "cook", "min": 2, "work": 3.0, "in": {"grain": 1, "herb": 2, "fang": 1}, "out": {"meal_roast": 2}},
+    # owner 2026-11-02: expedition meals are the kitchen's (blvl = kitchen level needed): no kitchen, no buffs
+    "cook_stew": {"name": "Cook hearty stew", "building": "kitchen", "prof": "cook", "min": 1, "blvl": 1, "work": 3.0, "in": {"grain": 2, "herb": 1}, "out": {"meal_stew": 2}},
+    "cook_roast": {"name": "Cook spiced roast", "building": "kitchen", "prof": "cook", "min": 2, "blvl": 2, "work": 3.0, "in": {"grain": 1, "herb": 2, "fang": 1}, "out": {"meal_roast": 2}},
+    "cook_broth": {"name": "Cook bone broth", "building": "kitchen", "prof": "cook", "min": 2, "blvl": 3, "work": 4.0, "in": {"grain": 1, "herb": 2, "bone": 2}, "out": {"meal_broth": 2}},
+    "cook_feast": {"name": "Cook a hunter's feast", "building": "kitchen", "prof": "cook", "min": 3, "blvl": 4, "work": 6.0, "in": {"grain": 3, "herb": 2, "hide": 1, "fang": 1}, "out": {"meal_feast": 2}},
     "make_camp_kit": {"name": "Make a camp kit", "line": "tannery", "prof": "leatherworker", "min": 1, "work": 4.0, "in": {"hide": 2, "wood": 2}, "out": {"camp_kit": 1}},
     "fletch_arrows": {"name": "Fletch arrows", "line": "workshop", "prof": "carpenter", "min": 0, "work": 2.0, "in": {"wood": 2, "ore": 1}, "out": {"arrows": 2}},
 }

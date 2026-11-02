@@ -4,8 +4,14 @@ extends RefCounted
 ## The simulation that uses it is TownSim; the state lives in Game. Numbers are tuning placeholders.
 
 # --- time (D-047) -----------------------------------------------------------------------------
-const REAL_SECONDS_PER_HOUR := 30.0    # while the player is in the town
-const HOURS_PER_EXPEDITION := 24       # every floor attempt moves the town one day
+const REAL_SECONDS_PER_HOUR := 50.0    # while the player is in the town: 20 real minutes = 1 town day (owner 2026-11-02)
+const TOWER_SECONDS_PER_HOUR := 25.0   # tower and Wilds run twice as fast: 20 real minutes away = 2 town days
+const HOURS_PER_EXPEDITION := 24       # default for callers without a measured duration (tests, offline runs)
+
+
+## Town hours that pass while the squad spent `seconds` of real play in the tower or the Wilds.
+static func expedition_hours(seconds: float) -> int:
+    return maxi(1, ceili(seconds / TOWER_SECONDS_PER_HOUR))
 const NIGHT_START := 22
 const NIGHT_END := 6
 
@@ -66,6 +72,8 @@ const RESOURCES := {
     # --- pista D (D-128, D-129): carried consumables (LootDefs.CONSUMABLES) and books (LootDefs.BOOKS) ---
     "meal_stew": {"name": "Hearty stews", "cat": "consumable"},
     "meal_roast": {"name": "Spiced roasts", "cat": "consumable"},
+    "meal_broth": {"name": "Bone broths", "cat": "consumable"},
+    "meal_feast": {"name": "Hunter's feasts", "cat": "consumable"},
     "camp_kit": {"name": "Camp kits", "cat": "consumable"},
     "arrows": {"name": "Quivers of arrows", "cat": "consumable"},
     "book_xp": {"name": "Books of experience", "cat": "book"},
@@ -122,6 +130,15 @@ const RECIPES := {
     "treat": {"name": "Treat patients", "building": "infirmary", "prof": "doctor", "min": 0, "work": 0.0, "in": {}, "out": {}, "service": true},
     "serve": {"name": "Run the tavern", "building": "common", "prof": "tavernkeeper", "min": 0, "work": 0.0, "in": {}, "out": {}, "service": true},
 }
+
+## Owner 2026-11-02: basic work runs on its own; everything else (potions, medicine, meals, elixirs,
+## gear, jewels, bags, arrows) is made only when the Master orders it inside the building.
+const AUTO_RECIPES := ["grow_grain", "grow_herbs", "fell_wood", "dig_stone", "dig_ore", "cook_meal", "make_materials", "smelt_iron"]
+
+
+static func is_auto(rid: String) -> bool:
+    return AUTO_RECIPES.has(rid) or bool(recipe(rid).get("service", false))
+
 
 # --- construction (D-048) ------------------------------------------------------------------------
 const BUILD_HOURS_PER_LEVEL := 6.0    # hours of a 1.0-efficiency builder per target level

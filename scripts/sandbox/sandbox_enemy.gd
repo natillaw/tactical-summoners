@@ -25,10 +25,10 @@ var _pending_strike: float = -1.0    # D-054: a ranged strike in flight lands wh
 var _pending_heroes: Array = []
 var _timer: float = 0.0
 var _aim: Vector2 = Vector2.ZERO
-var _shape: Dictionary = {"shape": "circle"}   # D-143 the current telegraph: circle / cone / line (+ reach)
+var _shape: Dictionary = {"shape": "circle"}   # D-145 the current telegraph: circle / cone / line (+ reach)
 var _from: Vector2 = Vector2.ZERO               # where the cone or line starts (the creature at wind-up)
-var _later_calls: Array = []                     # D-143 skill effects that land when the projectile arrives
-var _bar_lag: float = 1.0                        # D-143 health bar: white trail that drains after a hit
+var _later_calls: Array = []                     # D-145 skill effects that land when the projectile arrives
+var _bar_lag: float = 1.0                        # D-145 health bar: white trail that drains after a hit
 var _bar_wait: float = 0.0
 var _flash: float = 0.0
 var type_id: String = ""            # T-024: visual type (EnemySprites.IDS); stats unchanged for now
@@ -901,7 +901,7 @@ func telegraph_radius() -> float:
     return strike_radius
 
 
-## D-143: "circle" | "cone" | "line" of the current (or last) wind-up.
+## D-145: "circle" | "cone" | "line" of the current (or last) wind-up.
 func telegraph_shape() -> String:
     return String(_shape.get("shape", "circle"))
 
@@ -912,7 +912,7 @@ func _set_telegraph(shape: Dictionary, reach: float) -> void:
     _from = position
 
 
-## D-143: true when `p` stands inside the area the current wind-up marks (what the blow will hit).
+## D-145: true when `p` stands inside the area the current wind-up marks (what the blow will hit).
 func in_telegraph(p: Vector2) -> bool:
     return _in_shape(p, _shape, _from, _aim, telegraph_radius())
 
@@ -993,7 +993,7 @@ func _resolve_skill(heroes: Array) -> void:
         heal(roundi(float(max_hp) * float(sk["heal_self_pct"])))
         CombatVFX.play(parent, position + Vector2(0, -14), "heal_toxic", 1.4)
     if String(sk["target"]) in ["hero_area", "self_area", "far_hero", "doom_hero"]:
-        # D-143: the skill shows itself when the wind-up ends (a fireball flies, an arrow along the line, a
+        # D-145: the skill shows itself when the wind-up ends (a fireball flies, an arrow along the line, a
         # meteor from the sky) and its damage lands on arrival, on whoever is still in the marked shape.
         var look: Dictionary = sk.get("look", {})
         var shp := _shape.duplicate()
@@ -1014,7 +1014,7 @@ func _resolve_skill(heroes: Array) -> void:
     _do_lunge()
 
 
-## D-143: where a creature skill lands: damage + status on everyone inside its shape, its look and juice.
+## D-145: where a creature skill lands: damage + status on everyone inside its shape, its look and juice.
 func _land_skill(sid: String, sk: Dictionary, shp: Dictionary, from: Vector2, at: Vector2, heroes: Array, all_heroes: Array) -> void:
     var parent := get_parent()
     var r := float(sk["radius"])
@@ -1122,7 +1122,7 @@ func _land_strike(heroes: Array) -> void:
             var dmg_info := DamageInfo.make(float(atk) * (EnemyDefs.HEAVY_MULT if windup_time >= EnemyDefs.HEAVY_WINDUP else 1.0), "physical", self, crit_chance, combat_rng)
             var proj := String(_strike_fx().get("proj", ""))
             if proj != "":
-                dmg_info.tags.append("eskill.basic_" + proj)     # D-143 juice of the shot (JuiceDefs.ENEMY)
+                dmg_info.tags.append("eskill.basic_" + proj)     # D-145 juice of the shot (JuiceDefs.ENEMY)
             h.take_hit(dmg_info)
             if not on_hit_status.is_empty() and h.alive:
                 h.apply_status(String(on_hit_status["id"]), float(on_hit_status["dur"]), float(on_hit_status.get("mag", 0.0)), self)
@@ -1198,7 +1198,7 @@ func _draw() -> void:
         bar_w = clampf(body_radius * 2.6, 26.0, 70.0)
     var frac := float(hp) / float(maxi(1, max_hp))
     draw_rect(Rect2(-bar_w * 0.5, bar_y, bar_w, 4), Color(0.1, 0.1, 0.1, 0.8))
-    draw_rect(Rect2(-bar_w * 0.5, bar_y, bar_w * maxf(_bar_lag, frac), 4), Color(1.0, 0.95, 0.85, 0.9))   # D-143 white trail
+    draw_rect(Rect2(-bar_w * 0.5, bar_y, bar_w * maxf(_bar_lag, frac), 4), Color(1.0, 0.95, 0.85, 0.9))   # D-145 white trail
     draw_rect(Rect2(-bar_w * 0.5, bar_y, bar_w * frac, 4), Color(1.0, 1.0, 1.0) if _flash > 0.0 else Color(0.9, 0.35, 0.35))
     # D-090 attention: who it goes for (that hero's number, in its star colour); a taunt shows a red ring
     var att := attention()
@@ -1229,7 +1229,7 @@ func _draw() -> void:
             draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
-## D-143 cone telegraph: the wedge, a fill that grows outwards as the blow approaches, and its edge.
+## D-145 cone telegraph: the wedge, a fill that grows outwards as the blow approaches, and its edge.
 func _draw_cone(k: float) -> void:
     var o := _from - position
     var reach := float(_shape.get("reach", 60.0))
@@ -1250,7 +1250,7 @@ func _draw_cone(k: float) -> void:
             draw_polyline(pts, Color(1.0, 0.3, 0.3), 3.0 if heavy else 2.0)
 
 
-## D-143 line telegraph: a lane from the creature through the target that fills from the creature.
+## D-145 line telegraph: a lane from the creature through the target that fills from the creature.
 func _draw_line_tele(k: float) -> void:
     var reach := float(_shape.get("reach", 60.0))
     var w := float(_shape.get("width", 18.0))

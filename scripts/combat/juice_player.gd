@@ -32,7 +32,7 @@ static func resolve(target: Node, info: DamageInfo, lethal: bool, blocked: bool 
     elif src != null and src.get("hero") != null:
         id = _hero_profile_id(src)
     elif info != null and info.tags.any(func(t): return String(t).begins_with("eskill.") and JuiceDefs.raw(String(t)) != {}):
-        id = String(info.tags.filter(func(t): return String(t).begins_with("eskill."))[0])   # D-143 creature attack
+        id = String(info.tags.filter(func(t): return String(t).begins_with("eskill."))[0])   # D-145 creature attack
     elif src != null and _is_boss(src):
         id = "boss"
     elif src != null and String(src.get("type_id") if src.get("type_id") != null else "").begins_with("bandit"):

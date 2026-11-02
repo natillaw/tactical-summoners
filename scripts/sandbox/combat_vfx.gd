@@ -366,7 +366,7 @@ const ZONE_FX := {"weaken": ["smoke", 26.0], "root": ["circle_big", 36.0], "rege
 
 ## Enemy strike look by creature (first matching prefix): hit at the aimed spot, optional projectile.
 const ENEMY_FX := [
-    # D-143 bandits: the archer shoots arrows, the mage throws fireballs, the shaman orbs, the brutes cleave
+    # D-145 bandits: the archer shoots arrows, the mage throws fireballs, the shaman orbs, the brutes cleave
     ["bandido_arquero", {"proj": "arrow", "hit": "spark_small"}], ["bandido_mago", {"proj": "fireball", "hit": "explosion", "extra": "fire_impact"}],
     ["bandido_chaman", {"proj": "orb", "hit": "electric_impact"}], ["bandido_degollador", {"hit": "slash_blood"}],
     ["bandido_bruto", {"hit": "slash_heavy", "extra": "dust"}], ["bandido_maton", {"hit": "slam", "extra": "dust"}],

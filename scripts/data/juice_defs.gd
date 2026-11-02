@@ -112,7 +112,7 @@ static func has_skill(id: String) -> bool:
 
 
 ## The raw table for an id: "skill.<id>", "basic.<class>", or a TYPE key. {} if unknown.
-## D-143 creature attacks with their own feel: "eskill.<EnemyDefs skill>" and "eskill.basic_<projectile>"
+## D-145 creature attacks with their own feel: "eskill.<EnemyDefs skill>" and "eskill.basic_<projectile>"
 ## (a ranged creature's basic shot). Tagged on the DamageInfo by SandboxEnemy; JuicePlayer.resolve reads it.
 const ENEMY := {
     "slam": {"particles": Color(0.6, 0.5, 0.38), "amount": 12, "spread": 140.0, "speed": 110.0, "kick": 3, "heavy": true, "sound": "hit_heavy"},

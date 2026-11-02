@@ -2129,8 +2129,7 @@ func _end_mission(state: Mission) -> void:
 		for h in heroes:
 			if not h.dead:
 				back.append({"hero": h.hero, "downed": h.was_downed, "poisoned": h.was_poisoned, "master_lost": h.lost})
-		town_report = Game.after_expedition(back, floor_number, fallen.size(),
-			DungeonDefs.HOURS_PER_RUN if is_wilds() else EconomyDefs.HOURS_PER_EXPEDITION)
+		town_report = Game.after_expedition(back, floor_number, fallen.size(), EconomyDefs.expedition_hours(elapsed))   # owner 2026-11-02: 20 min away = 2 days
 	_show_result()
 
 
@@ -2478,6 +2477,16 @@ func _skill_key(i: int, pressed: bool) -> void:
 		use_skill_selected(i, screen_to_world(get_local_mouse_position()))
 
 
+## The Master's healing potion (LootDefs.POTION_KEY). Refusals are shown over the Master.
+func master_potion() -> String:
+	if master_hero == null or not is_instance_valid(master_hero):
+		return "no Master"
+	var why: String = master_hero.drink_potion()
+	if why != "" and not SimMode.on:
+		FloatingText.spawn(master_hero, tr(why), Color(1.0, 0.75, 0.5), false, 1.2)
+	return why
+
+
 ## Squad order keys (also the HUD buttons). D-082: in a Master squad they become pings to the party
 ## (H defend here, C regroup, X the Master retreats and the squad comes, A then click = attack ping,
 ## S lifts every ping order); V = follow (F is interaction now).
@@ -2535,6 +2544,10 @@ func _input(event: InputEvent) -> void:
 		cam_follow = -1 if event.pressed else cam_follow
 		if event.pressed and cam_mode == "follow":
 			cam_mode = "locked"
+		get_viewport().set_input_as_handled()
+		return
+	if event.keycode == LootDefs.POTION_KEY and event.pressed:
+		master_potion()                          # owner 2026-11-02: the Master drinks only on this key
 		get_viewport().set_input_as_handled()
 		return
 	if event.keycode == KEY_SPACE and event.pressed:
@@ -3008,6 +3021,8 @@ func _eat_meal(h: SandboxHero) -> void:
 		for st in ["atk", "mag"]:
 			if h.stats.has(st):
 				h.stats[st] = roundi(float(h.stats[st]) * (1.0 + float(meal.get(st + "_pct", 0.0))))
+		h.armor = roundi(float(h.armor) * (1.0 + float(meal.get("def_pct", 0.0))))     # broth / feast
+		h.mres = roundi(float(h.mres) * (1.0 + float(meal.get("mres_pct", 0.0))))
 		h.set_meta("meal", id)
 		if not SimMode.on:
 			FloatingText.spawn(h, tr("Well fed"), Color(0.95, 0.75, 0.4), false, 1.6)
