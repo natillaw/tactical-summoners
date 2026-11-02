@@ -29,6 +29,21 @@ const BY_BASE := {
     "plain_shoes": ["feet", "shoes_basic", "leather"],
     "plain_shield": ["off_hand", "shield_round", "default"],
     "plain_offhand_dagger": ["off_hand", "weapon_dagger_offhand", "default"],
+    # pista D (D-126, D-127, D-124): bows and shields kept for items, leather and cloth armour, bags on the back
+    # (tools/lpc_extras_items.py). The gauntlets keep the metal gloves.
+    "recurve": ["main_hand", "weapon_bow_recurve", "default"],
+    "longbow": ["main_hand", "weapon_bow_great", "default"],
+    "crossbow": ["main_hand", "weapon_crossbow", "default"],
+    "shield": ["off_hand", "shield_round", "default"],
+    "kite_shield": ["off_hand", "shield_kite", "default"],
+    "bronze_shield": ["off_hand", "shield_spartan", "default"],
+    "leather_cap": ["head", "hood", "brown"],
+    "leather_vest": ["chest", "armour_leather", "walnut_iron"],
+    "leather_pants": ["legs", "pants_dyed", "walnut"],
+    "cloth_pants": ["legs", "pants_dyed", "navy"],
+    "sandals": ["feet", "shoes_basic", "leather"],
+    "satchel": ["bag", "backpack_satchel", "default"],
+    "backpack": ["bag", "backpack_pack", "default"],
 }
 ## Item level -> metal (tiers of D-077: copper/iron 1-10, steel 11-20, silver 21-30, gold 31+).
 const METAL_BY_ILVL := [[5, "copper"], [10, "iron"], [20, "steel"], [30, "silver"], [9999, "gold"]]

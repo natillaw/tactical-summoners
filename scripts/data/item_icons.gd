@@ -8,16 +8,31 @@ const BASES := {
     "sword": 19, "greataxe": 35, "dagger": 235, "mace": 51, "bow": 67, "staff": 51, "wand": 84,
     "shield": 20, "helm": 16, "hood": 48, "mail": 33, "robe": 49, "gloves": 66, "greaves": 34,
     "boots": 18, "ring": 52, "amulet": 237, "charm": 240,
+    # pista D: the D-082b kit, the new bows/shields/armour and the bags. "r:N" = the Raven 32 px sheet
+    # (AssetCatalog.RAVEN_ICONS_32, 16 columns): 156 sack, 612/613 shields, 219 tanned hide.
+    "plain_shirt": 17, "plain_pants": 50, "plain_shoes": 50, "plain_sword": 19, "plain_shield": 20, "plain_dagger": 235,
+    "plain_offhand_dagger": 235, "plain_bow": 67, "plain_staff": 51, "plain_club": 51,
+    "recurve": 67, "longbow": 67, "crossbow": 67, "kite_shield": "r:613", "bronze_shield": "r:612",
+    "leather_cap": 48, "leather_vest": 17, "leather_pants": "r:219", "cloth_pants": 65, "sandals": 50,
+    "satchel": "r:156", "backpack": "r:156",
 }
-const CONSUMABLES := {"potion": 80, "antidote": 81, "medicine": 81}
+## Consumables and books (Raven): 92 tent, 401 arrows, 563 stew, 485 roast, 96/98/102 books, 304 plan.
+const CONSUMABLES := {"potion": 80, "antidote": 81, "medicine": 81, "con_potion_major": 80,
+    "meal_stew": "r:563", "meal_roast": "r:485", "camp_kit": "r:92", "arrows": "r:401",
+    "book_xp": "r:96", "book_skill": "r:98", "book_trade": "r:102", "book_plan": "r:304"}
 
 
 static func texture(base_id: String) -> Texture2D:
-    var idx: int = int(BASES.get(base_id, CONSUMABLES.get(base_id, 19)))
-    if not ResourceLoader.exists(AssetCatalog.ITEM_ICONS):
+    var ref = BASES.get(base_id, CONSUMABLES.get(base_id, 19))
+    var sheet := AssetCatalog.ITEM_ICONS
+    if ref is String:                                      # "r:N" = Raven sheet
+        sheet = AssetCatalog.RAVEN_ICONS_32
+        ref = int(String(ref).trim_prefix("r:"))
+    var idx: int = int(ref)
+    if not ResourceLoader.exists(sheet):
         return null
     var at := AtlasTexture.new()
-    at.atlas = load(AssetCatalog.ITEM_ICONS)
+    at.atlas = load(sheet)
     at.region = Rect2((idx % 16) * 32, (idx / 16) * 32, 32, 32)
     return at
 
@@ -43,8 +58,9 @@ static func slot_control(slot: String, item: Dictionary) -> Control:
     frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
     c.add_child(frame)
     if not item.is_empty():
+        var col := ItemDefs.rarity_color(String(item.get("rarity", "common")))   # D-123: the rarity colour of the item data
         var r := ColorRect.new()
-        r.color = Color(ArtPalette.rarity_color(String(item.get("rarity", "common"))), 0.35)
+        r.color = Color(col, 0.35)
         r.position = Vector2(2, 2)
         r.size = Vector2(28, 28)
         r.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -52,8 +68,23 @@ static func slot_control(slot: String, item: Dictionary) -> Control:
         var ic := TextureRect.new()
         ic.texture = texture(String(item.get("base", "")))
         ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        if ItemDefs.is_junk(item):
+            ic.modulate = Color(0.6, 0.6, 0.6)               # junk looks worn out
         c.add_child(ic)
+        var rim := ReferenceRect.new()                       # rarity border
+        rim.editor_only = false
+        rim.border_color = col
+        rim.border_width = 1.0
+        rim.size = Vector2(32, 32)
+        rim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        c.add_child(rim)
     return c
+
+
+## A label with the item's name in its rarity colour (loot window, lists).
+static func name_label(item: Dictionary, font_size: int = 12) -> Label:
+    var l := UIKit.label(String(item.get("name", "?")), font_size, ItemDefs.rarity_color(String(item.get("rarity", "common"))))
+    return l
 
 
 ## Tooltip text: name, rarity, stats and affixes; vs = the item now equipped in that slot (▲ / ▼).

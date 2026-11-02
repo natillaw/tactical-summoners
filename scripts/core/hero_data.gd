@@ -54,6 +54,8 @@ var bed: String = ""              # dorm id ("" = sleeps rough), kept while depl
 var exhausted_hours: int = 0
 var equipment: Dictionary = {}    # slot -> item dict (ItemDefs.SLOTS)
 var bag: Dictionary = {}          # consumable id -> count, carried into the tower
+var hoard: Array = []             # D-125: items a greedy hero kept back from the loot ("caught" = the Master knows)
+var bonus_skill_choice: int = 0   # D-129: extra skill choices from skill tomes (pista A reads it)
 var discovered_secrets: Array = [] # secret IDs discovered
 var secret_clues: Array = []      # discovered clue strings
 
@@ -531,6 +533,8 @@ func to_dict() -> Dictionary:
         "bed": bed,
         "equipment": intify(equipment.duplicate(true)),
         "bag": bag.duplicate(),
+        "hoard": intify(hoard.duplicate(true)),
+        "bonus_skill_choice": bonus_skill_choice,
         "ascension_fails": ascension_fails,
         "trained_skills": trained_skills,
         "synth_bonus": synth_bonus.duplicate(),
@@ -645,4 +649,8 @@ static func from_dict(d: Dictionary) -> HeroData:
     for k in bg:
         if int(bg[k]) > 0:
             h.bag[String(k)] = int(bg[k])
+    for it in d.get("hoard", []):                # D-125 / D-129: missing in older saves -> defaults
+        if typeof(it) == TYPE_DICTIONARY:
+            h.hoard.append(intify(it))
+    h.bonus_skill_choice = int(d.get("bonus_skill_choice", 0))
     return h

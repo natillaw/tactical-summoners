@@ -57,7 +57,7 @@ static func layers_for(look: Dictionary, hero_class: String = "", equipment: Dic
             out.append(equipment[slot])
         elif bare:
             out.append(STARTER_OUTFIT[slot])
-    for slot in ["head", "hands"]:                    # extra worn pieces (D-D)
+    for slot in ["head", "hands", "bag"]:             # extra worn pieces (D-D; D-124 the tanner's bag on the back)
         if equipment.has(slot):
             out.append(equipment[slot])
     if equipment.has("head"):

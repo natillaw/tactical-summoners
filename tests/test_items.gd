@@ -35,7 +35,7 @@ func _init() -> void:
                 if groups.has(d["group"]):
                     ok_groups = false
                 groups[d["group"]] = true
-                var hi := float(d["max"]) * (1.0 + ItemDefs.PER_ILVL * 9.0) * ItemLibrary.CURSE_BOOST + 1.0
+                var hi := float(d["max"]) * (1.0 + ItemDefs.PER_ILVL * 9.0) * ItemLibrary.CURSE_BOOST * float(ItemDefs.RARITIES[r].get("quality", 1.0)) + 1.0   # D-122 quality
                 if float(a["value"]) < float(d["min"]) * 0.99 - 0.5 or float(a["value"]) > hi:
                     ok_ranges = false
                 if not (d["kinds"] as Array).has(String(ItemDefs.BASES[String(it["base"])]["kind"])):
@@ -117,8 +117,8 @@ func _init() -> void:
     # D-060: one ring slot is open for now (ring2 opens later): a second ring swaps with the first
     check(g.equip(h, int(ring_a["uid"])) == "" and g.equip(h, int(ring_b["uid"])) == "" and h.equipment.has("ring1") and not h.equipment.has("ring2")
         and g.stash_index(int(ring_a["uid"])) >= 0, "one open ring slot: a second ring swaps the first back to the stash (D-060)")
-    check(ItemDefs.slot_open("hands") and not ItemDefs.slot_open("ring2") and ItemDefs.slot_open("special") and ItemDefs.ACTIVE_SLOTS.size() == 10,
-        "10 equipment slots are open (D-077: hands and trinket added); ring2 stays locked")
+    check(ItemDefs.slot_open("hands") and not ItemDefs.slot_open("ring2") and ItemDefs.slot_open("special") and ItemDefs.slot_open("bag") and ItemDefs.ACTIVE_SLOTS.size() == 11,
+        "11 equipment slots are open (D-077: hands and trinket; D-124: bag); ring2 stays locked")
     var in_stash: int = g.stash.size()
     var total: int = in_stash + h.equipment.size()
     check(g.unequip(h, "ring1") == "" and g.stash.size() + h.equipment.size() == total, "unequipping moves the item without copying it")
