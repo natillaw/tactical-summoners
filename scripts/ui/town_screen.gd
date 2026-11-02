@@ -40,6 +40,54 @@ const RES_ICONS := [["res_food", "food", "Meals: everyone eats every day"], ["re
     ["res_promotion_stone", "@stones", "Promotion stones"], ["res_skill_book", "@books", "Training books"]]
 
 
+## [icon, resource key, name]: every resource of the warehouse with its own picture.
+const RES_CHIPS := [
+    ["res://assets/pixel/ui/ts_kit/icons/res_food.png", "food", "Meals: everyone eats every day"],
+    ["res://assets/pixel/ui/ts_kit/icons/res_wood.png", "wood", "Wood: construction and the workshop"],
+    ["res://assets/pixel/ui/ts_kit/icons/res_stone.png", "stone", "Stone: construction"],
+    ["res://assets/pixel/packs/rpg_icons/Icon291.png", "materials", "Building materials"],
+    ["res://assets/pixel/packs/rpg_icons/Icon386.png", "ore", "Mineral: smelted into iron"],
+    ["res://assets/pixel/packs/rpg_icons/Icon271.png", "herb", "Herbs: potions and medicine"],
+    ["res://assets/pixel/packs/rpg_icons/Icon343.png", "ingot", "Iron ingots: forging"],
+    ["res://assets/pixel/packs/rpg_icons/Icon302.png", "potion", "Potions"],
+    ["res://assets/pixel/ui/ts_kit/icons/res_gem.png", "@gems", "Gems: summoning"],
+    ["res://assets/pixel/ui/ts_kit/icons/res_promotion_stone.png", "@stones", "Promotion stones"],
+    ["res://assets/pixel/ui/ts_kit/icons/res_skill_book.png", "@books", "Training books"],
+]
+
+
+static func _short(v: int) -> String:
+    if v >= 100000:
+        return "%dk" % (v / 1000)
+    if v >= 10000:
+        return "%.1fk" % (float(v) / 1000.0)
+    return str(v)
+
+
+## A resource chip: 16 px icon + value, tooltip with the name.
+func _chip(icon_path: String, text: String, tip: String, col: Color) -> Control:
+    var hb := HBoxContainer.new()
+    hb.add_theme_constant_override("separation", 2)
+    hb.tooltip_text = StringsEs.tx(tip)
+    hb.mouse_filter = Control.MOUSE_FILTER_PASS
+    if icon_path == "":
+        var only := UIKit.label(text, 14, col)
+        only.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        hb.add_child(only)
+        return hb
+    var ic := TextureRect.new()
+    ic.texture = load(icon_path) if ResourceLoader.exists(icon_path) else null
+    ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    ic.custom_minimum_size = Vector2(16, 16)
+    ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    hb.add_child(ic)
+    var l := UIKit.label(text, 14, col)
+    l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    hb.add_child(l)
+    return hb
+
+
 static func _res_value(key: String) -> int:
     match key:
         "@gems":
@@ -95,11 +143,11 @@ func rebuild() -> void:
         _world.add_child(piece)
     if not view.tall.is_empty():
         _world.add_child(BosqueArt.prop_sprites(view.tall))   # the forest ring
+    _world.add_child(view.plaza_props())              # stalls, lamps, barrels, benches
     if not SimMode.on:                                # the tower floors' life: birds, cloud shadows, lights
         _world.add_child(WorldLife.create(self, map.world_size(), 0x70e1))
-        for c in [Vector2i(9, 8), Vector2i(18, 8), Vector2i(24, 8), Vector2i(9, 12), Vector2i(18, 12), Vector2i(24, 12)]:
-            if c.y < map.height and c.x < map.width and String(map.ground[c.y])[c.x] == ".":
-                Ambience.add_light(_world, map.center_of(c) + Vector2(0, -14), Color(1.0, 0.8, 0.45), 40, true)
+        for p in view.lamp_spots:
+            Ambience.add_light(_world, p, Color(1.0, 0.8, 0.45), 36, true)
     var i := 0
     for id in Game.heroes:
         var th := TownHero.new(Game.heroes[id], map)
@@ -159,43 +207,90 @@ func _process(delta: float) -> void:
         view.queue_redraw()
 
 
+## 2026-11-02 (owner: "interfaz muy fea, no se sabe de qué van esos iconos"): resources as chips with their
+## own icon (top), and a dock at the bottom with big labelled buttons for every screen.
+const RPG := "res://assets/pixel/packs/rpg_icons/Icon%d.png"
+const UIC := "res://assets/pixel/packs/ui_icons/PNG/Separately/%s.png"
+
+
 func _build_ui() -> void:
-    # D-063 top bar: the village's resources with the kit icons (tooltip = what it is and how it moves)
-    var top := VBoxContainer.new()
+    var top := PanelContainer.new()
+    top.add_theme_stylebox_override("panel", UIKit.box(Color(0.06, 0.05, 0.09, 0.82), Color(ArtPalette.GOLD[2], 0.55), 1, 0, 3))
     top.position = Vector2(4, 4)
-    top.add_theme_constant_override("separation", 2)
     add_child(top)
-    var res_panel := PanelContainer.new()
-    top.add_child(res_panel)
     _res_row = HBoxContainer.new()
-    _res_row.add_theme_constant_override("separation", 6)
-    res_panel.add_child(_res_row)
-    _res = UIKit.label("", 12, UIKit.MUTED)          # the clock and the other resources in text
-    # quick access: every main screen one click away (icons with their name in the tooltip)
-    var quick := HBoxContainer.new()
-    quick.add_theme_constant_override("separation", 2)
-    top.add_child(quick)
-    for q in [["order_retreat", "Menu (Esc)", func(): open_menu()],
-            ["rarity_gem_epic", "Summon heroes", func(): navigate.emit("summon", 0)],
-            ["social_bond", "Heroes (roster, training, ascension)", func(): navigate.emit("roster", 0)],
-            ["order_follow", "Party: the five who go up", func(): navigate.emit("party", 0)],
-            ["res_skill_book", "Inventory and equipment stash", func(): navigate.emit("inventory", 0)],
-            ["order_interact", "Build (place it anywhere near the village)", show_build_menu],
-            ["order_explore", "Tower gate: choose a floor", func(): select_building("tower_gate")],
-            ["status_downed", "Memorial of the fallen", func(): navigate.emit("memorial", 0)],
-            ["star_full", "Pass a day: the village works, eats, sleeps and heals for 24 hours", func(): Game.pass_time(24)]]:
-        quick.add_child(UIKit.icon_button(AssetCatalog.icon(String(q[0])), String(q[1]), q[2]))
+    _res_row.add_theme_constant_override("separation", 8)
+    top.add_child(_res_row)
+    _res = UIKit.label("", 12, UIKit.MUTED)
+    var dock := PanelContainer.new()
+    dock.add_theme_stylebox_override("panel", UIKit.box(Color(0.06, 0.05, 0.09, 0.85), Color(ArtPalette.GOLD[2], 0.55), 1, 0, 3))
+    add_child(dock)
+    var row := HBoxContainer.new()
+    row.add_theme_constant_override("separation", 2)
+    dock.add_child(row)
+    for q in [[RPG % 372, "Summon", "Summon heroes (gems)", func(): navigate.emit("summon", 0)],
+            [RPG % 173, "Heroes", "Heroes: roster, training, ascension", func(): navigate.emit("roster", 0)],
+            [RPG % 97, "Party", "Party: the five who go up the tower", func(): navigate.emit("party", 0)],
+            [RPG % 289, "Inventory", "Inventory and equipment stash", func(): navigate.emit("inventory", 0)],
+            [RPG % 294, "Build", "Build: place a building near the village", show_build_menu],
+            [AssetCatalog.world("tower_portal"), "Tower", "Tower gate: choose a floor", func(): select_building("tower_gate")],
+            [UIC % "Icon42_1", "Memorial", "Memorial of the fallen", func(): navigate.emit("memorial", 0)],
+            [UIC % "Icon49_1", "Pass a day", "Pass a day: the village works, eats, sleeps and heals for 24 hours", func(): Game.pass_time(24)],
+            [UIC % "Icon55_1", "Menu", "Menu (Esc)", func(): open_menu()]]:
+        row.add_child(_dock_button(String(q[0]), String(q[1]), String(q[2]), q[3]))
+    dock.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE)
+    dock.grow_horizontal = Control.GROW_DIRECTION_BOTH
+    dock.grow_vertical = Control.GROW_DIRECTION_BEGIN
+    dock.position.y -= 4
+
+
+## A dock button: a 20 px icon over its name (the name is the explanation; the tooltip adds the detail).
+func _dock_button(icon_path: String, text: String, tip: String, cb: Callable) -> Button:
+    var b := Button.new()
+    b.tooltip_text = StringsEs.tx(tip)
+    b.custom_minimum_size = Vector2(58, 48)
+    b.pressed.connect(cb)
+    b.mouse_entered.connect(func(): UIKit.sound("hover"))
+    b.pressed.connect(func(): UIKit.sound("click"))
+    var normal := UIKit.box(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 0, 1)
+    var hover := UIKit.box(Color(ArtPalette.GOLD[1], 0.28), ArtPalette.GOLD[3], 1, 0, 1)
+    for st in ["normal", "focus", "disabled"]:
+        b.add_theme_stylebox_override(st, normal)
+    for st in ["hover", "pressed", "hover_pressed"]:
+        b.add_theme_stylebox_override(st, hover)
+    var v := VBoxContainer.new()
+    v.add_theme_constant_override("separation", 0)
+    v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    v.alignment = BoxContainer.ALIGNMENT_CENTER
+    b.add_child(v)
+    UIKit.fill(v)
+    var ic := TextureRect.new()
+    var tex: Texture2D = load(icon_path) if ResourceLoader.exists(icon_path) else null
+    if tex != null and tex.get_width() == 192:            # the tower portal sheet: its first frame
+        var at := AtlasTexture.new()
+        at.atlas = tex
+        at.region = Rect2(0, 0, 32, 48)
+        tex = at
+    ic.texture = tex
+    ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    ic.custom_minimum_size = Vector2(32, 32)            # whole steps: 32 px icons x1, 16 px icons x2
+    ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    v.add_child(ic)
+    var l := UIKit.label(text, 12, Color(0.92, 0.88, 0.78))
+    l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    v.add_child(l)
+    UIKit.react(b)
+    return b
+
+
     _move_msg = UIKit.label("", 15, UIKit.ACCENT)
     _move_msg.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
     _move_msg.position += Vector2(-100, 26)  # px
     _move_msg.mouse_filter = Control.MOUSE_FILTER_IGNORE
     add_child(_move_msg)
 
-    var hint := UIKit.label("Click a building to manage it    Click a hero to see them    Drag to move    Wheel to zoom    Red ! = a building has a problem", 14, UIKit.MUTED)
-    hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
-    hint.position += Vector2(7, -15)  # px
-    add_child(hint)
 
     _panel = PanelContainer.new()
     _panel.custom_minimum_size = Vector2(175, 0)  # px
@@ -218,18 +313,14 @@ func _refresh() -> void:
     if _res_row != null:
         for c in _res_row.get_children():
             c.queue_free()
-        _res_row.add_child(UIKit.label(Game.town_time_text(), 14, UIKit.ACCENT))
-        for r in RES_ICONS:
+        var h := Game.town_clock % 24
+        var day := h >= 6 and h < 20
+        _res_row.add_child(_chip(UIC % ("Icon3_1" if day else "Icon2_1"), Game.town_time_text(), "Time of day in the village", UIKit.ACCENT))
+        for r in RES_CHIPS:
             var v := _res_value(String(r[1]))
-            _res_row.add_child(UIKit.icon(AssetCatalog.icon(String(r[0])), "%s: %d" % [String(r[2]), v]))
-            _res_row.add_child(UIKit.label(str(v), 14, UIKit.TEXT))
-        var beds := UIKit.label("Beds %d/%d" % [Game.heroes.size(), Game.max_hero_capacity()], 14, UIKit.TEXT)
-        beds.tooltip_text = "Heroes / beds. More beds: build or upgrade dormitories."
-        beds.mouse_filter = Control.MOUSE_FILTER_PASS
-        _res_row.add_child(beds)
-        var others := "Mat %d · Ore %d · Herb %d · Iron %d · Potions %d" % [int(st.get("materials", 0)), int(st.get("ore", 0)), int(st.get("herb", 0)), int(st.get("ingot", 0)), int(st.get("potion", 0))]
-        var o := UIKit.label(others, 12, UIKit.MUTED)
-        _res_row.add_child(o)
+            _res_row.add_child(_chip(String(r[0]), _short(v), "%s: %d" % [tr(String(r[2])), v], UIKit.TEXT if v > 0 else UIKit.MUTED))
+        _res_row.add_child(_chip("", "%s %d/%d" % [tr("Beds"), Game.heroes.size(), Game.max_hero_capacity()],
+            "Heroes / beds. More beds: build or upgrade dormitories.", UIKit.BAD if Game.heroes.size() >= Game.max_hero_capacity() else UIKit.TEXT))
     _res.text = Game.town_time_text()
     if selected != "":
         _show_panel(selected)

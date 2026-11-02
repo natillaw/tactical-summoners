@@ -269,7 +269,7 @@ static func bake(map: NavMap, art_seed: int, camps: bool = false, tall_out = nul
 
 ## Ground only, for any grid (the town uses it): kind_at(x, y) -> 0 grass, 1 dirt, 2 water per cell.
 ## Same jittered Match-Corners terrain as bake(), so paths have organic edges.
-static func ground_image(w_cells: int, h_cells: int, kind_at: Callable, art_seed: int) -> Image:
+static func ground_image(w_cells: int, h_cells: int, kind_at: Callable, art_seed: int, full_variant_p: float = FULL_VARIANT_P) -> Image:
     var tiles := _img(TILES)
     var w := w_cells * SUB
     var h := h_cells * SUB
@@ -305,7 +305,7 @@ static func ground_image(w_cells: int, h_cells: int, kind_at: Callable, art_seed
                     if int(k[i]) == other:
                         idx |= 1 << i
                 at = (Vector2i(0, 0) if other == 1 else Vector2i(4, 0)) + Vector2i(idx % 4, idx / 4)
-                if idx == 15 and r.randf() < FULL_VARIANT_P * 2.0:
+                if idx == 15 and r.randf() < full_variant_p * 2.0:
                     at = Vector2i(8 + r.randi() % 2, other)
             out.blit_rect(tiles, Rect2i(at * T, Vector2i(T, T)), Vector2i(tx, ty) * T)
     return out

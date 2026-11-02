@@ -174,7 +174,7 @@ func show_options() -> void:
     var tabs := HBoxContainer.new()
     for t in [["display", "Display"], ["audio", "Audio"], ["game", "Game"]]:
         var id: String = t[0]
-        var b := UIKit.button(String(t[1]), func():
+        var b := UIKit.button(tr(String(t[1])), func():
             _tab = id
             show_options(), Vector2(150, 30))
         b.disabled = _tab == id
@@ -273,6 +273,12 @@ func _check(text: String, on: bool, on_toggle: Callable) -> void:
     cb.text = StringsEs.tx(text)
     cb.button_pressed = on
     cb.toggled.connect(func(v: bool): on_toggle.call(v))
+    var flat := UIKit.box(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 0, 2)
+    var hov := UIKit.box(Color(1, 1, 1, 0.08), Color(0, 0, 0, 0), 0, 0, 2)
+    for st in ["normal", "pressed", "focus", "disabled"]:
+        cb.add_theme_stylebox_override(st, flat)
+    for st in ["hover", "hover_pressed"]:
+        cb.add_theme_stylebox_override(st, hov)
     _box.add_child(cb)
 
 

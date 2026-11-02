@@ -358,5 +358,11 @@ const ES_UI2 := {
     "Begin": "Comenzar", "Start over": "Empezar de nuevo", "A tower, a village and the people you call.": "Una torre, un pueblo y la gente que invocas.",
     "Your story continues": "Tu historia continúa", "Day": "Día", "heroes": "héroes", "Highest floor": "Piso más alto",
     "One life, one story: there is no second save.": "Una vida, una historia: no hay segunda partida.",
-    "F11: full screen": "F11: pantalla completa",
+    "F11: full screen": "F11: pantalla completa", "Pass a day": "Pasar día",
+    "Display": "Pantalla", "Audio": "Sonido", "Game": "Juego", "Mode": "Modo", "Window": "Ventana",
+    "Full screen": "Pantalla completa", "Exclusive full screen": "Pantalla completa exclusiva", "FPS limit": "Límite FPS",
+    "No limit": "Sin límite", "Show FPS": "Mostrar FPS", "General": "General", "Mute when the window is in the background": "Silenciar cuando la ventana no está activa",
+    "Language": "Idioma", "Visual effects": "Efectos visuales", "Off": "No", "Low": "Bajos", "High": "Altos",
+    "Damage numbers": "Números de daño", "Shake": "Temblor",
+    "You are playing inside the Godot editor: full screen only works when the game runs in its own window (tools/Play.ps1, or turn off 'Embed game' in the editor's Game tab).": "Estás jugando dentro del editor de Godot: la pantalla completa solo funciona con el juego en su propia ventana (tools/Play.ps1, o desactiva 'Embed game' en la pestaña Game del editor).",
 }

@@ -42,7 +42,20 @@ func _shots_title() -> void:
 
 func _shots_town() -> void:
     _main.call("show_screen", "town", 0)
-    await _shot("town", 3.0)
+    await _shot("town", 4.0)
+    await _shot("town_later", 6.0)
+
+
+func _shots_options() -> void:
+    _main.call("show_screen", "title", 0)
+    await get_tree().create_timer(0.5).timeout
+    var t: Node = _find("TitleScreen")
+    t.call("_open_menu", "options")
+    await _shot("options_display", 0.6)
+    var menu: Node = t.get("_menu")
+    menu.set("_tab", "game")
+    menu.call("show_options")
+    await _shot("options_game", 0.4)
 
 
 func _shots_floor() -> void:
