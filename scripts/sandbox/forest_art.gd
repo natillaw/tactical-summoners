@@ -29,7 +29,36 @@ static func is_trail(map: NavMap, c: Vector2i) -> bool:
     return lr or ud
 
 
+## D-115 (pista C): the last few baked floors are kept, so going back into a floor (or retrying it) does
+## not bake the whole map again (the hitch when entering a floor).
+const BAKE_CACHE_MAX := 3
+static var _bake_cache: Dictionary = {}
+static var _bake_order: Array = []
+
+
 static func bake(map: NavMap, art_seed: int, camps: bool = false) -> Texture2D:
+    var key := "%d|%s|%dx%d|%d" % [art_seed, camps, map.width, map.height, _grid_hash(map)]
+    if _bake_cache.has(key):
+        return _bake_cache[key]
+    var t := _bake_uncached(map, art_seed, camps)
+    if t != null:
+        _bake_cache[key] = t
+        _bake_order.append(key)
+        while _bake_order.size() > BAKE_CACHE_MAX:
+            _bake_cache.erase(_bake_order.pop_front())
+    return t
+
+
+static func _grid_hash(map: NavMap) -> int:
+    var h := 0
+    for y in map.height:
+        for x in map.width:
+            if map.is_blocked_cell(Vector2i(x, y)):
+                h = (h * 31 + x * 7 + y * 13) & 0x7fffffff
+    return h
+
+
+static func _bake_uncached(map: NavMap, art_seed: int, camps: bool) -> Texture2D:
     if BosqueArt.available():                       # master prompt G: the owner's forest tileset
         var t := BosqueArt.bake(map, art_seed, camps)
         if t != null:

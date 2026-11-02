@@ -25,6 +25,8 @@ var _boss_bar: ProgressBar
 var _minimap: Minimap
 var _details: PanelContainer
 var _skill_tex: Texture2D
+var _frames: PartyFrames = null        # D-111: WoW-style party frames on the left edge
+var _boss_smooth: PartyFrames.SmoothBar = null
 var _corners: Dictionary = {}          # "bl" / "bc" / "br" / "tr" -> PanelContainer, placed from their real size
 
 
@@ -96,7 +98,10 @@ func _build_boss() -> void:
     _boss_bar.show_percentage = false
     _boss_bar.custom_minimum_size = Vector2(190, 6)
     _boss_bar.add_theme_stylebox_override("fill", UIKit.box(ArtPalette.HP, Color(0, 0, 0, 0), 0, 0, 0))
+    _boss_bar.visible = false                            # D-111: kept for callers; the smooth bar is drawn
     vb.add_child(_boss_bar)
+    _boss_smooth = PartyFrames.SmoothBar.new(Vector2(190, 6), true)
+    vb.add_child(_boss_smooth)
 
 
 # --- top-right: minimap ---------------------------------------------------------------------------
@@ -138,13 +143,10 @@ func _build_party() -> void:
     _social = HBoxContainer.new()
     _social.add_theme_constant_override("separation", 2)
     vb.add_child(_social)
-    var row := HBoxContainer.new()
-    row.add_theme_constant_override("separation", 2)
-    vb.add_child(row)
-    for i in sb.heroes.size():
-        var cell := PartyCell.new(sb, i)
-        row.add_child(cell)
-        _party.append(cell)
+    # D-111: the party is a column of frames down the left edge (PartyFrames); PartyCell stays for tests
+    _frames = PartyFrames.new(sb)
+    add_child(_frames)
+    _frames.position = Vector2(4, 40)
     _order_label = UIKit.label("", 12, UIKit.MUTED)
     vb.add_child(_order_label)
 
@@ -253,6 +255,8 @@ func _process(_delta: float) -> void:
         focus = sb.selected[0]                   # squad view: the first selected hero's actions
     for c in _party:
         (c as PartyCell).refresh()
+    if _frames != null:
+        _frames.refresh()
     for c in _skills:
         (c as SkillCell).refresh(focus)
     _refresh_commands()
@@ -264,6 +268,7 @@ func _process(_delta: float) -> void:
         _boss_name.text = boss.enemy_name
         _boss_bar.max_value = boss.max_hp
         _boss_bar.value = boss.hp
+        _boss_smooth.set_value(float(boss.hp), float(boss.max_hp))
     _minimap.queue_redraw()
 
 

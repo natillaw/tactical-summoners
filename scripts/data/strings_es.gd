@@ -223,5 +223,16 @@ static func install(locale: String = "es") -> void:
     t.locale = "es"
     for k in ES:
         t.add_message(String(k), String(ES[k]))
+    for k in ES_PISTA_C:                              # pista C block (end of file)
+        t.add_message(String(k), String(ES_PISTA_C[k]))
     TranslationServer.add_translation(t)
     TranslationServer.set_locale(locale)
+
+
+# --- pista C ---
+const ES_PISTA_C := {
+    "Loading...": "Cargando...", "An enemy is going for this hero": "Un enemigo va a por este héroe",
+    "DOWN %ds: right-click to rescue": "CAÍDO %ds: clic derecho para rescatar", "block": "bloqueo",
+    "Mining": "Minando", "Chopping": "Talando", "Picking herbs": "Recogiendo hierbas", "Opening": "Abriendo",
+    "Dodged!": "¡Esquivado!",
+}

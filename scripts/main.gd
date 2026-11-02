@@ -54,7 +54,25 @@ func _refresh_currency() -> void:
     _currency.text = "Gems %d     Stones %d     Books %d" % [Game.gems, Game.stones, Game.books]
 
 
+## D-115 (pista C): heavy screens (entering a floor, the town) first show a loading curtain for a frame,
+## so the click answers at once instead of freezing; headless runs (tests) build at once as before.
+const HEAVY_SCREENS := ["sandbox", "town"]
+
+
 func show_screen(screen: String, arg: int = 0) -> void:
+    if HEAVY_SCREENS.has(screen) and DisplayServer.get_name() != "headless" and is_inside_tree():
+        var curtain := UIKit.loading_curtain(self)
+        await get_tree().process_frame
+        await get_tree().process_frame
+        _show_screen_now(screen, arg)
+        curtain.queue_free()
+        UIKit.fade_in(self)
+        return
+    _show_screen_now(screen, arg)
+    UIKit.fade_in(self)
+
+
+func _show_screen_now(screen: String, arg: int = 0) -> void:
     for c in _content.get_children():
         c.queue_free()
     if Game.game_over and not ["title", "game_over"].has(screen):

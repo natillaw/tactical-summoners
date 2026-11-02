@@ -15,9 +15,20 @@ var _left: float = 0.0
 var _dur: float = 0.0
 var _dir: Vector2 = Vector2.ZERO
 var _t: float = 0.0
+## D-114 (pista C): look-ahead. The view leans a little toward where its target is heading, drawn through
+## `offset` (with the shake) so the camera's real position, bounds and framing tests are unchanged.
+## No zoom of its own: D-082b says the camera never zooms by itself, so the "slight boss zoom" of the
+## pista C prompt is left out until the owner decides.
+const LEAD_TIME := 0.25           # s of the target's motion the view leans ahead
+const LEAD_MAX := 14.0            # world px
+const LEAD_RATE := 3.0            # 1/s: the lean eases in and out (slight lag)
+var _lead: Vector2 = Vector2.ZERO
+var _last_target: Vector2 = Vector2.INF
 
 
 func snap() -> void:
+    _lead = Vector2.ZERO
+    _last_target = target_position
     zoom = Vector2.ONE * target_zoom
     position = _clamped(target_position)
     reset_physics_interpolation()
@@ -65,12 +76,19 @@ func step(delta: float) -> void:
     zoom = Vector2.ONE * z
     position = _clamped(position)
     _t += delta
+    var tv := Vector2.ZERO
+    if _last_target != Vector2.INF and delta > 0.0:
+        tv = (target_position - _last_target) / delta
+    _last_target = target_position
+    var want := (tv * LEAD_TIME).limit_length(LEAD_MAX) if tv.length() < 2000.0 else Vector2.ZERO   # a jump is not motion
+    _lead = _lead.lerp(want, 1.0 - exp(-LEAD_RATE * delta))
+    var lead := _lead.round()
     if _left > 0.0:
         _left = maxf(0.0, _left - delta)
         var a := _amp * _falloff() / maxf(0.1, z)          # constant size on screen at any zoom
         var wobble := Vector2(sin(_t * 61.0), cos(_t * 47.0 + 1.3))
         if _dir != Vector2.ZERO:
             wobble = _dir * sin(_t * 70.0) + wobble * 0.35   # mostly along the blow
-        offset = wobble * a
+        offset = lead + wobble * a
     else:
-        offset = Vector2.ZERO
+        offset = lead

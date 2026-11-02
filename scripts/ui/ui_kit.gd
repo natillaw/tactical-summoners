@@ -236,6 +236,7 @@ static func button(text: String, callback: Callable, min_size: Vector2 = Vector2
     b.pressed.connect(callback)
     b.mouse_entered.connect(func(): UIKit.sound("hover"))
     b.pressed.connect(func(): UIKit.sound("click"))
+    react(b)
     return b
 
 
@@ -250,6 +251,7 @@ static func icon_button(icon_path: String, tip: String, callback: Callable, size
     b.pressed.connect(callback)
     b.mouse_entered.connect(func(): UIKit.sound("hover"))
     b.pressed.connect(func(): UIKit.sound("click"))
+    react(b)
     return b
 
 
@@ -318,3 +320,73 @@ static func toast(parent: Control, text: String, color: Color = TEXT) -> void:
     t.tween_interval(1.6)
     t.tween_property(pc, "modulate:a", 0.0, 0.4)
     t.tween_callback(pc.queue_free)
+
+
+# --- D-116 (pista C): UI that reacts and eases --------------------------------------------------------
+
+const EASE_TIME := 0.12
+const HOVER_SCALE := 1.05
+const PRESS_SCALE := 0.94
+const FADE_TIME := 0.18
+
+
+## Buttons grow a little under the mouse and punch when pressed (scale around their centre; the layout
+## never moves).
+static func react(b: Control) -> void:
+    b.resized.connect(func(): b.pivot_offset = (b.size * 0.5).round())
+    b.mouse_entered.connect(func(): UIKit._ease_scale(b, HOVER_SCALE))
+    b.mouse_exited.connect(func(): UIKit._ease_scale(b, 1.0))
+    if b is BaseButton:
+        (b as BaseButton).button_down.connect(func(): UIKit._ease_scale(b, PRESS_SCALE, 0.05))
+        (b as BaseButton).button_up.connect(func(): UIKit._ease_scale(b, 1.0))
+
+
+static func _ease_scale(c: Control, to: float, t: float = EASE_TIME) -> void:
+    if not is_instance_valid(c) or not c.is_inside_tree():
+        return
+    if c.has_meta("ui_tween"):
+        var old: Tween = c.get_meta("ui_tween")
+        if old != null and old.is_valid():
+            old.kill()
+    var tw := c.create_tween()
+    c.set_meta("ui_tween", tw)
+    tw.tween_property(c, "scale", Vector2.ONE * to, t).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+## A panel that pops in (fade + slight grow, eased).
+static func pop_in(c: Control) -> void:
+    c.modulate.a = 0.0
+    c.scale = Vector2.ONE * 0.92
+    c.resized.connect(func(): c.pivot_offset = (c.size * 0.5).round())
+    var tw := c.create_tween().set_parallel()
+    tw.tween_property(c, "modulate:a", 1.0, FADE_TIME)
+    tw.tween_property(c, "scale", Vector2.ONE, FADE_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+## A curtain that fades out over a new screen (scene fade). Frees itself.
+static func fade_in(parent: Control, time: float = FADE_TIME) -> void:
+    if parent == null or not parent.is_inside_tree():
+        return
+    var r := ColorRect.new()
+    r.color = Color(ArtPalette.INK, 1.0)
+    r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    parent.add_child(r)
+    fill(r)
+    r.z_index = 200
+    var tw := r.create_tween()
+    tw.tween_property(r, "modulate:a", 0.0, time)
+    tw.tween_callback(r.queue_free)
+
+
+## A plain loading curtain with a short label (heavy screens: entering a floor, the town).
+static func loading_curtain(parent: Control) -> Control:
+    var r := ColorRect.new()
+    r.color = Color(ArtPalette.INK, 1.0)
+    r.mouse_filter = Control.MOUSE_FILTER_STOP
+    parent.add_child(r)
+    fill(r)
+    r.z_index = 200
+    var l := label("Loading...", 20, MUTED)
+    r.add_child(l)
+    l.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+    return r
