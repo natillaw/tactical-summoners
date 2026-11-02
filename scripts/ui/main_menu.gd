@@ -43,6 +43,7 @@ func _ready() -> void:
     dbg.add_child(UIKit.button("+10 books", func(): Game.grant(0, 0, 10)))
     dbg.add_child(UIKit.button("Full town", func(): Game.debug_full_town()))
     dbg.add_child(UIKit.button("Reset save", _ask_reset))
+    dbg.add_child(UIKit.button("Sim Lab", func(): get_tree().change_scene_to_file("res://tools/sim/sim_lab.tscn")))   # D-130
     vb.add_child(dbg)
 
     Game.changed.connect(_refresh)

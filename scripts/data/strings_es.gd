@@ -192,6 +192,19 @@ const ES := {
     "TODO lore: the bell that called the summoned home, ringing for the last time.": "TODO lore: la campana que llamaba a casa a los invocados, sonando por última vez.", "TODO lore: a banner you carried, burnt at the edges.": "TODO lore: un estandarte que llevaste, quemado por los bordes.", "TODO lore: a promise you made to the circle, and the night you broke it.": "TODO lore: una promesa que hiciste al círculo, y la noche en que la rompiste.",
     "TODO lore: the hall where your summoned waited, and nobody came back.": "TODO lore: la sala donde esperaban tus invocados, y nadie volvió.", "TODO lore: someone who stood beside you, then against you.": "TODO lore: alguien que estuvo a tu lado, y luego en tu contra.", "TODO lore: the deep floors burning, and what you left there.": "TODO lore: los pisos profundos ardiendo, y lo que dejaste allí.",
     "TODO lore: the last command you gave, and who obeyed it.": "TODO lore: la última orden que diste, y quién la obedeció.", "TODO lore: what waits at the top, and why you climbed it before.": "TODO lore: lo que espera en la cima, y por qué ya la subiste antes.",
+    # D-130 Sim Lab (tools/sim/sim_lab.gd)
+    "Sim Lab": "Sim Lab", "Load": "Cargar", "Save": "Guardar", "Duplicate": "Duplicar", "Floors": "Pisos", "Range:": "Rango:",
+    "Apply": "Aplicar", "All": "Todos", "Master's bot": "Bot del Máster", "Tactical": "Táctico", "Loco": "Loco",
+    "Both (compare)": "Ambos (compara)", "Advanced": "Avanzado", "Party (row 1 = Master)": "Party (fila 1 = Máster)",
+    "Use archetype": "Usar arquetipo", "Random party": "Party aleatoria", "Items": "Ítems",
+    "Progress": "Progreso", "Enemies": "Enemigos", "Health": "Vida", "Count": "Cantidad",
+    "Overrides": "Overrides", "+ Override": "+ Override", "Sweep": "Barrido", "On": "Activo", "Run": "Ejecución",
+    "Quick (5 runs)": "Rápido (5 runs)", "Open report folder": "Abrir carpeta del reporte",
+    "By floor": "Por piso", "Tactical vs loco": "Táctico vs loco", "History": "Historial", "Show": "Mostrar",
+    "Compare 2": "Comparar 2", "Refresh": "Actualizar", "Add": "Añadir", "Clear": "Vaciar", "Balanced": "Equilibrado",
+    "Aggressive": "Agresivo", "Double tank": "Tanque doble", "No healer": "Sin healer", "Stealthy": "Sigiloso",
+    "Melee only": "Solo melee", "Ranged only": "Solo ranged", "On / off": "Activar / desactivar",
+    "With \"items\" the hero gets the white kit plus these items.": "Con \"items\" el héroe lleva el kit blanco más estos ítems.",
 }
 
 
