@@ -21,11 +21,20 @@ Las pruebas automáticas se ejecutan en GitHub (Godot 4.7.1 Linux) con cada push
 | **v13** | sin commit (carpeta local `tactical-summoners-v13`, no es repo git) | — | **Balance:** Wilds con packs por rol (tanque+distancia+sanador), IA táctica y callers; jefes de piso 5/10 con mecánicas de raid y enrage; daño por piso +22%/piso; XP lenta (piso normal ≈0,5 nivel, MVP+secreto ≈1); pisos sin bloqueo por edificio; P-29 registrada. Bot: `PT_MATRIX=1 [PT_N PT_PROFILE PT_ONLY PT_CSV]`. Pendiente: LOCO con mejoras gana 100% en Wilds; pisos 1-3 sin diferencia de muertes. | Local Godot 4.7.2: 10 suites ALL PASSED (logs en `tests/out/`) |
 | **v14** | rama local `feat/master-prompt-bandits` (git init local, sin remoto) | — | **Prompt maestro:** bandidos TPF (capas accessory/mask, 8 tipos, Barón ×2), bosque con tileset del dueño + campamentos, loot de pisos (`LootDefs`), party por piso, amenaza, modificadores, escape, Barón Carmesí con altar, expediciones offline, mercader, save v11, simulador. Sabotaje del piso 7 y ritmo de gemas hechos (commit 975f229). Pendiente: mural de pista. | Local Godot 4.7.2: 22 suites ALL PASSED (logs en `tests/out/`) |
 | **v15** | rama `ccr-7d17ca4c-os56aa` | [ZIP de la rama](https://github.com/natillaw/tactical-summoners/archive/refs/heads/ccr-7d17ca4c-os56aa.zip) | **Pase visual (D-141):** árboles/rocas/troncos tapan a los héroes, cámara más cerca, botín con icono y aura de rareza, portal de salida y santuario, nueva pantalla de título (una sola partida), opciones ampliadas, pueblo con barra de recursos, dock con nombres, plaza decorada y héroes con emociones; Construir con imágenes; paneles de edificio; Memorial; inventario; escuadrón sin filas; ficha del héroe con ranuras | Local Godot 4.7.2 Linux: 35/35 suites PASS (tras arreglar `mission`) |
+| **v16** | rama `ccr-8a10e84a-r95vxi` | [ZIP de la rama](https://github.com/natillaw/tactical-summoners/archive/refs/heads/ccr-8a10e84a-r95vxi.zip) | **D-142:** héroes solo con Q y elección de W/E/R en 2, 5 y 10; solo Emboscada, Disparo de interrupción y Contrahechizo cortan lanzamientos (el aturdimiento pausa la carga); Resurrección del clérigo en F (4 s); sin flanqueo, espalda con espalda ni muro de escudos; marca del arquero +15 %; gear por criatura 3 %/20 % y hacha épica fija del jefe del piso 10; frases de héroes en español | **35/35 PASS** — [ejecución](https://github.com/natillaw/tactical-summoners/actions/runs/41493339346) (Godot 4.7.2, CI) |
 
 ## Qué probar a mano en cada versión (en Windows, con el editor o F5)
 ### v1 (estado original, como referencia)
 - Al abrir el Sandbox **no aparecen héroes** y sale un error en la consola (F-038, confirmado en GitHub).
 - "Living Headquarters → Explore Base" da error (F-001).
+
+### v16 (D-142)
+1. Crea o invoca un héroe nuevo: en la ficha (Skills) no tiene activas, solo Q. Súbelo a nivel 2, 5 y 10: cada vez elige 1 de 3; a partir del 10 no hay más elecciones.
+2. Con un pícaro/arquero/mago con Emboscada / Disparo de interrupción / Contrahechizo: corta el lanzamiento de un chamán o del jefe. Un aturdimiento ya no lo corta (solo lo pausa).
+3. Con un Máster clérigo, junto a un caído: "Mantén F: Resurrección" (4 s).
+4. Códice de sinergias: ya no aparecen Flanqueo, Espalda con espalda ni Muro de escudos. Marca del arquero: el objetivo se ve en la niebla.
+5. Piso 10: el jefe suelta un hacha épica (morada) además de su botín. Las criaturas normales sueltan gear muy rara vez.
+6. Pueblo y pisos: las frases de los héroes salen en español.
 
 ### v15 (D-141)
 1. Título: "Continuar" (o "Comenzar" sin partida); ya no hay "Nueva partida". Opciones → Pantalla → Modo "Pantalla completa". Si juegas con F5 desde el editor, la ventana va incrustada y no puede ir a pantalla completa: usa `tools\Play.ps1` o desactiva "Embed game" en la pestaña Game del editor.
