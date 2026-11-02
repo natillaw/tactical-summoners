@@ -32,7 +32,7 @@ const RPG := {
     "leather_pants": 211, "cloth_pants": 212, "sandals": 229, "satchel": 287, "backpack": 289, "ring": 249,
     "amulet": 254, "charm": 256, "plain_shirt": 181, "plain_pants": 213, "plain_shoes": 222, "plain_sword": 1,
     "plain_shield": 143, "plain_dagger": 81, "plain_offhand_dagger": 84, "plain_bow": 101, "plain_staff": 87,
-    "plain_club": 34, "potion": 302, "con_potion_major": 303, "antidote": 282, "medicine": 284,
+    "plain_club": 25, "potion": 302, "con_potion_major": 303, "antidote": 282, "medicine": 284,
 }
 static var _rpg_cache: Dictionary = {}
 

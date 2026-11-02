@@ -1,35 +1,61 @@
 class_name InventoryScreen
 extends Control
-## The Master's global inventory (vertical slice, D-063 UI): resources by category, the equipment
-## stash (rarity frame, tooltip with affixes and ▲▼ against the chosen hero), equip / salvage, and the
-## forge's recipes with what you have and what is missing. One inventory: heroes only wear equipment.
+## The Master's global inventory (vertical slice, D-063 UI). Redone 2026-11-02 (owner: "interfaz horrible"):
+##   left   - the chosen hero as a paper doll, every equipment slot around them (click a worn piece: take it off)
+##   centre - the stash as a backpack grid with filters (click: equip on the hero; right click: salvage)
+##   right  - tabs: resources (icon grid), books and kept loot, forge and alchemy recipes
+## One inventory: heroes only wear equipment.
 
 signal back_requested
 
-var _hero_pick: OptionButton
+const RPG := "res://assets/pixel/packs/rpg_icons/Icon%d.png"
+## Resource id -> icon (rpg_icons number, or "item:<id>" for ItemIcons, or a kit path).
+const RES_ICON := {"materials": 291, "grain": 275, "herb": 271, "ore": 386, "ingot": 343, "medicine": 284,
+    "potion": 302, "antidote": 282, "hide": 290, "fang": 15, "gel": 278, "spore": 280, "silk": 288, "venom": 279,
+    "bone": 179, "core": 340, "starsteel": 344, "essence": 372, "mat_enchanted_cloth": 288, "mat_iron_ore": 386,
+    "mat_resonant_crystal": 338, "mat_moon_flower": 279, "mat_rune_plate": 261, "key_guardian_heart": 257,
+    "key_legendary_fragment": 375, "con_potion_major": 303, "elixir_strength": 305, "elixir_speed": 312,
+    "elixir_defense": 316, "meal_stew": "item:meal_stew", "meal_roast": "item:meal_roast", "camp_kit": "item:camp_kit",
+    "food": "res://assets/pixel/ui/ts_kit/icons/res_food.png", "wood": "res://assets/pixel/ui/ts_kit/icons/res_wood.png",
+    "stone": "res://assets/pixel/ui/ts_kit/icons/res_stone.png", "book_xp": "item:book_xp", "book_skill": "item:book_skill",
+    "book_trade": "item:book_trade", "book_plan": "item:book_plan", "arrows": "item:arrows"}
+## Paper doll: slot -> position around the hero (base px, inside the doll box).
+const DOLL := {"head": Vector2(4, 8), "chest": Vector2(4, 46), "hands": Vector2(4, 84), "legs": Vector2(4, 122),
+    "feet": Vector2(4, 160), "main_hand": Vector2(140, 8), "off_hand": Vector2(140, 46), "amulet": Vector2(140, 84),
+    "ring1": Vector2(140, 122), "bag": Vector2(140, 160), "special": Vector2(72, 160)}
+const FILTERS := [["all", "All"], ["weapon", "Weapons"], ["armor", "Armour"], ["jewel", "Jewels"], ["junk", "Junk"]]
+
+var _hero_i: int = 0
 var _hero_ids: Array = []
+var _filter: String = "all"
+var _tab: String = "res"
 var _body: HBoxContainer
 var _msg: Label
 
 
 func _ready() -> void:
+    var bg := ColorRect.new()
+    bg.color = Color(0.09, 0.07, 0.06)
+    add_child(bg)
+    UIKit.fill(bg)
     var root := VBoxContainer.new()
+    root.add_theme_constant_override("separation", 3)
     add_child(root)
     UIKit.fill(root)
     var top := HBoxContainer.new()
     root.add_child(top)
     top.add_child(UIKit.button("< Back", func(): back_requested.emit(), Vector2(100, 32)))
     top.add_child(UIKit.label("Inventory", 28, UIKit.ACCENT))
-    top.add_child(UIKit.label("Compare / equip for:", 12, UIKit.MUTED))
-    _hero_pick = OptionButton.new()
-    top.add_child(_hero_pick)
+    _msg = UIKit.label("", 12, UIKit.ACCENT)
+    _msg.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+    top.add_child(_msg)
     for id in Game.heroes:
         _hero_ids.append(id)
-        _hero_pick.add_item((Game.heroes[id] as HeroData).display_name())
-    _hero_pick.item_selected.connect(func(_i): refresh())
-    _msg = UIKit.label("", 12, UIKit.ACCENT)
-    root.add_child(_msg)
+    var m := Game.master()
+    if m != null and _hero_ids.has(m.id):
+        _hero_i = _hero_ids.find(m.id)
     _body = HBoxContainer.new()
+    _body.add_theme_constant_override("separation", 4)
     _body.size_flags_vertical = Control.SIZE_EXPAND_FILL
     root.add_child(_body)
     Game.changed.connect(refresh)
@@ -37,8 +63,10 @@ func _ready() -> void:
 
 
 func _hero() -> HeroData:
-    var i := _hero_pick.selected
-    return Game.heroes.get(_hero_ids[i]) if i >= 0 and i < _hero_ids.size() else null
+    if _hero_ids.is_empty():
+        return null
+    _hero_i = posmod(_hero_i, _hero_ids.size())
+    return Game.heroes.get(_hero_ids[_hero_i])
 
 
 func refresh() -> void:
@@ -46,107 +74,280 @@ func refresh() -> void:
         return
     for c in _body.get_children():
         c.queue_free()
-    _body.add_child(_resources())
+    _body.add_child(_doll())
     _body.add_child(_stash())
-    _body.add_child(_books_and_hoards())
-    _body.add_child(_forge())
+    _body.add_child(_side())
 
 
 func _panel(title: String, w: int) -> Array:
     var pc := PanelContainer.new()
     pc.custom_minimum_size = Vector2(w, 0)
     pc.size_flags_vertical = Control.SIZE_EXPAND_FILL
-    var scroll := ScrollContainer.new()
-    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-    pc.add_child(scroll)
     var v := VBoxContainer.new()
     v.add_theme_constant_override("separation", 2)
-    scroll.add_child(v)
-    v.add_child(UIKit.label(title, 20, UIKit.ACCENT))
+    pc.add_child(v)
+    if title != "":
+        v.add_child(UIKit.label(title, 20, UIKit.ACCENT))
     return [pc, v]
 
 
-func _resources() -> Control:
-    var pv := _panel("Resources", 130)
+func _scroll(v: VBoxContainer) -> VBoxContainer:
+    var scroll := ScrollContainer.new()
+    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    v.add_child(scroll)
+    var inner := VBoxContainer.new()
+    inner.add_theme_constant_override("separation", 2)
+    inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    scroll.add_child(inner)
+    return inner
+
+
+# --- the hero and what they wear --------------------------------------------------------------
+
+func _doll() -> Control:
+    var pv := _panel("", 176)
     var v: VBoxContainer = pv[1]
-    var cats := {"basic": "Gathered", "processed": "Processed", "drop": "Creature drops", "consumable": "Supplies", "book": "Books"}
-    for cat in cats:
-        v.add_child(UIKit.label(String(cats[cat]), 14, UIKit.MUTED))
-        for res in EconomyDefs.RESOURCES:
-            if String(EconomyDefs.RESOURCES[res]["cat"]) != cat:
-                continue
-            var n := int(Game.hq_outputs.get(res, 0))
-            var l := UIKit.label("%s  %d" % [String(EconomyDefs.RESOURCES[res]["name"]), n], 12, UIKit.TEXT if n > 0 else UIKit.MUTED)
-            v.add_child(l)
-    v.add_child(UIKit.label("Storage cap %d each · stash %d/%d" % [Game.storage_cap(), Game.stash.size(), Game.stash_cap()], 12, UIKit.MUTED))
+    var h := _hero()
+    var pick := HBoxContainer.new()
+    pick.add_child(UIKit.button("<", func():
+        _hero_i -= 1
+        refresh(), Vector2(30, 26)))
+    var name := UIKit.label(h.display_name() if h != null else "-", 14, h.star_color() if h != null else UIKit.MUTED)
+    name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    name.clip_text = true
+    pick.add_child(name)
+    pick.add_child(UIKit.button(">", func():
+        _hero_i += 1
+        refresh(), Vector2(30, 26)))
+    v.add_child(pick)
+    if h == null:
+        return pv[0]
+    var cls: String = String(HeroTables.CLASSES.get(h.hero_class, HeroTables.CLASSES["class.none"])["name"])
+    var sub := UIKit.label("%s · %s %d · %s %d" % [tr(cls), tr("Lv"), h.level, tr("Power"), int(PowerCalc.hero_power(h).get("total", 0))], 12, UIKit.MUTED)
+    sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    v.add_child(sub)
+    var doll := Control.new()
+    doll.custom_minimum_size = Vector2(172, 196)
+    v.add_child(doll)
+    var plate := Panel.new()                                  # a lit stage behind the hero
+    plate.add_theme_stylebox_override("panel", UIKit.box(Color(0.16, 0.12, 0.09), Color(ArtPalette.GOLD[2], 0.35), 1, 0, 0))
+    plate.position = Vector2(40, 8)
+    plate.size = Vector2(96, 148)
+    doll.add_child(plate)
+    var spr := AnimatedSprite2D.new()
+    spr.sprite_frames = SpriteComposer.build_frames(h)
+    spr.play("idle_down")
+    spr.scale = Vector2(2, 2)
+    spr.position = Vector2(88, 84)
+    doll.add_child(spr)
+    for slot in DOLL:
+        if not ItemDefs.slot_open(String(slot)):
+            continue
+        var item: Dictionary = h.equipment.get(slot, {})
+        var c := ItemIcons.slot_control(String(slot), item)
+        c.position = DOLL[slot]
+        c.tooltip_text = "%s\n%s" % [tr(String(ItemDefs.SLOT_NAMES.get(slot, slot))), ItemIcons.tooltip(item) + "\n" + tr("Click: take it off") if not item.is_empty() else tr("empty")]
+        c.mouse_filter = Control.MOUSE_FILTER_STOP
+        var sl := String(slot)
+        c.gui_input.connect(func(e):
+            if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT and not h.equipment.get(sl, {}).is_empty():
+                var why := Game.unequip(h, sl)
+                _msg.text = why if why != "" else tr("Back in the stash.")
+                UIKit.sound("click"))
+        doll.add_child(c)
+    var locked: Array = ItemDefs.SLOTS.filter(func(s): return not ItemDefs.slot_open(String(s)))
+    if not locked.is_empty():
+        var l := UIKit.label(tr("Locked for now: ") + ", ".join(locked.map(func(s): return tr(String(ItemDefs.SLOT_NAMES.get(s, s))))), 12, UIKit.MUTED)
+        l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        l.custom_minimum_size = Vector2(176, 0)
+        v.add_child(l)
     return pv[0]
 
 
+# --- the stash ---------------------------------------------------------------------------------
+
 func _stash() -> Control:
-    var pv := _panel("Equipment stash", 290)
+    var pv := _panel("", 246)
     var v: VBoxContainer = pv[1]
     var h := _hero()
-    if Game.stash.is_empty():
-        v.add_child(UIKit.label("Empty: the tower and the forge fill it.", 12, UIKit.MUTED))
+    var head := HBoxContainer.new()
+    head.add_child(UIKit.label("Equipment stash", 20, UIKit.ACCENT))
+    var cap := UIKit.label("  %d / %d" % [Game.stash.size(), Game.stash_cap()], 12, UIKit.MUTED)
+    cap.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+    head.add_child(cap)
+    v.add_child(head)
+    var tabs := HBoxContainer.new()
+    tabs.add_theme_constant_override("separation", 1)
+    for f in FILTERS:
+        var id: String = f[0]
+        var b := UIKit.button(tr(String(f[1])), func():
+            _filter = id
+            refresh(), Vector2(60, 26))
+        b.disabled = _filter == id
+        b.add_theme_font_size_override("font_size", UIKit.fpx(12))
+        tabs.add_child(b)
+    v.add_child(tabs)
+    var shown: Array = Game.stash.filter(func(it): return _passes(it))
+    var inner := _scroll(v)
+    var grid := GridContainer.new()
+    grid.columns = 7
+    grid.add_theme_constant_override("h_separation", 2)
+    grid.add_theme_constant_override("v_separation", 2)
+    inner.add_child(grid)
+    var cells := maxi(Game.stash_cap() if _filter == "all" else shown.size(), 28)
+    grid.columns = 6
+    for i in cells:
+        if i < shown.size():
+            grid.add_child(_stash_cell(shown[i], h))
+        else:
+            var empty := Panel.new()                         # an empty pocket of the backpack
+            empty.custom_minimum_size = Vector2(32, 32)
+            empty.add_theme_stylebox_override("panel", UIKit.box(Color(0.06, 0.05, 0.05, 0.7), Color(0.3, 0.22, 0.15), 1, 0, 0))
+            grid.add_child(empty)
     var junk: Array = Game.stash.filter(func(it): return ItemDefs.is_junk(it))
+    var foot := VBoxContainer.new()
+    var hint := UIKit.label("Click: equip · Right click: salvage", 12, UIKit.MUTED)
+    hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    hint.custom_minimum_size = Vector2(220, 0)
+    foot.add_child(hint)
     if not junk.is_empty():                                   # D-123: grey junk is only good for materials
-        v.add_child(UIKit.button(tr("Salvage all junk (%d)") % junk.size(), func():
+        foot.add_child(UIKit.button(tr("Salvage all junk (%d)") % junk.size(), func():
             var got := {}
             for it in junk:
                 var g := Game.salvage(int(it["uid"]))
                 for k in g:
                     got[k] = int(got.get(k, 0)) + int(g[k])
-            _msg.text = "Salvaged: %s" % SandboxScreen._res_line(got), Vector2(200, 26)))
-    var grid := GridContainer.new()
-    grid.columns = 8
-    v.add_child(grid)
-    for it in Game.stash:
-        var slots := ItemDefs.slots_for(String(it["base"]))
-        var slot := String(slots[0]) if not slots.is_empty() else ""
-        var cell := ItemIcons.slot_control(slot, it)
-        var vs: Dictionary = h.equipment.get(slot, {}) if h != null and slot != "" else {}
-        cell.tooltip_text = ItemIcons.tooltip(it, vs) + ("\nClick: equip on %s · Right click: salvage" % h.display_name() if h != null else "")
-        cell.mouse_filter = Control.MOUSE_FILTER_STOP
-        var uid := int(it["uid"])
-        cell.gui_input.connect(func(e):
-            if e is InputEventMouseButton and e.pressed:
-                if e.button_index == MOUSE_BUTTON_LEFT and _hero() != null:
-                    var why := Game.equip(_hero(), uid)
-                    _msg.text = why if why != "" else "Equipped on %s." % _hero().display_name()
-                elif e.button_index == MOUSE_BUTTON_RIGHT:
-                    var got := Game.salvage(uid)
-                    _msg.text = "Salvaged: %s" % SandboxScreen._res_line(got)
-                UIKit.sound("click"))
-        grid.add_child(cell)
-    if not Game.stash.is_empty():                             # names in their rarity colour (D-123)
-        var names := VBoxContainer.new()
-        names.add_theme_constant_override("separation", 0)
-        for it in Game.stash.slice(0, 12):
-            var l := ItemIcons.name_label(it, 10)
-            l.tooltip_text = ItemIcons.tooltip(it)
-            l.mouse_filter = Control.MOUSE_FILTER_STOP
-            names.add_child(l)
-        if Game.stash.size() > 12:
-            names.add_child(UIKit.label("…", 10, UIKit.MUTED))
-        v.add_child(names)
-    if h != null:
-        v.add_child(UIKit.label("%s wears:" % h.display_name(), 14, UIKit.ACCENT))
-        var worn := GridContainer.new()
-        worn.columns = 8
-        v.add_child(worn)
-        for slot in ItemDefs.ACTIVE_SLOTS:
-            var item: Dictionary = h.equipment.get(slot, {})
-            var c := ItemIcons.slot_control(slot, item)
-            c.tooltip_text = "%s\n%s" % [String(ItemDefs.SLOT_NAMES.get(slot, slot)), ItemIcons.tooltip(item) if not item.is_empty() else "empty"]
-            c.mouse_filter = Control.MOUSE_FILTER_STOP
-            worn.add_child(c)
+            _msg.text = tr("Salvaged: %s") % SandboxScreen._res_line(got), Vector2(0, 26)))
+    v.add_child(foot)
     return pv[0]
 
 
-## Pista D: books from the tower (D-129) and heroes caught keeping loot (D-125).
-func _books_and_hoards() -> Control:
-    var pv := _panel("Books", 200)
+func _passes(it: Dictionary) -> bool:
+    if _filter == "all":
+        return true
+    if _filter == "junk":
+        return ItemDefs.is_junk(it)
+    var base: Dictionary = ItemDefs.BASES.get(String(it.get("base", "")), {})
+    return String(base.get("kind", "")) == _filter and not ItemDefs.is_junk(it)
+
+
+func _stash_cell(it: Dictionary, h: HeroData) -> Control:
+    var slots := ItemDefs.slots_for(String(it["base"]))
+    var slot := String(slots[0]) if not slots.is_empty() else ""
+    var cell := ItemIcons.slot_control(slot, it)
+    var vs: Dictionary = h.equipment.get(slot, {}) if h != null and slot != "" else {}
+    cell.tooltip_text = ItemIcons.tooltip(it, vs) + ("\n" + tr("Click: equip on %s · Right click: salvage") % h.display_name() if h != null else "")
+    cell.mouse_filter = Control.MOUSE_FILTER_STOP
+    var uid := int(it["uid"])
+    cell.gui_input.connect(func(e):
+        if e is InputEventMouseButton and e.pressed:
+            if e.button_index == MOUSE_BUTTON_LEFT and _hero() != null:
+                var why := Game.equip(_hero(), uid)
+                _msg.text = why if why != "" else tr("Equipped on %s.") % _hero().display_name()
+            elif e.button_index == MOUSE_BUTTON_RIGHT:
+                var got := Game.salvage(uid)
+                _msg.text = tr("Salvaged: %s") % SandboxScreen._res_line(got)
+            UIKit.sound("click"))
+    if not vs.is_empty() or slot == "":
+        return cell
+    # an upgrade arrow when this would raise the hero's power in that slot (empty slot: always)
+    var arrow := Label.new()
+    arrow.text = "▲"
+    arrow.add_theme_color_override("font_color", UIKit.GOOD)
+    arrow.add_theme_font_size_override("font_size", 8)
+    arrow.position = Vector2(23, -2)
+    arrow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    cell.add_child(arrow)
+    return cell
+
+
+# --- resources, books, forge -------------------------------------------------------------------
+
+func _side() -> Control:
+    var pv := _panel("", 150)
     var v: VBoxContainer = pv[1]
+    v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    (pv[0] as Control).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    var tabs := HBoxContainer.new()
+    tabs.add_theme_constant_override("separation", 1)
+    for t in [["res", "Resources"], ["books", "Books"], ["forge", "Forge"]]:
+        var id: String = t[0]
+        var b := UIKit.button(tr(String(t[1])), func():
+            _tab = id
+            refresh(), Vector2(60, 26))
+        b.disabled = _tab == id
+        b.add_theme_font_size_override("font_size", UIKit.fpx(12))
+        tabs.add_child(b)
+    v.add_child(tabs)
+    var inner := _scroll(v)
+    match _tab:
+        "res":
+            _resources(inner)
+        "books":
+            _books_and_hoards(inner)
+        _:
+            _forge(inner)
+    return pv[0]
+
+
+static func res_icon(res: String) -> Texture2D:
+    var ref = RES_ICON.get(res, null)
+    if ref is int:
+        var p := RPG % int(ref)
+        return load(p) if ResourceLoader.exists(p) else null
+    if ref is String and String(ref).begins_with("item:"):
+        return ItemIcons.texture(String(ref).trim_prefix("item:"))
+    if ref is String and ResourceLoader.exists(String(ref)):
+        return load(String(ref))
+    return null
+
+
+func _resources(v: VBoxContainer) -> void:
+    var cats := {"basic": "Gathered", "processed": "Processed", "consumable": "Supplies", "drop": "Creature drops",
+        "rare": "Rare", "tower": "Tower materials", "key": "Keys"}
+    for cat in cats:
+        var ids: Array = []
+        for res in EconomyDefs.RESOURCES:
+            if String(EconomyDefs.RESOURCES[res]["cat"]) == cat:
+                ids.append(res)
+        if ids.is_empty():
+            continue
+        v.add_child(UIKit.label(String(cats[cat]), 14, ArtPalette.GOLD[3]))
+        var grid := GridContainer.new()
+        grid.columns = 3
+        grid.add_theme_constant_override("h_separation", 2)
+        grid.add_theme_constant_override("v_separation", 2)
+        v.add_child(grid)
+        for res in ids:
+            var n := int(Game.hq_outputs.get(res, 0))
+            var cell := Panel.new()
+            cell.custom_minimum_size = Vector2(36, 36)
+            cell.add_theme_stylebox_override("panel", UIKit.box(Color(0.07, 0.05, 0.05, 0.8), Color(0.35, 0.26, 0.17), 1, 0, 0))
+            cell.tooltip_text = "%s: %d" % [tr(String(EconomyDefs.RESOURCES[res]["name"])), n]
+            var ic := TextureRect.new()
+            ic.texture = res_icon(String(res))
+            ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+            ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+            ic.position = Vector2(2, 2)
+            ic.size = Vector2(32, 32)
+            ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+            if n <= 0:
+                ic.modulate = Color(0.35, 0.35, 0.35, 0.8)
+            cell.add_child(ic)
+            var num := UIKit.label(str(n), 12, UIKit.TEXT if n > 0 else UIKit.MUTED)
+            num.add_theme_constant_override("outline_size", 2)
+            num.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+            num.position = Vector2(2, 22)
+            num.mouse_filter = Control.MOUSE_FILTER_IGNORE
+            cell.add_child(num)
+            grid.add_child(cell)
+    v.add_child(UIKit.label(tr("Storage cap %d each") % Game.storage_cap(), 12, UIKit.MUTED))
+
+
+## Pista D: books from the tower (D-129) and heroes caught keeping loot (D-125).
+func _books_and_hoards(v: VBoxContainer) -> void:
     var h := _hero()
     var any := false
     for b in LootDefs.BOOKS:
@@ -168,7 +369,10 @@ func _books_and_hoards() -> Control:
         else:
             v.add_child(UIKit.button(tr("Use") + (" · %s" % h.display_name() if h != null and book != "book_plan" else ""), func(): _use_book(book, ""), Vector2(190, 24)))
     if not any:
-        v.add_child(UIKit.label("Rare drops in the tower: experience, skill tomes, trade manuals, master plans.", 11, UIKit.MUTED))
+        var l := UIKit.label("Rare drops in the tower: experience, skill tomes, trade manuals, master plans.", 12, UIKit.MUTED)
+        l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        l.custom_minimum_size = Vector2(150, 0)
+        v.add_child(l)
     var caught := Game.hoard_suspects()
     if not caught.is_empty():
         v.add_child(UIKit.label("Kept loot back", 16, UIKit.BAD))
@@ -178,9 +382,8 @@ func _books_and_hoards() -> Control:
             v.add_child(UIKit.button(tr("Confiscate"), func(): _msg.text = tr("%d item(s) back in the stash.") % Game.confiscate_hoard(hx), Vector2(190, 24)))
         var tip := UIKit.label("Or punish them: synthesis in the Summoner's Hall.", 11, UIKit.MUTED)
         tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-        tip.custom_minimum_size = Vector2(185, 0)
+        tip.custom_minimum_size = Vector2(150, 0)
         v.add_child(tip)
-    return pv[0]
 
 
 func _use_book(book: String, prof: String) -> void:
@@ -189,28 +392,31 @@ func _use_book(book: String, prof: String) -> void:
     UIKit.sound("click")
 
 
-func _forge() -> Control:
-    var pv := _panel("Forge & alchemy", 190)
-    var v: VBoxContainer = pv[1]
+func _forge(v: VBoxContainer) -> void:
     for rid in EconomyDefs.RECIPES:
         var r: Dictionary = EconomyDefs.recipe(rid)
         if not (String(r["building"]) in ["blacksmith", "alchemy"]):
             continue
         var built := Game.building_level(String(r["building"])) > 0
         var who := Game.heroes.values().filter(func(x): return (x as HeroData).prof_level(String(r["prof"])) >= int(r["min"]))
-        v.add_child(UIKit.label(String(r["name"]), 14, UIKit.TEXT if built else UIKit.MUTED))
-        var parts: Array = []
+        v.add_child(UIKit.label(String(r["name"]), 14, ArtPalette.GOLD[3] if built else UIKit.MUTED))
+        var ins := HFlowContainer.new()
         for k in r["in"]:
             var have := int(Game.hq_outputs.get(k, 0))
-            parts.append("%s %d/%d%s" % [String(EconomyDefs.RESOURCES.get(k, {}).get("name", k)), have, int(r["in"][k]), "" if have >= int(r["in"][k]) else " ✗"])
-        var l := UIKit.label(", ".join(parts) if not parts.is_empty() else "no ingredients", 12, UIKit.MUTED)
-        l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-        l.custom_minimum_size = Vector2(175, 0)
-        v.add_child(l)
-        var need := "%s level %d" % [String(ProfessionDefs.info(String(r["prof"])).get("name", r["prof"])), int(r["min"])]
-        var st := UIKit.label(("%s · %d able" % [need, who.size()]) if built else "Build the %s first" % String(TownTables.info(String(r["building"]))["name"]), 12,
+            var chip := HBoxContainer.new()
+            chip.add_theme_constant_override("separation", 1)
+            chip.tooltip_text = String(EconomyDefs.RESOURCES.get(k, {}).get("name", k))
+            var ic := TextureRect.new()
+            ic.texture = res_icon(String(k))
+            ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+            ic.custom_minimum_size = Vector2(16, 16)
+            chip.add_child(ic)
+            chip.add_child(UIKit.label("%d/%d" % [have, int(r["in"][k])], 12, UIKit.GOOD if have >= int(r["in"][k]) else UIKit.BAD))
+            ins.add_child(chip)
+        v.add_child(ins)
+        var need := "%s %d" % [String(ProfessionDefs.info(String(r["prof"])).get("name", r["prof"])), int(r["min"])]
+        var st := UIKit.label(("%s · %d" % [need, who.size()]) if built else tr("Build the %s first") % String(TownTables.info(String(r["building"]))["name"]), 12,
             UIKit.GOOD if built and not who.is_empty() else UIKit.BAD)
         st.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-        st.custom_minimum_size = Vector2(175, 0)
+        st.custom_minimum_size = Vector2(150, 0)
         v.add_child(st)
-    return pv[0]
