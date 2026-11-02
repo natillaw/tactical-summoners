@@ -322,10 +322,9 @@ func _refresh() -> void:
         var cb: Button = _class_btns[c]
         cb.text = ("> " if c == cid else "") + cb.text.trim_prefix("> ")
         cb.add_theme_color_override("font_color", UIKit.ACCENT if c == cid else UIKit.TEXT)
-    var starter := SkillDefs.info(SkillDefs.starter_for(cid, hero_seed))
-    _class_info.text = "%s  -  %s\n%s\n%s\n\n%s: %s\n%s" % [tr(String(HeroTables.CLASSES[cid]["name"])), tr(String(MasterDefs.CLASSES[cid]["role"])),
+    _class_info.text = "%s  -  %s\n%s\n%s\n\n%s" % [tr(String(HeroTables.CLASSES[cid]["name"])), tr(String(MasterDefs.CLASSES[cid]["role"])),
         tr(String(MasterDefs.CLASSES[cid]["text"])), tr(String(HeroTables.CLASSES[cid]["desc"])),
-        tr("Starting skill"), tr(String(starter.get("name", ""))), tr(String(starter.get("desc", "")))]
+        tr("Skills: Q is the basic attack; choose W, E and R at levels 2, 5 and 10.")]   # D-142
     for c in _trait_box.get_children():
         c.queue_free()
     for tid in HeroTables.TRAITS:

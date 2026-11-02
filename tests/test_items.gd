@@ -174,11 +174,11 @@ func _init() -> void:
     var jewels: Array = ItemDefs.BASES.keys().filter(func(b): return String(ItemDefs.BASES[b]["kind"]) == "jewel")
     check(jewels.size() >= 14 and jewels.all(func(b): return ItemIcons.RPG.has(String(b)) and ItemLibrary.recipes().has(ItemLibrary.recipe_id("jeweler", String(b), 1))),
         "every jewel and trinket has its own icon and a jeweller recipe")
-    var procs: Array = ItemDefs.BASES.keys().filter(func(b): return (ItemDefs.BASES[b] as Dictionary).has("proc"))
-    check(procs.size() >= 8 and procs.all(func(b): return ItemDefs.proc_text(String(b)) != "" and ItemDefs.TRINKET_PROCS.has(String(ItemDefs.BASES[b]["proc"]["type"]))),
+    var trinkets: Array = ItemDefs.BASES.keys().filter(func(b): return (ItemDefs.BASES[b] as Dictionary).has("proc"))
+    check(trinkets.size() >= 8 and trinkets.all(func(b): return ItemDefs.proc_text(String(b)) != "" and ItemDefs.TRINKET_PROCS.has(String(ItemDefs.BASES[b]["proc"]["type"]))),
         "every trinket passive has a description")
     var classes_covered := {}
-    for b in procs:
+    for b in trinkets:
         for c in ItemDefs.BASES[b]["classes"]:
             classes_covered[c] = true
     check(["class.warrior", "class.rogue", "class.archer", "class.mage", "class.cleric"].all(func(c): return classes_covered.has(c)), "every combat class has its own trinket")

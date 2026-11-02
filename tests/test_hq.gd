@@ -348,8 +348,8 @@ func _init() -> void:
     # owner 2026-11-02: town-tower link (kitchen level gates meals, one site per builder, time scale)
     var gk := _game(31)
     gk.town_buildings["kitchen"] = 1
-    for res in ["grain", "herb", "bone"]:
-        gk.hq_outputs[res] = 50
+    for rid_in in ["grain", "herb", "bone"]:
+        gk.hq_outputs[rid_in] = 50
     check(String(gk.start_batch("kitchen", "cook_broth")).contains("level 3"), "bone broth needs a level-3 kitchen")
     gk.town_buildings["kitchen"] = 3
     check(gk.start_batch("kitchen", "cook_broth") == "", "a level-3 kitchen cooks bone broth")

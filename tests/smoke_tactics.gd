@@ -87,6 +87,8 @@ func _ready() -> void:
     await get_tree().process_frame
     var c: SandboxHero = sb3.heroes[0]
     var speed0 := c.move_mult()
+    c.slots.append("second_breath")                         # D-142: heroes start with no active
+    c.cds.clear()
     c.carrying = true
     check(c.move_mult() < speed0 * 0.7, "the relic carrier walks slower (%.2f -> %.2f)" % [speed0, c.move_mult()])
     check(not c.use_skill_slot(0, sb3.living_enemies(), sb3.heroes) and c.last_refusal.contains("relic"), "the carrier cannot use skills")

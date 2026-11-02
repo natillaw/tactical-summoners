@@ -269,7 +269,10 @@ func _ready() -> void:
     rogue.target = e1
     var info2 := DamageInfo.make(10.0, "physical", rogue, 0.05, rogue.combat_rng)
     rogue.synergy_before_hit(e1, info2)
-    check(info2.crit_chance > 0.15 and Game.synergy_codex.has("flank"), "formation: flanking adds crit")
+    check(is_equal_approx(info2.crit_chance, 0.05 + rogue.syn_crit) and not Game.synergy_codex.has("flank"), "no flanking synergy any more (D-142)")
+    check(not SynergyDefs.SYNERGIES.has("flank") and not SynergyDefs.SYNERGIES.has("back_to_back") and not SynergyDefs.SYNERGIES.has("tank_wall"),
+        "flanking, back to back and the shield wall are gone (D-142)")
+    check(is_equal_approx(float(CombatRules.STATUS["marked"]["in_dmg"]), 1.15), "the archer's mark: +15% damage from the whole squad (D-142)")
     war.hero.relationships[mage.hero.id] = {"level": 80, "status": "trusted_ally", "interactions": 5}
     mage.hero.relationships[war.hero.id] = {"level": 80, "status": "trusted_ally", "interactions": 5}
     war.position = base
@@ -315,13 +318,13 @@ func _ready() -> void:
     hd.level = 1
     hd.xp = 0
     hd.ensure_skills()
-    check(SkillDefs.choice_levels().slice(0, 4) == [2, 5, 10, 15], "choice levels: 2, 5, then every 5")
+    check(SkillDefs.choice_levels() == [2, 5, 10], "choice levels: 2, 5 and 10 (D-142)")
     var levels: Array = []
-    while hd.level < 10:
+    while hd.level < 16:
         hd.add_xp(hd.xp_to_next() - hd.xp)
     for ch in hd.skill_choices:
         levels.append(int(ch["level"]))
-    check(levels == [2, 5, 10], "a hero from 1 to 10 gets choices at 2, 5 and 10 (%s)" % str(levels))
+    check(levels == [2, 5, 10], "a hero from 1 to 16 gets choices only at 2, 5 and 10 (%s)" % str(levels))
     check((hd.skill_choices[0]["options"] as Array).size() == SkillDefs.CHOICE_OPTIONS, "each choice offers 3 options")
     var first: Array = (hd.skill_choices[0]["options"] as Array).duplicate()
     hd.choose_skill(0, String(first[0]))

@@ -149,7 +149,7 @@ var _fx_radius: float = 0.0
 
 
 func say(text: String, duration: float = 4.0) -> void:
-	chatter_text = text
+	chatter_text = StringsEs.tx(text)          # hero lines are English keys; Spanish by default (StringsEs)
 	chatter_timer = duration
 	queue_redraw()
 
@@ -1343,18 +1343,31 @@ func channel_revive(ally: SandboxHero, delta: float) -> bool:
 	_play("ready_" + _side)
 	rescue_target = ally
 	rescue_progress += delta
-	if rescue_progress < CombatRules.RESCUE_TIME:
+	if rescue_progress < revive_time():
 		return false
 	rescue_progress = 0.0
-	ally.revive(CombatRules.RESCUE_HP)
+	var resurrection := not f_action().is_empty()
+	ally.revive(float(f_action().get("hp", CombatRules.RESCUE_HP)))
+	if resurrection:
+		CombatVFX.play(get_parent(), ally.position + Vector2(0, -16), "heal_aura", 1.2)
 	CombatVFX.play(get_parent(), ally.position + Vector2(0, -16), "level_up", 1.0)
 	credit("rescues", 1.0)
 	if hero != null and ally.hero != null:
 		hero.rescue_hero(ally.hero)          # memory, bond and Trust (Phase 3 data)
 		if hero.is_master:
 			MasterRules.bond_event(ally.hero, "rescued_by_master")   # D-081
-	FloatingText.spawn(ally, "Rescued!", Color(0.5, 1.0, 0.6), true)
+	FloatingText.spawn(ally, "Resurrection!" if resurrection else "Rescued!", Color(0.5, 1.0, 0.6), true)
 	return true
+
+
+## D-142: the class action on F ({} = the common lift). The cleric's is Resurrection (SkillDefs.F_ACTIONS).
+func f_action() -> Dictionary:
+	return SkillDefs.f_action(hero.hero_class) if hero != null else {}
+
+
+## Seconds this hero needs to lift a fallen ally (the cleric's Resurrection channel, else RESCUE_TIME).
+func revive_time() -> float:
+	return float(f_action().get("channel", CombatRules.RESCUE_TIME))
 
 
 ## D-065 autonomy: one skill per check, in this order: heal a hurt ally, break a creature's cast, draw
@@ -1436,7 +1449,7 @@ func _auto_kind(sk: Dictionary) -> String:
 			kinds.append(String(inner["t"]))
 	if kinds.has("heal") or kinds.has("heal_pct"):
 		return "heal"
-	if kinds.has("interrupt") or sk["effects"].any(func(e): return String(e["t"]) == "status" and String(e.get("id", "")) == "stun"):
+	if kinds.has("interrupt"):                     # D-142: only Ambush, Interrupting Shot and Counterspell
 		return "interrupt"
 	if kinds.has("taunt"):
 		return "taunt"
@@ -1879,9 +1892,7 @@ func _apply_effect(eff: Dictionary, foes: Array, friends: Array, centre: Vector2
 		"knockback":
 			for f in foes:
 				CombatVFX.play(f.get_parent(), f.position, "dust_puff", 1.0)
-				_push(f, (f.position - position).normalized(), float(eff["dist"]))
-				if f.has_method("interrupt"):
-					f.interrupt()
+				_push(f, (f.position - position).normalized(), float(eff["dist"]))   # D-142: no longer breaks a cast
 		"dash":
 			if not foes.is_empty() and _map != null:
 				var f: Node2D = foes[0]
@@ -2211,12 +2222,17 @@ func _draw() -> void:
 				lifter = x
 		if lifter != null:
 			draw_rect(Rect2(-18, -58, 36, 4), Color(0.1, 0.1, 0.1, 0.85))
-			draw_rect(Rect2(-18, -58, 36.0 * lifter.rescue_progress / CombatRules.RESCUE_TIME, 4), Color(0.5, 1.0, 0.6))
+			draw_rect(Rect2(-18, -58, 36.0 * lifter.rescue_progress / lifter.revive_time(), 4), Color(0.5, 1.0, 0.6))
 		elif revive_prompt and not lost:
-			UIKit.draw_bubble(self, tr("Hold F"), Vector2(0, -58))   # D-082: interaction is F (QWER = combat)
+			var fa: Dictionary = {}
+			for x in squad:
+				if is_instance_valid(x) and x.hero != null and x.hero.is_master:
+					fa = x.f_action()
+			# D-082: interaction is F (QWER = combat); D-142: a cleric Master's F is Resurrection
+			UIKit.draw_bubble(self, tr("Hold F: %s") % tr(String(fa["name"])) if not fa.is_empty() else tr("Hold F"), Vector2(0, -58))
 		return
 	if rescue_progress > 0.0:
-		draw_rect(Rect2(-15, -52, 30.0 * rescue_progress / CombatRules.RESCUE_TIME, 3), Color(0.5, 1.0, 0.6))
+		draw_rect(Rect2(-15, -52, 30.0 * rescue_progress / revive_time(), 3), Color(0.5, 1.0, 0.6))
 	var sx := -15.0
 	for id in statuses:
 		draw_rect(Rect2(sx, -39, 4, 4), CombatRules.STATUS[id]["color"])
@@ -2295,28 +2311,7 @@ func synergy_before_hit(t: Combatant, info: DamageInfo) -> void:
 		t.statuses.erase("frozen")
 		CombatVFX.play(t.get_parent(), t.position + Vector2(0, -14), "frost_burst", 1.0)
 		synergy("shatter")
-	if _flanking(t):
-		info.crit_chance += float(SynergyDefs.param("flank", "crit", 0.15))
-		synergy("flank")
 	info.can_crit = info.rng != null and info.crit_chance > 0.0
-
-
-## Flanking: another standing hero fights the same foe from the opposite side (angle >= angle_deg).
-func _flanking(t: Combatant) -> bool:
-	var r := float(SynergyDefs.param("flank", "radius", 90.0))
-	if position.distance_to(t.position) > r:
-		return false
-	var mine := (position - t.position)
-	if mine.length() < 1.0:
-		return false
-	var lim := cos(deg_to_rad(float(SynergyDefs.param("flank", "angle_deg", 120.0))))
-	for a in squad:
-		if not is_instance_valid(a) or a == self or not a.alive or a.target != t or a.position.distance_to(t.position) > r:
-			continue
-		var other: Vector2 = a.position - t.position
-		if other.length() > 1.0 and mine.normalized().dot(other.normalized()) <= lim:
-			return true
-	return false
 
 
 ## D-090 aggro: healing an ally draws threat from the creatures already fighting near it.
