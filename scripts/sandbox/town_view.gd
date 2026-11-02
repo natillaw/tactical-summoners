@@ -72,6 +72,47 @@ func _process(delta: float) -> void:
             (p as Node2D).queue_redraw()
 
 
+## Plaza life (2026-11-02, owner: "deberían interactuar con las cosas que hay en el pueblo"): market stalls,
+## lamp posts, barrels, crates and benches around the fountain, as Y-sorted sprites. [file, cell offset
+## from the plaza, px nudge]. Only on free ground (never on a building plot).
+const VILLAGE := "res://assets/pixel/packs/village_tiles/2_Objects/"
+const PLAZA_DECOR := [
+    ["6_Tent/1", Vector2i(-3, -2), Vector2(0, 0)], ["6_Tent/3", Vector2i(3, -2), Vector2(0, 0)],
+    ["6_Tent/2", Vector2i(-3, 2), Vector2(0, 0)], ["6_Tent/4", Vector2i(3, 2), Vector2(0, 0)],
+    ["4_Box/1", Vector2i(-4, -2), Vector2(-4, 0)], ["4_Box/2", Vector2i(-4, -2), Vector2(12, 8)],
+    ["4_Box/3", Vector2i(4, -2), Vector2(4, 2)], ["4_Box/4", Vector2i(4, 2), Vector2(6, 0)],
+    ["4_Box/1", Vector2i(-4, 2), Vector2(-6, -2)], ["3_Decor/8", Vector2i(-1, 1), Vector2(-6, 10)],
+    ["3_Decor/8", Vector2i(1, 1), Vector2(6, 10)], ["3_Decor/9", Vector2i(-2, -1), Vector2(0, 0)],
+    ["3_Decor/10", Vector2i(2, -1), Vector2(0, 0)], ["3_Decor/9", Vector2i(-2, 1), Vector2(0, 0)],
+    ["3_Decor/11", Vector2i(2, 1), Vector2(0, 0)], ["3_Decor/5", Vector2i(-5, 0), Vector2(0, 0)],
+]
+var lamp_spots: Array = []          # world px of the lamps placed (TownScreen adds their light)
+
+
+func plaza_props() -> Node2D:
+    var layer := Node2D.new()
+    layer.y_sort_enabled = true
+    lamp_spots.clear()
+    var plaza := Vector2i(17, 10)
+    var cell := float(NavMap.CELL)
+    for d in PLAZA_DECOR:
+        var c: Vector2i = plaza + (d[1] as Vector2i)
+        if not map.in_bounds(c) or map.building_at(c) != "" or map.is_blocked_cell(c):
+            continue
+        var path := VILLAGE + String(d[0]) + ".png"
+        if not ResourceLoader.exists(path):
+            continue
+        var s := Sprite2D.new()
+        s.texture = load(path)
+        s.centered = false
+        s.offset = -Vector2(s.texture.get_width() / 2, s.texture.get_height())
+        s.position = Vector2(c) * cell + Vector2(cell * 0.5, cell * 0.9) + (d[2] as Vector2)
+        layer.add_child(s)
+        if String(d[0]).begins_with("3_Decor/9") or String(d[0]).begins_with("3_Decor/1"):
+            lamp_spots.append(s.position + Vector2(0, -s.texture.get_height() + 6))
+    return layer
+
+
 ## One Y-sorted node per standing building (feet = the plot's bottom edge), drawn by this view.
 func building_pieces() -> Array:
     pieces.clear()
@@ -189,7 +230,7 @@ func _bake_ground_bosque() -> Texture2D:
     var kind := func(x: int, y: int) -> int:
         var ch := String(map.ground[y])[x]
         return 1 if ch in ["p", "B", "w", "d"] else 0
-    var out := BosqueArt.ground_image(map.width, map.height, kind, 7331)
+    var out := BosqueArt.ground_image(map.width, map.height, kind, 7331, 0.02)   # few pebble tiles: a clean plaza
     var r := RandomNumberGenerator.new()
     r.seed = 7331
     for y in map.height:
