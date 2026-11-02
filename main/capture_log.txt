@@ -40,6 +40,8 @@ shot 06_combat_fx_c -> /home/runner/work/tactical-summoners/tactical-summoners/s
 CAPTURE DONE -> /home/runner/work/tactical-summoners/tactical-summoners/screenshots
 WARNING: 16 RIDs of type "CanvasItem" were leaked.
    at: _free_rids (servers/rendering/renderer_canvas_cull.cpp:2735)
-WARNING: 36 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+WARNING: 40 ObjectDB instances were leaked at exit (run with `--verbose` for details).
    at: cleanup (core/object/object.cpp:2536)
+ERROR: 2 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:822)
 ERROR: 1 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.
