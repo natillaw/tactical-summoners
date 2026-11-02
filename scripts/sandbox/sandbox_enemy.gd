@@ -25,6 +25,11 @@ var _pending_strike: float = -1.0    # D-054: a ranged strike in flight lands wh
 var _pending_heroes: Array = []
 var _timer: float = 0.0
 var _aim: Vector2 = Vector2.ZERO
+var _shape: Dictionary = {"shape": "circle"}   # D-143 the current telegraph: circle / cone / line (+ reach)
+var _from: Vector2 = Vector2.ZERO               # where the cone or line starts (the creature at wind-up)
+var _later_calls: Array = []                     # D-143 skill effects that land when the projectile arrives
+var _bar_lag: float = 1.0                        # D-143 health bar: white trail that drains after a hit
+var _bar_wait: float = 0.0
 var _flash: float = 0.0
 var type_id: String = ""            # T-024: visual type (EnemySprites.IDS); stats unchanged for now
 var _sprite: AnimatedSprite2D = null
@@ -365,6 +370,8 @@ func tick(delta: float, heroes: Array, map: NavMap) -> void:
         queue_redraw()
         return
     _repath = maxf(0.0, _repath - delta)
+    _tick_later(delta)
+    _tick_bar(delta)
     taunt_t = maxf(0.0, taunt_t - delta)
     _support_cd = maxf(0.0, _support_cd - delta)
     _skill_check = maxf(0.0, _skill_check - delta)
@@ -473,6 +480,8 @@ func tick(delta: float, heroes: Array, map: NavMap) -> void:
                 _timer = windup_time
                 _play_once("attack", windup_time + 0.15)    # the blow lands when the wind-up ends
                 _aim = t.position
+                _set_telegraph(EnemyDefs.strike_shape(role, ai_role, String(_strike_fx().get("proj", ""))),
+                    position.distance_to(_aim) + strike_radius)
             else:
                 state = State.CHASE
                 _step_toward(t.position, delta, map)
@@ -843,6 +852,7 @@ func _try_skill(heroes: Array, t: SandboxHero) -> bool:
         casting_skill = sid
         skill_cd[sid] = float(sk["cd"])
         _aim = aim if aim != Vector2.INF else _skill_ally.position
+        _set_telegraph(sk.get("shape", {"shape": "circle"}), float(sk.get("radius", 0.0)))
         state = State.WINDUP
         strike_seq += 1
         _cur_speed = 0.0
@@ -891,6 +901,76 @@ func telegraph_radius() -> float:
     return strike_radius
 
 
+## D-143: "circle" | "cone" | "line" of the current (or last) wind-up.
+func telegraph_shape() -> String:
+    return String(_shape.get("shape", "circle"))
+
+
+func _set_telegraph(shape: Dictionary, reach: float) -> void:
+    _shape = shape.duplicate()
+    _shape["reach"] = reach
+    _from = position
+
+
+## D-143: true when `p` stands inside the area the current wind-up marks (what the blow will hit).
+func in_telegraph(p: Vector2) -> bool:
+    return _in_shape(p, _shape, _from, _aim, telegraph_radius())
+
+
+static func _in_shape(p: Vector2, shape: Dictionary, from: Vector2, at: Vector2, radius: float) -> bool:
+    var reach := float(shape.get("reach", radius))
+    var dir := at - from
+    if dir.length() < 1.0:
+        dir = Vector2.RIGHT
+    match String(shape.get("shape", "circle")):
+        "cone":
+            var d := p - from
+            if d.length() > reach:
+                return false
+            return d.length() < 14.0 or absf(dir.angle_to(d)) <= deg_to_rad(float(shape.get("angle", 90.0)) * 0.5)
+        "line":
+            var end := from + dir.normalized() * maxf(reach, dir.length())
+            var q := Geometry2D.get_closest_point_to_segment(p, from, end)
+            return q.distance_to(p) <= float(shape.get("width", 18.0)) * 0.5 + 6.0     # + a hero's half body
+        _:
+            return p.distance_to(at) <= radius
+
+
+func _tick_later(delta: float) -> void:
+    if _later_calls.is_empty():
+        return
+    var due: Array = []
+    for c in _later_calls:
+        c["t"] = float(c["t"]) - delta
+        if float(c["t"]) <= 0.0:
+            due.append(c)
+    for c in due:
+        _later_calls.erase(c)
+        (c["f"] as Callable).call()
+
+
+## Health bar juice (D-111 style): the bar drops at once, the white part waits BAR_WAIT s and drains.
+const BAR_WAIT := 0.3
+const BAR_DRAIN := 0.9
+func _tick_bar(delta: float) -> void:
+    var frac := float(hp) / float(maxi(1, max_hp))
+    if frac >= _bar_lag:
+        _bar_lag = frac
+    elif _bar_wait > 0.0:
+        _bar_wait -= delta
+    else:
+        _bar_lag = move_toward(_bar_lag, frac, BAR_DRAIN * delta)
+
+
+## Middle of the marked area (where a cone or line blow shows its impact).
+func _shape_centre(shape: Dictionary, from: Vector2, at: Vector2) -> Vector2:
+    var reach := float(shape.get("reach", 0.0))
+    match String(shape.get("shape", "circle")):
+        "cone", "line":
+            return from + (at - from).normalized() * reach * 0.55 if from.distance_to(at) > 1.0 else at
+    return at
+
+
 func _resolve_skill(heroes: Array) -> void:
     var sid := casting_skill
     casting_skill = ""
@@ -913,26 +993,59 @@ func _resolve_skill(heroes: Array) -> void:
         heal(roundi(float(max_hp) * float(sk["heal_self_pct"])))
         CombatVFX.play(parent, position + Vector2(0, -14), "heal_toxic", 1.4)
     if String(sk["target"]) in ["hero_area", "self_area", "far_hero", "doom_hero"]:
-        var r := float(sk["radius"])
-        if sk.has("dmg_mult"):
-            var caught := heroes.filter(func(h): return is_instance_valid(h) and not h.dead and h.position.distance_to(_aim) <= r)
-            var blob := EnemyDefs.BLOB_MULT if caught.size() >= EnemyDefs.BLOB_COUNT else 1.0
-            for h in caught:
-                var own := float(sk.get("target_mult", 1.0)) if h == _skill_hero else 1.0
-                var hit := DamageInfo.make(float(atk) * float(sk["dmg_mult"]) * EnemyDefs.TELEGRAPH_MULT * blob * own, EnemyDefs.TELEGRAPH_KIND, self, crit_chance, combat_rng)
-                hit.element = String(sk.get("element", ""))
-                h.take_hit(hit)
-                if sk.has("status") and h.alive:
-                    var st2: Dictionary = sk["status"]
-                    h.apply_status(String(st2["id"]), float(st2["dur"]), float(st2["mag"]), self)
-            if parent != null:
-                CombatVFX.area_burst(parent, _aim, r, "slam" if r >= 60.0 else "spark")
-            CombatFeel.shake(self, "medium" if r >= 90.0 else "small", _aim - position)
-        if sk.has("zone") and parent != null:
-            var z: Dictionary = sk["zone"]
-            CombatZone.spawn(parent, _aim, r, float(z["life"]), String(z["status"]), float(z["dur"]), float(z["mag"]),
-                hero_list if not hero_list.is_empty() else heroes, self)
+        # D-143: the skill shows itself when the wind-up ends (a fireball flies, an arrow along the line, a
+        # meteor from the sky) and its damage lands on arrival, on whoever is still in the marked shape.
+        var look: Dictionary = sk.get("look", {})
+        var shp := _shape.duplicate()
+        var from := _from
+        var at := _aim
+        var travel := 0.0
+        if look.has("proj") and parent != null:
+            var start := at + Vector2(-160, -420) if bool(look.get("sky", false)) else position + Vector2(0, -20)
+            var spd := float(look.get("speed", 650.0 if bool(look.get("sky", false)) else 800.0))
+            var end := at + Vector2(0, -12) if String(shp.get("shape", "circle")) != "line" else from + (at - from).normalized() * float(shp.get("reach", 0.0))
+            CombatVFX.projectile(parent, start, end, String(look["proj"]), "", spd, float(look.get("scale", 1.0)), 1.0)
+            travel = start.distance_to(end) / spd
+        var land := func(): _land_skill(sid, sk, shp, from, at, heroes, hero_list)
+        if travel > 0.02:
+            _later_calls.append({"t": travel, "f": land})
+        else:
+            land.call()
     _do_lunge()
+
+
+## D-143: where a creature skill lands: damage + status on everyone inside its shape, its look and juice.
+func _land_skill(sid: String, sk: Dictionary, shp: Dictionary, from: Vector2, at: Vector2, heroes: Array, all_heroes: Array) -> void:
+    var parent := get_parent()
+    var r := float(sk["radius"])
+    var look: Dictionary = sk.get("look", {})
+    if sk.has("dmg_mult"):
+        var caught := heroes.filter(func(h): return is_instance_valid(h) and not h.dead and _in_shape(h.position, shp, from, at, r))
+        var blob := EnemyDefs.BLOB_MULT if caught.size() >= EnemyDefs.BLOB_COUNT else 1.0
+        for h in caught:
+            var own := float(sk.get("target_mult", 1.0)) if h == _skill_hero else 1.0
+            var hit := DamageInfo.make(float(atk) * float(sk["dmg_mult"]) * EnemyDefs.TELEGRAPH_MULT * blob * own, EnemyDefs.TELEGRAPH_KIND, self, crit_chance, combat_rng)
+            hit.element = String(sk.get("element", ""))
+            hit.tags.append("eskill." + sid)                  # its own juice profile (JuiceDefs.ENEMY)
+            h.take_hit(hit)
+            if sk.has("status") and h.alive:
+                var st2: Dictionary = sk["status"]
+                h.apply_status(String(st2["id"]), float(st2["dur"]), float(st2["mag"]), self)
+        CombatFeel.shake(self, "medium" if r >= 90.0 else "small", at - from)
+    if parent != null:
+        var centre := _shape_centre(shp, from, at)
+        if String(shp.get("shape", "circle")) == "circle":
+            CombatVFX.area_burst(parent, at, r, String(look.get("hit", "slam" if r >= 60.0 else "spark")))
+        else:
+            for i in 3:                                       # along the cone / line
+                var k := 0.3 + 0.35 * float(i)
+                CombatVFX.play(parent, from + (centre - from) * k * 1.8, String(look.get("hit", "slash_heavy")), 1.0, at.x < from.x)
+        if look.has("extra"):
+            CombatVFX.play(parent, centre, String(look["extra"]), clampf(r / 60.0, 0.8, 2.5))
+    if sk.has("zone") and parent != null:
+        var z: Dictionary = sk["zone"]
+        CombatZone.spawn(parent, at, r, float(z["life"]), String(z["status"]), float(z["dur"]), float(z["mag"]),
+            all_heroes if not all_heroes.is_empty() else heroes, self)
 
 
 ## Lookout (D-065): once it has seen the squad it does not fight; it runs to the nearest creature that
@@ -970,14 +1083,23 @@ func apply_status(id: String, duration: float, magnitude: float = 0.0, source: N
     super.apply_status(id, duration, magnitude, source)
 
 
-func _strike(heroes: Array) -> void:
-    _do_lunge()
-    # look per creature (CombatVFX.ENEMY_FX): claws, slime splashes, spores, slams, spells; sized to the strike
+## Look of the basic strike per creature (CombatVFX.ENEMY_FX): claws, slime splashes, spores, slams, spells.
+func _strike_fx() -> Dictionary:
     var fx := CombatVFX.enemy_fx(type_id)
     if role == "ranged" and not fx.has("proj"):
         fx = {"proj": "orb", "hit": String(fx.get("hit", "spark_small"))}    # a ranged strike always flies
+    return fx
+
+
+func _strike(heroes: Array) -> void:
+    _do_lunge()
+    var fx := _strike_fx()
     var sc := strike_radius / 44.0
     var at := _aim + Vector2(0, -12)
+    if telegraph_shape() == "line" and fx.has("proj"):
+        at = _from + (_aim - _from).normalized() * float(_shape.get("reach", 0.0)) + Vector2(0, -12)   # flies the whole line
+    elif telegraph_shape() == "cone" and get_parent() != null:
+        CombatVFX.play(get_parent(), _shape_centre(_shape, _from, _aim) + Vector2(0, -10), "crescent", sc, _aim.x < position.x)
     if fx.has("proj"):
         var from := position + Vector2(0, -20)
         CombatVFX.projectile(get_parent(), from, at, String(fx["proj"]), String(fx["hit"]), STRIKE_PROJECTILE_SPEED, 1.0, sc)
@@ -996,8 +1118,11 @@ const STRIKE_PROJECTILE_SPEED := 900.0
 ## Everyone still inside the marked circle when the blow (or the projectile) lands is hit.
 func _land_strike(heroes: Array) -> void:
     for h in heroes:
-        if is_instance_valid(h) and not h.dead and h.position.distance_to(_aim) <= strike_radius:
+        if is_instance_valid(h) and not h.dead and _in_shape(h.position, _shape, _from, _aim, strike_radius):
             var dmg_info := DamageInfo.make(float(atk) * (EnemyDefs.HEAVY_MULT if windup_time >= EnemyDefs.HEAVY_WINDUP else 1.0), "physical", self, crit_chance, combat_rng)
+            var proj := String(_strike_fx().get("proj", ""))
+            if proj != "":
+                dmg_info.tags.append("eskill.basic_" + proj)     # D-143 juice of the shot (JuiceDefs.ENEMY)
             h.take_hit(dmg_info)
             if not on_hit_status.is_empty() and h.alive:
                 h.apply_status(String(on_hit_status["id"]), float(on_hit_status["dur"]), float(on_hit_status.get("mag", 0.0)), self)
@@ -1014,6 +1139,7 @@ const STAGGER_PCT := 0.06
 
 func _on_hit(info: DamageInfo, dmg: int) -> void:
     _flash = 0.12
+    _bar_wait = BAR_WAIT
     alert()                                       # hurting one wakes its whole encounter
     if info != null and info.source is SandboxHero:
         if info.has_meta("aoe") and taunt_t > 0.0 and taunted_by != null and info.source != taunted_by:
@@ -1070,8 +1196,10 @@ func _draw() -> void:
     else:
         bar_y = -minf(_art_height() + 8.0, 150.0)          # above the head, whatever the size
         bar_w = clampf(body_radius * 2.6, 26.0, 70.0)
+    var frac := float(hp) / float(maxi(1, max_hp))
     draw_rect(Rect2(-bar_w * 0.5, bar_y, bar_w, 4), Color(0.1, 0.1, 0.1, 0.8))
-    draw_rect(Rect2(-bar_w * 0.5, bar_y, bar_w * float(hp) / float(maxi(1, max_hp)), 4), Color(0.9, 0.35, 0.35))
+    draw_rect(Rect2(-bar_w * 0.5, bar_y, bar_w * maxf(_bar_lag, frac), 4), Color(1.0, 0.95, 0.85, 0.9))   # D-143 white trail
+    draw_rect(Rect2(-bar_w * 0.5, bar_y, bar_w * frac, 4), Color(1.0, 1.0, 1.0) if _flash > 0.0 else Color(0.9, 0.35, 0.35))
     # D-090 attention: who it goes for (that hero's number, in its star colour); a taunt shows a red ring
     var att := attention()
     if att != null and att.hero != null:
@@ -1089,12 +1217,50 @@ func _draw() -> void:
         if r <= 0.0:
             # a help spell (heal, ward, rally): a ring on the caster fills up; interrupt it before it closes
             draw_arc(Vector2(0, -6), body_radius + 10.0, -PI / 2.0, -PI / 2.0 + TAU * k, 32, Color(0.4, 1.0, 0.6), 3.0)
+        elif telegraph_shape() == "cone":
+            _draw_cone(k)
+        elif telegraph_shape() == "line":
+            _draw_line_tele(k)
         else:
             draw_set_transform(_aim - position, 0.0, Vector2(1.0, 0.55))
             draw_circle(Vector2.ZERO, r, Color(1.0, 0.2, 0.2, 0.10 + 0.12 * k))
             draw_circle(Vector2.ZERO, r * k, Color(1.0, 0.25, 0.2, 0.25))
             draw_arc(Vector2.ZERO, r, 0.0, TAU, 40, Color(1.0, 0.3, 0.3), 3.0 if is_heavy() or casting_skill != "" else 2.0)
             draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## D-143 cone telegraph: the wedge, a fill that grows outwards as the blow approaches, and its edge.
+func _draw_cone(k: float) -> void:
+    var o := _from - position
+    var reach := float(_shape.get("reach", 60.0))
+    var half := deg_to_rad(float(_shape.get("angle", 90.0)) * 0.5)
+    var a0 := (_aim - _from).angle() if _aim.distance_to(_from) > 1.0 else 0.0
+    var heavy := is_heavy() or casting_skill != ""
+    for pass_i in 2:
+        var rr := reach if pass_i == 0 else reach * k
+        if rr < 2.0:
+            continue
+        var pts := PackedVector2Array([o])
+        for i in 17:
+            var a := a0 - half + 2.0 * half * float(i) / 16.0
+            pts.append(o + Vector2(cos(a), sin(a) * 0.55) * rr)
+        draw_colored_polygon(pts, Color(1.0, 0.2, 0.2, 0.10 + 0.12 * k) if pass_i == 0 else Color(1.0, 0.25, 0.2, 0.25))
+        if pass_i == 0:
+            pts.append(o)
+            draw_polyline(pts, Color(1.0, 0.3, 0.3), 3.0 if heavy else 2.0)
+
+
+## D-143 line telegraph: a lane from the creature through the target that fills from the creature.
+func _draw_line_tele(k: float) -> void:
+    var reach := float(_shape.get("reach", 60.0))
+    var w := float(_shape.get("width", 18.0))
+    var dir := (_aim - _from).normalized() if _aim.distance_to(_from) > 1.0 else Vector2.RIGHT
+    var lane := maxf(reach, _aim.distance_to(_from))
+    draw_set_transform(_from - position, dir.angle(), Vector2.ONE)
+    draw_rect(Rect2(0, -w * 0.5, lane, w), Color(1.0, 0.2, 0.2, 0.10 + 0.12 * k))
+    draw_rect(Rect2(0, -w * 0.5, lane * k, w), Color(1.0, 0.25, 0.2, 0.25))
+    draw_rect(Rect2(0, -w * 0.5, lane, w), Color(1.0, 0.3, 0.3), false, 3.0 if is_heavy() or casting_skill != "" else 2.0)
+    draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 ## Height of the creature on screen (opaque frame height x scale), for the health bar.

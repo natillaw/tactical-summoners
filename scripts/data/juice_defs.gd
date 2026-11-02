@@ -112,9 +112,32 @@ static func has_skill(id: String) -> bool:
 
 
 ## The raw table for an id: "skill.<id>", "basic.<class>", or a TYPE key. {} if unknown.
+## D-143 creature attacks with their own feel: "eskill.<EnemyDefs skill>" and "eskill.basic_<projectile>"
+## (a ranged creature's basic shot). Tagged on the DamageInfo by SandboxEnemy; JuicePlayer.resolve reads it.
+const ENEMY := {
+    "slam": {"particles": Color(0.6, 0.5, 0.38), "amount": 12, "spread": 140.0, "speed": 110.0, "kick": 3, "heavy": true, "sound": "hit_heavy"},
+    "spore_cloud": {"particles": Color(0.55, 0.9, 0.3), "amount": 6, "spread": 160.0, "speed": 40.0, "kick": 0},
+    "aimed_shot": {"flash": Color(0.85, 0.95, 1.0), "particles": Color(0.7, 0.52, 0.32), "amount": 8, "speed": 130.0, "kick": 3, "heavy": true, "sound": "hit_arrow_heavy"},
+    "fireball": {"flash": Color(1.0, 0.27, 0.0, 0.6), "particles": Color(1.0, 0.27, 0.0), "extra": Color(1.0, 0.75, 0.2), "amount": 10, "kick": 2, "sound": "hit_fire"},
+    "leap": {"particles": Color(0.6, 0.5, 0.38), "amount": 9, "spread": 120.0, "kick": 3, "sound": "hit_heavy"},
+    "whirlwind": {"particles": Color(0.85, 0.3, 0.3), "extra": Color(0.72, 0.62, 0.48), "amount": 8, "spread": 180.0, "kick": 2, "heavy": true, "sound": "hit_slash"},
+    "meteor": {"flash": Color(1.0, 0.4, 0.1), "particles": Color(1.0, 0.35, 0.05), "extra": Color(0.5, 0.45, 0.4), "amount": 14, "spread": 180.0, "kick": 3, "heavy": true, "sound": "hit_heavy"},
+    "doom": {"flash": Color(0.7, 0.3, 1.0), "particles": Color(0.6, 0.3, 0.9), "amount": 12, "spread": 180.0, "kick": 3, "heavy": true},
+    "crimson_wave": {"flash": Color(1.0, 0.2, 0.2), "particles": Color(0.85, 0.1, 0.1), "amount": 10, "spread": 160.0, "kick": 3, "heavy": true},
+    "basic_arrow": {"particles": Color(0.7, 0.52, 0.32), "amount": 4, "spread": 30.0, "kick": 1, "sound": "hit_arrow"},
+    "basic_fireball": {"flash": Color(1.0, 0.27, 0.0, 0.6), "particles": Color(1.0, 0.27, 0.0), "extra": Color(1.0, 0.75, 0.2), "amount": 6, "kick": 1, "sound": "hit_fire"},
+    "basic_frost_shard": {"particles": Color(0.6, 0.85, 1.0), "extra": Color(0.95, 1.0, 1.0), "amount": 6, "kick": 1},
+    "basic_arcane_bolt": {"particles": Color(0.7, 0.55, 1.0), "amount": 6, "kick": 1, "sound": "hit_lightning"},
+    "basic_orb": {"particles": Color(0.55, 0.8, 1.0), "amount": 5, "kick": 1, "sound": "hit_lightning"},
+    "basic_venom": {"particles": Color(0.55, 0.9, 0.3), "amount": 5, "kick": 1},
+}
+
+
 static func raw(id: String) -> Dictionary:
     if id.begins_with("skill."):
         return SKILL.get(id.substr(6), {})
+    if id.begins_with("eskill."):
+        return ENEMY.get(id.substr(7), {})
     if BASIC.has(id):
         return BASIC[id]
     return TYPE.get(id, {})
@@ -126,4 +149,6 @@ static func all_ids() -> Array:
         out.append("skill." + String(k))
     out.append_array(BASIC.keys())
     out.append_array(TYPE.keys())
+    for k in ENEMY:
+        out.append("eskill." + String(k))
     return out

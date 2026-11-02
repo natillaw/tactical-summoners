@@ -142,28 +142,54 @@ const SKILLS := {
         "shield_pct": 0.22, "desc": "Shields an ally (the boss first)."},
     "rally": {"name": "Rally", "cast": 1.2, "cd": 16.0, "range": 230.0, "target": "allies", "min_floor": 4,
         "status": {"id": "empowered", "dur": 8.0, "mag": 0.0}, "desc": "Nearby creatures hit 30% harder for a while."},
-    "slam": {"name": "Slam", "cast": 1.4, "cd": 9.0, "range": 140.0, "target": "hero_area", "radius": 95.0, "min_floor": 1,
-        "dmg_mult": 1.8, "status": {"id": "stun", "dur": 1.0, "mag": 0.0}, "desc": "A huge marked blow: get out of the circle."},
+    "slam": {"name": "Slam", "cast": 1.4, "cd": 9.0, "range": 140.0, "target": "hero_area", "radius": 150.0, "min_floor": 1,
+        "shape": {"shape": "cone", "angle": 120.0}, "look": {"hit": "slam", "extra": "shockwave"},
+        "dmg_mult": 1.8, "status": {"id": "stun", "dur": 1.0, "mag": 0.0}, "desc": "A huge frontal blow: get out of the cone."},
     "spore_cloud": {"name": "Spore Cloud", "cast": 1.0, "cd": 12.0, "range": 190.0, "target": "hero_area", "radius": 75.0, "min_floor": 3,
-        "zone": {"status": "poison", "life": 6.0, "dur": 2.0, "mag": 3.0}, "desc": "Leaves a poison cloud: do not stand in it."},
-    "aimed_shot": {"name": "Aimed Shot", "cast": 1.7, "cd": 8.0, "range": 230.0, "target": "hero_area", "radius": 28.0, "min_floor": 3,
-        "dmg_mult": 2.4, "desc": "A long aim at one hero: move that hero, or stun the archer."},
+        "zone": {"status": "poison", "life": 6.0, "dur": 2.0, "mag": 3.0}, "look": {"proj": "venom", "hit": "poison_cloud"}, "desc": "Leaves a poison cloud: do not stand in it."},
+    "aimed_shot": {"name": "Aimed Shot", "cast": 1.7, "cd": 8.0, "range": 230.0, "target": "hero_area", "radius": 250.0, "min_floor": 3,
+        "shape": {"shape": "line", "width": 26.0}, "look": {"proj": "arrow", "hit": "spark", "speed": 1100.0},
+        "dmg_mult": 2.4, "desc": "A long aim along a line: step out of it, or interrupt the archer."},
     "fireball": {"name": "Fireball", "cast": 1.3, "cd": 7.0, "range": 230.0, "target": "hero_area", "radius": 60.0, "min_floor": 1,
-        "dmg_mult": 2.0, "element": "fire", "desc": "A ball of fire on a group of heroes: do not bunch up."},
+        "dmg_mult": 2.0, "element": "fire", "look": {"proj": "fireball", "hit": "explosion_big", "extra": "fire_impact"}, "desc": "A ball of fire on a group of heroes: do not bunch up."},
     "leap": {"name": "Leap", "cast": 0.7, "cd": 9.0, "range": 320.0, "target": "far_hero", "radius": 34.0, "min_floor": 1,
-        "dmg_mult": 1.6, "dash": true, "desc": "Jumps onto the furthest hero (the backline): guard your healer."},
+        "dmg_mult": 1.6, "dash": true, "look": {"hit": "slam", "extra": "dust"}, "desc": "Jumps onto the furthest hero (the backline): guard your healer."},
     # --- boss mechanics (2026-10-31, raid style: each one asks the player for a specific answer) -------
     "whirlwind": {"name": "Whirlwind", "cast": 1.8, "cd": 13.0, "range": 125.0, "target": "self_area", "radius": 125.0, "min_floor": 1,
-        "dmg_mult": 2.2, "desc": "Spins around itself: every melee hero must run out of the circle."},
+        "dmg_mult": 2.2, "look": {"hit": "crescent", "extra": "shockwave"}, "desc": "Spins around itself: every melee hero must run out of the circle."},
     "meteor": {"name": "Meteor", "cast": 2.2, "cd": 11.0, "range": 460.0, "target": "far_hero", "radius": 70.0, "min_floor": 1,
-        "dmg_mult": 2.6, "desc": "Falls on the hero furthest away (the backline): move, and do not stack behind."},
+        "dmg_mult": 2.6, "look": {"proj": "fireball", "sky": true, "scale": 3.0, "hit": "explosion_big", "extra": "fire_impact"}, "desc": "Falls on the hero furthest away (the backline): move, and do not stack behind."},
     "doom": {"name": "Mark of Doom", "cast": 4.0, "cd": 17.0, "range": 460.0, "target": "doom_hero", "radius": 90.0, "min_floor": 1,
-        "follow": true, "dmg_mult": 3.0, "target_mult": 0.5, "desc": "Marks a hero (not the tank); it explodes on everyone near that hero: the marked one must leave the group."},
+        "follow": true, "dmg_mult": 3.0, "target_mult": 0.5, "look": {"hit": "arcane_burst", "extra": "shockwave"}, "desc": "Marks a hero (not the tank); it explodes on everyone near that hero: the marked one must leave the group."},
     "crimson_wave": {"name": "Crimson Wave", "cast": 1.6, "cd": 0.0, "range": 9999.0, "target": "hero_area", "radius": 80.0, "min_floor": 99,
-        "dmg_mult": 1.8, "desc": "The unshielded Baron strikes at his altar (AltarDefs): hold him, or leave the altar."},
+        "dmg_mult": 1.8, "look": {"hit": "shockwave", "extra": "blood"}, "desc": "The unshielded Baron strikes at his altar (AltarDefs): hold him, or leave the altar."},
     "blood_ritual": {"name": "Blood Ritual", "cast": 3.0, "cd": 18.0, "range": 0.0, "target": "self_heal", "below": 0.8, "min_floor": 1,
         "heal_self_pct": 0.12, "desc": "Heals itself a lot: interrupt it."},
 }
+## D-143 telegraph shapes of the basic strike: "circle" (at the target), "cone" (a wedge in front of the
+## creature, angle in degrees, reach = distance to the target + strike radius), "line" (from the creature
+## through the target, width px, length = strike range + LINE_EXTRA). Picked by role (strike_shape); a
+## skill's own "shape" wins (its "radius" is then the cone's reach or the line's length).
+## Casters (fire/frost/arcane bolts) hit a circle at the target; archers and spitters a line; brutes and
+## guards a cone; the rest a small circle.
+const STRIKE_SHAPES := {"brute": {"shape": "cone", "angle": 100.0}, "guard": {"shape": "cone", "angle": 80.0},
+    "line": {"shape": "line", "width": 18.0}, "circle": {"shape": "circle"}}
+const LINE_EXTRA := 24.0
+const MAGIC_PROJ := ["fireball", "frost_shard", "arcane_bolt", "orb"]
+
+
+static func strike_shape(role: String, ai_role: String, proj: String) -> Dictionary:
+    if ai_role == "caster" or MAGIC_PROJ.has(proj):
+        return STRIKE_SHAPES["circle"]
+    if role == "ranged" or ai_role == "archer":
+        return STRIKE_SHAPES["line"]
+    if role == "brute" or ai_role == "brute":
+        return STRIKE_SHAPES["brute"]
+    if role == "guard":
+        return STRIKE_SHAPES["guard"]
+    return STRIKE_SHAPES["circle"]
+
+
 ## Bosses get these on top of their own skills (make_boss). Each floor boss teaches a few mechanics.
 const BOSS_SKILLS := {"warlord": ["whirlwind", "meteor", "blood_ritual"],
     "capitan_bandido": ["whirlwind", "blood_ritual"], "jefe_baron_carmesi": ["whirlwind"],   # the altar is his fight (AltarDefs)
