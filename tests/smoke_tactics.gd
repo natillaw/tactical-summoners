@@ -59,6 +59,22 @@ func _ready() -> void:
     for i in 40:
         brute.tick(0.05, sb.heroes, sb.map)
     check(h.hp == hp0, "a hero who stepped out of the circle takes nothing")
+    # D-143 telegraph shapes and looks
+    check(brute.telegraph_shape() == "cone", "Slam marks a cone in front of the brute")
+    check(EnemyDefs.strike_shape("ranged", "archer", "arrow")["shape"] == "line" and EnemyDefs.strike_shape("ranged", "caster", "fireball")["shape"] == "circle"
+        and EnemyDefs.strike_shape("brute", "", "")["shape"] == "cone" and EnemyDefs.strike_shape("swarm", "", "")["shape"] == "circle",
+        "basic strikes: archers a line, casters a circle, brutes a cone, the rest a circle")
+    var cone := {"shape": "cone", "angle": 90.0, "reach": 100.0}
+    check(SandboxEnemy._in_shape(Vector2(80, 0), cone, Vector2.ZERO, Vector2(50, 0), 0.0) and not SandboxEnemy._in_shape(Vector2(0, 80), cone, Vector2.ZERO, Vector2(50, 0), 0.0)
+        and not SandboxEnemy._in_shape(Vector2(130, 0), cone, Vector2.ZERO, Vector2(50, 0), 0.0), "a cone hits in front, not to the side or past its reach")
+    var lane := {"shape": "line", "width": 20.0, "reach": 200.0}
+    check(SandboxEnemy._in_shape(Vector2(180, 5), lane, Vector2.ZERO, Vector2(60, 0), 0.0) and not SandboxEnemy._in_shape(Vector2(100, 40), lane, Vector2.ZERO, Vector2(60, 0), 0.0),
+        "a line hits along its lane past the target, not beside it")
+    check(EnemyDefs.SKILLS["fireball"]["look"]["proj"] == "fireball" and EnemyDefs.SKILLS["aimed_shot"]["look"]["proj"] == "arrow"
+        and EnemyDefs.SKILLS.keys().all(func(id): return not EnemyDefs.SKILLS[id].has("dmg_mult") or EnemyDefs.SKILLS[id].has("look")),
+        "every damaging creature skill has its own look (fireball flies, arrows fly)")
+    check(EnemyDefs.SKILLS.keys().all(func(id): return not EnemyDefs.SKILLS[id].has("dmg_mult") or JuiceDefs.raw("eskill." + String(id)) != {}),
+        "every damaging creature skill has a juice profile")
     sb.queue_free()
     await get_tree().process_frame
 
