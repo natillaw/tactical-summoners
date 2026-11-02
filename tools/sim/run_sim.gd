@@ -11,6 +11,7 @@ extends SceneTree
 ##   --out <dir>           report folder (default docs/reports/sim/<date>_<name>/)
 ##   --check-determinism   runs everything twice and checks both summaries are identical (test)
 ##   --quiet               less console output
+##   --cancel-file <path>  stop (and kill the workers) as soon as this file exists (Sim Lab, D-130)
 ##
 ## This file names no game class on purpose: a worker process (--child) first loads the balance overrides
 ## (a pack with patched copies of the scripts, tools/sim/sim_overrides.gd) and only then lets the game's
