@@ -753,6 +753,8 @@ func construction_block(bid: String) -> String:
         return "upgrade the Summoner's Hall first (level cap %d)" % hall
     if construction.any(func(p): return String(p["bid"]) == bid):
         return "already under construction"
+    if construction.size() >= builder_count():
+        return "every builder is busy (one building per builder)"
     if int(hq_outputs.get("materials", 0)) < cost:
         return "needs %d materials" % cost
     return ""
@@ -770,6 +772,12 @@ func complete_construction(bid: String, to: int) -> void:
     log_town("%s reached level %d." % [TownTables.info(bid)["name"], to])
     if TownTables.is_dorm(bid):
         assign_beds()
+
+
+## Owner 2026-11-02: one building site per builder (heroes who know the trade or work the site);
+## at least one, so a new town can always queue its first building.
+func builder_count() -> int:
+    return maxi(1, heroes.values().filter(func(h): return (h as HeroData).knows_prof("builder") or (h as HeroData).hq_assignment == "construction").size())
 
 
 func builders() -> Array:
@@ -1004,13 +1012,20 @@ func job_of(bid: String) -> String:
     if jobs.is_empty():
         return ""
     var j := String(town_jobs.get(bid, ""))
-    return j if jobs.has(j) else String(jobs[0])
+    if jobs.has(j) and (EconomyDefs.is_auto(j) or int(craft_left.get(bid, 0)) > 0):
+        return j
+    for x in jobs:                                    # owner 2026-11-02: without an order only basic work runs
+        if EconomyDefs.is_auto(String(x)):
+            return String(x)
+    return ""
 
 
 func set_job(bid: String, recipe: String) -> bool:
     if not (TownTables.info(bid).get("jobs", []) as Array).has(recipe):
         return false
     town_jobs[bid] = recipe
+    if not EconomyDefs.is_auto(recipe) and int(craft_left.get(bid, 0)) <= 0:
+        craft_left[bid] = 1                           # a craft never runs forever: picking it is an order of one
     _commit()
     return true
 
@@ -1034,6 +1049,9 @@ func workplace_prof(bid: String) -> String:
     if bid == "library":
         return "scholar"
     var rid := job_of(bid)
+    if rid == "":                                     # an order-only bench with no order still has its trade
+        var jobs: Array = TownTables.info(bid).get("jobs", [])
+        rid = String(jobs[0]) if not jobs.is_empty() else ""
     return "" if rid == "" else String(EconomyDefs.recipe(rid)["prof"])
 
 
@@ -1101,6 +1119,8 @@ func start_batch(bid: String, rid: String) -> String:
     var r: Dictionary = EconomyDefs.recipe(rid)
     if r.get("service", false):
         return ""
+    if building_level(bid) < int(r.get("blvl", 0)):           # owner 2026-11-02: better dishes need a better kitchen
+        return "needs %s level %d" % [TownTables.info(bid).get("name", bid), int(r["blvl"])]
     if not has_resources(r["in"]):
         var missing: Array = []
         for k in r["in"]:
@@ -1132,11 +1152,6 @@ func finish_batch(bid: String, best_level: int, rr: RandomNumberGenerator, repor
             String(craft_affix.get(bid, "")))
         stash.append(it2)
         (report["events"] as Array).append("The %s made %s." % [TownTables.info(bid)["name"], ItemDefs.item_label(it2)])
-        if int(craft_left.get(bid, 0)) > 0:
-            craft_left[bid] = int(craft_left[bid]) - 1
-            if int(craft_left[bid]) <= 0:
-                craft_left.erase(bid)
-                town_jobs.erase(bid)                          # the order is done: the bench rests
     if r.has("item"):
         var rarity := ItemGen.craft_rarity(rr, best_level, building_level(bid))
         var floor_rarity := String(r.get("min_rarity", "common"))
@@ -1146,6 +1161,12 @@ func finish_batch(bid: String, best_level: int, rr: RandomNumberGenerator, repor
         var it := ItemGen.generate(rr, _next_uid(), 1 + best_level + building_level(bid) + int(r.get("ilvl_bonus", 0)), rarity, String(kinds[rr.randi() % kinds.size()]))
         stash.append(it)
         (report["events"] as Array).append("The %s forged %s." % [TownTables.info(bid)["name"], ItemDefs.item_label(it)])
+    if not EconomyDefs.is_auto(String(b["recipe"])) and int(craft_left.get(bid, 0)) > 0:
+        craft_left[bid] = int(craft_left[bid]) - 1          # owner 2026-11-02: crafts only by the Master's order
+        if int(craft_left[bid]) <= 0:
+            craft_left.erase(bid)
+            town_jobs.erase(bid)                          # the order is done: the bench rests
+            (report["events"] as Array).append("The %s finished its order." % TownTables.info(bid)["name"])
 
 
 # --- building placement (D-050) ----------------------------------------------------------------
@@ -1383,8 +1404,20 @@ var uniques_found: Array = []        # D-077: unique ids already dropped on this
 func order_craft(bid: String, rid: String, count: int, affix: String = "") -> String:
     if workers_at(bid).is_empty():
         return "nobody works here"
-    if not set_job(bid, rid):
+    if not (TownTables.info(bid).get("jobs", []) as Array).has(rid):
         return "this building cannot make that"
+    var r: Dictionary = EconomyDefs.recipe(rid)
+    if building_level(bid) < int(r.get("blvl", 0)):
+        return "needs %s level %d" % [TownTables.info(bid).get("name", bid), int(r["blvl"])]
+    if count <= 0 and not EconomyDefs.is_auto(rid):     # "Create all" = as many as the stores pay for
+        count = 999
+        for k in r["in"]:
+            count = mini(count, int(hq_outputs.get(k, 0)) / maxi(1, int(r["in"][k])))
+        if count <= 0:
+            return "missing materials (farm them in the tower or the Wilds)"
+    if not EconomyDefs.is_auto(rid) and not has_resources(r["in"]):
+        return "missing materials (farm them in the tower or the Wilds)"
+    town_jobs[bid] = rid
     if count > 0:
         craft_left[bid] = count
     else:

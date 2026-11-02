@@ -560,6 +560,20 @@ Rama `feat/integracion` desde `feat/d083-headless-sim`; merges en orden Sim Lab 
 - **Botín:** gear por criatura **3 % normal** y **20 % élite** (antes 10 % / 35 %). El jefe del **piso 10** suelta **siempre un hacha épica** (morada; base `greataxe`), además de su botín normal (`LootDefs.BOSS_GUARANTEED`).
 - **Frases de héroes** en español: entrada a piso, pueblo, respuestas a pings y el altar del Barón (`StringsEs.ES_D142`); `SandboxHero.say` y `TownHero._say` traducen.
 
+### D-143 — Progresión pueblo ↔ torre (2026-11-02, dueño: "que el jugador no pueda progresar tanto en la torre si descuida su pueblo, pero no bloquearlo")
+- **Tiempo:** pueblo 20 min reales = 1 día (`EconomyDefs.REAL_SECONDS_PER_HOUR` 50). Torre y Tierras Salvajes: 20 min = 2 días (`TOWER_SECONDS_PER_HOUR` 25, `expedition_hours(segundos)`, mínimo 1 h). **Sin botón "Pasar día"** (pueblo y HQ): saltar tiempo mientras se craftea o construye era trampa. Crafteo, obras y hospital ya consumen horas de trabajo (`work`, `work_left`).
+- **Obras:** una obra a la vez por constructor (`Game.builder_count`, mínimo 1).
+- **Pociones:** solo de alquimia (los cofres de los pisos 1-2 ya no dan pociones). Enfriamiento de 5 min por héroe (`LootDefs.HEAL_POTION_CD`); los héroes beben solos por debajo del 25 %; el Máster solo con la tecla **D** (el bot del simulador la pulsa por él).
+- **Cocina:** las comidas de expedición dependen del nivel de la cocina (`blvl`): guiso Nv1, asado Nv2, caldo de hueso Nv3 (+12 % armadura y resistencia mágica), festín del cazador Nv4.
+- **Joyería:** 6 joyas nuevas con estadística propia (anillos de rubí, zafiro y hierro; colgantes del corazón y del sol; cadena veloz) + afijos al azar. **Trinkets** con pasiva por probabilidad, una o más por clase (runa de sangre: 5 % al golpear te curas el daño del golpe; baluarte, sombra, halcón, maná, piedad, espinas, trébol). La pasiva solo funciona para sus clases. Iconos del pack rpg_icons.
+- Las enfermedades siguen como estaban (bajan atributos; la herida infectada solo se cura en el hospital).
+
+### D-144 — Pueblo con el Máster y crafteo por encargo (2026-11-02, dueño: "el pueblo debería estar en cámara del máster… si quiero una poción debo ir a craftear con los materiales")
+- **Cámara siempre en el Máster** en el pueblo (sin cámara libre ni arrastre). Clic en el suelo: el Máster camina. Clic en un edificio: camina hasta la puerta y entra; **F** en una puerta también entra. El interior muestra al Máster junto a la puerta. Sin Máster (cuentas viejas, pruebas) se mantiene la vista directa.
+- **Encargo + artesano:** dentro del edificio, el libro de recetas encarga N piezas (`Game.order_craft`); el héroe artesano asignado las fabrica con su tiempo de trabajo. Sin artesano no se hace nada.
+- **Solo lo básico es automático** (`EconomyDefs.AUTO_RECIPES`: grano, hierbas, leña, piedra, mineral, comida del pueblo, materiales, lingotes) y los servicios (hospital, taberna). Pociones, medicina, antídotos, elixires, comidas de expedición, equipo, joyas, bolsas y flechas **solo por encargo**; terminado el encargo el banco descansa. "Crear todo" = lo que pagan los materiales del almacén.
+- El hospital sigue admitiendo enfermos solo (D-047); la medicina ahora sale solo por encargo en la alquimia.
+
 ## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)
 
 | ID | Tema | Lo que existe / origen | Pregunta abierta |

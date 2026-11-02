@@ -21,6 +21,7 @@ var _sync_t: float = 0.0
 
 var hero: HeroData
 var map: TownMap
+var player_controlled: bool = false   # owner 2026-11-02: the Master walks where the player clicks
 var town_heroes: Array = []       # other TownHero nodes (for chatting), set by TownScreen
 var hovered: bool = false
 var activity: String = "idle"
@@ -222,6 +223,15 @@ func _start_next() -> void:
 func _process(delta: float) -> void:
     if hero == null or map == null:
         return
+    if player_controlled:
+        visible = true
+        activity = "master"
+        if not _path.is_empty():
+            _walk(delta)
+        else:
+            _play("idle_" + _facing)
+        queue_redraw()
+        return
     if _bubble_t > 0.0:
         _bubble_t -= delta
     _sync_t -= delta
@@ -301,9 +311,19 @@ func _say(text: String) -> void:
     _bubble_t = 3.5
 
 
+## The Master walks to a map point (A* on the town map). False when there is no way there.
+func go_to(goal: Vector2) -> bool:
+    _path = map.find_path(position, goal)
+    return not _path.is_empty() or position.distance_to(goal) < 12.0
+
+
+func walking() -> bool:
+    return not _path.is_empty()
+
+
 func _walk(delta: float) -> void:
     var to := _path[0] - position
-    var step := SPEED * delta * (0.5 if activity == "sim_treat" else 1.0)   # the sick walk slowly
+    var step := SPEED * delta * (0.5 if activity == "sim_treat" else (1.8 if player_controlled else 1.0))   # the sick walk slowly; the Master hurries
     if to.length() <= step:
         position = _path[0]
         _path.remove_at(0)
