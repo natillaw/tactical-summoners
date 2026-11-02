@@ -2,7 +2,7 @@ class_name SquadSynergies
 extends RefCounted
 ## D-090: the synergies that depend on where the whole squad stands (SynergyDefs). SandboxScreen calls
 ## update() a few times a second: bushes (stealth), Shared Sight, bonds (rivals / mentor / friends /
-## incompatible), Trap Sense, Hunter's Eye. Back to Back is read by the screen's shake() (composure_mult).
+## incompatible), Trap Sense, Hunter's Eye.
 
 const EVERY := 0.25
 
@@ -97,24 +97,3 @@ static func _note_once(h: SandboxHero, id: String) -> void:
         return
     h.set_meta(key, true)
     h.synergy(id)
-
-
-## D-090 Back to Back: a hero standing next to another with SynergyDefs "foes"+ creatures around loses only
-## composure_mult of the Composure (less panic). 1.0 = no synergy.
-static func composure_mult(h: SandboxHero, heroes: Array, foes: Array) -> float:
-    var r := float(SynergyDefs.param("back_to_back", "radius", 48.0))
-    var mate := false
-    for o in heroes:
-        if is_instance_valid(o) and o != h and o.alive and o.position.distance_to(h.position) <= r:
-            mate = true
-            break
-    if not mate:
-        return 1.0
-    var near := 0
-    for e in foes:
-        if e.alive and e.position.distance_to(h.position) <= AiDefs.SURROUND_RADIUS * 1.5:
-            near += 1
-    if near < int(SynergyDefs.param("back_to_back", "foes", 2)):
-        return 1.0
-    h.synergy("back_to_back")
-    return float(SynergyDefs.param("back_to_back", "composure_mult", 0.5))

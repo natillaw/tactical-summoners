@@ -65,7 +65,7 @@ func _ready() -> void:
     for i in 30:
         await get_tree().process_frame
     get_viewport().get_texture().get_image().save_png(dir + "/pista_a_camp_%s.png" % tag)
-    Game.synergy_codex = {"stun_crit": true, "flank": true, "friends": true, "shared_sight": true}
+    Game.synergy_codex = {"stun_crit": true, "shatter": true, "friends": true, "shared_sight": true}
     var layer := CanvasLayer.new()
     layer.layer = 60
     add_child(layer)

@@ -72,6 +72,12 @@ static func body_loot(floor_num: int, rank: String, theme: String, first_clear: 
         var rarity := ItemGen.roll_rarity(rng, floor_num + 1, float(LootDefs.ITEM_RARITY_BONUS.get(rank, 0.0)),
             "uncommon" if rank != "normal" else "common")
         items.append(ItemGen.generate_drop(rng, int(uid_of.call()), floor_num, rarity, theme))
+    if rank == "boss":
+        for g in LootDefs.BOSS_GUARANTEED.get(floor_num, []):     # D-142: e.g. the epic axe of floor 10
+            var it := ItemGen.generate(rng, int(uid_of.call()), floor_num, String(g["rarity"]), String(g["base"]))
+            it["source"] = "drop"
+            it["theme"] = theme
+            items.append(it)
     if rng.randf() < float(LootDefs.BOOK_CHANCE.get(rank, 0.0)):
         var b := roll_book(rng)
         res[b] = int(res.get(b, 0)) + 1

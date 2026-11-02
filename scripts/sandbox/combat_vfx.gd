@@ -317,6 +317,7 @@ const SKILL_FX := {
     "smoke_bomb": {"area": ["smoke", "smoke_earth"]},
     "fan_of_knives": {"area": ["crescent", "blood"]},
     "kidney_shot": {"hit": ["crit"]},
+    "ambush": {"self": ["smoke"], "hit": ["slash", "parry"]},
     "eviscerate": {"hit": ["slash_heavy", "blood", "crit"]},
     "rapid_shot": {"proj": "arrow", "n": 2, "hit": ["spark_small"]},
     "snare_shot": {"proj": "arrow", "hit": ["smoke_earth"]},
@@ -325,6 +326,7 @@ const SKILL_FX := {
     "bear_trap": {"self": ["dust"]},
     "piercing_shot": {"cast": "circle_arcane", "proj": "arrow", "speed": 1100.0, "hit": ["slash_frost", "spark"]},
     "concussive_shot": {"proj": "arrow", "hit": ["shockwave"]},
+    "interrupt_shot": {"proj": "arrow", "speed": 1100.0, "hit": ["parry"]},
     "rain_of_arrows": {"cast": "circle_big", "proj": "arrow", "n": 12, "rain": true, "area": ["dust", "dust_puff"]},
     "heal": {"cast": "circle_holy"},
     "smite": {"hit": ["lightning_holy", "spark_holy"]},
@@ -342,6 +344,7 @@ const SKILL_FX := {
     "chain_burn": {"cast": "circle_arcane", "proj": "fireball", "area": ["fire_impact", "fire"]},
     "meteor": {"cast": "circle_big", "proj": "fireball", "sky": true, "proj_scale": 3.0, "area": ["explosion_big", "slam", "fire_impact"]},
     "arcane_torrent": {"cast": "circle_arcane", "proj": "arcane_bolt", "proj_scale": 1.6, "hit": ["electric_impact", "arcane_burst"]},
+    "counterspell": {"proj": "arcane_bolt", "hit": ["arcane_burst", "parry"]},
 }
 
 ## Looping aura while a status lasts: [effect, offset, scale].

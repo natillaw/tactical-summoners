@@ -2005,7 +2005,7 @@ func shake(h: SandboxHero, why: String) -> void:
 	if not h.alive or h.hero == null or h.hero.is_master:
 		return
 	var m: HeroData = master_hero.hero if master_hero != null else null
-	h.hero.set_composure(h.hero.composure - roundi(float(MasterRules.composure_loss(h.hero, m, why, h.in_master_radius())) * SquadSynergies.composure_mult(h, heroes, living_enemies())))   # D-090 Back to Back
+	h.hero.set_composure(h.hero.composure - roundi(float(MasterRules.composure_loss(h.hero, m, why, h.in_master_radius()))))
 	if h.hero.composure < MasterDefs.PANIC_BELOW and not h.has_status("panicked"):
 		h.apply_status("panicked", MasterDefs.PANIC_TIME)
 		h.order = "auto"

@@ -2,8 +2,8 @@ class_name SkillDefs
 extends RefCounted
 ## Skills as data (combat Phase 3). A skill = cost in the class resource (D-041) + cooldown +
 ## optional cast time (interruptible only by control, D-042) + targeting + a list of effects.
-## Heroes start with ONE active from their class "start" pool (D-043, D-044) and choose more at
-## LEARN_LEVELS (D-045) or learn them from books (D-046). Numbers are tuning placeholders.
+## Heroes start with only the basic attack on Q (D-142) and choose more at
+## LEARN_LEVELS (D-045, D-142) or learn them from books (D-046). Numbers are tuning placeholders.
 ##
 ## target: "enemy" (nearest/current enemy in range) | "self" | "ally_low" (most hurt ally in range,
 ##         self included) | "self_aoe" (around the caster) | "target_aoe" (around the enemy target)
@@ -15,14 +15,22 @@ extends RefCounted
 ##          {"t": "cleanse"} {"t": "zone", "radius", "dur", "status", "sdur", "foes"(bool), "once"(bool)}
 ##          {"t": "allies", "radius", "inner": [effects]}  (applies inner effects to allies around)
 
-## D-090: a choice of 1 skill out of CHOICE_OPTIONS at level 2, level 5 and then every CHOICE_EVERY levels
-## (choice_levels()); the options not taken are gone for that choice. LEARN_LEVELS is kept for old callers.
-const CHOICE_FIRST := [2, 5]
-const CHOICE_EVERY := 5
-const CHOICE_MAX_LEVEL := 70
+## D-142 (owner, 2026-11-02, replaces the D-090 "2, 5 and every 5"): heroes start with only Q (the basic
+## attack, D-059) and choose 1 skill out of CHOICE_OPTIONS at levels 2, 5 and 10, one for each of W, E and R:
+## at most 4 actives (Q + 3). The options not taken are gone for that choice. LEARN_LEVELS kept for old callers.
+const CHOICE_LEVELS := [2, 5, 10]
 const CHOICE_OPTIONS := 3
-const LEARN_LEVELS := [2, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70]
-const MAX_SLOTS := 3   # keys W E R (D-059; Q is the driven hero's basic attack — owner confirmed, 2026-11-02)
+const LEARN_LEVELS := [2, 5, 10]
+const MAX_SLOTS := 3   # keys W E R (Q is the basic attack: 4 actives in all)
+## D-142: only these skills (effect "interrupt") break a creature's cast; stuns and knock-backs no longer do.
+const INTERRUPTERS := ["ambush", "interrupt_shot", "counterspell"]
+## D-142: class actions bound to F instead of a W/E/R slot (not learnable, not in the kits). The cleric's
+## Resurrection is how a cleric lifts a fallen ally (agony, D-036/D-082): a channel of "channel" seconds
+## that a hit breaks, the ally back with "hp" of max HP. Death is still permanent once the agony ends (D-011).
+const F_ACTIONS := {
+    "class.cleric": {"id": "resurrection", "name": "Resurrection", "channel": 4.0, "hp": 0.25,
+        "desc": "F next to a fallen ally: a 4 s prayer lifts them (a hit breaks it)."},
+}
 
 ## D-041 class resources, redone by D-090. max = base + per point of the scaling attribute.
 ## regen = per second (regen_combat while fighting, regen_still while standing still, when given);
@@ -50,10 +58,10 @@ const KITS := {
     "class.none": {"start": ["second_breath"], "learn": ["improvised_strike", "shove", "rally"]},
     "class.commoner": {"start": ["improvised_strike", "second_breath", "shove"], "learn": ["rally", "dirty_trick", "second_breath", "improvised_strike", "shove"]},
     "class.warrior": {"start": ["cleave", "shield_bash", "war_cry"], "learn": ["charge", "shield_wall", "whirlwind", "rallying_shout", "earthshatter", "cleave", "shield_bash", "war_cry"]},
-    "class.rogue": {"start": ["quick_slash", "poison_blade", "shadow_step"], "learn": ["eviscerate", "backstab", "smoke_bomb", "fan_of_knives", "kidney_shot", "quick_slash", "poison_blade", "shadow_step"]},
-    "class.archer": {"start": ["rapid_shot", "snare_shot", "volley"], "learn": ["hunters_mark", "bear_trap", "piercing_shot", "concussive_shot", "rain_of_arrows", "rapid_shot", "snare_shot", "volley"]},
+    "class.rogue": {"start": ["quick_slash", "poison_blade", "shadow_step"], "learn": ["ambush", "eviscerate", "backstab", "smoke_bomb", "fan_of_knives", "kidney_shot", "quick_slash", "poison_blade", "shadow_step"]},
+    "class.archer": {"start": ["rapid_shot", "snare_shot", "volley"], "learn": ["interrupt_shot", "hunters_mark", "bear_trap", "piercing_shot", "concussive_shot", "rain_of_arrows", "rapid_shot", "snare_shot", "volley"]},
     "class.cleric": {"start": ["heal", "smite", "holy_radiance"], "learn": ["blessing", "purify", "sanctuary", "judgement", "mass_heal", "heal", "smite", "holy_radiance"]},
-    "class.mage": {"start": ["fire_burst", "frost_bolt", "arcane_shield"], "learn": ["frost_nova", "blink", "chain_burn", "meteor", "arcane_torrent", "fire_burst", "frost_bolt", "arcane_shield"]},
+    "class.mage": {"start": ["fire_burst", "frost_bolt", "arcane_shield"], "learn": ["counterspell", "frost_nova", "blink", "chain_burn", "meteor", "arcane_torrent", "fire_burst", "frost_bolt", "arcane_shield"]},
 }
 
 const SKILLS := {
@@ -63,7 +71,7 @@ const SKILLS := {
     "improvised_strike": {"name": "Improvised Strike", "class": "class.commoner", "cost": 0, "cd": 8.0, "cast": 0.0, "range": 60.0, "target": "enemy",
         "effects": [{"t": "damage", "mult": 1.5, "kind": "power"}], "desc": "A clumsy but surprisingly effective swing."},
     "shove": {"name": "Shove", "class": "class.commoner", "cost": 0, "cd": 12.0, "cast": 0.0, "range": 55.0, "target": "enemy",
-        "effects": [{"t": "knockback", "dist": 70.0}, {"t": "interrupt"}, {"t": "damage", "mult": 0.5, "kind": "power"}], "desc": "Push a foe away and break its wind-up."},
+        "effects": [{"t": "knockback", "dist": 70.0}, {"t": "damage", "mult": 0.5, "kind": "power"}], "desc": "Push a foe away."},
     "rally": {"name": "Rally", "class": "class.commoner", "cost": 0, "cd": 25.0, "cast": 0.0, "range": 0.0, "target": "self",
         "effects": [{"t": "allies", "radius": 140.0, "inner": [{"t": "shield", "pct": 0.12}]}], "desc": "Shield nearby allies for 12% of their max HP."},
     "dirty_trick": {"name": "Dirty Trick", "class": "class.commoner", "cost": 0, "cd": 16.0, "cast": 0.0, "range": 55.0, "target": "enemy",
@@ -72,7 +80,7 @@ const SKILLS := {
     "cleave": {"name": "Cleave", "class": "class.warrior", "cost": 30, "cd": 9.0, "cast": 0.0, "range": 75.0, "target": "self_aoe",
         "effects": [{"t": "damage", "mult": 1.4, "kind": "power"}], "desc": "Hit every enemy around you."},
     "shield_bash": {"name": "Shield Bash", "class": "class.warrior", "cost": 25, "cd": 12.0, "cast": 0.0, "range": 55.0, "target": "enemy",
-        "effects": [{"t": "damage", "mult": 0.8, "kind": "power"}, {"t": "status", "id": "stun", "dur": 1.5}, {"t": "interrupt"}], "desc": "Stun a foe and break its wind-up."},
+        "effects": [{"t": "damage", "mult": 0.8, "kind": "power"}, {"t": "status", "id": "stun", "dur": 1.5}], "desc": "Stun a foe."},
     "war_cry": {"name": "War Cry", "class": "class.warrior", "cost": 20, "cd": 18.0, "cast": 0.0, "range": 160.0, "target": "self",
         "effects": [{"t": "taunt", "radius": 160.0, "dur": 3.5}, {"t": "shield", "pct": 0.15}], "desc": "Enemies nearby attack you instead; gain a shield."},
     "charge": {"name": "Charge", "class": "class.warrior", "cost": 25, "cd": 14.0, "cast": 0.0, "range": 260.0, "target": "enemy",
@@ -84,7 +92,7 @@ const SKILLS := {
     "rallying_shout": {"name": "Rallying Shout", "class": "class.warrior", "cost": 50, "cd": 30.0, "cast": 0.0, "range": 0.0, "target": "self",
         "effects": [{"t": "allies", "radius": 180.0, "inner": [{"t": "shield", "pct": 0.2}, {"t": "cleanse"}]}], "desc": "Shield allies around you and shake off their ailments."},
     "earthshatter": {"name": "Earthshatter", "class": "class.warrior", "cost": 80, "cd": 35.0, "cast": 0.8, "range": 120.0, "target": "self_aoe",
-        "effects": [{"t": "damage", "mult": 2.4, "kind": "power"}, {"t": "status", "id": "stun", "dur": 2.0}, {"t": "interrupt"}], "desc": "Slam the ground: damage and stun everything around."},
+        "effects": [{"t": "damage", "mult": 2.4, "kind": "power"}, {"t": "status", "id": "stun", "dur": 2.0}], "desc": "Slam the ground: damage and stun everything around."},
     # --- rogue (focus)
     "quick_slash": {"name": "Quick Slash", "class": "class.rogue", "cost": 25, "combo": 1, "cd": 6.0, "cast": 0.0, "range": 60.0, "target": "enemy",
         "effects": [{"t": "damage", "mult": 1.9, "kind": "power"}], "desc": "One heavy strike on a nearby enemy."},
@@ -99,9 +107,11 @@ const SKILLS := {
     "fan_of_knives": {"name": "Fan of Knives", "class": "class.rogue", "cost": 50, "cd": 14.0, "cast": 0.0, "range": 110.0, "target": "self_aoe",
         "effects": [{"t": "damage", "mult": 1.1, "kind": "power"}, {"t": "status", "id": "bleed", "dur": 4.0, "mult": 0.15}], "desc": "Knives in every direction; everything bleeds."},
     "kidney_shot": {"name": "Kidney Shot", "class": "class.rogue", "cost": 25, "finisher": true, "cd": 16.0, "cast": 0.0, "range": 60.0, "target": "enemy",
-        "effects": [{"t": "status", "id": "stun", "dur": 2.0}, {"t": "interrupt"}], "desc": "Finisher: stun a foe (longer with more combo points)."},
+        "effects": [{"t": "status", "id": "stun", "dur": 2.0}], "desc": "Finisher: stun a foe (longer with more combo points)."},
     "eviscerate": {"name": "Eviscerate", "class": "class.rogue", "cost": 35, "finisher": true, "cd": 10.0, "cast": 0.0, "range": 60.0, "target": "enemy",
         "effects": [{"t": "damage", "mult": 2.2, "kind": "power"}], "desc": "Finisher: one brutal strike, stronger with every combo point."},
+    "ambush": {"name": "Ambush", "class": "class.rogue", "cost": 30, "combo": 1, "cd": 14.0, "cast": 0.0, "range": 200.0, "target": "enemy",
+        "effects": [{"t": "dash"}, {"t": "damage", "mult": 0.9, "kind": "power"}, {"t": "interrupt"}], "desc": "Leap on a foe and cut its cast short."},
     # --- archer (concentration)
     "rapid_shot": {"name": "Rapid Shot", "class": "class.archer", "cost": 25, "cd": 7.0, "cast": 0.0, "range": 220.0, "target": "enemy",
         "effects": [{"t": "damage", "mult": 1.8, "kind": "power"}], "desc": "Swift double shot from distance."},
@@ -110,15 +120,17 @@ const SKILLS := {
     "volley": {"name": "Volley", "class": "class.archer", "cost": 40, "cd": 14.0, "cast": 0.5, "range": 240.0, "target": "target_aoe", "radius": 75.0,
         "effects": [{"t": "damage", "mult": 1.1, "kind": "power"}], "desc": "Arrows rain on a group (short aim)."},
     "hunters_mark": {"name": "Hunter's Mark", "class": "class.archer", "cost": 20, "cd": 15.0, "cast": 0.0, "range": 260.0, "target": "enemy",
-        "effects": [{"t": "status", "id": "marked", "dur": 8.0}], "desc": "The target takes 25% more damage from everyone."},
+        "effects": [{"t": "status", "id": "marked", "dur": 8.0}], "desc": "Reveals the target through the fog; the whole squad deals it 15% more damage."},
     "bear_trap": {"name": "Bear Trap", "class": "class.archer", "cost": 35, "cd": 20.0, "cast": 0.0, "range": 0.0, "target": "self",
         "effects": [{"t": "zone", "radius": 50.0, "dur": 15.0, "status": "root", "sdur": 2.5, "foes": true, "once": true}], "desc": "A trap at your feet roots the first foes that step in."},
     "piercing_shot": {"name": "Piercing Shot", "class": "class.archer", "cost": 45, "cd": 12.0, "cast": 0.4, "range": 260.0, "target": "enemy",
         "effects": [{"t": "damage", "mult": 2.6, "kind": "true"}], "desc": "Ignores armor."},
     "concussive_shot": {"name": "Concussive Shot", "class": "class.archer", "cost": 30, "cd": 14.0, "cast": 0.0, "range": 220.0, "target": "enemy",
-        "effects": [{"t": "knockback", "dist": 60.0}, {"t": "interrupt"}, {"t": "status", "id": "slow", "dur": 3.0}], "desc": "Knock a foe back and break its wind-up."},
+        "effects": [{"t": "knockback", "dist": 60.0}, {"t": "status", "id": "slow", "dur": 3.0}], "desc": "Knock a foe back and slow it."},
     "rain_of_arrows": {"name": "Rain of Arrows", "class": "class.archer", "cost": 80, "cd": 30.0, "cast": 1.0, "range": 260.0, "target": "target_aoe", "radius": 120.0,
         "effects": [{"t": "damage", "mult": 2.2, "kind": "power"}, {"t": "status", "id": "slow", "dur": 3.0}], "desc": "A storm of arrows over a wide area."},
+    "interrupt_shot": {"name": "Interrupting Shot", "class": "class.archer", "cost": 25, "cd": 12.0, "cast": 0.0, "range": 240.0, "target": "enemy",
+        "effects": [{"t": "damage", "mult": 0.6, "kind": "power"}, {"t": "interrupt"}], "desc": "A quick arrow that cuts a foe's cast short."},
     # --- cleric (mana)
     "heal": {"name": "Heal", "class": "class.cleric", "cost": 20, "cd": 4.0, "cast": 0.6, "range": 200.0, "target": "ally_low",
         "effects": [{"t": "heal", "mult": 3.0}], "desc": "Heal the most wounded ally in range."},
@@ -133,7 +145,7 @@ const SKILLS := {
     "sanctuary": {"name": "Sanctuary", "class": "class.cleric", "cost": 50, "cd": 30.0, "cast": 0.8, "range": 0.0, "target": "self",
         "effects": [{"t": "zone", "radius": 110.0, "dur": 8.0, "status": "regen", "sdur": 1.0, "foes": false}], "desc": "Holy ground: allies inside regenerate."},
     "judgement": {"name": "Judgement", "class": "class.cleric", "cost": 30, "cd": 15.0, "cast": 0.0, "range": 200.0, "target": "enemy",
-        "effects": [{"t": "damage", "mult": 1.2, "kind": "magical"}, {"t": "status", "id": "stun", "dur": 1.2}, {"t": "interrupt"}], "desc": "Stun a foe with holy force."},
+        "effects": [{"t": "damage", "mult": 1.2, "kind": "magical"}, {"t": "status", "id": "stun", "dur": 1.2}], "desc": "Stun a foe with holy force."},
     "mass_heal": {"name": "Mass Heal", "class": "class.cleric", "cost": 70, "cd": 35.0, "cast": 1.2, "range": 0.0, "target": "self",
         "effects": [{"t": "allies", "radius": 260.0, "inner": [{"t": "heal", "mult": 2.5}, {"t": "cleanse"}]}], "desc": "A long prayer that heals and cleanses the whole squad."},
     # --- mage (mana)
@@ -152,7 +164,9 @@ const SKILLS := {
     "meteor": {"name": "Meteor", "class": "class.mage", "cost": 70, "cd": 30.0, "cast": 1.5, "range": 260.0, "target": "target_aoe", "radius": 110.0,
         "effects": [{"t": "damage", "mult": 3.2, "kind": "magical"}, {"t": "status", "id": "stun", "dur": 1.0}], "desc": "A long cast, a devastating impact."},
     "arcane_torrent": {"name": "Arcane Torrent", "class": "class.mage", "cost": 50, "cd": 16.0, "cast": 0.8, "range": 230.0, "target": "enemy",
-        "effects": [{"t": "damage", "mult": 2.8, "kind": "magical"}, {"t": "interrupt"}], "desc": "A raw blast that also breaks a wind-up."},
+        "effects": [{"t": "damage", "mult": 2.8, "kind": "magical"}], "desc": "A raw blast of arcane force."},
+    "counterspell": {"name": "Counterspell", "class": "class.mage", "cost": 20, "cd": 14.0, "cast": 0.0, "range": 230.0, "target": "enemy",
+        "effects": [{"t": "damage", "mult": 0.4, "kind": "magical"}, {"t": "interrupt"}], "desc": "Unravel a foe's spell while it is being cast."},
 }
 
 
@@ -184,7 +198,8 @@ static func resource_of(class_id: String) -> String:
     return String(CLASS_RESOURCE.get(class_id, "none"))
 
 
-## D-044: the starting active, picked with the hero's seed from the class pool (separate RNG,
+## D-044 (superseded by D-142: new heroes start with no active; kept for old callers and the creator's
+## preview): the class active a seed would have picked from the class pool (separate RNG,
 ## so the rest of the hero generation is untouched).
 static func starter_for(class_id: String, hero_seed: int) -> String:
     var pool: Array = KITS.get(class_id, KITS["class.none"])["start"]
@@ -208,14 +223,14 @@ static func level_choices(class_id: String, known: Array, level: int, hero_seed:
     return out
 
 
-## D-090: the levels that bring a skill choice (2, 5, then every CHOICE_EVERY up to CHOICE_MAX_LEVEL).
+## D-142: the levels that bring a skill choice (2, 5 and 10: W, E and R).
 static func choice_levels() -> Array:
-    var out: Array = CHOICE_FIRST.duplicate()
-    var lv: int = CHOICE_EVERY * 2
-    while lv <= CHOICE_MAX_LEVEL:
-        out.append(lv)
-        lv += CHOICE_EVERY
-    return out
+    return CHOICE_LEVELS.duplicate()
+
+
+## D-142: the F action of a class ({} = the common lift of D-082).
+static func f_action(class_id: String) -> Dictionary:
+    return F_ACTIONS.get(class_id, {})
 
 
 static func is_finisher(id: String) -> bool:

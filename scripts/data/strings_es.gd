@@ -147,7 +147,7 @@ const ES := {
     "Quick Slash": "Tajo rápido", "One heavy strike on a nearby enemy.": "Un golpe fuerte a un enemigo cercano.", "Rapid Shot": "Disparo rápido",
     "Swift double shot from distance.": "Doble disparo veloz a distancia.", "Second Breath": "Segundo aliento", "Recover 25% of max HP.": "Recupera el 25 % de la vida máxima.",
     "Shadow Step": "Paso sombrío", "Vanish and strike a distant enemy (great on archers).": "Desaparece y golpea a un enemigo lejano (ideal contra arqueros).", "Shield Bash": "Golpe de escudo",
-    "Stun a foe and break its wind-up.": "Aturde a un enemigo y corta su carga.", "Shove": "Empujón", "Push a foe away and break its wind-up.": "Aparta a un enemigo y corta su carga.",
+    "Stun a foe.": "Aturde a un enemigo.", "Shove": "Empujón", "Push a foe away.": "Aparta a un enemigo.",
     "Smite": "Castigo", "Holy light burns a foe (magic).": "La luz sagrada quema a un enemigo (magia).", "Snare Shot": "Disparo trampa",
     "Pin a charging foe in place.": "Inmoviliza a un enemigo que carga.", "Volley": "Andanada", "Arrows rain on a group (short aim).": "Llueven flechas sobre un grupo (apuntado corto).",
     "War Cry": "Grito de guerra", "Enemies nearby attack you instead; gain a shield.": "Los enemigos cercanos te atacan a ti; ganas un escudo.", "Brave": "Valiente",
@@ -304,6 +304,8 @@ static func install(locale: String = "es") -> void:
         t.add_message(String(k), String(ES_PISTA_C[k]))
     for k in ES_UI2:                                  # visual overhaul 2026-11-02 (end of file)
         t.add_message(String(k), String(ES_UI2[k]))
+    for k in ES_D142:                                 # D-142 hero lines and skills (end of file)
+        t.add_message(String(k), String(ES_D142[k]))
     TranslationServer.add_translation(t)
     TranslationServer.set_locale(locale)
 
@@ -316,10 +318,8 @@ const ES_PISTA_A := {
     "Opening": "Apertura", "A rogue's blow on a stunned foe is always a critical hit.": "Un golpe del pícaro a un enemigo aturdido siempre es crítico.",
     "Shatter": "Quebrar", "A physical blow on a frozen foe shatters the ice: x1.5 damage, and the foe is free again.": "Un golpe físico a un enemigo congelado rompe el hielo: daño ×1,5 y el enemigo queda libre.",
     "Safe Sweep": "Barrido seguro", "While a foe is taunted, area damage from the other heroes draws no threat from it.": "Mientras un enemigo está provocado, el daño en área de los demás héroes no le genera amenaza.",
-    "Hunter's Eye": "Ojo del cazador", "A foe marked by an archer stays visible through the fog.": "Un enemigo marcado por el arquero se sigue viendo a través de la niebla.",
-    "Flanking": "Flanqueo", "Two heroes hitting the same foe from opposite sides: +15% critical chance.": "Dos héroes que golpean al mismo enemigo desde lados opuestos: +15 % de crítico.",
-    "Back to Back": "Espalda con espalda", "Two heroes standing together with foes around them lose half the Composure (less panic).": "Dos héroes juntos rodeados de enemigos pierden la mitad de Compostura (menos pánico).",
-    "Shield Wall": "Muro de escudos", "Two warriors side by side catch the shots flying at the heroes behind them (half damage, on the warrior).": "Dos guerreros juntos paran los disparos dirigidos a los héroes de detrás (la mitad del daño, al guerrero).",
+    "Hunter's Eye": "Ojo del cazador", "A foe marked by an archer is revealed through the fog, and the whole squad deals it 15% more damage.": "Un enemigo marcado por el arquero se revela a través de la niebla y todo el grupo le hace un 15 % más de daño.",
+    "Shield Wall": "Muro de escudos",
     "Rivals": "Rivales", "Rivals near each other try to outdo one another: +8% damage.": "Los rivales cerca el uno del otro compiten: +8 % de daño.",
     "Mentor and Apprentice": "Mentor y aprendiz", "An apprentice near a friend 8+ levels higher fights better: +5% critical chance.": "Un aprendiz cerca de un amigo 8+ niveles por encima pelea mejor: +5 % de crítico.",
     "Friends": "Amigos", "Close friends near each other take 8% less damage.": "Los buenos amigos cerca el uno del otro reciben un 8 % menos de daño.",
@@ -388,4 +388,77 @@ const ES_UI2 := {
     "Storage for every resource and the equipment stash. Each level holds more.": "Almacén de todos los recursos y del alijo de equipo. Cada nivel guarda más.",
     "Heroes of 2 stars or more learn one more skill of their class here (a choice, not all of them). Class wings come later.": "Los héroes de 2 estrellas o más aprenden aquí una habilidad más de su clase (a elegir).",
     "A hero at the top level of its star rank can attempt to ascend (promotion) with tower materials. Luck matters; failures make the next try likelier.": "Un héroe en el nivel máximo de su rango puede intentar ascender con materiales de la torre. Hay suerte de por medio; cada fallo hace más probable el siguiente intento.",
+}
+
+
+# --- D-142: hero lines (HeroChatter, AltarDefs.HERO_LINES, say()), new skills, Resurrection ---
+const ES_D142 := {
+    # entering a floor (HeroChatter.ENTRY_LINES / DEFAULT_ENTRY)
+    "A relic in the depths? Let's carve our way through!": "¿Una reliquia en las profundidades? ¡Abrámonos paso!",
+    "No monster stands between us and the extraction zone.": "Ningún monstruo se interpone entre nosotros y la salida.",
+    "Forward! We seize glory on this floor.": "¡Adelante! En este piso nos ganamos la gloria.",
+    "Quiet... I smell traps. Don't rush blindly into the dark.": "Silencio... huelo trampas. No os lancéis a ciegas a la oscuridad.",
+    "We know the goal is the extraction portal, but let's check every corner first.": "Sabemos que el objetivo es el portal de salida, pero miremos antes cada rincón.",
+    "Stick close together. One wrong step and we're surrounded.": "No os separéis. Un paso en falso y nos rodean.",
+    "I didn't climb this tower for fresh air. Where's the loot?": "No he subido a esta torre a tomar el aire. ¿Dónde está el botín?",
+    "Relic first, gold second. Or both at the exact same time!": "Primero la reliquia, luego el oro. ¡O las dos cosas a la vez!",
+    "Someone better be paying us double for this floor.": "Más vale que alguien nos pague el doble por este piso.",
+    "Hhmpf. Mere pests infest this floor. Watch and learn how it's done.": "Hmpf. Simples alimañas infestan este piso. Mirad y aprended cómo se hace.",
+    "The objective is clear enough. Try not to slow me down.": "El objetivo está bien claro. Procurad no retrasarme.",
+    "Child's play. Let's finish this quickly.": "Un juego de niños. Acabemos rápido.",
+    "Another floor of damp stone and inevitable doom...": "Otro piso de piedra húmeda y perdición inevitable...",
+    "We know the goal, sure... but how many of us walk out alive?": "Sabemos el objetivo, claro... pero ¿cuántos saldremos con vida?",
+    "Don't get too attached to this room. It smells like a tomb.": "No le cojáis cariño a esta sala. Huele a tumba.",
+    "Come on team, we've got this! Let's find that relic!": "¡Vamos, equipo, que podemos! ¡A por esa reliquia!",
+    "Ooh, look at the architecture! Creepy, but exciting!": "¡Oh, mirad qué arquitectura! ¡Siniestra, pero emocionante!",
+    "Eyes up, smiles on! We'll reach the exit in no time!": "¡Ojos abiertos y una sonrisa! ¡Llegaremos a la salida en nada!",
+    "Stop talking and let's start swinging!": "¡Menos hablar y más repartir!",
+    "I see enemies, I hit enemies. Simple plan!": "Veo enemigos, pego a enemigos. ¡Plan sencillo!",
+    "Let's smash through their lines right now!": "¡Rompamos sus filas ahora mismo!",
+    "We need to find the relic and reach the extraction point... but how do we get past them?": "Hay que encontrar la reliquia y llegar a la salida... pero ¿cómo pasamos entre ellos?",
+    "Objective received: secure the artifact and escape. Let's move.": "Objetivo recibido: asegurar el artefacto y escapar. En marcha.",
+    "This tower floor looks dangerous. Stay sharp.": "Este piso de la torre parece peligroso. Atentos.",
+    "Let's move.": "En marcha.",
+    # in town (HeroChatter.TOWN_LINES / TOWN_DEFAULT)
+    "Next floor, I lead the way.": "En el próximo piso, voy yo delante.", "Anyone up for sparring?": "¿Alguien se apunta a entrenar?",
+    "Did you check your gear twice?": "¿Has revisado tu equipo dos veces?", "Quiet days are the best days.": "Los días tranquilos son los mejores.",
+    "Heard the tower hides gold...": "Dicen que la torre esconde oro...", "Who owes me coins again?": "¿Quién me debía monedas?",
+    "Watch and learn.": "Mira y aprende.", "This town needs a statue. Of me.": "Este pueblo necesita una estatua. Mía.",
+    "The forest was too quiet.": "El bosque estaba demasiado tranquilo.", "Enjoy the sun while it lasts.": "Disfruta del sol mientras dure.",
+    "What a lovely day!": "¡Qué día tan bonito!", "Let's grab food at the tavern!": "¡Vamos a comer algo a la taberna!",
+    "I'm bored. Where's the fight?": "Me aburro. ¿Dónde está la pelea?", "Those goblins won't know what hit them.": "Esos goblins no sabrán ni qué les ha golpeado.",
+    "Are you hurt? Let me see.": "¿Estás herido? Déjame ver.", "Rest well, friend.": "Descansa bien, amigo.",
+    "What's behind the tower gate?": "¿Qué habrá tras la puerta de la torre?", "I found a strange mushroom!": "¡He encontrado una seta rara!",
+    "Five more minutes...": "Cinco minutitos más...", "Is it lunch yet?": "¿Ya es la hora de comer?",
+    "Nice weather.": "Hace buen tiempo.", "How was the last floor?": "¿Qué tal el último piso?",
+    "I could use a drink.": "No me vendría mal un trago.", "The blacksmith is busy today.": "El herrero está ocupado hoy.",
+    # answers to pings (HeroChatter.PING_REPLIES / PING_REFUSALS / PING_TRAIT_LINES)
+    "Coming!": "¡Voy!", "On my way.": "De camino.", "Right behind you.": "Justo detrás de ti.",
+    "On it!": "¡Entendido!", "Target sighted.": "Objetivo a la vista.", "Going in!": "¡Allá voy!",
+    "I'll hold here.": "Aguanto aquí.", "Nobody gets past.": "Aquí no pasa nadie.", "Holding.": "Resistiendo.",
+    "I'll take a look.": "Echaré un vistazo.", "Scouting ahead.": "Exploro por delante.", "Let's see...": "A ver...",
+    "I'll grab it.": "Lo cojo yo.", "Gathering.": "Recolectando.", "Mine!": "¡Mío!",
+    "Falling back!": "¡Me repliego!", "Pulling out!": "¡Me retiro!", "Careful!": "¡Cuidado!",
+    "I see it.": "Lo veo.", "Marked.": "Marcado.", "Got eyes on it.": "Lo tengo a la vista.",
+    "I've got them!": "¡Ya lo tengo!", "Coming to help!": "¡Voy a ayudar!",
+    "Moving.": "Me muevo.", "Going.": "Voy.", "Right.": "Vale.",
+    "Not now!": "¡Ahora no!", "I don't take orders like that.": "Así no acepto órdenes.", "Hmph.": "Hmpf.", "Stop shouting at me.": "Deja de gritarme.",
+    "Run? Never!": "¿Huir? ¡Jamás!", "Finally!": "¡Por fin!", "Not while I can swing!": "¡No mientras pueda dar golpes!", "Let me at them!": "¡Dejadme a mí!",
+    "...if you say so.": "...si tú lo dices.", "I knew it!": "¡Lo sabía!", "Always at your side.": "Siempre a tu lado.",
+    "I won't leave anyone!": "¡No dejaré a nadie atrás!", "Do I have to?": "¿Tengo que hacerlo?",
+    # the Baron's altar (AltarDefs.HERO_LINES)
+    "That light isn't coming from him...": "Esa luz no sale de él...",
+    "The stone over there is glowing with him. Look!": "La piedra de allí brilla con él. ¡Mirad!",
+    "Nothing touches him. Something else keeps him whole.": "Nada le hace daño. Algo más lo mantiene entero.",
+    "Then we break whatever shields him!": "¡Pues rompamos lo que lo protege!",
+    # skills (D-142)
+    "Ambush": "Emboscada", "Leap on a foe and cut its cast short.": "Salta sobre un enemigo y corta su lanzamiento.",
+    "Interrupting Shot": "Disparo de interrupción", "A quick arrow that cuts a foe's cast short.": "Una flecha rápida que corta el lanzamiento de un enemigo.",
+    "Counterspell": "Contrahechizo", "Unravel a foe's spell while it is being cast.": "Deshace el hechizo de un enemigo mientras lo lanza.",
+    "Knock a foe back and slow it.": "Empuja a un enemigo y lo ralentiza.", "A raw blast of arcane force.": "Una descarga pura de fuerza arcana.",
+    "Reveals the target through the fog; the whole squad deals it 15% more damage.": "Revela al objetivo en la niebla; todo el grupo le hace un 15 % más de daño.",
+    "Heals itself a lot: interrupt it.": "Se cura mucho: interrúmpelo.",
+    "Resurrection": "Resurrección", "Resurrection!": "¡Resurrección!", "Hold F: %s": "Mantén F: %s",
+    "F next to a fallen ally: a 4 s prayer lifts them (a hit breaks it).": "F junto a un aliado caído: una plegaria de 4 s lo levanta (un golpe la corta).",
+    "Skills: Q is the basic attack; choose W, E and R at levels 2, 5 and 10.": "Habilidades: Q es el ataque básico; W, E y R se eligen en los niveles 2, 5 y 10.",
 }

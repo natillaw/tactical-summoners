@@ -81,18 +81,29 @@ func _ready() -> void:
     h.statuses.clear()
     h.hp = h.max_hp
 
-    # --- interrupts (D-042) ----------------------------------------------------------------
+    # --- interrupts (D-142: only Ambush, Interrupting Shot and Counterspell) -------------------
+    var with_interrupt: Array = SkillDefs.SKILLS.keys().filter(func(id): return (SkillDefs.SKILLS[id]["effects"] as Array).any(func(e): return String(e["t"]) == "interrupt"))
+    with_interrupt.sort()
+    var expected: Array = SkillDefs.INTERRUPTERS.duplicate()
+    expected.sort()
+    check(with_interrupt == expected, "only %s interrupt casts %s" % [str(expected), str(with_interrupt)])
     _fresh(e1, base + Vector2(40, 0))
     e1.state = SandboxEnemy.State.WINDUP
     e1._timer = 0.5
     _give(h, "shield_bash")
-    check(h.use_skill_slot(0, foes, squad) and e1.state == SandboxEnemy.State.RECOVER and e1.has_status("stun"), "Shield Bash stuns and breaks the wind-up")
+    check(h.use_skill_slot(0, foes, squad) and e1.state == SandboxEnemy.State.WINDUP and e1.has_status("stun"), "Shield Bash stuns but no longer breaks the wind-up")
     _fresh(e1, base + Vector2(40, 0))
     e1.state = SandboxEnemy.State.WINDUP
     e1._timer = 0.5
     e1.apply_status("stun", 1.0)
     e1.tick(0.05, squad, map)
-    check(e1.state == SandboxEnemy.State.RECOVER, "a stun breaks an enemy wind-up")
+    check(e1.state == SandboxEnemy.State.WINDUP and is_equal_approx(e1._timer, 0.5), "a stun pauses an enemy wind-up instead of breaking it")
+    for sid in ["ambush", "interrupt_shot", "counterspell"]:
+        _fresh(e1, base + Vector2(40, 0))
+        e1.state = SandboxEnemy.State.WINDUP
+        e1._timer = 0.5
+        _give(h, sid)
+        check(h.use_skill_slot(0, foes, squad) and e1.state == SandboxEnemy.State.RECOVER, "%s breaks the wind-up" % sid)
     _fresh(e1, base + Vector2(40, 0))
     e1.apply_status("slow", 3.0)
     e1.state = SandboxEnemy.State.WINDUP
@@ -275,12 +286,14 @@ func _ready() -> void:
             starters["nondeterministic"] = true
     check(starters.size() >= 2 and starters.keys().all(func(x): return (SkillDefs.KITS["class.warrior"]["start"] as Array).has(x)), "starters are deterministic per seed and vary within the class pool (D-044)")
     var hd := HeroGenerator.generate(424242, 3)
-    check(hd.skills.size() == 1 and hd.loadout == hd.skills and hd.skill_choices.is_empty(), "a new hero is born with exactly one active (D-043)")
+    check(hd.skills.is_empty() and hd.loadout.is_empty() and hd.skill_choices.is_empty(), "a new hero is born with only Q, no active (D-142)")
+    check(SkillDefs.choice_levels() == [2, 5, 10] and SkillDefs.MAX_SLOTS == 3, "choices at levels 2, 5 and 10 for W, E and R: 4 actives at most (D-142)")
     hd.hero_class = "class.warrior"
     hd.skills.clear()
     hd.loadout.clear()
     hd.ensure_skills()
-    check(hd.skills.size() == 1 and String(SkillDefs.info(hd.skills[0])["class"]) == "class.warrior", "a hero with a new class learns that class's starter")
+    check(hd.skills.is_empty(), "a hero with a new class gets no starter either (D-142)")
+    hd.learn_skill("cleave", false)
     hd.level = 4
     hd.xp = 0
     while hd.level < 5:
@@ -303,7 +316,7 @@ func _ready() -> void:
     old.erase("skill_choices")
     old["level"] = 12
     var mig := HeroData.from_dict(JSON.parse_string(JSON.stringify(old)))
-    check(mig.skills.size() == 1 and mig.skill_choices.size() == 3, "v7 hero migrates: starter skill + pending choices for levels 2, 5 and 10 (D-090)")
+    check(mig.skills.is_empty() and mig.skill_choices.size() == 3, "v7 hero migrates: pending choices for levels 2, 5 and 10 (D-142)")
     check(mig.trust == hd.trust and mig.traits == hd.traits and mig.hero_name == hd.hero_name, "migration does not reroll the hero (D-004)")
 
     # --- skill books, Library, save v8 (D-046) --------------------------------------------------
