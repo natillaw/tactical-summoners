@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="JuiceProfile" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/juice_profile.gd" id="1_jps3v"]
+
+[resource]
+script = ExtResource("1_jps3v")
+id = "skill.eviscerate"
+particles = Color(1, 0.92, 0.6, 1)
+extra = Color(0.85, 0.15, 0.15, 1)
+amount = 10
+kick = 3
+recoil = 1
+sound = "hit_heavy"
+heavy = true

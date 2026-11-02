@@ -60,7 +60,7 @@ func _ready() -> void:
     for n in main.find_children("*", "", true, false):
         if n is SandboxScreen:
             sb = n
-    check(sb != null and sb._hud != null and sb._hud._party.size() == sb.heroes.size() and sb._hud._skills.size() == 4, "the HUD shows the party and Q W E R")
+    check(sb != null and sb._hud != null and sb._hud._frames != null and sb._hud._frames.get_child_count() == sb.heroes.size() and sb._hud._skills.size() == 4, "the HUD shows the party (D-111 frames) and Q W E R")
     _key(sb, KEY_2)
     check(sb.heroes[1].is_controlled(), "key 2 drives hero 2")
     sb.heroes[1]._cooldown = 0.0

@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="JuiceProfile" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/juice_profile.gd" id="1_t7js1"]
+
+[resource]
+script = ExtResource("1_t7js1")
+id = "skill.shove"
+particles = Color(0.72, 0.62, 0.48, 1)
+amount = 6
+kick = 3

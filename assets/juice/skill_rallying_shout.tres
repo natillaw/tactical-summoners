@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="JuiceProfile" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/juice_profile.gd" id="1_44k5p"]
+
+[resource]
+script = ExtResource("1_44k5p")
+id = "skill.rallying_shout"
+particles = Color(1, 0.75, 0.4, 1)
+rise = true
+kick = 0

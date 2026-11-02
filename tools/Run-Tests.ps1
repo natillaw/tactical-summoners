@@ -57,6 +57,7 @@ $suites = @(
   @{ name = "master";        args = @("res://tests/smoke_master.tscn", "--quit-after", "3000");        ok = "ALL PASSED" },
   @{ name = "combat ai";     args = @("res://tests/smoke_ai.tscn");                                    ok = "ALL PASSED" },
   @{ name = "bots";          args = @("res://tests/smoke_bots.tscn");                                  ok = "ALL PASSED" },
+  @{ name = "juice";         args = @("res://tests/smoke_juice.tscn", "--quit-after", "3000");        ok = "ALL PASSED" },
   @{ name = "fixes";         args = @("res://tests/smoke_fixes.tscn");                                 ok = "ALL PASSED" },
   @{ name = "sim";           args = @("-s", "res://tools/sim/run_sim.gd", "--", "--config", "tools/sim/configs/test_smoke.json", "--check-determinism", "--quiet"); ok = "ALL PASSED" }
 )
