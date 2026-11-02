@@ -23,6 +23,7 @@ Las pruebas automáticas se ejecutan en GitHub (Godot 4.7.1 Linux) con cada push
 | **v15** | rama `ccr-7d17ca4c-os56aa` | [ZIP de la rama](https://github.com/natillaw/tactical-summoners/archive/refs/heads/ccr-7d17ca4c-os56aa.zip) | **Pase visual (D-141):** árboles/rocas/troncos tapan a los héroes, cámara más cerca, botín con icono y aura de rareza, portal de salida y santuario, nueva pantalla de título (una sola partida), opciones ampliadas, pueblo con barra de recursos, dock con nombres, plaza decorada y héroes con emociones; Construir con imágenes; paneles de edificio; Memorial; inventario; escuadrón sin filas; ficha del héroe con ranuras | Local Godot 4.7.2 Linux: 35/35 suites PASS (tras arreglar `mission`) |
 | **v16** | rama `ccr-8a10e84a-r95vxi` | [ZIP de la rama](https://github.com/natillaw/tactical-summoners/archive/refs/heads/ccr-8a10e84a-r95vxi.zip) | **D-142:** héroes solo con Q y elección de W/E/R en 2, 5 y 10; solo Emboscada, Disparo de interrupción y Contrahechizo cortan lanzamientos (el aturdimiento pausa la carga); Resurrección del clérigo en F (4 s); sin flanqueo, espalda con espalda ni muro de escudos; marca del arquero +15 %; gear por criatura 3 %/20 % y hacha épica fija del jefe del piso 10; frases de héroes en español | **35/35 PASS** — [ejecución](https://github.com/natillaw/tactical-summoners/actions/runs/41493339346) (Godot 4.7.2, CI) |
 | **v17** | rama `ccr-37e545ac-klc1ys` (`4dd15ac`) | [ZIP de la rama](https://github.com/natillaw/tactical-summoners/archive/refs/heads/ccr-37e545ac-klc1ys.zip) | **D-143/D-144:** tiempo (pueblo 20 min = 1 día, torre 20 min = 2 días), sin "Pasar día", 1 obra por constructor; pociones solo de alquimia con CD 5 min y tecla D del Máster; comidas según nivel de cocina; 6 joyas nuevas y 8 trinkets con pasiva por clase; pueblo con cámara en el Máster (clic camina, F entra, Máster visible dentro); crafteo solo por encargo (básicos automáticos) | **35/35 PASS** — [ejecución](https://github.com/natillaw/tactical-summoners/actions/runs/41499142215) (Godot 4.7.2, CI) |
+| **v18** | rama `ccr-8a10e84a-r95vxi` | [ZIP de la rama](https://github.com/natillaw/tactical-summoners/archive/refs/heads/ccr-8a10e84a-r95vxi.zip) | **D-145:** telegrafías en cono, línea y círculo; bolas de fuego, flechas y meteoros visibles al soltarse; juice propio de ataques enemigos; barras de vida de criaturas con estela | **35/35 PASS** — [ejecución](https://github.com/natillaw/tactical-summoners/actions/runs/41496667638) |
 
 ## Qué probar a mano en cada versión (en Windows, con el editor o F5)
 ### v1 (estado original, como referencia)
@@ -37,6 +38,10 @@ Las pruebas automáticas se ejecutan en GitHub (Godot 4.7.1 Linux) con cada push
 5. Cocina nivel 3: aparece el caldo de hueso; nivel 4, el festín.
 6. Joyería: nuevas joyas y runas; el tooltip de una runa muestra su pasiva y su clase.
 7. Dos obras a la vez con un solo constructor: la segunda se rechaza.
+### v18 (D-145)
+1. Piso con brutos: su golpe marca un cono delante; el Slam un cono grande. Arqueros: una línea; magos bandidos: círculo y bola de fuego que vuela.
+2. Al terminar la marca se ve la skill (flecha, bola, meteoro) y el daño llega al impactar.
+3. Barra de vida de una criatura: baja de golpe y la parte blanca se vacía después.
 
 ### v16 (D-142)
 1. Crea o invoca un héroe nuevo: en la ficha (Skills) no tiene activas, solo Q. Súbelo a nivel 2, 5 y 10: cada vez elige 1 de 3; a partir del 10 no hay más elecciones.

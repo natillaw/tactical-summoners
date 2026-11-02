@@ -9,7 +9,7 @@ LOG=tools/last_test_run.txt
 echo "Godot: $GODOT ($("$GODOT" --version 2>/dev/null))  $(date '+%Y-%m-%d %H:%M')" > "$LOG"
 
 echo "=== import" | tee -a "$LOG"
-timeout 300 "$GODOT" --headless --path . --import > tools/import_log.txt 2>&1
+timeout 900 "$GODOT" --headless --path . --import > tools/import_log.txt 2>&1
 grep -E "ERROR|Parse Error|SCRIPT ERROR" tools/import_log.txt | head -40 | tee -a "$LOG"
 
 suites=(
