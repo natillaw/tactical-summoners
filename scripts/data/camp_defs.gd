@@ -1,6 +1,6 @@
 class_name CampDefs
 extends RefCounted
-## D-090 camp. Heroes do not regenerate out of combat: to recover in the tower the squad camps. The Master
+## D-090 camp. Health does not regenerate out of combat and mana only slowly: to recover fully in the tower the squad camps. The Master
 ## pings "Camp here" (wheel): it needs a camp kit, no awake creature within SAFE_RADIUS, and lasts DURATION s.
 ## Every hero within GATHER_RADIUS of the fire when it ends eats its own meal (one FOOD_ID from its bag): back
 ## to full health and mana + "well fed" for FED_TIME s; without a meal only NO_FOOD share. The fire draws
