@@ -5,9 +5,8 @@ var _content: Control
 var _currency: Label
 var _bar: Control
 
-## Screens with their own header or HUD hide the global currency bar (2026-11-02: it doubled the town bar
-## and covered the title and the expedition HUD).
-const NO_BAR := ["title", "town", "sandbox", "master", "master_edit", "game_over", "welcome", "memorial", "inventory"]
+## 2026-11-02: every screen has its own header or HUD, so the global currency bar stays hidden (it doubled
+## the town bar and covered the title and the expedition HUD).
 
 
 func _ready() -> void:
@@ -167,7 +166,5 @@ func _show_screen_now(screen: String, arg: int = 0) -> void:
             s = town
     _content.add_child(s)
     UIKit.fill(s)
-    var town_like := not ["summon", "roster", "party", "memorial", "sandbox", "hq", "title", "inventory", "master",
-        "master_edit", "game_over", "welcome", "menu"].has(screen)
-    _bar.visible = not (NO_BAR.has(screen) or town_like)
+    _bar.visible = false                         # every screen has its own header now (2026-11-02)
     _content.offset_top = 22 if _bar.visible else 0
