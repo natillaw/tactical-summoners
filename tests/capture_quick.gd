@@ -100,6 +100,18 @@ func _shots_screens() -> void:
         await _shot("panel_" + b, 0.6)
 
 
+func _shots_gate() -> void:
+    _main.call("show_screen", "town", 0)
+    await get_tree().create_timer(1.5).timeout
+    _find("TownScreen").call("select_building", "tower_gate")
+    await _shot("tower_gate", 0.8)
+
+
+func _shots_wilds() -> void:
+    _main.call("show_screen", "sandbox", -1)
+    await _shot("wilds", 3.0)
+
+
 func _shots_options() -> void:
     _main.call("show_screen", "title", 0)
     await get_tree().create_timer(0.5).timeout

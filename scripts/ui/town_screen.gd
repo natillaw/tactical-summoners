@@ -881,38 +881,111 @@ func _on_transcribe(id: String, class_id: String) -> void:
     _show_panel(id)
 
 
+## 2026-11-02 (owner: "pésima interfaz"): the tower gate lists floors as cards: a medallion with the floor
+## number, the name, the mission with its icon, difficulty pips, squad size and the risk in its colour.
+const MISSION_ICON := {"combat": 3, "exploration": "Icon43_1", "defense": 152, "escape": 226, "boss": 179,
+    "retrieval": 255, "rescue": "Icon60_1", "survival": 302, "sabotage": 294}
+const DIFF_PIPS := {"Tutorial": 1, "Easy": 2, "Normal": 3, "Hard": 4, "Very hard": 5, "Boss": 5}
+
+
+func _icon_tex(ref) -> Texture2D:
+    var path := (RPG % int(ref)) if ref is int else (UIC % String(ref))
+    return load(path) if ResourceLoader.exists(path) else null
+
+
+func _floor_card(f: int, title: String, line2: String, mission: String, pips: int, cb: Callable, special: bool = false) -> Button:
+    var b := Button.new()
+    b.custom_minimum_size = Vector2(200, 40)
+    b.focus_mode = Control.FOCUS_NONE
+    var base := Color(0.1, 0.16, 0.1) if special else Color(0.12, 0.09, 0.07)
+    b.add_theme_stylebox_override("normal", UIKit.box(base, ArtPalette.PANEL_RIM, 1, 0, 2))
+    b.add_theme_stylebox_override("hover", UIKit.box(base.lightened(0.1), ArtPalette.GOLD[3], 1, 0, 2))
+    b.add_theme_stylebox_override("pressed", UIKit.box(base.lightened(0.15), ArtPalette.GOLD[3], 1, 0, 2))
+    b.pressed.connect(cb)
+    b.mouse_entered.connect(func(): UIKit.sound("hover"))
+    UIKit.react(b)
+    var med := Panel.new()                                     # the floor medallion
+    med.add_theme_stylebox_override("panel", UIKit.box(Color(0.2, 0.14, 0.3) if not special else Color(0.15, 0.3, 0.15), ArtPalette.GOLD[3], 1, 0, 0))
+    med.position = Vector2(3, 4)
+    med.size = Vector2(32, 32)
+    med.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    b.add_child(med)
+    var num := UIKit.label("W" if special else ("·" if f == 0 else str(f)), 20, ArtPalette.GOLD[3])
+    num.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    num.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+    num.size = Vector2(32, 32)
+    num.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    med.add_child(num)
+    var t := UIKit.label(title, 14, UIKit.TEXT)
+    t.position = Vector2(40, 1)
+    t.size = Vector2(118, 16)
+    t.clip_text = true
+    t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    b.add_child(t)
+    var mi := TextureRect.new()
+    mi.texture = _icon_tex(MISSION_ICON.get(mission, 3))
+    mi.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    mi.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    mi.position = Vector2(40, 20)
+    mi.size = Vector2(16, 16)
+    mi.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    b.add_child(mi)
+    var l2 := UIKit.label(line2, 12, UIKit.MUTED)
+    l2.position = Vector2(58, 20)
+    l2.size = Vector2(136, 14)
+    l2.clip_text = true
+    l2.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    b.add_child(l2)
+    for i in 5:                                                 # difficulty pips
+        var pip := ColorRect.new()
+        pip.color = Color(0.9, 0.35, 0.3) if i < pips else Color(0.25, 0.2, 0.18)
+        pip.position = Vector2(162 + i * 6, 6)
+        pip.size = Vector2(5, 5)
+        pip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        b.add_child(pip)
+    return b
+
+
 func _add_tower_buttons() -> void:
     # D-066: the repeatable Wilds (the town's materials) and the tower (gear and rarities), gated by the Hall
     var tier := Game.wilds_tier()
     var wcfg := DungeonDefs.config(tier)
-    var wilds := UIKit.button("%s  ·  repeatable  ·  materials" % String(wcfg["name"]), func(): enter_floor(-tier), Vector2(320, 38))
-    wilds.focus_mode = Control.FOCUS_NONE
-    wilds.alignment = HORIZONTAL_ALIGNMENT_LEFT
+    _section("Outside the tower")
+    var wilds := _floor_card(0, String(wcfg["name"]), tr("repeatable · materials"), "exploration", 0, func(): enter_floor(-tier), true)
     wilds.tooltip_text = "%s\nA new map every run; leave by the entrance (X) to keep what you carry. Half a day passes." % String(wcfg["intro"])
     _panel_box.add_child(wilds)
-    var train := UIKit.button("Training ground (fixed map)", func(): navigate.emit("sandbox", 0), Vector2(300, 38))
-    train.focus_mode = Control.FOCUS_NONE
+    var train := _floor_card(0, tr("Training ground"), tr("fixed map, no risk"), "combat", 0, func(): navigate.emit("sandbox", 0))
     _panel_box.add_child(train)
+    _section("The tower")
     # vertical slice: floors 1-5, each known before entering (mission, difficulty, squad size, what it is)
     for f in range(1, TowerExpedition.SLICE_FLOORS + 1):
         var floor_num := f
         var cfg := TowerExpedition.get_floor_config(f)
         var done := int(Game.tower_cleared.get(str(f), 0))
-        var btn := UIKit.button("%s  ·  %s  ·  %s  ·  %s%s" % [String(cfg["name"]), String(cfg["mission"]).capitalize(), String(cfg["difficulty"]),
-            tr("squad %d") % TowerExpedition.party_max(f), "  ✓" if done > 0 else ""], func(): enter_floor(floor_num), Vector2(320, 32))
-        btn.focus_mode = Control.FOCUS_NONE
-        btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
-        btn.tooltip_text = "%s
-Squad: %d heroes (the first ones of your party go in). Explored: %s" % [String(cfg.get("intro", "")), TowerExpedition.party_max(f),
-            "yes" if Game.floor_explored(f) != "" else "not yet"]
-        _show_risk(btn, f, true)
+        var nm := String(cfg["name"])
+        if nm.contains(": "):
+            nm = nm.split(": ", true, 1)[1]
+        var mission := String(cfg["mission"])
+        var btn := _floor_card(f, nm + ("  ✓" if done > 0 else ""), "%s · %s %d" % [tr(mission.capitalize()), tr("squad"), TowerExpedition.party_max(f)],
+            mission, int(DIFF_PIPS.get(String(cfg["difficulty"]), 3)), func(): enter_floor(floor_num))
+        btn.tooltip_text = "%s · %s\n%s\nSquad: %d heroes (the first ones of your party go in). Explored: %s" % [String(cfg["name"]), tr(String(cfg["difficulty"])), String(cfg.get("intro", "")),
+            TowerExpedition.party_max(f), "yes" if Game.floor_explored(f) != "" else "not yet"]
+        _show_risk(btn, f, false)
+        var r := PowerCalc.floor_risk(f, Game.party_heroes(), Game.hq_outputs, Game.town_buildings)
+        var risk := ColorRect.new()                               # risk stripe on the left edge
+        risk.color = PowerCalc.band_color(String(r["band"]))
+        risk.position = Vector2(0, 2)
+        risk.size = Vector2(2, 36)
+        risk.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        btn.add_child(risk)
         _panel_box.add_child(btn)
     var grid := GridContainer.new()
     grid.columns = 5
+    _panel_box.add_child(UIKit.label("Floors 6-10 (beyond the demo)", 12, UIKit.MUTED))
     _panel_box.add_child(grid)
     for f in range(TowerExpedition.SLICE_FLOORS + 1, 11):
         var floor_num := f
-        var btn := UIKit.button("F%d" % f, func(): enter_floor(floor_num), Vector2(56, 30))
+        var btn := UIKit.button(str(f), func(): enter_floor(floor_num), Vector2(70, 30))
         btn.focus_mode = Control.FOCUS_NONE
         btn.tooltip_text = String(TowerExpedition.get_floor_config(f)["name"]) + " (beyond the demo: not tuned yet)"
         _show_risk(btn, f, false)
