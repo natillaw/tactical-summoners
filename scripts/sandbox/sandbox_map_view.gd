@@ -26,6 +26,8 @@ func _draw() -> void:
 	if not _tried:
 		_tried = true
 		_baked = ForestArt.bake(map, (map as ProceduralMap).seed_value, has_camps(map)) if map is ProceduralMap else MapTiles.bake(map)
+		if _baked != null and map is ProceduralMap:
+			material = Ambience.wind_material(false)      # D-113: canopy sways in gusts (look only)
 	if _baked != null:
 		draw_texture(_baked, Vector2.ZERO)
 	else:

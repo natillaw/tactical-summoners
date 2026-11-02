@@ -7,9 +7,10 @@ extends RefCounted
 
 ## Shake in SCREEN pixels and seconds. Small: a crit or a heavy creature's blow; medium: a big area skill,
 ## a boss blow, a hero going down; large: a hero's permanent death or a major skill.
-const SHAKE := {"small": [2.5, 0.12], "medium": [5.0, 0.22], "large": [8.0, 0.35]}
+## D-110 (pista C): never more than JuiceDefs.MAX_SHAKE (2 px) on screen.
+const SHAKE := {"small": [1.0, 0.12], "medium": [1.5, 0.18], "large": [2.0, 0.25]}
 ## Impact freeze (sprites only) in seconds. Light basic hits get none.
-const FREEZE := {"crit": 0.05, "heavy": 0.07, "boss": 0.09, "death": 0.14}
+const FREEZE := {"crit": 0.04, "heavy": 0.05, "boss": 0.05, "death": 0.05}   # D-110: 0.03-0.05 s
 const SLIDE_TIME := 0.16                 # knock-back: the sprite slides from where it was hit
 const AREA_FLASH_TIME := 0.45
 ## Player accessibility multiplier (0 = no shake). Kept here until there is an options screen.
@@ -21,10 +22,29 @@ static func shake(from: Node, kind: String, dir: Vector2 = Vector2.ZERO) -> void
         return
     if from == null or not from.is_inside_tree() or not SHAKE.has(kind) or shake_scale <= 0.0:
         return
+    if kind == "small" and not shake_allowed(from):
+        return
+    var s: Array = SHAKE[kind]
+    shake_px(from, float(s[0]), float(s[1]), dir)
+
+
+## D-110 filter: a common creature's ordinary blow never shakes the camera (only bosses, crits,
+## finishing blows and heavy skills do). Read only.
+static func shake_allowed(from: Node) -> bool:
+    if from == null or from.get("is_boss") == null:
+        return true                                  # heroes call shake only for crits and skills
+    if from.get("is_boss") == true:
+        return true
+    return String(from.get("casting_skill")) != "" or from.get("alive") == false
+
+
+## Camera shake of `px` screen pixels (capped at JuiceDefs.MAX_SHAKE).
+static func shake_px(from: Node, px: float, duration: float, dir: Vector2 = Vector2.ZERO) -> void:
+    if SimMode.on or from == null or not from.is_inside_tree() or shake_scale <= 0.0:
+        return
     var cam := from.get_viewport().get_camera_2d()
     if cam is FeelCamera:
-        var s: Array = SHAKE[kind]
-        (cam as FeelCamera).add_shake(float(s[0]) * shake_scale, float(s[1]), dir)
+        (cam as FeelCamera).add_shake(minf(px, JuiceDefs.MAX_SHAKE) * shake_scale, duration, dir)
 
 
 ## Holds a sprite's frame (and its pose tween) for a few hundredths of a second. The unit keeps
@@ -47,6 +67,18 @@ static func freeze(sprite: AnimatedSprite2D, kind: String) -> void:
         if tw != null and tw.is_valid():
             tw.play()
     ).set_delay(float(FREEZE[kind]))
+
+
+## D-110: render-only freeze for a given time (0.03-0.05 s from JuiceProfile).
+static func freeze_for(sprite: CanvasItem, seconds: float) -> void:
+    if SimMode.on or not (sprite is AnimatedSprite2D) or not sprite.is_inside_tree() or seconds <= 0.0:
+        return
+    var a := sprite as AnimatedSprite2D
+    a.pause()
+    a.create_tween().tween_callback(func():
+        if not a.is_playing():
+            a.play()
+    ).set_delay(clampf(seconds, JuiceDefs.FREEZE_MIN, JuiceDefs.FREEZE_MAX))
 
 
 ## The unit already moved (rules); its sprite starts at the old spot and slides home.

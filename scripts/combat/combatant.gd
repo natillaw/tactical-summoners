@@ -62,7 +62,7 @@ func take_hit(info: DamageInfo) -> int:
         agony = maxf(0.0, agony - CombatRules.AGONY_HIT_PENALTY)
         return 0
     if iframe_t > 0.0:
-        FloatingText.spawn(self, "Dodged!", Color(0.7, 0.9, 1.0), false, 0.8)
+        FloatingText.spawn(self, "Dodged!", FloatingText.COLORS["miss"], false, 0.8)
         return 0
     if immune:
         FloatingText.spawn(self, "0", Color(0.75, 0.75, 0.85), false, 0.8)
@@ -87,17 +87,14 @@ func take_hit(info: DamageInfo) -> int:
         call("credit", "tanked", float(dmg))               # a hero took a blow for the squad
     if dmg > 0 and info.source != null and is_instance_valid(info.source) and info.source.has_method("credit"):
         set_meta("last_hitter", info.source)
-    # readable at a glance: crits gold and big, damage to heroes red-orange, to foes white, a hit the
-    # shield ate entirely says "block" in shield blue (heals are green, in heal())
-    var col := Color(1, 1, 1)
-    if info.crit:
-        col = Color(1.0, 0.85, 0.2)
-    elif can_be_downed:
-        col = Color(1.0, 0.55, 0.45)
+    # D-112 (pista C): white normal, orange crit, purple damage over time, grey block; big numbers
+    # only for the Master and damage to the party (heals are green, in heal())
     if blocked:
-        FloatingText.spawn(self, "block", Color(0.6, 0.85, 1.0), false)
+        FloatingText.number(self, 0, "miss", false, "block")
     else:
-        FloatingText.spawn(self, str(dmg) + ("!" if info.crit else ""), col, info.crit)
+        var nk := "dot" if info.tags.has("dot") else ("crit" if info.crit else ("party" if can_be_downed else "normal"))
+        FloatingText.number(self, dmg, nk, can_be_downed or _master_involved(info))
+    JuicePlayer.on_hit(self, info, dmg, blocked)      # D-110: presentation only
     _on_hit(info, dmg)
     if hp <= 0:
         if can_be_downed:
@@ -119,7 +116,7 @@ func heal(amount: int) -> int:
     var before := hp
     hp = mini(max_hp, hp + maxi(0, roundi(float(amount) * heal_mult)))
     if hp > before:
-        FloatingText.spawn(self, "+%d" % (hp - before), Color(0.45, 1.0, 0.5), false)
+        FloatingText.number(self, hp - before, "heal", can_be_downed)
     return hp - before
 
 
@@ -166,6 +163,7 @@ func die() -> void:
     hp = 0
     statuses.clear()
     _sync_status_fx()
+    JuicePlayer.on_death(self)            # D-110: death "pop" (look only)
     _on_die()
     died.emit(self)
 
@@ -294,7 +292,9 @@ func tick_combat(delta: float) -> void:
         var dot := String(CombatRules.STATUS[id].get("dot", ""))
         if dot != "" and ticks > 0:
             var src: Node2D = s["src"] if is_instance_valid(s["src"]) else null
-            dots.append(DamageInfo.make(float(s["mag"]) * float(s["stacks"]) * CombatRules.STATUS_TICK * ticks, dot, src))
+            var di := DamageInfo.make(float(s["mag"]) * float(s["stacks"]) * CombatRules.STATUS_TICK * ticks, dot, src)
+            di.tags.append("dot")                 # D-112: shown purple (look only)
+            dots.append(di)
         if CombatRules.STATUS[id].get("hot", false) and ticks > 0:
             hots += float(s["mag"]) * CombatRules.STATUS_TICK * ticks
         if float(s["t"]) <= 0.0:
@@ -326,3 +326,10 @@ func _on_revive() -> void:
 
 func _on_die() -> void:
     pass
+
+
+## D-112: the Master dealt or took this hit (their numbers are the big ones).
+func _master_involved(info: DamageInfo) -> bool:
+    if no_death:
+        return true
+    return info.source != null and is_instance_valid(info.source) and info.source.get("no_death") == true

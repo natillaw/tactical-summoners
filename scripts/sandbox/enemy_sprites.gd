@@ -169,6 +169,7 @@ static func spawn_death(e: Node2D, sprite: AnimatedSprite2D) -> void:
     s.offset = Vector2(-sz.x * 0.5, -sz.y)
     ghost.add_child(s)
     s.play("death")
+    JuicePlayer.pop(s)                    # D-110: death "pop" (squash/stretch + flash) before the fade
     parent.add_child.call_deferred(ghost)
     var t := e.get_tree().create_tween()
     t.tween_interval(1.4)

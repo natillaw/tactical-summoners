@@ -185,6 +185,9 @@ func _ready() -> void:
 	_viewport.add_child(camera)
 	camera.make_current()
 	Ambience.add_particles(camera, Vector2(640, 360))   # phase 8: leaves and fireflies (Options: effects)
+	if not SimMode.on:                           # D-113 (pista C): floating dust, cloud shadows, birds, brake dust
+		Ambience.add_dust(camera, Vector2(640, 360))
+		_world.add_child(WorldLife.create(self, map.world_size(), hash(floor_number) ^ 0x11fe))
 	# Smooth motion on any refresh rate: the rules tick at the physics rate and the world is drawn
 	# interpolated between ticks, and so is the camera (eased in the same tick). The HUD is not. Turned off again when the mission screen closes.
 	physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
@@ -322,6 +325,7 @@ func _spawn_nodes() -> void:
 				amounts[res] = got
 		var g := GatherNode.new(String(n["kind"]), amounts)
 		g.position = map.center_of(n["cell"])
+		g.roll_charges()                             # D-117: 3-6 charges, one per ~5 s cycle
 		_world.add_child(g)
 		nodes.append(g)
 
@@ -332,25 +336,17 @@ func _tick_gathering(delta: float) -> void:
 		if not is_instance_valid(g) or g.taken:
 			continue                                   # gathered spots are freed (crash fix 2026-10-31)
 		g.visible = fog == null or fog.is_explored(map.cell_of(g.position))
-		var who: SandboxHero = null
+		var workers: Array = []
 		for h in heroes:
 			if h.alive and h.target == null and not h.is_casting() and h.position.distance_to(g.position) <= GatherNode.RANGE \
 					and (not h.is_controlled() or not _locked() or interact_held):   # D-082: the Master gathers with F
-				who = h
-				break
-		if who == null:
-			if g.progress > 0.0:
-				g.progress = 0.0
-				g.queue_redraw()
-			continue
-		g.progress += delta
-		g.queue_redraw()
-		if g.progress >= EconomyDefs.GATHER_TIME:
-			g.taken = true
-			for res in g.amounts:
-				_add_loot(String(res), int(g.amounts[res]), who)
-				who.credit("gathered", float(g.amounts[res]))
-			g.queue_free()
+				workers.append(h)
+		var got := g.work(delta, workers)            # D-117: one charge per cycle; the spot fades when empty
+		if not workers.is_empty():
+			var who: SandboxHero = workers[0]
+			for res in got:
+				_add_loot(String(res), int(got[res]), who)
+				who.credit("gathered", float(got[res]))
 	nodes.assign(nodes.filter(func(n): return is_instance_valid(n) and not n.taken))
 
 
@@ -2188,6 +2184,9 @@ func result_text() -> String:
 	return "\n".join(lines)
 
 
+const RESULT_SCROLL := Vector2(300, 150)     # D-116 (pista C): results window fits the 640x360 view
+
+
 func _show_result() -> void:
 	if SimMode.on:
 		return                                   # D-083 headless simulator: the runner reads the result
@@ -2209,7 +2208,7 @@ func _show_result() -> void:
 	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vb.add_child(head)
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(360, 230)
+	scroll.custom_minimum_size = RESULT_SCROLL           # D-116: was 360x230 in a 640x360 view (blocked the screen)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	vb.add_child(scroll)
 	var body := VBoxContainer.new()
@@ -2220,9 +2219,12 @@ func _show_result() -> void:
 		var mvp := ln.begins_with("MVP OF THE EXPEDITION")
 		var l := UIKit.label(ln, 20 if mvp else 14, ArtPalette.GOLD[3] if mvp else (UIKit.ACCENT if ln.begins_with("  *") else UIKit.TEXT))
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		l.custom_minimum_size = Vector2(345, 0)
+		l.custom_minimum_size = Vector2(RESULT_SCROLL.x - 12, 0)
 		body.add_child(l)
-	vb.add_child(UIKit.button("Back to town", func(): back_requested.emit(), Vector2(720, 40)))
+	var back := UIKit.button("Back to town", func(): back_requested.emit(), Vector2(260, 40))
+	back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	vb.add_child(back)
+	UIKit.pop_in(panel)                          # D-116: eased entrance
 	_overlay = center
 
 
