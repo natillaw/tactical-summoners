@@ -20,11 +20,19 @@ Las pruebas automáticas se ejecutan en GitHub (Godot 4.7.1 Linux) con cada push
 | **v12** | rama `ccr-cb2bbfa2-cg889y` | [ZIP de la rama](https://github.com/natillaw/tactical-summoners/archive/refs/heads/ccr-cb2bbfa2-cg889y.zip) | v11 unido a la historia de `main` + **playtest automático de 5 pisos** y arreglos: héroes atrapados (B1), CI en Linux (B2), minimapa (B3), errores de consola (B4), últimos enemigos marcados (B6), nombre del jefe (B7), pistas repartidas, **pisos ~1,7× más grandes** para una primera partida de 10-15 min. Informe: `docs/reports/PLAYTEST_5_FLOORS_REPORT.md` | **25/25 PASS** — [ejecución](https://github.com/natillaw/tactical-summoners/actions/runs/41224031814) (Godot 4.7.2) |
 | **v13** | sin commit (carpeta local `tactical-summoners-v13`, no es repo git) | — | **Balance:** Wilds con packs por rol (tanque+distancia+sanador), IA táctica y callers; jefes de piso 5/10 con mecánicas de raid y enrage; daño por piso +22%/piso; XP lenta (piso normal ≈0,5 nivel, MVP+secreto ≈1); pisos sin bloqueo por edificio; P-29 registrada. Bot: `PT_MATRIX=1 [PT_N PT_PROFILE PT_ONLY PT_CSV]`. Pendiente: LOCO con mejoras gana 100% en Wilds; pisos 1-3 sin diferencia de muertes. | Local Godot 4.7.2: 10 suites ALL PASSED (logs en `tests/out/`) |
 | **v14** | rama local `feat/master-prompt-bandits` (git init local, sin remoto) | — | **Prompt maestro:** bandidos TPF (capas accessory/mask, 8 tipos, Barón ×2), bosque con tileset del dueño + campamentos, loot de pisos (`LootDefs`), party por piso, amenaza, modificadores, escape, Barón Carmesí con altar, expediciones offline, mercader, save v11, simulador. Sabotaje del piso 7 y ritmo de gemas hechos (commit 975f229). Pendiente: mural de pista. | Local Godot 4.7.2: 22 suites ALL PASSED (logs en `tests/out/`) |
+| **v15** | rama `ccr-7d17ca4c-os56aa` | [ZIP de la rama](https://github.com/natillaw/tactical-summoners/archive/refs/heads/ccr-7d17ca4c-os56aa.zip) | **Pase visual (D-141):** árboles/rocas/troncos tapan a los héroes, cámara más cerca, botín con icono y aura de rareza, portal de salida y santuario, nueva pantalla de título (una sola partida), opciones ampliadas, pueblo con barra de recursos, dock con nombres, plaza decorada y héroes con emociones; Construir con imágenes; paneles de edificio; Memorial; inventario; escuadrón sin filas; ficha del héroe con ranuras | Local Godot 4.7.2 Linux: 35/35 suites PASS (tras arreglar `mission`) |
 
 ## Qué probar a mano en cada versión (en Windows, con el editor o F5)
 ### v1 (estado original, como referencia)
 - Al abrir el Sandbox **no aparecen héroes** y sale un error en la consola (F-038, confirmado en GitHub).
 - "Living Headquarters → Explore Base" da error (F-001).
+
+### v15 (D-141)
+1. Título: "Continuar" (o "Comenzar" sin partida); ya no hay "Nueva partida". Opciones → Pantalla → Modo "Pantalla completa". Si juegas con F5 desde el editor, la ventana va incrustada y no puede ir a pantalla completa: usa `tools\Play.ps1` o desactiva "Embed game" en la pestaña Game del editor.
+2. Pueblo: barra de recursos con iconos arriba, botones con nombre abajo; héroes por la plaza (fuente, bancos, emociones).
+3. Construir: tarjetas con imagen. Clic en un dormitorio: camas dibujadas y residentes con cara.
+4. Piso 3: camina detrás de un árbol (debe taparte); mata algo que suelte botín (icono que rebota con aura); la SALIDA es un portal y el santuario una piedra rúnica al lado.
+5. Memorial, Inventario, Escuadrón y la ficha de un héroe (Resumen y Equipo).
 
 ### v13 (D-065, D-066)
 1. Puerta de la Torre: arriba **The Overgrown Wilds** (repetible). Entra: mapa nuevo cada vez, sin misión; recoge (las **cachés doradas** están en las salas lejanas) y vuelve a la entrada con X.
