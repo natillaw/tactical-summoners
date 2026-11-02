@@ -31,7 +31,7 @@ const BASIC := {
     # rogue: quick cuts, small sparks per dagger
     "basic.rogue": {"particles": Color(1.0, 0.92, 0.6), "amount": 3, "spread": 30.0, "speed": 95.0, "kick": 1, "sound": "hit_slash"},
     # archer: splinters where the arrow lands
-    "basic.ranger": {"particles": Color(0.7, 0.52, 0.32), "amount": 4, "spread": 35.0, "speed": 90.0, "kick": 1, "sound": "hit_arrow"},
+    "basic.archer": {"particles": Color(0.7, 0.52, 0.32), "amount": 4, "spread": 35.0, "speed": 90.0, "kick": 1, "sound": "hit_arrow"},
     "basic.mage": {"flash": Color(0.75, 0.6, 1.0), "particles": Color(0.7, 0.5, 1.0), "amount": 5, "kick": 1, "sound": "hit_magic"},
     "basic.cleric": {"flash": Color(1.0, 0.92, 0.6), "particles": Color(1.0, 0.85, 0.35), "amount": 5, "rise": true, "kick": 1, "sound": "hit_holy"},
     "basic.commoner": {"particles": Color(0.8, 0.75, 0.65), "amount": 3, "kick": 1, "sound": "hit_blunt"},
@@ -62,7 +62,7 @@ const SKILL := {
     "fan_of_knives": {"particles": Color(1.0, 0.92, 0.6), "amount": 4, "spread": 160.0, "speed": 120.0, "kick": 1},
     "kidney_shot": {"particles": Color(1.0, 0.92, 0.6), "amount": 5, "kick": 2},
     "eviscerate": {"particles": Color(1.0, 0.92, 0.6), "extra": Color(0.85, 0.15, 0.15), "amount": 10, "kick": 3, "recoil": 1, "heavy": true, "sound": "hit_heavy"},
-    # archer (ranger id until the rename)
+    # archer
     "rapid_shot": {"particles": Color(0.7, 0.52, 0.32), "amount": 3, "spread": 30.0, "speed": 100.0, "kick": 1, "sound": "hit_arrow"},
     "snare_shot": {"particles": Color(0.5, 0.42, 0.3), "amount": 5, "kick": 1, "sound": "hit_arrow"},
     "volley": {"particles": Color(0.7, 0.52, 0.32), "amount": 3, "spread": 60.0, "kick": 1, "sound": "hit_arrow"},

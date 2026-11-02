@@ -12,6 +12,6 @@
     "party": [
         {"master": true, "class": "warrior", "level": 3, "traits": ["stubborn"], "gear": "tier1"},
         {"class": "cleric", "level": 2, "rarity": "rare", "gear": {"preset": "kit_blanco", "items": [{"base": "amulet", "rarity": "uncommon", "ilvl": 2}]}},
-        {"class": "ranger", "level": 1, "stars": 2, "attrs": {"agi": 14}, "gear": "kit_blanco"}
+        {"class": "archer", "level": 1, "stars": 2, "attrs": {"agi": 14}, "gear": "kit_blanco"}
     ]
 }

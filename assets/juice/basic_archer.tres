@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1_yjm83")
-id = "basic.ranger"
+id = "basic.archer"
 particles = Color(0.7, 0.52, 0.32, 1)
 amount = 4
 spread = 35.0

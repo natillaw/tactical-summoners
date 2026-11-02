@@ -21,7 +21,7 @@ func _ready() -> void:
     var rng := RandomNumberGenerator.new()
     rng.seed = 5
     var gear := {"class.warrior": ["kite_shield", "mail", "satchel"], "class.rogue": ["leather_vest", "leather_pants", "leather_cap", "backpack"],
-        "class.ranger": ["recurve", "leather_vest"], "class.mage": ["robe", "cloth_pants", "hood"], "class.cleric": ["bronze_shield", "robe"]}
+        "class.archer": ["recurve", "leather_vest"], "class.mage": ["robe", "cloth_pants", "hood"], "class.cleric": ["bronze_shield", "robe"]}
     for id in Game.heroes:
         var h: HeroData = Game.heroes[id]
         h.level = 12

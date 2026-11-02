@@ -140,7 +140,7 @@ func _ready() -> void:
             archer = h
     if archer == null:
         archer = h0
-        archer.hero.hero_class = "class.ranger"
+        archer.hero.hero_class = "class.archer"
     check(not map.has_line_of_sight(map.center_of(Vector2i(12, 3)), map.center_of(Vector2i(15, 3))), "walls block line of sight")
     check(map.has_line_of_sight(map.center_of(Vector2i(3, 3)), map.center_of(Vector2i(8, 3))), "open ground keeps line of sight")
 

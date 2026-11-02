@@ -16,7 +16,7 @@ Leyenda: **I** implementado (sin ejecutar) · **ID** implementado pero defectuos
 | Generación de héroes | ID | `scripts/core/hero_generator.gd`, `scripts/data/hero_tables.gd` | Misma semilla ≠ mismo héroe que en versiones previas sin subir `VERSION` (F-008) |
 | HeroData + snapshot en guardado | I | `scripts/core/hero_data.gd` | — |
 | Atributos y stats (D-035) | I (v6, probado: `combat core`) | `HeroData.attributes()`, `CombatRules.derive()` | FUE/AGI/VIT/INT/TEM → vida, poderes, armadura, M.RES, velocidad, cadencia, crítico, energía, resistencia a estados |
-| Clases | P | `hero_tables.gd` | Commoner + Warrior/Rogue/Ranger/Cleric/Mage; avanzadas: lista vacía |
+| Clases | P | `hero_tables.gd` | Commoner + Warrior/Rogue/Archer/Cleric/Mage (03b: antes Ranger/Explorador, alias aceptados); avanzadas: lista vacía |
 | Promoción por estrellas + XP por libros | I | `Game.promote/train` | F-007 reparado en v2 (prueba en `test_core`). Escala actual 5★; D-029 pide 7★/70 (Fase 5) |
 | Rasgos (16) y pasivas (16) | P | `hero_tables.gd` | Las pasivas no tienen efecto en juego; texto de turnos (F-016) |
 | Trust/Obedience/Composure + ledger | P | `hero_data.gd` | Composure no cambia nunca; Trust solo con `ally_fell` −2 (F-019) |

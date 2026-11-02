@@ -369,11 +369,11 @@ func _weapons() -> void:
     var r0 := _dps(sb, "class.rogue", 5, 0, 20.0)
     check(float(r8["dps"]) / float(r0["dps"]) < float(w8["dps"]) / float(w0["dps"]),
         "flat armour applies to every blow: daggers keep %.0f %% against armour 8, the sword %.0f %%" % [float(r8["dps"]) / float(r0["dps"]) * 100.0, float(w8["dps"]) / float(w0["dps"]) * 100.0])
-    var ranger := _plain("class.ranger", 5, 77)
-    var rh := SandboxHero.new(ranger, 0)
+    var archer := _plain("class.archer", 5, 77)
+    var rh := SandboxHero.new(archer, 0)
     sb._world.add_child(rh)
-    check(rh.uses_bow() and LpcWardrobe.STARTER_WEAPON_BY_CLASS["class.ranger"] == "weapon_bow" and rh.attack_range() > CombatRules.HERO_RANGED_RANGE,
-        "the ranger carries the plain LPC bow and shoots further (%.0f px > %.0f)" % [rh.attack_range(), CombatRules.HERO_RANGED_RANGE])
+    check(rh.uses_bow() and LpcWardrobe.STARTER_WEAPON_BY_CLASS["class.archer"] == "weapon_bow" and rh.attack_range() > CombatRules.HERO_RANGED_RANGE,
+        "the archer carries the plain LPC bow and shoots further (%.0f px > %.0f)" % [rh.attack_range(), CombatRules.HERO_RANGED_RANGE])
     check(rh.attack_range() <= float(rh.vision_cells() * NavMap.CELL), "the bow never reaches beyond what the hero sees in the fog")
     rh.queue_free()
     sb.queue_free()
@@ -383,7 +383,7 @@ func _weapons() -> void:
 # --- arrows: real projectiles ---------------------------------------------------------------------------
 
 func _shoot_at(sb: SandboxScreen, moving: bool, shots: int) -> Dictionary:
-    var hd := _plain("class.ranger", 5, 4321)
+    var hd := _plain("class.archer", 5, 4321)
     var h := SandboxHero.new(hd, 0)
     var base := sb.map.center_of(sb.map.spawn_cells[0])
     h.position = base
@@ -423,7 +423,7 @@ func _arrows() -> void:
     _clear(sb, [])
     var still := _shoot_at(sb, false, 12)
     var moving := _shoot_at(sb, true, 12)
-    check(bool(still["drawn"]), "the ranger draws the bow (~0.3 s) before every shot")
+    check(bool(still["drawn"]), "the archer draws the bow (~0.3 s) before every shot")
     check(int(still["hit"]) >= int(still["fired"]) * 0.7, "arrows hit a target that stands still (%d / %d)" % [still["hit"], still["fired"]])
     check(int(moving["hit"]) <= int(moving["fired"]) * 0.4, "arrows are not homing: a target moving across the line dodges most (%d / %d hit)" % [moving["hit"], moving["fired"]])
     var shot := ArrowShot.make(Vector2.ZERO, Vector2.RIGHT, 300.0, "arrow")

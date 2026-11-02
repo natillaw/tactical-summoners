@@ -43,7 +43,9 @@ suites=(
   "master|res://tests/smoke_master.tscn --quit-after 3000|ALL PASSED"
   "combat ai|res://tests/smoke_ai.tscn|ALL PASSED"
   "bots|res://tests/smoke_bots.tscn|ALL PASSED"
+  "juice|res://tests/smoke_juice.tscn --quit-after 3000|ALL PASSED"
   "fixes|res://tests/smoke_fixes.tscn|ALL PASSED"
+  "pista a|res://tests/smoke_pista_a.tscn --quit-after 3000|ALL PASSED"
   "loot|res://tests/smoke_loot.tscn|ALL PASSED"
   "sim|-s res://tools/sim/run_sim.gd -- --config tools/sim/configs/test_smoke.json --check-determinism --quiet|ALL PASSED"
 )

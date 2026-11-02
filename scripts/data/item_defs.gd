@@ -33,11 +33,11 @@ const BASES := {
     "greataxe": {"name": "Greataxe", "kind": "weapon", "slot": "main_hand", "two_handed": true, "stats": {"atk": 11}, "classes": ["class.warrior"]},
     "dagger": {"name": "Dagger", "kind": "weapon", "slot": "main_hand", "stats": {"atk": 4, "crit": 0.04}, "classes": ["class.rogue"]},
     "mace": {"name": "Mace", "kind": "weapon", "slot": "main_hand", "stats": {"atk": 5, "mag": 2}, "classes": ["class.cleric", "class.warrior"]},
-    "bow": {"name": "Longbow", "kind": "weapon", "slot": "main_hand", "two_handed": true, "stats": {"atk": 8}, "classes": ["class.ranger"], "visual_base": "bow"},
+    "bow": {"name": "Longbow", "kind": "weapon", "slot": "main_hand", "two_handed": true, "stats": {"atk": 8}, "classes": ["class.archer"], "visual_base": "bow"},
     # D-127: the bows D-082 reserved for items (interval_pct < 0 = slower shots)
-    "recurve": {"name": "Recurve bow", "kind": "weapon", "slot": "main_hand", "two_handed": true, "stats": {"atk": 8, "crit": 0.03}, "classes": ["class.ranger"], "visual_base": "bow"},
-    "longbow": {"name": "Great bow", "kind": "weapon", "slot": "main_hand", "two_handed": true, "stats": {"atk": 11, "interval_pct": -0.08}, "classes": ["class.ranger"], "visual_base": "bow"},
-    "crossbow": {"name": "Crossbow", "kind": "weapon", "slot": "main_hand", "two_handed": true, "stats": {"atk": 13, "interval_pct": -0.15}, "classes": ["class.ranger"], "visual_base": "bow"},
+    "recurve": {"name": "Recurve bow", "kind": "weapon", "slot": "main_hand", "two_handed": true, "stats": {"atk": 8, "crit": 0.03}, "classes": ["class.archer"], "visual_base": "bow"},
+    "longbow": {"name": "Great bow", "kind": "weapon", "slot": "main_hand", "two_handed": true, "stats": {"atk": 11, "interval_pct": -0.08}, "classes": ["class.archer"], "visual_base": "bow"},
+    "crossbow": {"name": "Crossbow", "kind": "weapon", "slot": "main_hand", "two_handed": true, "stats": {"atk": 13, "interval_pct": -0.15}, "classes": ["class.archer"], "visual_base": "bow"},
     "staff": {"name": "Staff", "kind": "weapon", "slot": "main_hand", "two_handed": true, "stats": {"mag": 9}, "classes": ["class.mage", "class.cleric"]},
     "wand": {"name": "Wand", "kind": "weapon", "slot": "main_hand", "stats": {"mag": 5}, "classes": ["class.mage"]},
     "shield": {"name": "Shield", "kind": "armor", "slot": "off_hand", "stats": {"def": 4}, "classes": ["class.warrior", "class.cleric", "class.commoner"],
@@ -75,7 +75,7 @@ const BASES := {
         "block": {"chance": 0.1, "reduce": 0.5, "arc_deg": 120.0}},
     "plain_dagger": {"name": "Simple dagger", "kind": "weapon", "slot": "main_hand", "stats": {"atk": 1}, "classes": ["class.rogue"], "starter": true, "visual_base": "dagger"},
     "plain_offhand_dagger": {"name": "Simple off-hand dagger", "kind": "weapon", "slot": "off_hand", "stats": {}, "classes": ["class.rogue"], "starter": true, "visual_base": "dagger"},
-    "plain_bow": {"name": "Simple bow", "kind": "weapon", "slot": "main_hand", "two_handed": true, "stats": {"atk": 1}, "classes": ["class.ranger"], "starter": true, "visual_base": "bow"},
+    "plain_bow": {"name": "Simple bow", "kind": "weapon", "slot": "main_hand", "two_handed": true, "stats": {"atk": 1}, "classes": ["class.archer"], "starter": true, "visual_base": "bow"},
     "plain_staff": {"name": "Simple staff", "kind": "weapon", "slot": "main_hand", "two_handed": true, "stats": {"mag": 1}, "classes": ["class.mage", "class.cleric"], "starter": true, "visual_base": "staff"},
     "plain_club": {"name": "Club", "kind": "weapon", "slot": "main_hand", "stats": {"atk": 1}, "classes": [], "starter": true, "visual_base": "mace"},
 }
@@ -84,7 +84,7 @@ const STARTER_OUTFIT := {"chest": "plain_shirt", "legs": "plain_pants", "feet": 
 const STARTER_WEAPONS := {
     "class.warrior": {"main_hand": "plain_sword", "off_hand": "plain_shield"},
     "class.rogue": {"main_hand": "plain_dagger", "off_hand": "plain_offhand_dagger"},
-    "class.ranger": {"main_hand": "plain_bow"},
+    "class.archer": {"main_hand": "plain_bow"},
     "class.mage": {"main_hand": "plain_staff"},
     "class.cleric": {"main_hand": "plain_staff"},
     "class.commoner": {"main_hand": "plain_club"},

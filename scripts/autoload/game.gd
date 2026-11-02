@@ -5,7 +5,7 @@ extends Node
 signal changed
 
 const DEFAULT_SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 19
+const SAVE_VERSION := 20
 const PARTY_SIZE := 5            # slots 0-2 = front row, slots 3-4 = back row; D-080: slot 0 is the Master
 const MASTER_BED := "town_hall"   # D-080: the Master sleeps in the Hall (no dorm bed)
 const XP_PER_BOOK := 100
@@ -1736,6 +1736,18 @@ func apply_save(data: Dictionary) -> void:
     assign_beds()
 
 
+## v19 -> v20 for one hero dict (also memorial snapshots): 03b class id, D-125 hoard, D-129 bonus skill
+## choice, D-090 "bonus" flag on pending skill choices.
+func _migrate_hero_v20(hd: Dictionary) -> void:
+    hd["class"] = HeroTables.canonical_class(String(hd.get("class", "class.none")))
+    if not (hd.get("hoard") is Array):
+        hd["hoard"] = []
+    hd["bonus_skill_choice"] = int(hd.get("bonus_skill_choice", 0))
+    for c in hd.get("skill_choices", []):
+        if c is Dictionary and not c.has("bonus"):
+            c["bonus"] = false
+
+
 ## Old save versions get upgraded here when the format changes.
 func _migrate(data: Dictionary) -> Dictionary:
     var v := int(data.get("version", 1))
@@ -1800,6 +1812,20 @@ func _migrate(data: Dictionary) -> Dictionary:
         data["exp_charges"] = ExpeditionDefs.CHARGES_MAX
         data["exp_charge_t"] = 0.0
         data["portal_upgrades"] = {}
+    if v < 20:
+        # v19 -> v20 (integration of pistas A/C/D + Sim Lab, task 03b): every new field gets its default and
+        # the ranger ("explorador") becomes the archer. Pista C and the Sim Lab store nothing in the save.
+        if not (data.get("synergy_codex") is Dictionary):
+            data["synergy_codex"] = {}                     # D-090: discovered synergies
+        for hd in data.get("heroes", []):
+            if hd is Dictionary:
+                _migrate_hero_v20(hd)
+        for m in data.get("memorial", []):
+            if m is Dictionary:
+                if m.has("class"):
+                    m["class"] = HeroTables.canonical_class(String(m["class"]))
+                if m.get("snapshot") is Dictionary:
+                    _migrate_hero_v20(m["snapshot"])
     if v < 19:
         data["kit_migration"] = 1         # v18 -> v19 (D-082b): the starter kit goes into empty slots on load
     if v < 18:

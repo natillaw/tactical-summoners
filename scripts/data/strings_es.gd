@@ -82,7 +82,7 @@ const ES := {
     "Hospital": "Hospital", "Jeweller": "Joyería", "Kitchen": "Cocina", "Library": "Biblioteca", "Lumber Camp": "Aserradero", "Memorial": "Memorial",
     "Mine": "Mina", "Sanctuary of Ascension": "Santuario de Ascensión", "Summoner's Hall": "Salón del Invocador", "Summoning Circle": "Círculo de invocación",
     "Tavern": "Taberna", "Tower Gate": "Puerta de la Torre", "War Room": "Sala de guerra", "Warehouse": "Almacén", "Workshop": "Taller",
-    "Novice": "Novato", "Commoner": "Plebeyo", "Warrior": "Guerrero", "Rogue": "Pícaro", "Ranger": "Explorador", "Cleric": "Clérigo", "Mage": "Mago",
+    "Novice": "Novato", "Commoner": "Plebeyo", "Warrior": "Guerrero", "Rogue": "Pícaro", "Archer": "Arquero", "Cleric": "Clérigo", "Mage": "Mago",
     "Recover the relic": "Recupera la reliquia", "Clear the floor": "Limpia el piso", "Rescue the villager": "Rescata al aldeano",
     "Explore the forest": "Explora el bosque", "Survive the onslaught": "Sobrevive a la embestida", "Hold the shrine": "Defiende el santuario",
     "Defeat the chieftain": "Derrota al jefe", "Cross to the far side": "Cruza al otro lado", "Destroy the totems": "Destruye los tótems",

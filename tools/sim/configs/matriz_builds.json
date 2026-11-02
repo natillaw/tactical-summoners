@@ -8,12 +8,12 @@
     "max_time": 1500,
     "progress": "medio",
     "matrix": {
-        "master": ["warrior", "rogue", "ranger", "mage", "cleric"],
+        "master": ["warrior", "rogue", "archer", "mage", "cleric"],
         "party": {
-            "equilibrado": [{"class": "warrior", "stars": 2}, {"class": "cleric", "stars": 2}, {"class": "ranger", "stars": 2}, {"class": "mage", "stars": 2}],
-            "canon": [{"class": "rogue", "stars": 2}, {"class": "ranger", "stars": 2}, {"class": "mage", "stars": 2}, {"class": "mage", "stars": 2}],
+            "equilibrado": [{"class": "warrior", "stars": 2}, {"class": "cleric", "stars": 2}, {"class": "archer", "stars": 2}, {"class": "mage", "stars": 2}],
+            "canon": [{"class": "rogue", "stars": 2}, {"class": "archer", "stars": 2}, {"class": "mage", "stars": 2}, {"class": "mage", "stars": 2}],
             "tortuga": [{"class": "warrior", "stars": 2}, {"class": "warrior", "stars": 2}, {"class": "cleric", "stars": 2}, {"class": "cleric", "stars": 2}],
-            "sin_healer": [{"class": "warrior", "stars": 2}, {"class": "rogue", "stars": 2}, {"class": "ranger", "stars": 2}, {"class": "mage", "stars": 2}]
+            "sin_healer": [{"class": "warrior", "stars": 2}, {"class": "rogue", "stars": 2}, {"class": "archer", "stars": 2}, {"class": "mage", "stars": 2}]
         },
         "gear_style": ["mix", "def", "atk"],
         "bot": ["tactico", "loco"]

@@ -32,7 +32,7 @@ const DEFAULTS := {
     "party": [
         {"master": true, "class": "warrior", "level": 1, "gear": "kit_blanco"},
         {"class": "cleric", "level": 1, "stars": 2, "gear": "kit_blanco"},
-        {"class": "ranger", "level": 1, "stars": 2, "gear": "kit_blanco"},
+        {"class": "archer", "level": 1, "stars": 2, "gear": "kit_blanco"},
         {"class": "mage", "level": 1, "stars": 2, "gear": "kit_blanco"},
         {"class": "rogue", "level": 1, "stars": 2, "gear": "kit_blanco"},
     ],

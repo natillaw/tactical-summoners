@@ -130,7 +130,7 @@ func _ready() -> void:
             melee_h = hh
     if archer_h == null:
         archer_h = sb.heroes[4]
-        archer_h.hero.hero_class = "class.ranger"
+        archer_h.hero.hero_class = "class.archer"
     var dummy := sb._spawn_enemy(sb.map.cell_of(archer_h.position), "slime_green")
     dummy.position = archer_h.position + Vector2(120, 0)
     for k in 16:                                   # a spot in clear sight (random floors: a tree may stand in the way)

@@ -15,7 +15,7 @@ const AUTO_BASES := {
     "class.cleric": {"main_hand": "mace", "off_hand": "shield", "head": "hood", "chest": "robe", "legs": "cloth_pants", "feet": "sandals"},
     "class.commoner": {"main_hand": "sword", "off_hand": "shield", "head": "leather_cap", "chest": "leather_vest", "legs": "leather_pants"},
     "class.rogue": {"main_hand": "dagger", "head": "leather_cap", "chest": "leather_vest", "legs": "leather_pants"},
-    "class.ranger": {"main_hand": "bow", "head": "leather_cap", "chest": "leather_vest", "legs": "leather_pants"},
+    "class.archer": {"main_hand": "bow", "head": "leather_cap", "chest": "leather_vest", "legs": "leather_pants"},
     "class.mage": {"main_hand": "staff", "head": "hood", "chest": "robe", "legs": "cloth_pants", "feet": "sandals"},
 }
 const AUTO_COMMON := {"hands": "gloves", "legs": "greaves", "feet": "boots", "amulet": "amulet", "ring1": "ring", "ring2": "ring", "special": "charm"}
@@ -24,10 +24,10 @@ const MASTER_LOOK := {"race": "human", "body": "male", "skin": "light", "eyes": 
 
 static func class_id(s: String) -> String:
     s = s.strip_edges().to_lower()
-    var alias := {"guerrero": "warrior", "picaro": "rogue", "pícaro": "rogue", "arquero": "ranger", "explorador": "ranger",
-        "archer": "ranger", "mago": "mage", "clerigo": "cleric", "clérigo": "cleric", "healer": "cleric", "plebeyo": "commoner"}
+    var alias := {"guerrero": "warrior", "picaro": "rogue", "pícaro": "rogue", "arquero": "archer", "explorador": "archer",
+        "ranger": "archer", "mago": "mage", "clerigo": "cleric", "clérigo": "cleric", "healer": "cleric", "plebeyo": "commoner"}
     s = String(alias.get(s, s))
-    return s if s.begins_with("class.") else "class." + s
+    return HeroTables.canonical_class(s if s.begins_with("class.") else "class." + s)   # 03b: class.ranger -> class.archer
 
 
 static func trait_id(s: String) -> String:

@@ -136,7 +136,7 @@ static func pose_texture_for(look: Dictionary, hero_class: String = "", anim: St
 
 
 ## The attack each class plays (overhaul: ItemDefs.BASES[*].attack_anim takes over once items are LPC).
-const ATTACK_BY_CLASS := {"class.ranger": "shoot", "class.mage": "spellcast", "class.cleric": "spellcast", "class.rogue": "thrust"}
+const ATTACK_BY_CLASS := {"class.archer": "shoot", "class.mage": "spellcast", "class.cleric": "spellcast", "class.rogue": "thrust"}
 
 
 ## SpriteComposer-compatible frames for a hero: the LPC set plus the old names the game plays

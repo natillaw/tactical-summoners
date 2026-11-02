@@ -187,6 +187,19 @@ func _d081() -> void:
     check(back.look["race"] == "human" and back.look["ears"] == "" and back.look["hair"] == hair,
         "a saved elf Master migrates to human and keeps the rest of the look")
     check(Game.SAVE_VERSION >= 18 and Game._migrate({"version": 17})["version"] == Game.SAVE_VERSION, "save v17 -> v18 (and on to the current version)")
+    # v19 -> v20 (integration + 03b): new fields get defaults and the ranger / explorador becomes the archer
+    var v19 := {"version": 19, "heroes": [{"class": "class.ranger", "skill_choices": [{"level": 5, "options": ["volley"]}]},
+        {"class": "class.explorador"}], "memorial": [{"class": "class.ranger", "snapshot": {"class": "class.ranger"}}]}
+    var m20 := Game._migrate(v19)
+    var h20: Dictionary = m20["heroes"][0]
+    check(int(m20["version"]) == Game.SAVE_VERSION and Game.SAVE_VERSION >= 20 and (m20["synergy_codex"] as Dictionary).is_empty(),
+        "save v19 -> v20: synergy codex starts empty")
+    check(h20["class"] == "class.archer" and m20["heroes"][1]["class"] == "class.archer" and (h20["hoard"] as Array).is_empty()
+        and int(h20["bonus_skill_choice"]) == 0 and h20["skill_choices"][0]["bonus"] == false, "save v19 -> v20: ranger/explorador -> archer, hoard and tome fields")
+    check(m20["memorial"][0]["class"] == "class.archer" and m20["memorial"][0]["snapshot"]["class"] == "class.archer", "save v19 -> v20: memorial archers")
+    var sim_party: GDScript = load("res://tools/sim/sim_party.gd")
+    check(HeroData.from_dict({"class": "class.ranger"}).hero_class == "class.archer" and sim_party.class_id("ranger") == "class.archer"
+        and sim_party.class_id("explorador") == "class.archer" and sim_party.class_id("class.ranger") == "class.archer", "old ranger ids are read as the archer")
 
     Game.new_game()
     var m := Game.create_master({"first": "Lead", "last": "Er", "class": "class.warrior", "trait": "trait.brave"})

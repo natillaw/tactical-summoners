@@ -283,7 +283,7 @@ static func projectile(parent: Node, from: Vector2, to: Vector2, key: String, im
 # --- what each attack, skill, status and creature looks like -----------------------------------
 
 ## Basic attack by weapon (equipped base, or the class's default weapon).
-const CLASS_WEAPON := {"class.warrior": "sword", "class.rogue": "dagger", "class.ranger": "bow", "class.mage": "staff",
+const CLASS_WEAPON := {"class.warrior": "sword", "class.rogue": "dagger", "class.archer": "bow", "class.mage": "staff",
     "class.cleric": "mace", "class.commoner": "fist", "class.none": "fist"}
 const WEAPON_FX := {
     "sword": {"hit": "slash"}, "greataxe": {"hit": "slash_heavy"}, "dagger": {"hit": "crescent", "scale": 0.7},

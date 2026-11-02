@@ -532,6 +532,13 @@ Escena de herramienta `res://tools/sim/sim_lab.tscn` (botón **Sim Lab** en la f
 - **Prueba (D-134):** `godot --headless --path . -s res://tools/sim/sim_lab_smoke.gd` (abre la escena, 2 runs del piso 1, lee el resultado). No está en `Run-Tests.ps1`.
 - Fuera de `tools/sim`: botón en `scripts/ui/main_menu.gd` y textos en `strings_es.gd`. No añade mecánicas al juego (no hace falta comparar floors1-10 antes/después).
 
+### D-140 — Integración de las pistas paralelas, arquero (03b) y guardado v20 (2026-11-02, dueño: "Merge de pistas paralelas")
+Rama `feat/integracion` desde `feat/d083-headless-sim`; merges en orden Sim Lab (D-130), pista A (D-090), pista D (D-120), pista C (D-110).
+- **Conflictos:** textos y DECISIONS (se conservan todos los bloques, por ID); `master_bot.gd`: con campamento en marcha se queda sentado, luego saquea (D-121) y después pide acampar si la escuadra está agotada (D-090); `tools/sim`: claves de bot `camp`, `camp_below` y `loot`, estadísticas y tablas de las dos pistas, `--cancel-file` y armadura por clase conviven; `Run-Tests.ps1`/`run_tests.sh` con las suites `pista a`, `loot` y `juice`.
+- **Conexiones entre pistas:** `camp_kit` y `arrows` (ítems de D) los leen el campamento y el carcaj de A; `bonus_skill_choice` (D) da la opción extra de A; `resource_value`/`resource_max` (A) los leen las party frames (C); la sinergia de recolección de C apuntaba a `two_on_ore` y ahora usa `gather_pair` ("Dos en una veta", `mult` = velocidad). La clave de texto "Opening" chocaba (sinergia de A / verbo de C): el verbo de C pasa a "Opening the cache".
+- **03b:** el explorador/ranger pasa a **arquero** (`class.archer`, "Archer"/"Arquero"). `HeroTables.canonical_class` acepta `class.ranger`/`class.explorador` en guardados; el simulador acepta `ranger`, `explorador`, `arquero` y `archer`. Mismo peso y orden en `BIRTH_CLASS_WEIGHTS`: las semillas dan los mismos héroes.
+- **Guardado v20:** `synergy_codex` vacío; por héroe (y en las instantáneas del memorial) clase migrada, `hoard` = [], `bonus_skill_choice` = 0 y `bonus` = false en elecciones pendientes. C y el Sim Lab no guardan nada.
+
 ## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)
 
 | ID | Tema | Lo que existe / origen | Pregunta abierta |
