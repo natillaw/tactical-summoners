@@ -46,6 +46,41 @@ func _shots_town() -> void:
     await _shot("town_later", 6.0)
 
 
+func _shots_build() -> void:
+    _main.call("show_screen", "town", 0)
+    await get_tree().create_timer(1.5).timeout
+    _find("TownScreen").call("show_build_menu")
+    await _shot("build_menu", 0.8)
+
+
+func _shots_memorial() -> void:
+    _main.call("show_screen", "memorial", 0)
+    await _shot("memorial_empty", 1.0)
+    var ids: Array = Game.heroes.keys()
+    var causes := ["slain by a bandit captain", "fell to an orc warband", "lost in the dark", "poisoned by spiders", "left behind"]
+    for i in range(5, mini(ids.size(), 11)):
+        var h: HeroData = Game.heroes[ids[i]]
+        if not h.is_master:
+            Game.record_death(h, causes[i % causes.size()], "Floor %d" % (i - 3))
+    _main.call("show_screen", "memorial", 0)
+    await _shot("memorial_graves", 1.0)
+    var ms: Node = _find("MemorialScreen")
+    ms.call("_show_epitaph", Game.memorial[Game.memorial.size() - 1])
+    await _shot("memorial_epitaph", 0.6)
+
+
+func _shots_screens() -> void:
+    for scr in ["memorial", "inventory", "roster", "party"]:
+        _main.call("show_screen", scr, 0)
+        await _shot("screen_" + scr, 1.0)
+    _main.call("show_screen", "town", 0)
+    await get_tree().create_timer(1.5).timeout
+    var town: Node = _find("TownScreen")
+    for b in ["dorm_1", "town_hall", "blacksmith"]:
+        town.call("select_building", b)
+        await _shot("panel_" + b, 0.6)
+
+
 func _shots_options() -> void:
     _main.call("show_screen", "title", 0)
     await get_tree().create_timer(0.5).timeout

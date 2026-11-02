@@ -242,6 +242,27 @@ func _build_ui() -> void:
     dock.grow_horizontal = Control.GROW_DIRECTION_BOTH
     dock.grow_vertical = Control.GROW_DIRECTION_BEGIN
     dock.position.y -= 4
+    _move_msg = UIKit.label("", 15, UIKit.ACCENT)
+    _move_msg.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+    _move_msg.position += Vector2(-100, 26)  # px
+    _move_msg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    add_child(_move_msg)
+
+
+    _panel = PanelContainer.new()
+    _panel.custom_minimum_size = Vector2(212, 0)  # px
+    _panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+    _panel.position = Vector2(-218, 26)  # px
+    _panel.visible = false
+    add_child(_panel)
+    var scroll := ScrollContainer.new()
+    scroll.custom_minimum_size = Vector2(206, 252)  # px (ends above the dock)
+    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    _panel.add_child(scroll)
+    _panel_box = VBoxContainer.new()
+    _panel_box.add_theme_constant_override("separation", 3)  # px
+    _panel_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    scroll.add_child(_panel_box)
 
 
 ## A dock button: a 20 px icon over its name (the name is the explanation; the tooltip adds the detail).
@@ -283,29 +304,6 @@ func _dock_button(icon_path: String, text: String, tip: String, cb: Callable) ->
     v.add_child(l)
     UIKit.react(b)
     return b
-
-
-    _move_msg = UIKit.label("", 15, UIKit.ACCENT)
-    _move_msg.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-    _move_msg.position += Vector2(-100, 26)  # px
-    _move_msg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    add_child(_move_msg)
-
-
-    _panel = PanelContainer.new()
-    _panel.custom_minimum_size = Vector2(175, 0)  # px
-    _panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-    _panel.position = Vector2(-181, 26)  # px
-    _panel.visible = false
-    add_child(_panel)
-    var scroll := ScrollContainer.new()
-    scroll.custom_minimum_size = Vector2(170, 295)  # px
-    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-    _panel.add_child(scroll)
-    _panel_box = VBoxContainer.new()
-    _panel_box.add_theme_constant_override("separation", 3)  # px
-    _panel_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    scroll.add_child(_panel_box)
 
 
 func _refresh() -> void:
@@ -384,19 +382,10 @@ func _show_panel(id: String) -> void:
         c.queue_free()
     var b := TownTables.info(id)
     var level := Game.building_level(id)
-    var head := HBoxContainer.new()
-    head.add_child(UIKit.label(String(b["name"]), 20, UIKit.ACCENT))
-    var sp := Control.new()
-    sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    head.add_child(sp)
-    var close := UIKit.button("x", func(): select_building(""), Vector2(32, 30))
-    close.focus_mode = Control.FOCUS_NONE
-    head.add_child(close)
-    _panel_box.add_child(head)
-    _panel_box.add_child(UIKit.label("Level %d / %d" % [level, int(b["max"])] if level > 0 else "Not built yet", 15, UIKit.TEXT))
-    var desc := UIKit.label(String(b["desc"]), 14, UIKit.MUTED)
+    _panel_box.add_child(_panel_header(id, b, level))
+    var desc := UIKit.label(String(b["desc"]), 12, UIKit.MUTED)
     desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    desc.custom_minimum_size = Vector2(150, 0)  # px
+    desc.custom_minimum_size = Vector2(190, 0)  # px
     _panel_box.add_child(desc)
     _panel_construction(id, level)
     if TownTables.is_dorm(id) and level > 0:
@@ -438,6 +427,7 @@ func _show_panel(id: String) -> void:
         _panel_box.add_child(enter)
     var cost := Game.next_building_cost(id)
     if cost >= 0 and Game.under_construction(id).is_empty():
+        _section("Build" if level == 0 else "Upgrade")
         var label := ("Build (%d materials)" if level == 0 else "Upgrade to Lv %d (%%d materials)" % (level + 1)) % cost
         var up := UIKit.button(label, func(): Game.build_or_upgrade(id), Vector2(320, 38))
         up.focus_mode = Control.FOCUS_NONE
@@ -445,13 +435,119 @@ func _show_panel(id: String) -> void:
         up.disabled = why != ""
         _panel_box.add_child(up)
         if why != "":
-            _panel_box.add_child(_wrap("Cannot start: " + why, 13, Color(1.0, 0.6, 0.5)))
+            var lock := HBoxContainer.new()
+            var li := TextureRect.new()
+            li.texture = load(UIC % "Icon10_1") if ResourceLoader.exists(UIC % "Icon10_1") else null
+            li.custom_minimum_size = Vector2(16, 16)
+            li.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+            lock.add_child(li)
+            var lw := _wrap(why, 12, Color(1.0, 0.6, 0.5))
+            lw.custom_minimum_size = Vector2(170, 0)
+            lock.add_child(lw)
+            _panel_box.add_child(lock)
         elif Game.builders().is_empty():
             _panel_box.add_child(_wrap("No builder assigned yet: the work waits until someone builds (Summoner's Hall).", 13, Color(1.0, 0.8, 0.5)))
     var mv := UIKit.button("Move building", func(): start_move(id), Vector2(320, 32))
     mv.focus_mode = Control.FOCUS_NONE
     _panel_box.add_child(mv)
     _panel.visible = true
+
+
+## 2026-11-02 (owner: "interfaz de dormitorio y sus iguales, malísimas"): the building panel opens with
+## the building's picture and badge, its name, and the level as pips; sections have titled rules; heroes
+## show their face.
+func _panel_header(id: String, b: Dictionary, level: int) -> Control:
+    var box := VBoxContainer.new()
+    box.add_theme_constant_override("separation", 2)
+    var top := HBoxContainer.new()
+    var pic_box := Panel.new()
+    pic_box.custom_minimum_size = Vector2(64, 52)
+    pic_box.add_theme_stylebox_override("panel", UIKit.box(Color(0.1, 0.12, 0.08), ArtPalette.PANEL_RIM, 1, 0, 0))
+    var pic := TextureRect.new()
+    pic.texture = TownView.building_thumb(id)
+    pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    pic.position = Vector2(2, 2)
+    pic.size = Vector2(60, 48)
+    pic_box.add_child(pic)
+    var badge := TextureRect.new()
+    badge.texture = building_badge(id)
+    badge.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    badge.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    badge.position = Vector2(-6, 30)
+    badge.size = Vector2(24, 24)
+    pic_box.add_child(badge)
+    top.add_child(pic_box)
+    var right := VBoxContainer.new()
+    right.add_theme_constant_override("separation", 1)
+    right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    var title_row := HBoxContainer.new()
+    var t := UIKit.label(String(b["name"]), 20, UIKit.ACCENT)
+    t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    title_row.add_child(t)
+    var close := UIKit.button("x", func(): select_building(""), Vector2(28, 26))
+    close.focus_mode = Control.FOCUS_NONE
+    title_row.add_child(close)
+    right.add_child(title_row)
+    if level > 0:
+        var pips := HBoxContainer.new()
+        pips.add_theme_constant_override("separation", 2)
+        pips.add_child(UIKit.label(tr("Level"), 12, UIKit.MUTED))
+        for i in int(b["max"]):
+            var pip := ColorRect.new()
+            pip.custom_minimum_size = Vector2(8, 8)
+            pip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+            pip.color = ArtPalette.GOLD[3] if i < level else Color(0.2, 0.17, 0.14)
+            pips.add_child(pip)
+        right.add_child(pips)
+    else:
+        right.add_child(UIKit.label("Not built yet", 12, UIKit.MUTED))
+    top.add_child(right)
+    box.add_child(top)
+    return box
+
+
+func _section(title: String) -> void:
+    var v := VBoxContainer.new()
+    v.add_theme_constant_override("separation", 1)
+    var l := UIKit.label(title, 14, ArtPalette.GOLD[3])
+    v.add_child(l)
+    var rule := ColorRect.new()
+    rule.color = Color(ArtPalette.GOLD[2], 0.5)
+    rule.custom_minimum_size = Vector2(0, 1)
+    v.add_child(rule)
+    _panel_box.add_child(v)
+
+
+const STATE_NAMES := {"idle": "free", "working": "working", "sleeping": "sleeping", "eating": "eating",
+    "socializing": "at the tavern", "in_treatment": "in hospital", "deployed": "in the tower"}
+
+
+## A hero line: small face, first name, a second muted line, and an optional button.
+func _hero_line(hd: HeroData, note: String, btn: Button = null) -> Control:
+    var row := HBoxContainer.new()
+    row.add_theme_constant_override("separation", 3)
+    var face := HeroPortrait.new(hd, 0.5)
+    face.custom_minimum_size = Vector2(24, 24)
+    var clip := Control.new()
+    clip.custom_minimum_size = Vector2(24, 24)
+    clip.clip_contents = true
+    clip.add_child(face)
+    face.position = Vector2(0, 2)
+    row.add_child(clip)
+    var col := VBoxContainer.new()
+    col.add_theme_constant_override("separation", -2)
+    col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    col.add_child(UIKit.label(hd.hero_name.split(" ")[0], 14, hd.star_color()))
+    var n := UIKit.label(note, 12, UIKit.MUTED)
+    n.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    n.custom_minimum_size = Vector2(110, 0)
+    col.add_child(n)
+    row.add_child(col)
+    if btn != null:
+        btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+        row.add_child(btn)
+    return row
 
 
 func _wrap(text: String, size_px: int, color: Color) -> Label:
@@ -479,15 +575,21 @@ func _panel_construction(id: String, level: int) -> void:
 func _panel_dorm(id: String, level: int) -> void:
     var beds := TownTables.beds_at(id, level)
     var used := Game.beds_used(id)
-    _panel_box.add_child(UIKit.label("Beds: %d used / %d  (%d free)" % [used, beds, beds - used], 15, UIKit.TEXT))
-    _panel_box.add_child(UIKit.label("Rest quality: x%.1f" % (0.8 + 0.1 * float(level)), 13, UIKit.MUTED))
-    var names: Array = []
+    _section("%s  %d / %d" % [tr("Beds"), used, beds])
+    var row := HFlowContainer.new()
+    row.add_theme_constant_override("h_separation", 2)
+    for i in beds:
+        var bi := BedPip.new()
+        bi.taken = i < used
+        bi.tooltip_text = tr("Taken") if i < used else tr("Free")
+        row.add_child(bi)
+    _panel_box.add_child(row)
+    _panel_box.add_child(UIKit.label("%s x%.1f" % [tr("Rest quality:"), 0.8 + 0.1 * float(level)], 12, UIKit.MUTED))
+    _section("Residents")
     for hid in Game.heroes:
         var h: HeroData = Game.heroes[hid]
         if h.bed == id:
-            names.append("%s (%s)" % [h.hero_name.split(" ")[0], h.activity_state])
-    if not names.is_empty():
-        _panel_box.add_child(_wrap("Residents: " + ", ".join(names), 13, UIKit.TEXT))
+            _panel_box.add_child(_hero_line(h, tr(String(STATE_NAMES.get(h.activity_state, h.activity_state)))))
     var rough := Game.heroes.values().filter(func(h): return (h as HeroData).bed == "").size()
     if rough > 0:
         _panel_box.add_child(_wrap("%d hero(es) sleep rough: build or upgrade a dormitory." % rough, 13, Color(1.0, 0.6, 0.5)))
@@ -579,63 +681,156 @@ func _res_text(d: Dictionary) -> String:
 func _panel_workers(id: String, slots: int) -> void:
     var prof := Game.workplace_prof(id)
     var here := Game.workers_at(id)
-    _panel_box.add_child(UIKit.label(("Builders" if id == "construction" else "Workers") + (" %d / %d" % [here.size(), slots] if slots < 99 else " %d" % here.size()), 15, UIKit.ACCENT))
+    _section(("Builders" if id == "construction" else "Workers") + (" %d / %d" % [here.size(), slots] if slots < 99 else " %d" % here.size()))
     for h in here:
         var hd := h as HeroData
-        var row := HBoxContainer.new()
-        row.add_child(_wrap("%s — %s Lv %d · %s" % [hd.hero_name.split(" ")[0], ProfessionDefs.info(prof).get("name", prof), hd.prof_level(prof), hd.activity_state], 13, UIKit.TEXT))
-        (row.get_child(0) as Label).custom_minimum_size = Vector2(125, 0)  # px
-        row.add_child(_small_btn("Remove", func(): Game.assign_work(hd, "")))
-        _panel_box.add_child(row)
+        _panel_box.add_child(_hero_line(hd, "%s Lv %d · %s" % [ProfessionDefs.info(prof).get("name", prof), hd.prof_level(prof), tr(String(STATE_NAMES.get(hd.activity_state, hd.activity_state)))],
+            _small_btn("Remove", func(): Game.assign_work(hd, ""), 56.0)))
+    if here.is_empty():
+        _panel_box.add_child(UIKit.label("Nobody works here yet.", 12, Color(1.0, 0.8, 0.5)))
     if here.size() >= slots:
         return
     var cands: Array = Game.heroes.values().filter(func(h): return (h as HeroData).hq_assignment != id)
     cands.sort_custom(func(a, b): return a.prof_level(prof) > b.prof_level(prof))
+    if not cands.is_empty():
+        _section("Can work here")
     for i in mini(5, cands.size()):
         var hd := cands[i] as HeroData
         var lvl := hd.prof_level(prof)
         var note := ("%s Lv %d" % [ProfessionDefs.info(prof).get("name", prof), lvl]) if lvl >= 0 else ((_aptitude_note(hd, prof) if TownTables.SPECIALIST_ONLY.has(id) else "can learn it") if hd.professions.size() < ProfessionDefs.MAX_KNOWN else "knows 2 professions")
-        var row := HBoxContainer.new()
-        row.add_child(_wrap("%s (%s)%s" % [hd.hero_name.split(" ")[0], note, " · now: " + hd.hq_assignment if hd.hq_assignment != "" else ""], 13, UIKit.MUTED))
-        (row.get_child(0) as Label).custom_minimum_size = Vector2(125, 0)  # px
-        var b := _small_btn("Assign", func(): Game.assign_work(hd, id))
+        var b := _small_btn("Assign", func(): Game.assign_work(hd, id), 56.0)
         b.disabled = lvl < 0 and hd.professions.size() >= ProfessionDefs.MAX_KNOWN
-        row.add_child(b)
-        _panel_box.add_child(row)
+        _panel_box.add_child(_hero_line(hd, note + (" · now: " + hd.hq_assignment if hd.hq_assignment != "" else ""), b))
 
 
 # --- build menu: new buildings go wherever the player places them (owner, 2026-10-31) -----------
 
 ## Buildings that are not built yet, each with its price and whatever stops it right now.
+## 2026-11-02 (owner: "pésima interfaz; cada construcción debería tener una imagen del edificio"): a window
+## of cards, each with the building's picture, name, cost and what it is for; blocked ones say why.
+var _build_win: Control = null
+## A badge per building (what it is for, at a glance): rpg_icons number, or a ui_icons name.
+const BUILDING_BADGE := {"barracks": 97, "war_room": "Icon45_1", "memorial": "Icon42_1", "kitchen": "Icon65_1",
+    "infirmary": 302, "blacksmith": 294, "workshop": 101, "jeweler": 249, "alchemy": 309, "common": "Icon60_1",
+    "library": 297, "farm": 271, "lumber_camp": 295, "mine": 292, "warehouse": 290, "dorm_1": 288, "dorm_2": 288,
+    "dorm_3": 288, "dorm_4": 288, "training_grounds": 3, "ascension": 372, "town_hall": 173, "summon_circle": 343}
+
+
+static func building_badge(id: String) -> Texture2D:
+    var ref = BUILDING_BADGE.get(id, null)
+    if ref == null:
+        return null
+    var path := (RPG % int(ref)) if ref is int else (UIC % String(ref))
+    return load(path) if ResourceLoader.exists(path) else null
+
+
 func show_build_menu() -> void:
     select_building("")
-    for c in _panel_box.get_children():
-        c.queue_free()
+    _panel.visible = false
+    if _build_win != null and is_instance_valid(_build_win):
+        _build_win.queue_free()
+    var dim := ColorRect.new()
+    dim.color = Color(0, 0, 0, 0.5)
+    add_child(dim)
+    UIKit.fill(dim)
+    _build_win = dim
+    dim.gui_input.connect(func(e):
+        if e is InputEventMouseButton and e.pressed:
+            dim.queue_free())
+    var pc := PanelContainer.new()
+    dim.add_child(pc)
+    pc.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+    pc.custom_minimum_size = Vector2(600, 300)
+    pc.position = Vector2(20, 24)
+    var vb := VBoxContainer.new()
+    pc.add_child(vb)
     var head := HBoxContainer.new()
-    head.add_child(UIKit.label("Build", 20, UIKit.ACCENT))
+    head.add_child(UIKit.label("Build", 28, UIKit.ACCENT))
+    var mats := UIKit.label("   %s: %d" % [tr("Building materials"), int(Game.hq_outputs.get("materials", 0))], 14, UIKit.TEXT)
+    head.add_child(mats)
     var sp := Control.new()
     sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     head.add_child(sp)
-    var close := UIKit.button("x", func(): _panel.visible = false, Vector2(32, 30))
-    close.focus_mode = Control.FOCUS_NONE
-    head.add_child(close)
-    _panel_box.add_child(head)
-    _panel_box.add_child(_wrap("Pick a building, then click where it goes (near the town). Builders raise it over time.", 13, UIKit.MUTED))
+    head.add_child(UIKit.button("x", func(): dim.queue_free(), Vector2(32, 30)))
+    vb.add_child(head)
+    var hint := "Pick a building, then click where it goes (near the town). Builders raise it over time."
     if Game.builders().is_empty():
-        _panel_box.add_child(_wrap("No builder at work: assign one at the Summoner's Hall.", 13, Color(1.0, 0.8, 0.5)))
+        hint = "No builder at work: assign one at the Summoner's Hall."
+    vb.add_child(UIKit.label(hint, 12, UIKit.MUTED if not Game.builders().is_empty() else Color(1.0, 0.8, 0.5)))
+    var scroll := ScrollContainer.new()
+    scroll.custom_minimum_size = Vector2(590, 240)
+    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    vb.add_child(scroll)
+    var grid := GridContainer.new()
+    grid.columns = 4
+    grid.add_theme_constant_override("h_separation", 4)
+    grid.add_theme_constant_override("v_separation", 4)
+    scroll.add_child(grid)
     for id in TownTables.ids():
         if Game.is_placed(id):
             continue
-        var b := TownTables.info(id)
-        var why := Game.construction_block(id)
-        var btn := UIKit.button("%s  (%d materials)" % [String(b["name"]), Game.next_building_cost(id)], start_place.bind(id), Vector2(320, 34))
-        btn.focus_mode = Control.FOCUS_NONE
-        btn.disabled = why != ""
-        btn.tooltip_text = String(b["desc"]) + ("" if why == "" else "\nCannot start: " + why)
-        _panel_box.add_child(btn)
-        if why != "":
-            _panel_box.add_child(_wrap("   " + why, 12, Color(1.0, 0.6, 0.5)))
-    _panel.visible = true
+        grid.add_child(_build_card(id, dim))
+
+
+func _build_card(id: String, win: Control) -> Control:
+    var b := TownTables.info(id)
+    var why := Game.construction_block(id)
+    var cost := Game.next_building_cost(id)
+    var ok := why == ""
+    var card := Button.new()
+    card.custom_minimum_size = Vector2(142, 112)
+    card.tooltip_text = StringsEs.tx(String(b["desc"])) + ("" if ok else "\n" + tr("Cannot start: ") + why)
+    card.add_theme_stylebox_override("normal", UIKit.box(Color(0.12, 0.09, 0.07, 0.95), ArtPalette.PANEL_RIM, 1, 0, 3))
+    card.add_theme_stylebox_override("hover", UIKit.box(Color(0.2, 0.15, 0.1, 0.95), ArtPalette.GOLD[3], 1, 0, 3))
+    card.add_theme_stylebox_override("pressed", UIKit.box(Color(0.25, 0.18, 0.1, 0.95), ArtPalette.GOLD[3], 1, 0, 3))
+    card.add_theme_stylebox_override("disabled", UIKit.box(Color(0.08, 0.07, 0.07, 0.95), Color(0.3, 0.25, 0.25), 1, 0, 3))
+    card.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+    card.pressed.connect(func():
+        win.queue_free()
+        start_place(id))
+    card.disabled = not ok
+    UIKit.react(card)
+    var v := VBoxContainer.new()
+    v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    v.add_theme_constant_override("separation", 1)
+    card.add_child(v)
+    UIKit.fill(v)
+    var pic := TextureRect.new()
+    pic.texture = TownView.building_thumb(id)
+    pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    pic.custom_minimum_size = Vector2(130, 62)
+    pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    if not ok:
+        pic.modulate = Color(0.45, 0.42, 0.42)
+    v.add_child(pic)
+    var badge := TextureRect.new()
+    badge.texture = building_badge(id)
+    badge.position = Vector2(4, 4)
+    badge.size = Vector2(32, 32)
+    badge.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    badge.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    var badge_bg := Panel.new()
+    badge_bg.add_theme_stylebox_override("panel", UIKit.box(Color(0.05, 0.04, 0.06, 0.8), ArtPalette.GOLD[2], 1, 0, 0))
+    badge_bg.position = Vector2(3, 3)
+    badge_bg.size = Vector2(34, 34)
+    badge_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    card.add_child(badge_bg)
+    card.add_child(badge)
+    var name := UIKit.label(String(b["name"]), 14, ArtPalette.GOLD[3] if ok else UIKit.MUTED)
+    name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    name.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    v.add_child(name)
+    var cl := UIKit.label("%d %s" % [cost, tr("materials")], 12, UIKit.TEXT if int(Game.hq_outputs.get("materials", 0)) >= cost else UIKit.BAD)
+    if not ok:
+        cl = UIKit.label(why, 12, Color(1.0, 0.6, 0.5))
+        cl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        cl.custom_minimum_size = Vector2(130, 0)
+    cl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    cl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    v.add_child(cl)
+    return card
 
 
 func start_place(id: String) -> void:
@@ -966,3 +1161,22 @@ func _unhandled_key_input(event: InputEvent) -> void:
         return
     if moving != "" and event is InputEventKey and event.pressed and (event as InputEventKey).keycode == KEY_ESCAPE:
         cancel_move()
+
+
+## A tiny pixel bed for the dormitory panel: a sleeper's head on the pillow when it is taken.
+class BedPip extends Control:
+    var taken: bool = false
+
+    func _init() -> void:
+        custom_minimum_size = Vector2(18, 14)
+        mouse_filter = Control.MOUSE_FILTER_PASS
+
+    func _draw() -> void:
+        draw_rect(Rect2(0, 2, 18, 11), Color(0.36, 0.22, 0.12))          # frame
+        draw_rect(Rect2(1, 3, 16, 8), Color(0.92, 0.9, 0.84))             # sheet
+        draw_rect(Rect2(2, 4, 5, 4), Color(1, 1, 1))                      # pillow
+        draw_rect(Rect2(7, 4, 10, 7), Color(0.35, 0.45, 0.75) if taken else Color(0.55, 0.6, 0.75))   # blanket
+        if taken:
+            draw_rect(Rect2(3, 4, 3, 3), Color(0.85, 0.65, 0.5))           # head
+            draw_rect(Rect2(8, 6, 8, 1), Color(0.28, 0.36, 0.62))          # body shape under the blanket
+        draw_rect(Rect2(0, 0, 2, 13), Color(0.3, 0.18, 0.1))              # headboard
