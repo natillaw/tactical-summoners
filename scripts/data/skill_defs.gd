@@ -15,24 +15,42 @@ extends RefCounted
 ##          {"t": "cleanse"} {"t": "zone", "radius", "dur", "status", "sdur", "foes"(bool), "once"(bool)}
 ##          {"t": "allies", "radius", "inner": [effects]}  (applies inner effects to allies around)
 
-const LEARN_LEVELS := [5, 10, 20, 30, 40, 50, 60, 70]
-const MAX_SLOTS := 3   # keys W E R (D-059; Q is the driven hero's basic attack)
+## D-090: a choice of 1 skill out of CHOICE_OPTIONS at level 2, level 5 and then every CHOICE_EVERY levels
+## (choice_levels()); the options not taken are gone for that choice. LEARN_LEVELS is kept for old callers.
+const CHOICE_FIRST := [2, 5]
+const CHOICE_EVERY := 5
+const CHOICE_MAX_LEVEL := 70
+const CHOICE_OPTIONS := 3
+const LEARN_LEVELS := [2, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70]
+const MAX_SLOTS := 4   # D-090: keys Q W E R (the Master's basic attack moved to the left click)
 
-## D-041 class resources. max = base + per point of the scaling attribute.
+## D-041 class resources, redone by D-090. max = base + per point of the scaling attribute.
+## regen = per second (regen_combat while fighting, regen_still while standing still, when given);
+## decay = per second lost out of combat; on_hit / on_hurt = gained per blow dealt / taken.
+## "none" (commoners): no resource; their skills only have a cooldown.
+## Mana: nothing out of combat (D-090 point 4: recovering means camping, CampDefs), a trickle while fighting.
 const RESOURCES := {
-    "fury": {"name": "Fury", "color": Color(0.9, 0.3, 0.2), "base": 100, "start": 0.3, "regen": 0.0, "decay": 3.0, "on_hit": 10.0, "on_hurt": 12.0},   # #13: enters with 30 (War Cry ready), cools slower
-    "focus": {"name": "Focus", "color": Color(0.95, 0.85, 0.3), "base": 100, "start": 1.0, "regen": 9.0, "decay": 0.0, "on_hit": 0.0, "on_hurt": 0.0},
-    "mana": {"name": "Mana", "color": Color(0.35, 0.55, 1.0), "base": 60, "per_attr": "int", "per": 6, "start": 1.0, "regen": 3.0, "decay": 0.0, "on_hit": 0.0, "on_hurt": 0.0},
-    "stamina": {"name": "Stamina", "color": Color(0.5, 0.9, 0.5), "base": 100, "start": 1.0, "regen": 7.0, "decay": 0.0, "on_hit": 0.0, "on_hurt": 0.0},
+    "fury": {"name": "Fury", "color": Color(0.9, 0.3, 0.2), "base": 100, "start": 0.2, "regen": 0.0, "decay": 6.0, "on_hit": 10.0, "on_hurt": 12.0},
+    "energy": {"name": "Energy", "color": Color(0.95, 0.85, 0.3), "base": 100, "start": 1.0, "regen": 10.0, "decay": 0.0, "on_hit": 0.0, "on_hurt": 0.0},
+    "concentration": {"name": "Concentration", "color": Color(0.55, 0.95, 0.55), "base": 100, "start": 1.0, "regen": 5.0, "regen_still": 14.0, "decay": 0.0, "on_hit": 0.0, "on_hurt": 0.0},
+    "mana": {"name": "Mana", "color": Color(0.35, 0.55, 1.0), "base": 60, "per_attr": "int", "per": 6, "start": 1.0, "regen": 0.0, "regen_combat": 1.0, "decay": 0.0, "on_hit": 0.0, "on_hurt": 0.0},
+    "none": {"name": "None", "color": Color(0.6, 0.6, 0.6), "base": 0, "start": 0.0, "regen": 0.0, "decay": 0.0, "on_hit": 0.0, "on_hurt": 0.0},
 }
-const CLASS_RESOURCE := {"class.warrior": "fury", "class.rogue": "focus", "class.ranger": "focus",
-    "class.mage": "mana", "class.cleric": "mana", "class.commoner": "stamina", "class.none": "stamina"}
+const CLASS_RESOURCE := {"class.warrior": "fury", "class.rogue": "energy", "class.ranger": "concentration",
+    "class.mage": "mana", "class.cleric": "mana", "class.commoner": "none", "class.none": "none"}
+## Rogue combo points: every basic attack and every skill with "combo": n builds them (max COMBO_MAX);
+## a "finisher" skill needs at least 1 and spends them all, x (1 + FINISHER_PER_COMBO x points).
+const COMBO_MAX := 5
+const COMBO_PER_BASIC := 1
+const FINISHER_PER_COMBO := 0.25
+## Seconds a hero counts as "in combat" after it hits, is hit or has a foe targeted (resource regen/decay).
+const COMBAT_LINGER := 4.0
 
 const KITS := {
     "class.none": {"start": ["second_breath"], "learn": ["improvised_strike", "shove", "rally"]},
     "class.commoner": {"start": ["improvised_strike", "second_breath", "shove"], "learn": ["rally", "dirty_trick", "second_breath", "improvised_strike", "shove"]},
     "class.warrior": {"start": ["cleave", "shield_bash", "war_cry"], "learn": ["charge", "shield_wall", "whirlwind", "rallying_shout", "earthshatter", "cleave", "shield_bash", "war_cry"]},
-    "class.rogue": {"start": ["quick_slash", "poison_blade", "shadow_step"], "learn": ["backstab", "smoke_bomb", "fan_of_knives", "kidney_shot", "eviscerate", "quick_slash", "poison_blade", "shadow_step"]},
+    "class.rogue": {"start": ["quick_slash", "poison_blade", "shadow_step"], "learn": ["eviscerate", "backstab", "smoke_bomb", "fan_of_knives", "kidney_shot", "quick_slash", "poison_blade", "shadow_step"]},
     "class.ranger": {"start": ["rapid_shot", "snare_shot", "volley"], "learn": ["hunters_mark", "bear_trap", "piercing_shot", "concussive_shot", "rain_of_arrows", "rapid_shot", "snare_shot", "volley"]},
     "class.cleric": {"start": ["heal", "smite", "holy_radiance"], "learn": ["blessing", "purify", "sanctuary", "judgement", "mass_heal", "heal", "smite", "holy_radiance"]},
     "class.mage": {"start": ["fire_burst", "frost_bolt", "arcane_shield"], "learn": ["frost_nova", "blink", "chain_burn", "meteor", "arcane_torrent", "fire_burst", "frost_bolt", "arcane_shield"]},
@@ -40,15 +58,15 @@ const KITS := {
 
 const SKILLS := {
     # --- shared / commoner
-    "second_breath": {"name": "Second Breath", "class": "", "cost": 30, "cd": 20.0, "cast": 0.0, "range": 0.0, "target": "self",
+    "second_breath": {"name": "Second Breath", "class": "", "cost": 0, "cd": 20.0, "cast": 0.0, "range": 0.0, "target": "self",
         "effects": [{"t": "heal_pct", "pct": 0.25}], "desc": "Recover 25% of max HP."},
-    "improvised_strike": {"name": "Improvised Strike", "class": "class.commoner", "cost": 25, "cd": 8.0, "cast": 0.0, "range": 60.0, "target": "enemy",
+    "improvised_strike": {"name": "Improvised Strike", "class": "class.commoner", "cost": 0, "cd": 8.0, "cast": 0.0, "range": 60.0, "target": "enemy",
         "effects": [{"t": "damage", "mult": 1.5, "kind": "power"}], "desc": "A clumsy but surprisingly effective swing."},
-    "shove": {"name": "Shove", "class": "class.commoner", "cost": 30, "cd": 12.0, "cast": 0.0, "range": 55.0, "target": "enemy",
+    "shove": {"name": "Shove", "class": "class.commoner", "cost": 0, "cd": 12.0, "cast": 0.0, "range": 55.0, "target": "enemy",
         "effects": [{"t": "knockback", "dist": 70.0}, {"t": "interrupt"}, {"t": "damage", "mult": 0.5, "kind": "power"}], "desc": "Push a foe away and break its wind-up."},
-    "rally": {"name": "Rally", "class": "class.commoner", "cost": 40, "cd": 25.0, "cast": 0.0, "range": 0.0, "target": "self",
+    "rally": {"name": "Rally", "class": "class.commoner", "cost": 0, "cd": 25.0, "cast": 0.0, "range": 0.0, "target": "self",
         "effects": [{"t": "allies", "radius": 140.0, "inner": [{"t": "shield", "pct": 0.12}]}], "desc": "Shield nearby allies for 12% of their max HP."},
-    "dirty_trick": {"name": "Dirty Trick", "class": "class.commoner", "cost": 35, "cd": 16.0, "cast": 0.0, "range": 55.0, "target": "enemy",
+    "dirty_trick": {"name": "Dirty Trick", "class": "class.commoner", "cost": 0, "cd": 16.0, "cast": 0.0, "range": 55.0, "target": "enemy",
         "effects": [{"t": "status", "id": "weaken", "dur": 4.0}, {"t": "status", "id": "slow", "dur": 3.0}], "desc": "Sand in the eyes: weaken and slow a foe."},
     # --- warrior (fury)
     "cleave": {"name": "Cleave", "class": "class.warrior", "cost": 30, "cd": 9.0, "cast": 0.0, "range": 75.0, "target": "self_aoe",
@@ -56,7 +74,7 @@ const SKILLS := {
     "shield_bash": {"name": "Shield Bash", "class": "class.warrior", "cost": 25, "cd": 12.0, "cast": 0.0, "range": 55.0, "target": "enemy",
         "effects": [{"t": "damage", "mult": 0.8, "kind": "power"}, {"t": "status", "id": "stun", "dur": 1.5}, {"t": "interrupt"}], "desc": "Stun a foe and break its wind-up."},
     "war_cry": {"name": "War Cry", "class": "class.warrior", "cost": 20, "cd": 18.0, "cast": 0.0, "range": 160.0, "target": "self",
-        "effects": [{"t": "taunt", "radius": 160.0, "dur": 4.0}, {"t": "shield", "pct": 0.15}], "desc": "Enemies nearby attack you instead; gain a shield."},
+        "effects": [{"t": "taunt", "radius": 160.0, "dur": 3.5}, {"t": "shield", "pct": 0.15}], "desc": "Enemies nearby attack you instead; gain a shield."},
     "charge": {"name": "Charge", "class": "class.warrior", "cost": 25, "cd": 14.0, "cast": 0.0, "range": 260.0, "target": "enemy",
         "effects": [{"t": "dash"}, {"t": "status", "id": "root", "dur": 1.5}, {"t": "damage", "mult": 1.0, "kind": "power"}], "desc": "Rush a distant foe and pin it in place."},
     "shield_wall": {"name": "Shield Wall", "class": "class.warrior", "cost": 40, "cd": 25.0, "cast": 0.0, "range": 0.0, "target": "self",
@@ -68,22 +86,22 @@ const SKILLS := {
     "earthshatter": {"name": "Earthshatter", "class": "class.warrior", "cost": 80, "cd": 35.0, "cast": 0.8, "range": 120.0, "target": "self_aoe",
         "effects": [{"t": "damage", "mult": 2.4, "kind": "power"}, {"t": "status", "id": "stun", "dur": 2.0}, {"t": "interrupt"}], "desc": "Slam the ground: damage and stun everything around."},
     # --- rogue (focus)
-    "quick_slash": {"name": "Quick Slash", "class": "class.rogue", "cost": 25, "cd": 6.0, "cast": 0.0, "range": 60.0, "target": "enemy",
+    "quick_slash": {"name": "Quick Slash", "class": "class.rogue", "cost": 25, "combo": 1, "cd": 6.0, "cast": 0.0, "range": 60.0, "target": "enemy",
         "effects": [{"t": "damage", "mult": 1.9, "kind": "power"}], "desc": "One heavy strike on a nearby enemy."},
-    "poison_blade": {"name": "Poison Blade", "class": "class.rogue", "cost": 30, "cd": 10.0, "cast": 0.0, "range": 60.0, "target": "enemy",
+    "poison_blade": {"name": "Poison Blade", "class": "class.rogue", "cost": 30, "combo": 1, "cd": 10.0, "cast": 0.0, "range": 60.0, "target": "enemy",
         "effects": [{"t": "damage", "mult": 0.8, "kind": "power"}, {"t": "status", "id": "poison", "dur": 6.0, "mult": 0.35}], "desc": "Coat the blade: strong poison over time (stacks)."},
-    "shadow_step": {"name": "Shadow Step", "class": "class.rogue", "cost": 35, "cd": 14.0, "cast": 0.0, "range": 280.0, "target": "enemy",
+    "shadow_step": {"name": "Shadow Step", "class": "class.rogue", "cost": 35, "combo": 1, "cd": 14.0, "cast": 0.0, "range": 280.0, "target": "enemy",
         "effects": [{"t": "dash"}, {"t": "damage", "mult": 1.2, "kind": "power"}], "desc": "Vanish and strike a distant enemy (great on archers)."},
-    "backstab": {"name": "Backstab", "class": "class.rogue", "cost": 40, "cd": 9.0, "cast": 0.0, "range": 60.0, "target": "enemy",
+    "backstab": {"name": "Backstab", "class": "class.rogue", "cost": 40, "combo": 2, "cd": 9.0, "cast": 0.0, "range": 60.0, "target": "enemy",
         "effects": [{"t": "damage", "mult": 2.2, "kind": "power", "bonus_if_busy": 1.6}], "desc": "Massive damage to a foe busy fighting someone else."},
     "smoke_bomb": {"name": "Smoke Bomb", "class": "class.rogue", "cost": 45, "cd": 22.0, "cast": 0.0, "range": 0.0, "target": "self",
         "effects": [{"t": "zone", "radius": 90.0, "dur": 5.0, "status": "weaken", "sdur": 1.0, "foes": true}], "desc": "Foes inside the smoke hit weaker."},
     "fan_of_knives": {"name": "Fan of Knives", "class": "class.rogue", "cost": 50, "cd": 14.0, "cast": 0.0, "range": 110.0, "target": "self_aoe",
         "effects": [{"t": "damage", "mult": 1.1, "kind": "power"}, {"t": "status", "id": "bleed", "dur": 4.0, "mult": 0.15}], "desc": "Knives in every direction; everything bleeds."},
-    "kidney_shot": {"name": "Kidney Shot", "class": "class.rogue", "cost": 35, "cd": 16.0, "cast": 0.0, "range": 60.0, "target": "enemy",
-        "effects": [{"t": "status", "id": "stun", "dur": 2.0}, {"t": "interrupt"}], "desc": "Stun a foe and break its wind-up."},
-    "eviscerate": {"name": "Eviscerate", "class": "class.rogue", "cost": 70, "cd": 20.0, "cast": 0.0, "range": 60.0, "target": "enemy",
-        "effects": [{"t": "damage", "mult": 3.5, "kind": "power"}], "desc": "Finish a target with one brutal strike."},
+    "kidney_shot": {"name": "Kidney Shot", "class": "class.rogue", "cost": 25, "finisher": true, "cd": 16.0, "cast": 0.0, "range": 60.0, "target": "enemy",
+        "effects": [{"t": "status", "id": "stun", "dur": 2.0}, {"t": "interrupt"}], "desc": "Finisher: stun a foe (longer with more combo points)."},
+    "eviscerate": {"name": "Eviscerate", "class": "class.rogue", "cost": 35, "finisher": true, "cd": 10.0, "cast": 0.0, "range": 60.0, "target": "enemy",
+        "effects": [{"t": "damage", "mult": 2.2, "kind": "power"}], "desc": "Finisher: one brutal strike, stronger with every combo point."},
     # --- ranger (focus)
     "rapid_shot": {"name": "Rapid Shot", "class": "class.ranger", "cost": 25, "cd": 7.0, "cast": 0.0, "range": 220.0, "target": "enemy",
         "effects": [{"t": "damage", "mult": 1.8, "kind": "power"}], "desc": "Swift double shot from distance."},
@@ -126,7 +144,7 @@ const SKILLS := {
     "arcane_shield": {"name": "Arcane Shield", "class": "class.mage", "cost": 20, "cd": 18.0, "cast": 0.0, "range": 0.0, "target": "self",
         "effects": [{"t": "shield", "pct": 0.35}], "desc": "A barrier for the fragile caster."},
     "frost_nova": {"name": "Frost Nova", "class": "class.mage", "cost": 35, "cd": 18.0, "cast": 0.0, "range": 100.0, "target": "self_aoe",
-        "effects": [{"t": "damage", "mult": 0.8, "kind": "magical"}, {"t": "status", "id": "root", "dur": 2.5}], "desc": "Freeze everything around you in place."},
+        "effects": [{"t": "damage", "mult": 0.8, "kind": "magical"}, {"t": "status", "id": "frozen", "dur": 2.5}], "desc": "Freeze everything around you in place (a heavy blow shatters the ice)."},
     "blink": {"name": "Blink", "class": "class.mage", "cost": 15, "cd": 12.0, "cast": 0.0, "range": 0.0, "target": "self",
         "effects": [{"t": "blink", "dist": 140.0}], "desc": "Teleport away from danger."},
     "chain_burn": {"name": "Chain Burn", "class": "class.mage", "cost": 40, "cd": 14.0, "cast": 0.6, "range": 220.0, "target": "target_aoe", "radius": 140.0,
@@ -163,7 +181,7 @@ static func book_pool(class_ids: Array) -> Array:
 
 
 static func resource_of(class_id: String) -> String:
-    return String(CLASS_RESOURCE.get(class_id, "stamina"))
+    return String(CLASS_RESOURCE.get(class_id, "none"))
 
 
 ## D-044: the starting active, picked with the hero's seed from the class pool (separate RNG,
@@ -175,8 +193,9 @@ static func starter_for(class_id: String, hero_seed: int) -> String:
     return String(pool[r.randi() % pool.size()])
 
 
-## D-045: 2-3 class skills the hero does not know yet (deterministic per hero and level).
-static func level_choices(class_id: String, known: Array, level: int, hero_seed: int) -> Array:
+## D-045 / D-090: up to CHOICE_OPTIONS (+ extra) class skills the hero does not know yet (deterministic
+## per hero and level). extra = the bonus option of a skill tome (pista D's bonus_skill_choice).
+static func level_choices(class_id: String, known: Array, level: int, hero_seed: int, extra: int = 0) -> Array:
     var pool: Array = []
     for s in KITS.get(class_id, KITS["class.none"])["learn"]:
         if not known.has(s) and not pool.has(s):
@@ -184,6 +203,25 @@ static func level_choices(class_id: String, known: Array, level: int, hero_seed:
     var r := RandomNumberGenerator.new()
     r.seed = hero_seed ^ (level * 7919)
     var out: Array = []
-    while not pool.is_empty() and out.size() < 3:
+    while not pool.is_empty() and out.size() < CHOICE_OPTIONS + maxi(0, extra):
         out.append(pool.pop_at(r.randi() % pool.size()))
     return out
+
+
+## D-090: the levels that bring a skill choice (2, 5, then every CHOICE_EVERY up to CHOICE_MAX_LEVEL).
+static func choice_levels() -> Array:
+    var out: Array = CHOICE_FIRST.duplicate()
+    var lv: int = CHOICE_EVERY * 2
+    while lv <= CHOICE_MAX_LEVEL:
+        out.append(lv)
+        lv += CHOICE_EVERY
+    return out
+
+
+static func is_finisher(id: String) -> bool:
+    return bool(info(id).get("finisher", false))
+
+
+## The cost a hero really pays (classes with no resource pay nothing).
+static func cost_for(id: String, class_id: String) -> float:
+    return 0.0 if resource_of(class_id) == "none" else float(info(id).get("cost", 0))

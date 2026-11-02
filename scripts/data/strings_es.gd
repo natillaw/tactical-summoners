@@ -223,5 +223,43 @@ static func install(locale: String = "es") -> void:
     t.locale = "es"
     for k in ES:
         t.add_message(String(k), String(ES[k]))
+    for k in ES_PISTA_A:                              # D-090
+        t.add_message(String(k), String(ES_PISTA_A[k]))
     TranslationServer.add_translation(t)
     TranslationServer.set_locale(locale)
+
+
+# --- pista-a (D-090: combat and tactics) ---
+const ES_PISTA_A := {
+    "Synergy discovered!": "¡Sinergia descubierta!", "Synergy codex": "Códice de sinergias", "Synergy codex (%d/%d)": "Códice de sinergias (%d/%d)",
+    "Not discovered yet.": "Aún sin descubrir.", "Close": "Cerrar", "Later": "Más tarde", "Learn": "Aprender",
+    "Combos": "Combos", "Formation": "Formación", "Personality and bonds": "Personalidad y vínculos", "Exploration": "Exploración", "Camp": "Campamento", "Gathering": "Recolección",
+    "Opening": "Apertura", "A rogue's blow on a stunned foe is always a critical hit.": "Un golpe del pícaro a un enemigo aturdido siempre es crítico.",
+    "Shatter": "Quebrar", "A physical blow on a frozen foe shatters the ice: x1.5 damage, and the foe is free again.": "Un golpe físico a un enemigo congelado rompe el hielo: daño ×1,5 y el enemigo queda libre.",
+    "Safe Sweep": "Barrido seguro", "While a foe is taunted, area damage from the other heroes draws no threat from it.": "Mientras un enemigo está provocado, el daño en área de los demás héroes no le genera amenaza.",
+    "Hunter's Eye": "Ojo del cazador", "A foe marked by an archer stays visible through the fog.": "Un enemigo marcado por el arquero se sigue viendo a través de la niebla.",
+    "Flanking": "Flanqueo", "Two heroes hitting the same foe from opposite sides: +15% critical chance.": "Dos héroes que golpean al mismo enemigo desde lados opuestos: +15 % de crítico.",
+    "Back to Back": "Espalda con espalda", "Two heroes standing together with foes around them lose half the Composure (less panic).": "Dos héroes juntos rodeados de enemigos pierden la mitad de Compostura (menos pánico).",
+    "Shield Wall": "Muro de escudos", "Two warriors side by side catch the shots flying at the heroes behind them (half damage, on the warrior).": "Dos guerreros juntos paran los disparos dirigidos a los héroes de detrás (la mitad del daño, al guerrero).",
+    "Rivals": "Rivales", "Rivals near each other try to outdo one another: +8% damage.": "Los rivales cerca el uno del otro compiten: +8 % de daño.",
+    "Mentor and Apprentice": "Mentor y aprendiz", "An apprentice near a friend 8+ levels higher fights better: +5% critical chance.": "Un aprendiz cerca de un amigo 8+ niveles por encima pelea mejor: +5 % de crítico.",
+    "Friends": "Amigos", "Close friends near each other take 8% less damage.": "Los buenos amigos cerca el uno del otro reciben un 8 % menos de daño.",
+    "Incompatible": "Incompatibles", "Heroes who cannot stand each other (or whose characters clash) lose Composure when close.": "Los héroes que no se soportan (o de carácter opuesto) pierden Compostura cuando están cerca.",
+    "Shared Sight": "Vista compartida", "Two scouts (rogue, archer) near each other share what they see: +1 sight each.": "Dos exploradores (pícaro, arquero) cerca comparten lo que ven: +1 de visión cada uno.",
+    "Trap Sense": "Olfato para trampas", "A rogue and an archer together spot hidden ambushers before walking into them.": "Un pícaro y un arquero juntos descubren las emboscadas antes de caer en ellas.",
+    "Camp Cook": "Cocinero de campamento", "A hero who was a chef cooks for everyone at the camp: the meal lasts twice as long.": "Un héroe que fue cocinero cocina para todos en el campamento: la comida dura el doble.",
+    "Campfire Song": "Canción junto al fuego", "A hero who was an entertainer plays at the fire: everyone recovers Composure and takes less damage for a while.": "Un héroe que fue artista toca junto al fuego: todos recuperan Compostura y reciben menos daño un rato.",
+    "Two on a Vein": "Dos en una veta", "Two heroes working the same node gather faster.": "Dos héroes en el mismo nodo recolectan más rápido.",
+    "Camp here": "Acampar aquí", "Camping": "Acampando", "Camp interrupted": "Campamento interrumpido", "Camp done: rested": "Campamento terminado: descansados",
+    "enemies are coming": "llegan enemigos", "attacked": "atacados", "no camp kit": "no hay kit de campamento", "enemies too close": "hay enemigos demasiado cerca",
+    "already camping": "ya estamos acampando", "not now": "ahora no", "no combo points": "sin puntos de combo", "arrows": "flechas", "ambush?": "¿emboscada?",
+    "Frozen": "Congelado", "Well fed": "Bien comido", "Inspired by a song": "Inspirado por una canción",
+    "Energy": "Energía", "Concentration": "Concentración", "None": "Ninguno",
+    "%s reached level %d: choose ONE skill": "%s llegó al nivel %d: elige UNA habilidad",
+    "The others are lost for this choice. Up to 4 skills on Q W E R.": "Las demás se pierden en esta elección. Hasta 4 habilidades en Q W E R.",
+    "Skill tome: one extra option.": "Tomo de habilidad: una opción más.", "finisher": "remate", "combo": "combo", "range %d": "alcance %d",
+    "Level %d: choose a skill (%d options)": "Nivel %d: elige una habilidad (%d opciones)",
+    "Finisher: stun a foe (longer with more combo points).": "Remate: aturde a un enemigo (más tiempo con más puntos de combo).",
+    "Finisher: one brutal strike, stronger with every combo point.": "Remate: un golpe brutal, más fuerte con cada punto de combo.",
+    "Freeze everything around you in place (a heavy blow shatters the ice).": "Congela todo a tu alrededor (un golpe fuerte rompe el hielo).",
+}

@@ -96,7 +96,7 @@ var _info: Label
 var _hint: Label
 var _squad_label: Label
 var _skill_btns: Array[Button] = []    # skill slots 0-2 on W E R (D-059; Q = aimed basic attack)
-const SKILL_KEYS := "WER"
+const SKILL_KEYS := "QWER"                         # D-090: four skills (the Master's basic attack = left click)
 var _q_held: bool = false                 # holding Q keeps firing at the cursor whenever ready
 var _overlay: Control
 var _band: ColorRect
@@ -172,6 +172,7 @@ func _ready() -> void:
 	var grade := CanvasModulate.new()            # master prompt G: one warm, slightly muted palette
 	grade.color = Color(1.0, 0.97, 0.9)
 	_viewport.add_child(grade)
+	_setup_pista_a()                              # D-090: bushes (before the fog, so the fog covers them)
 	fog = FogMap.new(map.width, map.height)
 	if floor_number > 0:
 		fog.unpack(Game.floor_explored(floor_number))     # what this account already explored here
@@ -1564,6 +1565,8 @@ func _node_at(p: Vector2) -> GatherNode:
 func ping(kind: String, world_point: Vector2, foe: SandboxEnemy = null) -> int:
 	if not AiDefs.PINGS.has(kind) or mission_state != Mission.ACTIVE:
 		return 0
+	if kind == "camp" and start_camp(world_point) != "":
+		return 0                                     # D-090: no kit, or creatures too close (it says why)
 	if kind in ["attack", "spotted"] and foe == null:
 		foe = _foe_at(world_point)
 	var ally: SandboxHero = _downed_at(world_point) if kind == "help" else null
@@ -1663,6 +1666,9 @@ func _apply_ping(h: SandboxHero, kind: String, point: Vector2, foe, ally) -> voi
 			if foe != null and is_instance_valid(foe):
 				h.focus_hint = foe                  # a hint, not an order: the role decides when
 			return
+		"camp":
+			var spot := camp.position if camp != null and is_instance_valid(camp) else point
+			h.order_move(map.find_path(h.position, map.nearest_walkable(spot + Vector2.RIGHT.rotated(float(h.slot) * 1.25) * 40.0)))
 		"help":
 			if ally != null and is_instance_valid(ally) and ally.downed:
 				h.order_rescue(ally)
@@ -1821,6 +1827,7 @@ func tick(delta: float) -> void:
 		_update_surrounded(foes)
 	_tick_boss_wards()
 	_tick_gathering(delta)
+	_tick_pista_a(delta, foes)
 	_fog_t -= delta
 	if _fog_t <= 0.0:
 		_fog_t = CombatRules.FOG_EVERY
@@ -1987,7 +1994,7 @@ func shake(h: SandboxHero, why: String) -> void:
 	if not h.alive or h.hero == null or h.hero.is_master:
 		return
 	var m: HeroData = master_hero.hero if master_hero != null else null
-	h.hero.set_composure(h.hero.composure - MasterRules.composure_loss(h.hero, m, why, h.in_master_radius()))
+	h.hero.set_composure(h.hero.composure - roundi(float(MasterRules.composure_loss(h.hero, m, why, h.in_master_radius())) * SquadSynergies.composure_mult(h, heroes, living_enemies())))   # D-090 Back to Back
 	if h.hero.composure < MasterDefs.PANIC_BELOW and not h.has_status("panicked"):
 		h.apply_status("panicked", MasterDefs.PANIC_TIME)
 		h.order = "auto"
@@ -2293,7 +2300,7 @@ func _process(delta: float) -> void:
 		debug_overlay.queue_redraw()
 	var driven := controlled()
 	if _q_held and driven != null and driven.attack_ready():
-		attack_at_cursor()                       # holding Q fires again as soon as the attack is ready
+		attack_at_cursor()                       # holding the left click fires again as soon as the attack is ready
 	if _rmb_held and driven != null and mission_state == Mission.ACTIVE:
 		_rmb_t -= delta                          # hold right click: the hero keeps following the cursor
 		if _rmb_t <= 0.0:
@@ -2357,6 +2364,11 @@ func _gui_input(event: InputEvent) -> void:
 			if not event.pressed and _ping_press != Vector2.INF:
 				quick_ping(screen_to_world(_ping_press))
 				_ping_press = Vector2.INF
+				return
+			if controlled() != null and not Input.is_key_pressed(AiDefs.PING_MODIFIER):
+				_q_held = event.pressed                  # D-090: the Master's basic attack (was Q), held = keeps attacking
+				if event.pressed:
+					attack_at_cursor()
 				return
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			if event.pressed and _arming_attack_move:
@@ -2489,12 +2501,6 @@ func squad_key(key: int) -> void:
 func _input(event: InputEvent) -> void:
 	if not (event is InputEventKey) or event.echo:
 		return
-	if event.keycode == KEY_Q:
-		_q_held = event.pressed
-		if event.pressed:
-			attack_at_cursor()
-		get_viewport().set_input_as_handled()
-		return
 	if event.keycode == KEY_F:
 		if event.pressed:                        # D-082: interaction (lift a fallen ally, gather, escape)
 			interact_press()
@@ -2515,7 +2521,7 @@ func _input(event: InputEvent) -> void:
 		dash_selected()
 		get_viewport().set_input_as_handled()
 		return
-	var skill_keys := {KEY_W: 0, KEY_E: 1, KEY_R: 2}
+	var skill_keys := {KEY_Q: 0, KEY_W: 1, KEY_E: 2, KEY_R: 3}   # D-090
 	if skill_keys.has(event.keycode):
 		_skill_key(int(skill_keys[event.keycode]), event.pressed)
 		get_viewport().set_input_as_handled()
@@ -2652,3 +2658,78 @@ func _mission_objective() -> String:
 	if map is SandboxMap:
 		return "recover the relic (far room, top right)"
 	return "find the relic in the far room and bring it back to EXTRACT"
+
+
+# --- pista A (D-090): bushes, squad synergies, camp --------------------------------------------------
+
+var bushes: BushField = null
+var camp: CampSite = null
+var camp_test_kits: int = CampDefs.TEST_KITS     # while pista D's kit item does not exist
+var camps_done: int = 0                           # stats (simulator, tests)
+var camps_interrupted: int = 0
+var _syn_t: float = 0.0
+
+
+func _setup_pista_a() -> void:
+	var seed_v := int(map.get("seed_value")) if map.get("seed_value") != null else floor_number
+	bushes = BushField.make(map, seed_v)
+	_world.add_child(bushes)
+
+
+func _tick_pista_a(delta: float, foes: Array) -> void:
+	_syn_t -= delta
+	if _syn_t <= 0.0:
+		_syn_t = SquadSynergies.EVERY
+		SquadSynergies.update(heroes, foes, bushes, fog, map)
+	if camp != null:
+		if not is_instance_valid(camp) or not camp.tick(delta, foes):
+			camp = null
+
+
+## D-090 "Camp here": "" when the camp starts, otherwise why not (also said by the Master).
+func start_camp(point: Vector2) -> String:
+	var why := camp_refusal(point)
+	if why != "":
+		if master_hero != null:
+			master_hero.say(tr(why), 2.5)
+		return why
+	if CampDefs.kit_is_item():
+		for h in heroes:
+			if h.alive and h.hero != null and int(h.hero.bag.get(CampDefs.KIT_ID, 0)) > 0:
+				h.hero.bag[CampDefs.KIT_ID] = int(h.hero.bag[CampDefs.KIT_ID]) - 1
+				if int(h.hero.bag[CampDefs.KIT_ID]) <= 0:
+					h.hero.bag.erase(CampDefs.KIT_ID)
+				break
+	else:
+		camp_test_kits -= 1
+	camp = CampSite.make(map.nearest_walkable(point), heroes)
+	camp.finished.connect(func(_c, ok: bool, _w: String):
+		if ok:
+			camps_done += 1
+		else:
+			camps_interrupted += 1)
+	_world.add_child(camp)
+	return ""
+
+
+## Why the squad cannot camp at `point` now ("" = it can).
+func camp_refusal(point: Vector2) -> String:
+	if mission_state != Mission.ACTIVE:
+		return "not now"
+	if camp != null and is_instance_valid(camp):
+		return "already camping"
+	if not camp_kit_available():
+		return "no camp kit"
+	for e in living_enemies():
+		if not e.dormant and e.position.distance_to(point) <= CampDefs.SAFE_RADIUS and (e.alerted or e.visible):
+			return "enemies too close"
+	return ""
+
+
+func camp_kit_available() -> bool:
+	if not CampDefs.kit_is_item():
+		return camp_test_kits > 0
+	for h in heroes:
+		if h.alive and h.hero != null and int(h.hero.bag.get(CampDefs.KIT_ID, 0)) > 0:
+			return true
+	return false

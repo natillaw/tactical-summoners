@@ -60,7 +60,7 @@ var secret_clues: Array = []      # discovered clue strings
 # Active skills (combat Phase 3, D-043..D-046): known skills, the W/E/R loadout (D-059) and the
 # level-up choices still waiting for the player.
 var skills: Array = []            # known skill ids (SkillDefs.SKILLS)
-var loadout: Array = []           # equipped ids, up to SkillDefs.MAX_SLOTS, in W E R order
+var loadout: Array = []           # equipped ids, up to SkillDefs.MAX_SLOTS, in Q W E R order (D-090)
 var skill_choices: Array = []     # [{"level": int, "options": [ids]}], oldest first
 var ascension_fails: int = 0      # failed ascension attempts in a row (pity, ProgressionDefs)
 var trained_skills: int = 0       # skills learned at the Training Grounds
@@ -274,7 +274,7 @@ func learn_skill(id: String, log_event: bool = true) -> bool:
     return true
 
 
-## Puts a known skill in a slot (0-3 = Q W E R); swaps if it was in another slot.
+## Puts a known skill in a slot (0-3 = Q W E R, D-090); swaps if it was in another slot.
 func equip_skill(slot_index: int, id: String) -> bool:
     if not skills.has(id) or slot_index < 0 or slot_index >= SkillDefs.MAX_SLOTS:
         return false
@@ -298,6 +298,8 @@ func choose_skill(choice_index: int, id: String) -> bool:
     if not (c["options"] as Array).has(id) or not learn_skill(id):
         return false
     skill_choices.remove_at(choice_index)
+    if bool(c.get("bonus", false)) and get("bonus_skill_choice") != null:
+        set("bonus_skill_choice", maxi(0, int(get("bonus_skill_choice")) - 1))   # D-090: the tome's extra option is used
     # options learned meanwhile disappear from the other pending choices
     for other in skill_choices:
         (other["options"] as Array).erase(id)
@@ -306,11 +308,13 @@ func choose_skill(choice_index: int, id: String) -> bool:
 
 
 func _queue_skill_choices(from_level: int, to_level: int) -> void:
-    for lv in SkillDefs.LEARN_LEVELS:
+    for lv in SkillDefs.choice_levels():
         if lv > from_level and lv <= to_level:
-            var opts := SkillDefs.level_choices(hero_class, skills, lv, hero_seed)
+            # D-090: a skill tome (pista D, optional field bonus_skill_choice) adds one more option
+            var extra := 1 if get("bonus_skill_choice") != null and int(get("bonus_skill_choice")) > 0 else 0
+            var opts := SkillDefs.level_choices(hero_class, skills, lv, hero_seed, extra)
             if not opts.is_empty():
-                skill_choices.append({"level": lv, "options": opts})
+                skill_choices.append({"level": lv, "options": opts, "bonus": opts.size() > SkillDefs.CHOICE_OPTIONS})
 
 
 ## Luck 1-10: a fixed trait of the hero, derived from its seed (nothing new is stored, the same hero

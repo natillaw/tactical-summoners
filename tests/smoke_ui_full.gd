@@ -64,8 +64,8 @@ func _ready() -> void:
     _key(sb, KEY_2)
     check(sb.heroes[1].is_controlled(), "key 2 drives hero 2")
     sb.heroes[1]._cooldown = 0.0
-    _key(sb, KEY_Q)
-    check(sb.heroes[1]._cooldown > 0.0, "Q fires the driven hero's attack at the mouse")
+    sb.attack_at_cursor()                           # D-090: the basic attack is the left click (Q is skill 1 now)
+    check(sb.heroes[1]._cooldown > 0.0, "the basic attack fires the driven hero's attack at the mouse")
     _key(sb, KEY_Q, false)
     _key(sb, KEY_H)
     check(sb.heroes[1].order == "hold", "H gives the hold order")

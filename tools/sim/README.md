@@ -39,7 +39,8 @@ El informe queda en `docs/reports/sim/<fecha>_<nombre>/`: `resumen.md`, `runs.cs
           "aim_error_mult": 1.0, // error de puntería de los héroes autónomos
           "think_every": 0.25, "engage": 320,
           "knows_map": false,  // false = explora con niebla como un jugador nuevo; true = sabe el mapa
-          "regroup_wait": 6},  // táctico: espera al grupo hasta N s antes de atraer a un grupo nuevo
+          "regroup_wait": 6,   // táctico: espera al grupo hasta N s antes de atraer a un grupo nuevo
+          "camp": true, "camp_below": 0.55},  // D-090 táctico: acampa con la party por debajo de esa vida (o un mago sin maná)
   "party": [                   // el piso despliega los que admite (piso 1 = solo el Máster)
     {"master": true, "class": "warrior", "level": 3, "traits": ["stubborn"], "gear": "tier1"},
     {"class": "cleric", "level": 2, "rarity": "rare", "attrs": {"int": 14}, "skills": ["..."],
