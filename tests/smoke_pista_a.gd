@@ -321,9 +321,9 @@ func _ready() -> void:
     while not hd.skill_choices.is_empty():
         hd.choose_skill(0, String(hd.skill_choices[0]["options"][0]))
     hd.learn_skill("shield_wall")
-    check(hd.loadout.size() <= SkillDefs.MAX_SLOTS and SkillDefs.MAX_SLOTS == 4, "at most 4 actives (Q W E R): %d" % hd.loadout.size())
+    check(hd.loadout.size() <= SkillDefs.MAX_SLOTS and SkillDefs.MAX_SLOTS == 3, "Q = basic attack + at most 3 actives on W E R: %d" % hd.loadout.size())
     check(SkillDefs.level_choices("class.warrior", [], 2, 9, 1).size() == SkillDefs.CHOICE_OPTIONS + 1, "a skill tome adds one option")
-    check(SandboxScreen.SKILL_KEYS == "QWER", "the keys are Q W E R")
+    check(SandboxScreen.SKILL_KEYS == "WER", "skills on W E R (Q stays the basic attack)")
     var scr := SkillChoiceScreen.make(hd, 0)
     check(scr != null, "the choice screen builds")
     scr.free()

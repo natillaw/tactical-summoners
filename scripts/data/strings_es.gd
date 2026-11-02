@@ -256,7 +256,7 @@ const ES_PISTA_A := {
     "Frozen": "Congelado", "Well fed": "Bien comido", "Inspired by a song": "Inspirado por una canción",
     "Energy": "Energía", "Concentration": "Concentración", "None": "Ninguno",
     "%s reached level %d: choose ONE skill": "%s llegó al nivel %d: elige UNA habilidad",
-    "The others are lost for this choice. Up to 4 skills on Q W E R.": "Las demás se pierden en esta elección. Hasta 4 habilidades en Q W E R.",
+    "The others are lost for this choice. Up to 3 skills on W E R (Q = basic attack).": "Las demás se pierden en esta elección. Hasta 3 habilidades en W E R (Q = ataque básico).",
     "Skill tome: one extra option.": "Tomo de habilidad: una opción más.", "finisher": "remate", "combo": "combo", "range %d": "alcance %d",
     "Level %d: choose a skill (%d options)": "Nivel %d: elige una habilidad (%d opciones)",
     "Finisher: stun a foe (longer with more combo points).": "Remate: aturde a un enemigo (más tiempo con más puntos de combo).",

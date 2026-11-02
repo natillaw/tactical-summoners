@@ -96,7 +96,7 @@ var _info: Label
 var _hint: Label
 var _squad_label: Label
 var _skill_btns: Array[Button] = []    # skill slots 0-2 on W E R (D-059; Q = aimed basic attack)
-const SKILL_KEYS := "QWER"                         # D-090: four skills (the Master's basic attack = left click)
+const SKILL_KEYS := "WER"
 var _q_held: bool = false                 # holding Q keeps firing at the cursor whenever ready
 var _overlay: Control
 var _band: ColorRect
@@ -2300,7 +2300,7 @@ func _process(delta: float) -> void:
 		debug_overlay.queue_redraw()
 	var driven := controlled()
 	if _q_held and driven != null and driven.attack_ready():
-		attack_at_cursor()                       # holding the left click fires again as soon as the attack is ready
+		attack_at_cursor()                       # holding Q fires again as soon as the attack is ready
 	if _rmb_held and driven != null and mission_state == Mission.ACTIVE:
 		_rmb_t -= delta                          # hold right click: the hero keeps following the cursor
 		if _rmb_t <= 0.0:
@@ -2364,11 +2364,6 @@ func _gui_input(event: InputEvent) -> void:
 			if not event.pressed and _ping_press != Vector2.INF:
 				quick_ping(screen_to_world(_ping_press))
 				_ping_press = Vector2.INF
-				return
-			if controlled() != null and not Input.is_key_pressed(AiDefs.PING_MODIFIER):
-				_q_held = event.pressed                  # D-090: the Master's basic attack (was Q), held = keeps attacking
-				if event.pressed:
-					attack_at_cursor()
 				return
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			if event.pressed and _arming_attack_move:
@@ -2501,6 +2496,12 @@ func squad_key(key: int) -> void:
 func _input(event: InputEvent) -> void:
 	if not (event is InputEventKey) or event.echo:
 		return
+	if event.keycode == KEY_Q:
+		_q_held = event.pressed
+		if event.pressed:
+			attack_at_cursor()
+		get_viewport().set_input_as_handled()
+		return
 	if event.keycode == KEY_F:
 		if event.pressed:                        # D-082: interaction (lift a fallen ally, gather, escape)
 			interact_press()
@@ -2521,7 +2522,7 @@ func _input(event: InputEvent) -> void:
 		dash_selected()
 		get_viewport().set_input_as_handled()
 		return
-	var skill_keys := {KEY_Q: 0, KEY_W: 1, KEY_E: 2, KEY_R: 3}   # D-090
+	var skill_keys := {KEY_W: 0, KEY_E: 1, KEY_R: 2}
 	if skill_keys.has(event.keycode):
 		_skill_key(int(skill_keys[event.keycode]), event.pressed)
 		get_viewport().set_input_as_handled()

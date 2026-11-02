@@ -60,7 +60,7 @@ var secret_clues: Array = []      # discovered clue strings
 # Active skills (combat Phase 3, D-043..D-046): known skills, the W/E/R loadout (D-059) and the
 # level-up choices still waiting for the player.
 var skills: Array = []            # known skill ids (SkillDefs.SKILLS)
-var loadout: Array = []           # equipped ids, up to SkillDefs.MAX_SLOTS, in Q W E R order (D-090)
+var loadout: Array = []           # equipped ids, up to SkillDefs.MAX_SLOTS, in W E R order
 var skill_choices: Array = []     # [{"level": int, "options": [ids]}], oldest first
 var ascension_fails: int = 0      # failed ascension attempts in a row (pity, ProgressionDefs)
 var trained_skills: int = 0       # skills learned at the Training Grounds
@@ -274,7 +274,7 @@ func learn_skill(id: String, log_event: bool = true) -> bool:
     return true
 
 
-## Puts a known skill in a slot (0-3 = Q W E R, D-090); swaps if it was in another slot.
+## Puts a known skill in a slot (0-2 = W E R); swaps if it was in another slot.
 func equip_skill(slot_index: int, id: String) -> bool:
     if not skills.has(id) or slot_index < 0 or slot_index >= SkillDefs.MAX_SLOTS:
         return false

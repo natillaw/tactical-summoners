@@ -153,7 +153,7 @@ func _summary() -> VBoxContainer:
 func _skills() -> VBoxContainer:
     var v := VBoxContainer.new()
     var res := String(SkillDefs.RESOURCES[SkillDefs.resource_of(hero.hero_class)]["name"])
-    v.add_child(UIKit.label("Q W E R = skills (up to 4) · left click = basic attack · resource: %s" % res, 12, UIKit.MUTED))
+    v.add_child(UIKit.label("Q = basic attack · W E R = skills · resource: %s" % res, 12, UIKit.MUTED))
     v.add_child(UIKit.button(tr("Synergy codex"), func(): _overlay(SynergyCodex.new()), Vector2(140, 26)))   # D-090
     for sid in hero.skills:
         var sk := SkillDefs.info(sid)
@@ -173,10 +173,10 @@ func _skills() -> VBoxContainer:
         row.add_child(col)
         if slot_i != 0:
             var id := String(sid)
-            row.add_child(UIKit.button("→Q", func():
+            row.add_child(UIKit.button("→W", func():
                 hero.equip_skill(0, id)
                 Game._commit()
-                _done("%s now on Q." % String(sk["name"])), Vector2(50, 28)))
+                _done("%s now on W." % String(sk["name"])), Vector2(50, 28)))
         v.add_child(row)
     for i in hero.skill_choices.size():
         var c: Dictionary = hero.skill_choices[i]
