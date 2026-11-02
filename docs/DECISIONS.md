@@ -438,6 +438,14 @@ Herramienta para balancear sin jugar: `godot --headless --path . -s res://tools/
 - **Simulador:** `progress` + `progress_profiles.json`, `gear_style` (mix/def/atk, presets `tierN_def/atk`), `matrix` (clase del Máster × party × equipo × bot), alerta de ventaja táctica < 30 pts y tabla por dimensión.
 - **Sin verificar:** el balance resultante (la simulación completa se cortó por tiempo). Pendiente correrla en el PC del dueño y ajustar.
 
+### D-130 — Sim Lab: interfaz para el simulador (2026-11-02, dueño: "Sim Lab")
+Escena de herramienta `res://tools/sim/sim_lab.tscn` (botón **Sim Lab** en la fila Debug del menú principal, o `godot --path . res://tools/sim/sim_lab.tscn`). No reimplementa nada: arma la config JSON de D-083/D-084, lanza `run_sim.gd` como proceso aparte (`OS.execute_with_pipe`, lectura en hilos: la UI no se congela) y lee `results.json`.
+- **Config (izquierda):** pisos (casillas desde `TowerExpedition.FLOORS` o rango), bot táctico/loco/ambos + avanzado, party de 5 filas (clases de `HeroTables`/`MasterDefs`, rarezas, rasgos, skills filtradas con `SkillDefs.usable_by`, gear de `gear_presets.json` o lista de ítems de `ItemDefs.BASES`), aleatorio por fila y party, **arquetipos** en `tools/sim/configs/archetypes.json` (D-131, ampliable), progreso + gear_style, sliders de enemigos, overrides con autocompletado de constantes numéricas de `scripts/data|sandbox|core|combat`, sweep, runs/semilla/workers/max_time, Rápido (5) y Completo; guardar/cargar/duplicar en `tools/sim/configs/`.
+- **Resultados (derecha, D-132):** barra de progreso (líneas `[n/total runs]` del simulador, por lote de runs) y Cancelar; tabla por piso (rojo < 10 %, verde 40–80 %, gris > 95 %); táctico vs loco con diferencia y alerta < 30 pts; daño/curación/daño recibido por héroe; historial (`docs/reports/sim/*/results.json`), comparar 2 por piso; abrir carpeta del reporte.
+- **Cambio mínimo en el simulador (D-133):** `--cancel-file <ruta>`: si el archivo aparece, el padre mata a sus workers y sale con `SIM ERROR: cancelled`. Los errores de validación son los mismos `SIM ERROR` del simulador, mostrados en la UI (más 3 comprobaciones previas: sin pisos, sweep sin parámetro o paso ≤ 0).
+- **Prueba (D-134):** `godot --headless --path . -s res://tools/sim/sim_lab_smoke.gd` (abre la escena, 2 runs del piso 1, lee el resultado). No está en `Run-Tests.ps1`.
+- Fuera de `tools/sim`: botón en `scripts/ui/main_menu.gd` y textos en `strings_es.gd`. No añade mecánicas al juego (no hace falta comparar floors1-10 antes/después).
+
 ## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)
 
 | ID | Tema | Lo que existe / origen | Pregunta abierta |
