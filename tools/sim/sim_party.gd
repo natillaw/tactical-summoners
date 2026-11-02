@@ -11,11 +11,12 @@ const SimConfig := preload("res://tools/sim/sim_config.gd")
 ## What an automatic preset puts in each slot, by class (only bases that exist in ItemDefs.BASES).
 const AUTO_BASES := {
     "class.warrior": {"main_hand": "sword", "off_hand": "shield", "head": "helm", "chest": "mail"},
-    "class.cleric": {"main_hand": "mace", "off_hand": "shield", "head": "helm", "chest": "mail"},
-    "class.commoner": {"main_hand": "sword", "off_hand": "shield", "head": "helm", "chest": "mail"},
-    "class.rogue": {"main_hand": "dagger", "head": "hood", "chest": "mail"},
-    "class.ranger": {"main_hand": "bow", "head": "hood", "chest": "mail"},
-    "class.mage": {"main_hand": "staff", "head": "hood", "chest": "robe"},
+    # pista D (D-126): armour by class (plate warrior, leather rogue/archer, cloth mage/cleric)
+    "class.cleric": {"main_hand": "mace", "off_hand": "shield", "head": "hood", "chest": "robe", "legs": "cloth_pants", "feet": "sandals"},
+    "class.commoner": {"main_hand": "sword", "off_hand": "shield", "head": "leather_cap", "chest": "leather_vest", "legs": "leather_pants"},
+    "class.rogue": {"main_hand": "dagger", "head": "leather_cap", "chest": "leather_vest", "legs": "leather_pants"},
+    "class.ranger": {"main_hand": "bow", "head": "leather_cap", "chest": "leather_vest", "legs": "leather_pants"},
+    "class.mage": {"main_hand": "staff", "head": "hood", "chest": "robe", "legs": "cloth_pants", "feet": "sandals"},
 }
 const AUTO_COMMON := {"hands": "gloves", "legs": "greaves", "feet": "boots", "amulet": "amulet", "ring1": "ring", "ring2": "ring", "special": "charm"}
 const MASTER_LOOK := {"race": "human", "body": "male", "skin": "light", "eyes": "blue", "hair": "hair_plain", "hair_color": "black", "beard": ""}
@@ -234,6 +235,12 @@ static func _equip(h: HeroData, gear: Variant, presets: Dictionary, rng: RandomN
             it["affixes"] = []
         Game.stash.append(it)
         var why := Game.equip(h, int(it["uid"]), String(spec.get("slot", "")))
+        var own := String(AUTO_BASES.get(h.hero_class, {}).get(String(spec.get("slot", "")), ""))
+        if why != "" and ItemLibrary.armor_of(it) != "" and own != "" and own != base:   # D-126: the class's own armour instead
+            Game.stash.remove_at(Game.stash_index(int(it["uid"])))
+            it = ItemGen.generate(rng, Game._next_uid(), int(spec.get("ilvl", preset.get("ilvl", 1))), String(spec.get("rarity", preset.get("rarity", "common"))), own)
+            Game.stash.append(it)
+            why = Game.equip(h, int(it["uid"]), String(spec.get("slot", "")))
         if why != "":
             Game.stash.remove_at(Game.stash_index(int(it["uid"])))
             if spec in items or spec in (preset.get("items", []) as Array):

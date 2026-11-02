@@ -23,7 +23,12 @@ var revive: bool = true               # tactical: walks over and lifts the falle
 var regroup_wait: float = 3.0         # D-084 tactical: waits up to this long for the squad before pulling a new group
 var _wait_t: float = 0.0
 var _regroup_cd: float = 0.0
-var stats := {"pings": 0, "commands": 0, "skills": 0, "revives": 0, "retreats": 0, "dashes": 0}
+var stats := {"pings": 0, "commands": 0, "skills": 0, "revives": 0, "retreats": 0, "dashes": 0, "loots": 0}
+var loot: bool = true                 # pista D: walks to glowing bodies near the way and holds F
+const LOOT_SEEK := 220.0
+var _loot_t: float = 0.0              # time spent on the current body (gives up after LOOT_GIVE_UP s)
+var _loot_target: LootBag = null
+const LOOT_GIVE_UP := 6.0
 var _ping_cd: float = 0.0
 var _move_cd: float = 0.0
 var _last_goal: Vector2 = Vector2.INF
@@ -115,6 +120,8 @@ func think(sb: SandboxScreen, goal: Vector2, dt: float) -> int:
                     stats["skills"] += 1
                     used += 1
         return used
+    if loot and _loot(sb, m, dt):                     # pista D (D-121): a glowing body near the way: hold F on it
+        return used
     for g in sb.nodes:                                # a gathering spot at the Master's feet: hold F
         if is_instance_valid(g) and not g.taken and g.position.distance_to(m.position) <= GatherNode.RANGE:
             sb.interact_held = true
@@ -126,6 +133,35 @@ func think(sb: SandboxScreen, goal: Vector2, dt: float) -> int:
             _ping_cd = 8.0
             _ping(sb, "explore", m.position + (goal - m.position).normalized() * 200.0)
     return used
+
+
+## Pista D: walks to the nearest body with loot (only if a pack has room or it holds materials) and
+## holds F there; gives up on a body after LOOT_GIVE_UP s. True while busy looting.
+func _loot(sb: SandboxScreen, m: SandboxHero, dt: float) -> bool:
+    var best: LootBag = null
+    for b in sb.loot_bags:
+        if is_instance_valid(b) and not b.is_empty() and b.visible_to_bot and b.position.distance_to(m.position) <= LOOT_SEEK \
+                and (best == null or b.position.distance_to(m.position) < best.position.distance_to(m.position)):
+            best = b
+    if best == null or (best.res.is_empty() and sb._pack_with_room(m, true) == null):
+        _loot_t = 0.0
+        return false
+    if best != _loot_target:
+        _loot_target = best
+        _loot_t = 0.0
+    _loot_t += dt
+    if _loot_t > LOOT_GIVE_UP:
+        best.visible_to_bot = false               # unreachable: leave it
+        _loot_t = 0.0
+        return false
+    if best.position.distance_to(m.position) <= LootDefs.LOOT_RANGE * 0.8:
+        sb.interact_held = true
+        m.stop()
+        if best.hold == 0.0:
+            stats["loots"] += 1
+    else:
+        _move(sb, best.position, false)
+    return true
 
 
 ## Retreat toward the exit like a player: X (the Master runs, the squad is pinged to come), then escape.

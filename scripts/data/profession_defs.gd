@@ -25,6 +25,20 @@ const PROFESSIONS := {
     "doctor": {"name": "Doctor", "family": "medicine", "attr": "int", "desc": "Treats diseases and wounds in the hospital."},
     "scholar": {"name": "Scholar", "family": "knowledge", "attr": "int", "desc": "Working in the Library makes skill-book transcription cheaper."},
     "tavernkeeper": {"name": "Tavern keeper", "family": "service", "attr": "tem", "desc": "Makes the tavern more relaxing."},
+    # D-126: armour by class. Their own buildings come with the town (pista B); until then they work in
+    # the workshop (ItemLibrary.LINES "fallback").
+    "leatherworker": {"name": "Leatherworker", "family": "craft", "attr": "agi", "desc": "Tans hides into leather armour for rogues and archers, bags and camp kits."},
+    "tailor": {"name": "Tailor", "family": "craft", "attr": "int", "desc": "Weaves robes, hoods and trousers for mages and clerics."},
+}
+
+## D-128 plain recipes of the professions (same format as EconomyDefs.RECIPES; "line" = the
+## ItemLibrary line whose building runs it). Consumables for the other tracks: meals with a buff for the
+## whole expedition (LootDefs.CONSUMABLES), the camp kit (pista A's camp) and quivers of arrows.
+const RECIPES := {
+    "cook_stew": {"name": "Cook hearty stew", "building": "kitchen", "prof": "cook", "min": 1, "work": 3.0, "in": {"grain": 2, "herb": 1}, "out": {"meal_stew": 2}},
+    "cook_roast": {"name": "Cook spiced roast", "building": "kitchen", "prof": "cook", "min": 2, "work": 3.0, "in": {"grain": 1, "herb": 2, "fang": 1}, "out": {"meal_roast": 2}},
+    "make_camp_kit": {"name": "Make a camp kit", "line": "tannery", "prof": "leatherworker", "min": 1, "work": 4.0, "in": {"hide": 2, "wood": 2}, "out": {"camp_kit": 1}},
+    "fletch_arrows": {"name": "Fletch arrows", "line": "workshop", "prof": "carpenter", "min": 0, "work": 2.0, "in": {"wood": 2, "ore": 1}, "out": {"arrows": 2}},
 }
 
 ## Past-life occupation (HeroTables.PROFESSIONS) -> town profession it starts with.
@@ -32,9 +46,9 @@ const FROM_PAST_LIFE := {
     "occupation.builder": "builder", "occupation.mason": "builder", "occupation.engineer": "builder",
     "occupation.blacksmith": "blacksmith", "occupation.lumberjack": "lumberjack", "occupation.miner": "miner",
     "occupation.farmer": "farmer", "occupation.stablehand": "farmer", "occupation.chef": "cook",
-    "occupation.fisher": "cook", "occupation.hunter": "cook", "occupation.alchemist": "alchemist",
+    "occupation.fisher": "cook", "occupation.hunter": "leatherworker", "occupation.alchemist": "alchemist",   # D-126: hunter -> leatherworker
     "occupation.medic": "doctor", "occupation.priest": "doctor", "occupation.scholar": "scholar",
-    "occupation.entertainer": "tavernkeeper", "occupation.merchant": "tavernkeeper", "occupation.tailor": "carpenter",
+    "occupation.entertainer": "tavernkeeper", "occupation.merchant": "tavernkeeper", "occupation.tailor": "tailor",   # D-126: tailor -> tailor
     "occupation.guard": "builder", "occupation.scout": "lumberjack",
 }
 

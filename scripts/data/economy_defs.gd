@@ -63,6 +63,15 @@ const RESOURCES := {
     "elixir_strength": {"name": "Elixirs of strength", "cat": "consumable"},
     "elixir_speed": {"name": "Elixirs of speed", "cat": "consumable"},
     "elixir_defense": {"name": "Elixirs of defence", "cat": "consumable"},
+    # --- pista D (D-128, D-129): carried consumables (LootDefs.CONSUMABLES) and books (LootDefs.BOOKS) ---
+    "meal_stew": {"name": "Hearty stews", "cat": "consumable"},
+    "meal_roast": {"name": "Spiced roasts", "cat": "consumable"},
+    "camp_kit": {"name": "Camp kits", "cat": "consumable"},
+    "arrows": {"name": "Quivers of arrows", "cat": "consumable"},
+    "book_xp": {"name": "Books of experience", "cat": "book"},
+    "book_skill": {"name": "Skill tomes", "cat": "book"},
+    "book_trade": {"name": "Trade manuals", "cat": "book"},
+    "book_plan": {"name": "Master plans", "cat": "book"},
 }
 
 ## Gathering spots in tower floors (ProceduralMap v2 "nodes"): what a hero collects in GATHER_TIME.

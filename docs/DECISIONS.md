@@ -438,6 +438,44 @@ Herramienta para balancear sin jugar: `godot --headless --path . -s res://tools/
 - **Simulador:** `progress` + `progress_profiles.json`, `gear_style` (mix/def/atk, presets `tierN_def/atk`), `matrix` (clase del Máster × party × equipo × bot), alerta de ventaja táctica < 30 pts y tabla por dimensión.
 - **Sin verificar:** el balance resultante (la simulación completa se cortó por tiempo). Pendiente correrla en el PC del dueño y ajustar.
 
+### D-120 — Por qué los enemigos no soltaban nada y botín en el cuerpo (2026-11-02, dueño: "Pista D")
+- **Causa:** en la torre cada criatura solo tiraba la tabla `LootDefs.FLOORS[n].drops` (4-6 % de un material) y todo el equipo salía al **completar** el piso, directo al alijo. En partida, un enemigo muerto no dejaba nada (como mucho un número flotante de "+1 esencia" muy de vez en cuando).
+- **Ahora** (`LootService.body_loot`, con la semilla de la expedición): cada cuerpo puede llevar equipo según su rango (`LootDefs.CREATURE_ITEM_CHANCE`: normal 10 %, élite —líder, chamán o pregonero— 35 %, jefe 100 % y 2 piezas), los materiales/llaves de siempre y, raramente, un libro (D-129). La recompensa por completar el piso no cambia.
+- Todo se queda **en el cuerpo** (`LootBag`) hasta que alguien lo saquea. Al ganar, el escuadrón barre los cuerpos a ≤ 260 px (`END_SWEEP`: el piso puede acabar en el acto al caer el jefe). Lo que quede en el suelo se pierde.
+
+### D-121 — Saquear con F (2026-11-02, dueño)
+- El cuerpo con botín **brilla** con el color de su mejor ítem (dorado si solo hay materiales) y chispas; oculto en la niebla no explorada. Junto a él aparece "Mantén F: saquear" y un anillo que se llena: **mantener F 1 s** (`LOOT_HOLD`, a ≤ 44 px) abre la **ventana de botín** (`LootWindow`): el juego no se pausa (D-014) y se cierra al alejarse. "Coger" / "Cogerlo todo".
+- Cambio localizado en `SandboxScreen`: `_tick_master_loot` dentro de `_tick_interact` (levantar a un aliado tiene prioridad) y funciones nuevas al final del archivo.
+- Los héroes autónomos que no pelean saquean el cuerpo que pisan (1,2 s, `AUTO_LOOT_*`), solo a su mochila. El `MasterBot` camina a los cuerpos cercanos (≤ 220 px) y mantiene F (`bot.loot` en el simulador).
+
+### D-122 — Stats: base fija + 1-2 propiedades por rareza (2026-11-02, dueño; cambia el número de afijos de D-077)
+Base fija (sin tirada) + verde 1 propiedad, azul/morado/naranja 2, cada vez más fuertes (`RARITIES.quality`: ×1,0 / 1,1 / 1,3 / 1,55 sobre el rango). Antes (D-077) épico 3 y legendario 4 afijos. Los afijos malditos de D-077 siguen igual. Con `ItemGen` y semilla.
+
+### D-123 — Rarezas y basura gris (2026-11-02, dueño)
+Gris **basura** (no se equipa; "Desmontar toda la basura" en el inventario → materiales, `LootDefs.SALVAGE_JUNK`), blanco común, verde poco común, azul raro, morado épico, naranja legendario, rojo único (solo misiones supersecretas o eventos, como D-077). El color sale de `ItemDefs.RARITIES`: borde e icono tintado en las casillas, nombre coloreado en la ventana de botín y en el alijo, brillo del cuerpo y texto flotante para verde o mejor. La basura sale en el 35 % de los ítems de criaturas normales con nombre gastado ("Daga doblada").
+
+### D-124 — Mochila por héroe (2026-11-02, dueño)
+- Cada héroe lleva una mochila de 4 casillas (`PACK_SLOTS`) + la bolsa equipada (nuevo hueco **bolsa**: zurrón +2, mochila +4; se ven a la espalda). Las hace el **peletero**; nunca salen de cuerpos.
+- Al salir (éxito o huida) todo pasa al alijo del Máster (`Game.deliver_packs`; si el alijo está lleno, se queda en la torre y se avisa). Si un héroe **cae**, su mochila cae con él al suelo (cualquiera la recoge); si muere y nadie la recoge, se pierde. Expedición fallida = mochilas perdidas. La pantalla de resultados lo lista.
+
+### D-125 — Rasgo avaricioso (`trait.greedy`, "Codicioso") (2026-11-02, dueño)
+Ventaja: +25 % de probabilidad de ítem por cada avaricioso en el escuadrón (máx. +50 %) y saquea desde el doble de distancia. Pega: al volver, cada ítem de su mochila tiene un 25 % de **quedárselo** (`HeroData.hoard`). El Máster lo descubre con un 40 % ("X intentó quedarse Y" en el registro del pueblo y en resultados). En el inventario: **Confiscar** (vuelve al alijo; Confianza −8, Obediencia +4) o castigarlo por síntesis en el Salón. El Máster nunca retiene. No hay oro todavía (D-070): el "+% oro" queda para cuando exista.
+
+### D-126 — Armadura por clase y oficios de equipo (2026-11-02, dueño)
+- Cada pieza de armadura tiene peso (`BASES.armor`): **placa** (yelmo, cota, guanteletes, grebas) → herrería → guerrero; **cuero** (gorro, armadura, pantalón, botas) → peletería → pícaro y arquero; **tela** (capucha, túnica, pantalón tejido, sandalias) → sastrería → mago y clérigo. `ItemLibrary.ARMOR_BY_CLASS`: el guerrero también lleva cuero; el plebeyo cuero y tela. Las subclases futuras añaden su línea. Escudos, joyas y la ropa inicial no tienen regla.
+- Oficios nuevos `leatherworker` (peletero) y `tailor` (sastre). Pasado: cazador → peletero, sastre → sastre (antes cocinero/carpintero; solo afecta a héroes nuevos). Sin edificio propio aún (el pueblo es de la pista B): trabajan en el **taller** (`LINES.fallback`) hasta que `TownTables` tenga `tannery`/`tailor`.
+- Las recetas viejas `forge_weapon/forge_armor` del herrero solo hacen metal.
+
+### D-127 — Arcos y escudos LPC reservados, ahora ítems (2026-11-02, dueño; completa D-082)
+Arco recurvo, arco largo (great) y ballesta (arquero; el largo y la ballesta disparan más lento y pegan más), escudo de cometa y de bronce (spartan); el escudo genérico ya bloquea y se ve (escudo redondo). Se fabrican (taller, herrería) y salen de cuerpos (temas de `THEMES`). Arte importado con `tools/lpc_extras_items.py` (CC-BY-SA/OGA-BY/GPL, créditos en `assets/pixel/lpc/CREDITS.csv`), también mochilas y pantalones teñidos.
+
+### D-128 — Consumibles para otras pistas (2026-11-02, dueño)
+`LootDefs.CONSUMABLES` es la lista de lo que cabe en la bolsa (antes, una lista fija en `Game.pack_consumable`). Comidas con buff (se comen al entrar, toda la expedición): estofado (+10 % vida máx.) y asado especiado (+8 % ataque y magia), en la cocina. **Kit de campamento** (peletero) y **carcaj de flechas** (taller): se fabrican y se llevan; los usará la pista A (campamento, munición). Comprar flechas: pendiente del mercader (pueblo).
+
+### D-129 — Libros (2026-11-02, dueño)
+Drop raro de élites (3 %) y jefes (30 %), al almacén del pueblo; se usan desde el inventario: **libro de experiencia** (un nivel entero), **tomo de habilidad** (`HeroData.bonus_skill_choice` +1, lo lee la pista A), **manual de oficio** (+1 nivel de una profesión; la pista B lo apuntará a aldeanos), **plano maestro** (llama a `Game.apply_master_plan` si existe —pista B—; si no, se guarda). Distinto de los libros de entrenamiento (`Game.books`, XP fija).
+Guardado: campos nuevos con valores por defecto (`hoard`, `bonus_skill_choice`, hueco `bag`); **sin subir `SAVE_VERSION`** (se sube en el merge). Pruebas: `tests/smoke_loot.gd`; captura: `tests/capture_loot.tscn`.
+
 ## 2. PENDIENTES (ideas que se conservan; no implementar sin respuesta del dueño)
 
 | ID | Tema | Lo que existe / origen | Pregunta abierta |

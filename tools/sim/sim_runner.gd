@@ -64,6 +64,7 @@ func _run(tree: SceneTree, host: Node, cfg: Dictionary, floor_num: int, seed_v: 
     bot.use_skills = bool(bc["use_skills"])
     bot.revive = bool(bc["revive"])
     bot.regroup_wait = float(bc["regroup_wait"])
+    bot.loot = bool(bc.get("loot", true))            # pista D: loots the bodies (hold F)
     var knows_map := bool(bc["knows_map"])
     var seen := {}
     var lost_t := 0.0
@@ -206,6 +207,10 @@ func _collect(sb: SandboxScreen, cfg: Dictionary, floor_num: int, seed_v: int, t
         "lost": (results.get("lost_loot", {}) as Dictionary).duplicate(), "reward": reward_res, "reward_items": reward_items,
         "unique": String(results.get("unique", "")), "stash_items": Game.stash.size(),
         "consumables_used": maxi(0, bag_before - _bag_total()), "kill_xp": sb.kill_xp,
+        # pista D: bodies with loot, items on them (junk), looted, brought home, left/lost, kept by the greedy
+        "loot": {"bodies": int(sb.loot_stats["bodies"]), "items": int(sb.loot_stats["items"]), "junk": int(sb.loot_stats["junk"]),
+            "looted": int(sb.loot_stats["looted"]), "home": (sb.loot_report.get("items", []) as Array).size(),
+            "lost": int(sb.loot_report.get("lost", 0)), "greedy_kept": int(sb.loot_report.get("kept", 0))},
     }
 
 

@@ -6,7 +6,7 @@ extends RefCounted
 const TOP_KEYS := ["name", "floors", "floor", "runs", "seed", "seeds", "max_time", "tick_hz", "workers", "bot", "party",
     "party_seed", "gear_seed", "enemies", "overrides", "compare", "sweep", "alerts", "label", "progress", "gear_style", "matrix"]
 const BOT_KEYS := ["style", "retreat_hp", "retreat_standing", "ping_every", "use_commands", "use_skills", "revive",
-    "aim_error_mult", "think_every", "engage", "gather", "knows_map", "regroup_wait"]
+    "aim_error_mult", "think_every", "engage", "gather", "knows_map", "regroup_wait", "loot"]
 const HERO_KEYS := ["master", "class", "level", "stars", "rarity", "traits", "passives", "attrs", "skills", "gear", "seed", "name"]
 const ENEMY_KEYS := ["hp", "damage", "count"]
 ## Hero rarity names -> stars (P-09 is pending: the code only has 1-5 stars, so a rarity is an alias).
@@ -23,7 +23,7 @@ const DEFAULTS := {
     "gear_seed": 1,
     "bot": {"style": "tactico", "retreat_hp": 0.3, "retreat_standing": 1, "ping_every": -1.0, "use_commands": true,
         "use_skills": true, "revive": true, "aim_error_mult": 1.0, "think_every": 0.25, "engage": 320.0, "gather": true,
-        "knows_map": false, "regroup_wait": 3.0},
+        "knows_map": false, "regroup_wait": 3.0, "loot": true},
     "progress": "",                  # "" = levels/gear of the party as written; else a profile of progress_profiles.json
     "gear_style": "mix",             # with a progress profile: "mix" (tierN), "def" (tierN_def) or "atk" (tierN_atk)
     "enemies": {"hp": 1.0, "damage": 1.0, "count": 1.0},
