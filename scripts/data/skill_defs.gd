@@ -28,12 +28,12 @@ const MAX_SLOTS := 4   # D-090: keys Q W E R (the Master's basic attack moved to
 ## regen = per second (regen_combat while fighting, regen_still while standing still, when given);
 ## decay = per second lost out of combat; on_hit / on_hurt = gained per blow dealt / taken.
 ## "none" (commoners): no resource; their skills only have a cooldown.
-## Mana: nothing out of combat (D-090 point 4: recovering means camping, CampDefs), a trickle while fighting.
+## Mana: comes back slowly out of combat (owner, 2026-11-02) and only a trickle while fighting; a camp refills it (CampDefs).
 const RESOURCES := {
     "fury": {"name": "Fury", "color": Color(0.9, 0.3, 0.2), "base": 100, "start": 0.2, "regen": 0.0, "decay": 6.0, "on_hit": 10.0, "on_hurt": 12.0},
     "energy": {"name": "Energy", "color": Color(0.95, 0.85, 0.3), "base": 100, "start": 1.0, "regen": 10.0, "decay": 0.0, "on_hit": 0.0, "on_hurt": 0.0},
     "concentration": {"name": "Concentration", "color": Color(0.55, 0.95, 0.55), "base": 100, "start": 1.0, "regen": 5.0, "regen_still": 14.0, "decay": 0.0, "on_hit": 0.0, "on_hurt": 0.0},
-    "mana": {"name": "Mana", "color": Color(0.35, 0.55, 1.0), "base": 60, "per_attr": "int", "per": 6, "start": 1.0, "regen": 0.0, "regen_combat": 1.0, "decay": 0.0, "on_hit": 0.0, "on_hurt": 0.0},
+    "mana": {"name": "Mana", "color": Color(0.35, 0.55, 1.0), "base": 60, "per_attr": "int", "per": 6, "start": 1.0, "regen": 1.5, "regen_combat": 1.0, "decay": 0.0, "on_hit": 0.0, "on_hurt": 0.0},
     "none": {"name": "None", "color": Color(0.6, 0.6, 0.6), "base": 0, "start": 0.0, "regen": 0.0, "decay": 0.0, "on_hit": 0.0, "on_hurt": 0.0},
 }
 const CLASS_RESOURCE := {"class.warrior": "fury", "class.rogue": "energy", "class.ranger": "concentration",
