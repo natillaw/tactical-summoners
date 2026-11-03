@@ -1,0 +1,12 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# Export
+export_credentials.cfg
+*.tmp
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
