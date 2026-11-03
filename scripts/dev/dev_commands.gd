@@ -70,10 +70,13 @@ const COMMANDS := {
     "fps": ["", "Contador de FPS", "_c_fps"],
     "quicksave": ["", "Guarda en el slot de pruebas", "_c_quicksave"],
     "quickload": ["", "Carga el slot de pruebas", "_c_quickload"],
+    "class set": ["<clase> [hueco]", "Cambia la clase (Máster o hueco 1-5)", "_c_class_set"],
+    "newgame": ["", "Borra la partida y vuelve al creador (escribirlo 2 veces)", "_c_newgame"],
     "respawn": ["", "Vuelve al inicio del piso sin perder la partida", "_c_respawn"],
 }
 
 var tree: SceneTree = null
+static var _newgame_armed: bool = false
 
 
 func _init(p_tree: SceneTree = null) -> void:
@@ -811,3 +814,39 @@ func _c_quickload(_args: Array) -> String:
     if main != null:
         main.call("show_screen", "town", 0)
     return "Quickload OK"
+
+
+func _c_class_set(args: Array) -> String:
+    if args.is_empty():
+        return "Clases: %s" % ", ".join(HeroTables.CLASSES.keys())
+    var cls := String(args[0])
+    if not cls.begins_with("class."):
+        cls = "class." + cls
+    if not HeroTables.CLASSES.has(cls):
+        return "Clase desconocida. Clases: %s" % ", ".join(HeroTables.CLASSES.keys())
+    var h: HeroData = _master_data()
+    if args.size() > 1 and String(args[1]).is_valid_int():
+        var pid := String(Game.party[clampi(int(args[1]) - 1, 0, Game.PARTY_SIZE - 1)])
+        h = Game.heroes.get(pid, null)
+    if h == null:
+        return "Sin héroe"
+    h.hero_class = cls
+    h.skills = h.skills.filter(func(id): return SkillDefs.usable_by(String(id), cls))
+    for slot in ["main_hand", "off_hand"]:
+        h.equipment.erase(slot)                   # the old class weapon goes; the new starter one comes
+    Game.give_kit(h)
+    h.ensure_skills()
+    Game._commit()
+    return "%s ahora es %s (efecto al entrar a un piso)" % [h.display_name(), h.class_title()]
+
+
+func _c_newgame(_args: Array) -> String:
+    if not _newgame_armed:
+        _newgame_armed = true
+        return "Esto BORRA la partida. Escribe /newgame otra vez para confirmar"
+    _newgame_armed = false
+    Game.new_game()
+    var main := _main()
+    if main != null:
+        main.call("show_screen", "master", 0)
+    return "Partida nueva"
