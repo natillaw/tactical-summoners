@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="JuiceProfile" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/juice_profile.gd" id="1_2asks"]
+
+[resource]
+script = ExtResource("1_2asks")
+id = "skill.frost_bolt"
+flash = Color(0.6, 0.85, 1, 1)
+particles = Color(0.6, 0.85, 1, 1)
+extra = Color(0.95, 1, 1, 1)
+amount = 7
+kick = 2
+sound = "hit_ice"

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="JuiceProfile" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/juice_profile.gd" id="1_hm3eg"]
+
+[resource]
+script = ExtResource("1_hm3eg")
+id = "skill.meteor"
+flash = Color(1, 0.267, 0, 0.6)
+particles = Color(1, 0.267, 0, 1)
+extra = Color(1, 0.75, 0.3, 1)
+amount = 14
+spread = 180.0
+speed = 120.0
+kick = 3
+sound = "hit_fire_heavy"
+heavy = true
