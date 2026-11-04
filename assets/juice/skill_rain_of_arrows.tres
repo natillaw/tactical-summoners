@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="JuiceProfile" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/juice_profile.gd" id="1_why26"]
+
+[resource]
+script = ExtResource("1_why26")
+id = "skill.rain_of_arrows"
+particles = Color(0.7, 0.52, 0.32, 1)
+amount = 3
+spread = 90.0
+heavy = true

@@ -1,0 +1,264 @@
+{
+  "frames": [
+    {
+      "filename": "dash_dust_00.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "pivot": {
+        "x": 0.6875,
+        "y": 0.734375
+      },
+      "duration": 42
+    },
+    {
+      "filename": "dash_dust_01.png",
+      "frame": {
+        "x": 64,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "pivot": {
+        "x": 0.6875,
+        "y": 0.734375
+      },
+      "duration": 41
+    },
+    {
+      "filename": "dash_dust_02.png",
+      "frame": {
+        "x": 128,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "pivot": {
+        "x": 0.6875,
+        "y": 0.734375
+      },
+      "duration": 42
+    },
+    {
+      "filename": "dash_dust_03.png",
+      "frame": {
+        "x": 192,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "pivot": {
+        "x": 0.6875,
+        "y": 0.734375
+      },
+      "duration": 42
+    },
+    {
+      "filename": "dash_dust_04.png",
+      "frame": {
+        "x": 256,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "pivot": {
+        "x": 0.6875,
+        "y": 0.734375
+      },
+      "duration": 41
+    },
+    {
+      "filename": "dash_dust_05.png",
+      "frame": {
+        "x": 320,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "pivot": {
+        "x": 0.6875,
+        "y": 0.734375
+      },
+      "duration": 42
+    },
+    {
+      "filename": "dash_dust_06.png",
+      "frame": {
+        "x": 384,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "pivot": {
+        "x": 0.6875,
+        "y": 0.734375
+      },
+      "duration": 42
+    },
+    {
+      "filename": "dash_dust_07.png",
+      "frame": {
+        "x": 448,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "pivot": {
+        "x": 0.6875,
+        "y": 0.734375
+      },
+      "duration": 41
+    },
+    {
+      "filename": "dash_dust_08.png",
+      "frame": {
+        "x": 512,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 64
+      },
+      "pivot": {
+        "x": 0.6875,
+        "y": 0.734375
+      },
+      "duration": 42
+    }
+  ],
+  "meta": {
+    "app": "Sprite Kitchen / PixelLab VFX workbench",
+    "version": "0.1",
+    "image": "../spritesheets/dash_dust_64x64_9f.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 576,
+      "h": 64
+    },
+    "scale": "1",
+    "fps": 24,
+    "loop": false,
+    "anchor": {
+      "kind": "origin",
+      "x": 44,
+      "y": 47
+    },
+    "frameTags": [
+      {
+        "name": "dash_dust",
+        "from": 0,
+        "to": 8,
+        "direction": "forward"
+      }
+    ]
+  }
+}

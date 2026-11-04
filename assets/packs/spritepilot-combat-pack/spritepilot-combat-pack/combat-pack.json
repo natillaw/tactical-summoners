@@ -1,0 +1,188 @@
+{
+  "name": "SpritePilot Combat Pack",
+  "license": "CC0-1.0",
+  "source": "https://spritepilot.com/free-game-assets",
+  "layout": "Each PNG is one row of square frames, left to right. The file name gives the frame size and count: explosion-32px_strip10.png is 10 frames of 32 × 32.",
+  "effects": [
+    {
+      "id": "sword-slash",
+      "name": "Sword slash",
+      "frames": 7,
+      "fps": 18,
+      "loop": false,
+      "sheets": [
+        {
+          "file": "16px/sword-slash-16px_strip7.png",
+          "frameWidth": 16,
+          "frameHeight": 16
+        },
+        {
+          "file": "32px/sword-slash-32px_strip7.png",
+          "frameWidth": 32,
+          "frameHeight": 32
+        }
+      ],
+      "preview": "previews/sword-slash-preview.gif"
+    },
+    {
+      "id": "claw-slash",
+      "name": "Claw slash",
+      "frames": 8,
+      "fps": 18,
+      "loop": false,
+      "sheets": [
+        {
+          "file": "16px/claw-slash-16px_strip8.png",
+          "frameWidth": 16,
+          "frameHeight": 16
+        },
+        {
+          "file": "32px/claw-slash-32px_strip8.png",
+          "frameWidth": 32,
+          "frameHeight": 32
+        }
+      ],
+      "preview": "previews/claw-slash-preview.gif"
+    },
+    {
+      "id": "muzzle-flash",
+      "name": "Muzzle flash",
+      "frames": 5,
+      "fps": 20,
+      "loop": false,
+      "sheets": [
+        {
+          "file": "16px/muzzle-flash-16px_strip5.png",
+          "frameWidth": 16,
+          "frameHeight": 16
+        },
+        {
+          "file": "32px/muzzle-flash-32px_strip5.png",
+          "frameWidth": 32,
+          "frameHeight": 32
+        }
+      ],
+      "preview": "previews/muzzle-flash-preview.gif"
+    },
+    {
+      "id": "laser-bolt",
+      "name": "Laser bolt",
+      "frames": 6,
+      "fps": 14,
+      "loop": true,
+      "sheets": [
+        {
+          "file": "16px/laser-bolt-16px_strip6.png",
+          "frameWidth": 16,
+          "frameHeight": 16
+        },
+        {
+          "file": "32px/laser-bolt-32px_strip6.png",
+          "frameWidth": 32,
+          "frameHeight": 32
+        }
+      ],
+      "preview": "previews/laser-bolt-preview.gif"
+    },
+    {
+      "id": "arrow",
+      "name": "Arrow",
+      "frames": 4,
+      "fps": 12,
+      "loop": true,
+      "sheets": [
+        {
+          "file": "16px/arrow-16px_strip4.png",
+          "frameWidth": 16,
+          "frameHeight": 16
+        },
+        {
+          "file": "32px/arrow-32px_strip4.png",
+          "frameWidth": 32,
+          "frameHeight": 32
+        }
+      ],
+      "preview": "previews/arrow-preview.gif"
+    },
+    {
+      "id": "parry-flash",
+      "name": "Parry flash",
+      "frames": 7,
+      "fps": 18,
+      "loop": false,
+      "sheets": [
+        {
+          "file": "16px/parry-flash-16px_strip7.png",
+          "frameWidth": 16,
+          "frameHeight": 16
+        },
+        {
+          "file": "32px/parry-flash-32px_strip7.png",
+          "frameWidth": 32,
+          "frameHeight": 32
+        }
+      ],
+      "preview": "previews/parry-flash-preview.gif"
+    },
+    {
+      "id": "shockwave",
+      "name": "Shockwave",
+      "frames": 8,
+      "fps": 15,
+      "loop": false,
+      "sheets": [
+        {
+          "file": "16px/shockwave-16px_strip8.png",
+          "frameWidth": 16,
+          "frameHeight": 16
+        },
+        {
+          "file": "32px/shockwave-32px_strip8.png",
+          "frameWidth": 32,
+          "frameHeight": 32
+        }
+      ],
+      "preview": "previews/shockwave-preview.gif"
+    },
+    {
+      "id": "critical-hit",
+      "name": "Critical hit",
+      "frames": 8,
+      "fps": 15,
+      "loop": false,
+      "sheets": [
+        {
+          "file": "16px/critical-hit-16px_strip8.png",
+          "frameWidth": 16,
+          "frameHeight": 16
+        },
+        {
+          "file": "32px/critical-hit-32px_strip8.png",
+          "frameWidth": 32,
+          "frameHeight": 32
+        }
+      ],
+      "preview": "previews/critical-hit-preview.gif"
+    },
+    {
+      "id": "ground-slam",
+      "name": "Ground slam",
+      "frames": 9,
+      "fps": 14,
+      "loop": false,
+      "sheets": [
+        {
+          "file": "16px/ground-slam-16px_strip9.png",
+          "frameWidth": 16,
+          "frameHeight": 16
+        },
+        {
+          "file": "32px/ground-slam-32px_strip9.png",
+          "frameWidth": 32,
+          "frameHeight": 32
+        }
+      ],
+      "preview": "previews/ground-slam-preview.gif"
+    }
+  ]
+}

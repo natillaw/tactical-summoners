@@ -1,12 +1,41 @@
-# Godot 4+ specific ignores
+# Godot 4 specific
 .godot/
-/android/
 
-# Export
-export_credentials.cfg
+# Build / export / cache
+.import/
+export.cfg
+export_presets.cfg
+
+# Temporary and log files
+*.log
 *.tmp
+*.bak
+*.swp
+tools/last_test_run.txt
+tools/import_log.txt
 
-# OS / editor
+# Backup folders
+_backup_dropD/
+
+# OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
-.vscode/
+Desktop.ini
+
+# Raw third-party packs: only the files the game uses are imported into assets/ (UI/art prompt)
+assets/source_packs/
+assets/*.zip
+assets/_inbox/*.zip
+assets/_inbox/**/raw/
+
+# test outputs (keep the balance matrix)
+tests/out/*
+!tests/out/balance_matrix.csv
+
+# raw packs (overhaul): only processed, used assets enter the repo
+assets/nuevos assets/

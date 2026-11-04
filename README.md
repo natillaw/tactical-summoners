@@ -1,35 +1,23 @@
-# Project B — Reflections
+# Tactical Summoners
 
-RPG de acción 2D top-down (Godot 4). El diseño, las prioridades y los issues viven en un único documento de diseño; solo se implementa desde sus Partes A (prioridades) y B (issues).
+RPG táctico en pixel art 2D (Godot 4, GDScript). Se invocan héroes únicos y persistentes (personalidad, historia, relaciones, muerte permanente), se forma un escuadrón de 5 y se le dirige en tiempo real, sin pausa, mediante control RTS híbrido.
 
-## Arranque
+**Estado:** prototipo en fase de reparación. Qué funciona de verdad: `docs/IMPLEMENTATION_STATUS.md`. Fallos conocidos: `audit/`.
 
-1. Instala Godot 4 (≥ 4.6).
-2. Abre el editor y elige **Importar** → `project.godot` en esta carpeta.
-   - O desde terminal: `godot --editor --path .`
+## Abrir y jugar
+1. Godot 4.7 (según `project.godot`) → Project Manager → Import → `project.godot`.
+2. La primera apertura importa los sprites. Pulsa F5.
+3. Partida guardada automáticamente en `user://save.json`. El menú tiene botones de depuración (gemas, piedras, libros, borrar partida).
 
-## Configuración base
+Controles del sandbox: clic izquierdo para seleccionar o arrastrar una caja, clic derecho para mover, 1-5 para enfocar a un héroe, Tab para la vista de grupo, G para seleccionar el escuadrón, Q para la habilidad y S para parar. Los héroes muertos no vuelven.
 
-- Física / tick de simulación: **60 Hz** (`physics/common/physics_ticks_per_second`).
-- Resolución: 1280×720, stretch `canvas_items`.
-- Input map:
+## Pruebas
+`powershell -ExecutionPolicy Bypass -File tools\Run-Tests.ps1` (12 suites; escribe `tools\last_test_run.txt`).
 
-| Acción | Tecla |
-|---|---|
-| `move_up` / `move_left` / `move_down` / `move_right` | W / A / S / D |
-| `click` | Botón izquierdo del ratón |
-| `skill_q` / `skill_w` / `skill_e` / `skill_r` | Q / W / E / R |
-| `slot_1` … `slot_4` | 1 … 4 |
+## Documentación
+- Agentes: `CLAUDE.md`, `GEMINI.md`, `AGENTS.md`.
+- Proyecto: `docs/MASTER_PROJECT.md` (visión), `docs/DECISIONS.md` (decisiones), `docs/DEVELOPMENT_ROADMAP.md` (plan), `docs/ARCHITECTURE.md` (código), `docs/specs/` (detalle por sistema).
+- Historia: `docs/archive/` (no vigente).
 
-> ⚠️ `move_up` y `skill_w` comparten la tecla W (así lo pide el doc). Pendiente de decisión antes de P1.11.
-
-## Estructura
-
-| Carpeta | Contenido |
-|---|---|
-| `core/` | Tick, loop de juego, utilidades base |
-| `net/` | Servidor, cliente, snapshots, predicción |
-| `combat/` | Pipeline de efectos, stats, skills, CC, hit detection |
-| `data/` | Recursos `.tres` (skills, saves) |
-| `ui/` | Debug overlay y UI |
-| `content/` | Clases, arenas, torre, dungeon |
+## Assets
+Los héroes usan **Tiny Pixel Fantasy – Character Generator by Caz** (`assets/sprites/`; leer su EULA, enlazada en `EULA_READ_ME.txt`, antes de compartir o vender). El resto de packs y sus licencias están en `docs/ASSET_REGISTRY.md`.

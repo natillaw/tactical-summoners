@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="JuiceProfile" format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/juice_profile.gd" id="1_gnkov"]
+
+[resource]
+script = ExtResource("1_gnkov")
+id = "skill.whirlwind"
+particles = Color(0.72, 0.62, 0.48, 1)
+amount = 6
+spread = 160.0
+kick = 2
+heavy = true
