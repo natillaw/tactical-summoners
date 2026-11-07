@@ -1,9 +1,0 @@
-[gd_resource type="Resource" script_class="JuiceProfile" format=3]
-
-[ext_resource type="Script" path="res://scripts/combat/juice_profile.gd" id="1_b4lrg"]
-
-[resource]
-script = ExtResource("1_b4lrg")
-id = "skill.kidney_shot"
-particles = Color(1, 0.92, 0.6, 1)
-kick = 2
