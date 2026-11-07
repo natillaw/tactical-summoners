@@ -1,40 +1,101 @@
-# AGENTS.md — reglas comunes para cualquier agente (Claude, Gemini, otros)
+# AGENTS.md
 
-El repositorio Git es la única fuente de verdad; la memoria del chat no lo es.
+Guía para agentes y personas que trabajen en **Reflections**. Léela antes de
+tocar código o assets.
 
-## Reglas duras del juego (nunca violarlas)
-- Tiempo real **sin pausa ni cámara lenta** (D-014).
-- Escuadrón de **5** héroes: el **Máster** (personaje del jugador, siempre en el hueco 1 y el único controlado) + 4 autónomos. Tab da la vista de grupo, G selecciona el escuadrón (D-017, D-080; 1-5 ya no cambia de héroe).
-- Las órdenes directas **nunca** se rechazan al azar (D-016).
-- **Muerte permanente** y memorial; sin resurrección (D-011). Única excepción: el Máster vuelve herido (D-080).
-- Los héroes **nunca se re-generan** al cargar; se guarda el snapshot (D-004).
-- Trust, Obedience y Composure son valores separados, con cambios deterministas (D-016).
-- **No modificar los sprites de héroes de Caz** (`assets/sprites/**`) (D-023).
-- Solo assets gratuitos con licencia registrada en `docs/ASSET_REGISTRY.md` (D-024).
-- IP original; nombres prohibidos en `docs/specs/REFERENCE_INSPIRATION.md` (D-002).
-- Script-first / "no-hands Godot": todo por script, comando o headless. Nunca pedir al dueño que use el editor (D-009, D-019).
-- **Estabilizar antes de ampliar** (D-025): no añadir sistemas nuevos sin la tarea correspondiente en `docs/DEVELOPMENT_ROADMAP.md`.
+## Contexto
 
-## Autoridad cuando los documentos no coinciden
-`docs/DECISIONS.md` > `docs/specs/*` > `docs/MASTER_PROJECT.md` > `docs/DEVELOPMENT_ROADMAP.md` > chat.
-Para saber qué *existe*, manda el código ejecutado y probado; para saber qué *debe existir*, manda la spec. Un conflicto se reporta al dueño, no se resuelve en silencio.
-Las ideas en estado **PENDIENTE** o **CANDIDATA** no se implementan: se pregunta. Las **SUSTITUIDAS** no se implementan nunca.
-`docs/archive/` es historia: no se lee salvo petición expresa.
+Reflections es un action RPG top-down de clases con identidad fija: sin gacha,
+sin builds y sin variantes. El único corte jugable hoy es el **Warrior** en un
+patio de entrenamiento. Godot 4.7.2, renderer `gl_compatibility`.
 
-## Evidencia
-- No afirmes que algo funciona sin ejecutarlo: indica el comando y la salida (o "NO VERIFICADO").
-- Actualiza `docs/IMPLEMENTATION_STATUS.md` solo con lo verificado.
-- Si cambias el formato de los datos del héroe o del guardado: sube `SAVE_VERSION`/`HeroGenerator.VERSION`, escribe la migración y su prueba.
+## Reglas de arquitectura (no romper)
 
-## GDScript (lecciones aprendidas)
-- Archivos nuevos: 4 espacios. En archivos existentes, respeta el estilo del archivo (hoy hay tabs en 9 de ellos).
-- Tipa las variables. Nada de `var x := arr[0]` cuando `arr` es un Array sin tipo: escribe `var x: Tipo = arr[0]`.
-- No asignes un literal de array tipado directamente a un campo tipado; usa `.append()` o construye antes el array tipado.
-- `class_name` únicos. Los scripts nuevos necesitan `godot --headless --path . --import` antes de que los tests los vean.
-- Los lambdas pueden cambiar miembros, pero no variables locales capturadas.
-- Números de balance en datos (`HeroTables`, `SummonConfig`, `CombatRules`), nunca en la UI.
+1. **La simulación solo cambia dentro de un tick fijo.** El único `Tickable`
+   registrado en `TickManager` es `CombatWorld`. `WarriorSim` y `DummySim` solo
+   mutan dentro de `step()`.
+2. **Presentación ≠ simulación.** `Arena`, `WarriorActor`, `DummyActor`, VFX,
+   cámara y `GameHud` leen estado o escuchan señales; nunca escriben posición,
+   vida, Rage, cooldowns ni estado de ataque.
+3. **Determinismo.** Nada de `randf()` global ni `Time` dentro de la simulación.
+   Usa el RNG del `CombatWorld`/`WarriorSim`, sembrado y avanzado por tick.
+4. **Input como comando.** El input del jugador se empaqueta en `InputMessage`
+   (`move_dir`, `aim_dir`, `actions`) y se entrega una vez por tick. Esto es lo
+   que permite que el netcode futuro reutilice la misma simulación.
+5. **Números de balance en datos.** Los valores del Warrior viven en
+   `combat/warrior_kit.gd`; la simulación los lee, no los duplica. La UI no
+   contiene números de combate.
+6. **Un `class_name` por archivo**, GDScript tipado. Evita `:=` cuando la
+   expresión devuelve `Variant` (acceso a `Dictionary`, `Array` sin tipo,
+   `get()`); Godot 4.7 trata esa inferencia como error en este proyecto.
 
-## Seguridad y Git
-- Nunca escribas secretos (claves, tokens, `.env`) en ningún archivo.
-- Pregunta antes de: borrar archivos, sobrescribir varios archivos a la vez, `git push`, `git reset`, merges a `main` o tocar algo fuera del repo.
-- Una rama por tarea; commits pequeños que citen el ID (F-0xx, P-xx, D-xxx).
+## Simulación y presentación
+
+```
+main.gd ──input──▶ CombatWorld (Tickable)
+                     ├── WarriorSim
+                     └── DummySim[]
+Arena / Actors / HUD ◀── leen estado y señales
+```
+
+- Simulación: `game/sim/`, `combat/`, `core/tickable.gd`.
+- Presentación: `game/actors/`, `game/world/`, `game/vfx/`, `game/ui/`,
+  `ui/debug_overlay.gd`.
+- Si un efecto necesita cambiar el juego, no lo hace el VFX: emite una señal o
+  pide el cambio a la simulación en el tick siguiente.
+
+## Añadir una habilidad
+
+1. Define el dato en `combat/warrior_kit.gd` (`implemented = false` hasta que
+   esté jugable).
+2. Implementa el estado y la resolución en `WarriorSim` dentro de `step()`.
+3. Expón lo necesario en `snapshot()` si afecta a la red.
+4. Añade VFX/SFX en `Arena` y el actor; el actor solo consume señales.
+5. Añade checks a `tests/test_warrior_sim.gd` (daño, coste, cooldown, borde) y,
+   si cambia el contrato de diseño, a `tests/test_warrior_data.gd`.
+6. Actualiza `docs/design/WARRIOR.md` y `docs/ARCHITECTURE.md` si aplica.
+
+## Tests
+
+Antes de dar algo por terminado:
+
+```powershell
+pwsh -File tools/run_tests.ps1
+```
+
+- Añade una suite nueva a `tools/run_tests.ps1` **y** a `tools/run_tests.sh`.
+- Los tests son scripts `SceneTree` que salen con 0/1. No abren ventana.
+- No ajustes un test para tapar un fallo real; corrige la simulación o el dato.
+  Si el test estaba mal planteado, documenta por qué cambia.
+
+## Assets y licencias
+
+- Usa solo assets con licencia leída y registrada en `docs/ASSET_REGISTRY.md` y
+  `assets/ASSET_REGISTRY.json`.
+- El arte del Warrior es LPC (`assets/pixel/lpc/`); los créditos por archivo
+  están en `assets/pixel/lpc/CREDITS.csv`.
+- SFX: `assets/audio/sfx/ninja/` (CC0). Fuente: `assets/fonts/m5x7.ttf` (CC0).
+- No edites los PNG originales del LPC; el `LpcComposer` compone en memoria.
+- `new assets/` son packs crudos: están ignorados por git y por Godot
+  (`.gdignore`). No los referencies desde el juego.
+- No redistribuyas packs crudos como biblioteca independiente.
+
+## Carpetas que no se tocan
+
+- `archive/legacy_ts/` es histórico. No lo importes ni lo reactives.
+- `new assets/` es material de origen, no contenido del juego.
+
+## Estilo
+
+- Indentación con **tabs** en archivos nuevos de `game/`, `tests/` y `combat/`.
+  Respeta el estilo del archivo que edites.
+- Comentarios y documentación en español; identificadores y API en inglés.
+- Nombres de archivos en `snake_case`.
+- Nada de dependencias externas ni addons sin justificar.
+
+## Git
+
+- Trabaja en una rama descriptiva (`overhaul/...`, `feat/...`).
+- Commits pequeños y con intención: separar reestructuración de assets de
+  cambios de gameplay.
+- No borres historia: lo que deja de usarse se archiva.
