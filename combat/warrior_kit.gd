@@ -68,7 +68,7 @@ const M1: Dictionary = {
 	"windup": 0.16,
 	"active": 0.12,
 	"recovery": 0.18,
-	"cooldown": 0.35,
+	"cooldown": 0.0,
 	"cost": 0.0,
 	"range": 80.0,
 	"arc": 120.0,

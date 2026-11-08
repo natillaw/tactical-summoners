@@ -46,6 +46,9 @@ func _run() -> void:
 	_test_collision()
 	_test_weapon_level_items_enemy()
 	_test_jump_and_enemy_spacing()
+	_test_m1_chains_without_cooldown()
+	_test_attacks_hit_in_volume()
+	_test_enemy_warrior_kit()
 
 	print("== %d checks, %d failed ==" % [_checks, _failures])
 	print("RESULT: %s" % ("PASS" if _failures == 0 else "FAIL"))
@@ -76,7 +79,7 @@ func _test_heavy_strikes() -> void:
 	_check(world.warrior.rage() <= WarriorKitScript.MAX_RAGE, "Rage nunca supera el tope")
 	if not hits.is_empty():
 		_check(float(hits[0]) >= world.warrior.stats.get_stat(&"weapon_min") * 1.0 - 0.01, "Heavy Strikes hace al menos el daño mínimo del arma")
-	_check(world.warrior.cooldown_left("M1") > 0.0, "Heavy Strikes deja cooldown activo")
+	_check(is_zero_approx(world.warrior.cooldown_left("M1")), "M1 no tiene cooldown")
 
 
 func _test_piercing_thrust() -> void:
@@ -550,3 +553,76 @@ func _test_jump_and_enemy_spacing() -> void:
 		prev = enemy.position
 	_check(max_speed <= EnemySim.CHARGE_SPEED + 1.0, "El Soldado nunca supera su velocidad de carga (%d px/s)" % int(max_speed))
 	_check(close_ticks < 30, "El Soldado no se queda encima del jugador (%d ticks pegado)" % close_ticks)
+
+
+func _test_m1_chains_without_cooldown() -> void:
+	var world := _make_world(false, 21)
+	var starts := [0]
+	world.warrior.attack_started.connect(func(_skill: Dictionary, _dir: Vector2) -> void: starts[0] += 1)
+	_step(world, 120, _input(Vector2(0, -1), true, false))  # 2 s con M1 mantenido
+	# Un M1 dura 0.46 s: sin cooldown caben 4 en 2 s (con cooldown 0.35 serían 3).
+	_check(starts[0] >= 4, "M1 mantenido encadena golpes sin pausa (%d en 2 s)" % starts[0])
+
+
+func _test_attacks_hit_in_volume() -> void:
+	var world := _make_world(false, 22)
+	var w = world.warrior
+	var attacker: DummySim = world.dummies[0]
+	attacker.position = w.position + Vector2(-50, 0)
+	w.height = 60.0  # en pleno salto
+	var before: float = w.health
+	var hit: bool = attacker._strike(w, Vector2.RIGHT, 92.0, 70.0, 10.0)
+	_check(hit and w.health < before, "Un golpe cuerpo a cuerpo alcanza al jugador en pleno salto (volumen, no solo suelo)")
+	w.height = 0.0
+	before = w.health
+	attacker._strike(w, Vector2.RIGHT, 120.0, 360.0, 10.0)
+	_check(w.health < before, "El círculo (Ruptura sísmica) daña a quien salta o no")
+
+
+func _test_enemy_warrior_kit() -> void:
+	# M1 enemigo: combo de 3 sin pausa y daña.
+	var world := _make_world(false, 23)
+	var w = world.warrior
+	var e: EnemySim = world.add_enemy(w.position + Vector2(60, 0), 1)
+	var swings := [0]
+	e.m1_started.connect(func(_i: int) -> void: swings[0] += 1)
+	e._decide_timer = 99.0
+	e._begin_m1_swing()
+	var hp: float = w.health
+	_step(world, 100, null)
+	_check(swings[0] >= 3 and w.health < hp, "El Soldado encadena el combo de M1 y daña (%d golpes)" % swings[0])
+
+	# Charge enemigo: daña y aturde al jugador.
+	var world2 := _make_world(false, 24)
+	var w2 = world2.warrior
+	var e2: EnemySim = world2.add_enemy(w2.position + Vector2(300, 0), 1)
+	e2.charge_cooldown = 0.0
+	var stunned := false
+	for i in 120:
+		world2.step(DT)
+		stunned = stunned or w2.is_stunned()
+	_check(stunned, "La carga del Soldado aturde al jugador")
+
+	# Parry enemigo: desvía el golpe frontal y no recibe daño.
+	var world3 := _make_world(false, 25)
+	var w3 = world3.warrior
+	var e3: EnemySim = world3.add_enemy(w3.position + Vector2(60, 0), 1)
+	e3._start_parry()
+	_step(world3, 8, null)
+	var parried := [false]
+	e3.parried.connect(func() -> void: parried[0] = true)
+	var e3_hp: float = e3.health
+	var dealt := e3.take_damage(50.0, w3.position)
+	_check(parried[0] and is_zero_approx(dealt) and is_equal_approx(e3.health, e3_hp), "El Soldado desvía con Parry")
+
+	# Bladestorm enemigo: gira y daña alrededor.
+	var world4 := _make_world(false, 26)
+	var w4 = world4.warrior
+	var e4: EnemySim = world4.add_enemy(w4.position + Vector2(60, 0), 1)
+	var ended := [false]
+	e4.spin_ended.connect(func() -> void: ended[0] = true)
+	e4._decide_timer = 99.0
+	e4._start_spin()
+	var hp4: float = w4.health
+	_step(world4, 160, null)
+	_check(ended[0] and w4.health < hp4, "El Soldado usa Bladestorm y daña")

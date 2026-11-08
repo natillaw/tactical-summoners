@@ -15,9 +15,24 @@ const CLIP_SLASH := {"clip": "ual2/Sword_Regular_A", "from": 0.0, "to": 1.0, "co
 const TINT := Color(1.0, 0.55, 0.5)
 const CLIP_ROLL := {"clip": "ual1/Roll", "from": 0.0, "to": 0.78, "contact": 0.55}
 const ANIM_STUN := "ual1/Hit_Head"
+## Los mismos clips que usa el jugador para M1 y sus habilidades.
+const M1_CLIPS := [
+	{"clip": "ual2/Sword_Regular_A", "from": 0.0, "to": 1.0, "contact": 0.55},
+	{"clip": "ual2/Sword_Regular_B", "from": 0.0, "to": 1.0, "contact": 0.49},
+	{"clip": "ual2/Sword_Regular_C", "from": 0.0, "to": 0.62, "contact": 0.34},
+]
+const CLIP_THRUST := {"clip": "custom/thrust", "from": 0.30, "to": 0.62, "contact": 0.45}
+const CLIP_SLAM := {"clip": "ual2/Sword_Heavy_Combo", "from": 0.52, "to": 0.80, "contact": 0.63}
+const CLIP_PARRY := {"clip": "ual2/Sword_Block", "from": 0.0, "to": 0.45, "contact": 0.08}
+const CLIP_COUNTER := {"clip": "ual2/Sword_Regular_B", "from": 0.25, "to": 1.0, "contact": 0.49}
+const SPIN_SPEED := 15.0
+const COLOR_GUARD := Color(0.55, 0.8, 1.0, 0.9)
+const COLOR_RAGE := Color(1.0, 0.42, 0.15, 1.0)
 
 var enemy: EnemySim
 var _label: Label3D
+var _spin_yaw: float = 0.0
+var _was_spinning: bool = false
 
 
 func setup(p_sim: DummySim, p_arena: Arena3D) -> void:
@@ -43,6 +58,53 @@ func setup(p_sim: DummySim, p_arena: Arena3D) -> void:
 	enemy.effect_applied.connect(func(effect: String, _s: float) -> void:
 		if effect == "stun":
 			rig.play_clip(ANIM_STUN, 0.0, 1.0, 0.3, 0.1, 0.8, ANIM_SWORD_IDLE))
+	enemy.m1_started.connect(_on_m1_started)
+	enemy.parry_started.connect(func() -> void:
+		var c := CLIP_PARRY
+		rig.play_clip(String(c["clip"]), float(c["from"]), float(c["to"]), float(c["contact"]), 0.06, 0.45, ANIM_SWORD_IDLE))
+	enemy.parried.connect(_on_parried)
+	enemy.charge_hit.connect(func() -> void:
+		arena.spawn_impact(enemy.position + enemy.charge_direction * 20.0, COLOR_RAGE, true)
+		arena.spawn_shockwave(enemy.position + enemy.charge_direction * 20.0, 60.0, COLOR_RAGE, 0.3)
+		arena.shake(4.0, 0.2))
+	enemy.spin_started.connect(_on_spin_started)
+	enemy.last_stand_started.connect(func() -> void:
+		arena.spawn_shockwave(enemy.position, 70.0, COLOR_RAGE, 0.5, 0.6))
+
+
+func _on_m1_started(index: int) -> void:
+	var c: Dictionary = M1_CLIPS[clampi(index, 0, 2)]
+	var kit: Dictionary = WarriorKit.M1
+	rig.play_clip(String(c["clip"]), float(c["from"]), float(c["to"]), float(c["contact"]),
+		float(kit["windup"]), float(kit["active"]) + float(kit["recovery"]), ANIM_SWORD_IDLE)
+	arena.play_sfx(SFX_SWING, -9.0, randf_range(0.95, 1.1))
+
+
+func _on_parried() -> void:
+	var c := CLIP_COUNTER
+	rig.play_clip(String(c["clip"]), float(c["from"]), float(c["to"]), float(c["contact"]), 0.05, 0.4, ANIM_SWORD_IDLE)
+	arena.spawn_impact(enemy.position + enemy.facing * 24.0, COLOR_GUARD, true)
+	arena.play_sfx(SFX_IMPACT, -3.0, 1.2)
+	arena.shake(2.6, 0.14)
+	rig.hitstop(0.08)
+
+
+func _on_spin_started(radius: float) -> void:
+	# Aviso en el suelo (círculo que se llena) antes de empezar a girar.
+	_telegraph.scale = Vector3.ONE * (View3D.meters(radius) / View3D.meters(DummySim.ATTACK_RANGE))
+	_telegraph.set_param("arc", TAU)
+	arena.play_sfx(SFX_ALERT, -10.0, 0.8)
+
+
+## Cada ataque con telegraph usa su propia animación.
+func _telegraph_clip(attack: String) -> Dictionary:
+	match attack:
+		"thrust":
+			return CLIP_THRUST
+		"seismic":
+			return CLIP_SLAM
+		_:
+			return attack_clip
 
 
 func _dress() -> void:
@@ -60,7 +122,7 @@ func _process(delta: float) -> void:
 		return
 	if enemy.stun_timer > 0.0:
 		rig.flash(Color(1.0, 0.9, 0.3), 0.05)
-	elif enemy.state == DummySim.State.IDLE and not enemy.is_rolling():
+	elif enemy.state == DummySim.State.IDLE and not enemy.is_rolling() and enemy.act == EnemySim.Act.NONE:
 		var current := rig.current()
 		if current in [ANIM_SWORD_IDLE, ANIM_RUN, ANIM_SPRINT, ""]:
 			if enemy.is_charging():
@@ -71,3 +133,22 @@ func _process(delta: float) -> void:
 				rig.play(ANIM_SWORD_IDLE, 0.18)
 	if enemy.guard_timer > 0.0:
 		rig.flash(Color(0.5, 0.7, 1.0), 0.05)
+	if enemy.last_stand_timer > 0.0:
+		rig.flash(Color(1.0, 0.35, 0.1), 0.05)
+	_update_spin(delta)
+
+
+## Bladestorm: mientras dura, el modelo gira con la pose del tajo extendido.
+func _update_spin(delta: float) -> void:
+	var spinning := enemy.is_spinning()
+	if spinning and not _was_spinning:
+		_spin_yaw = 0.0
+		rig.play_clip(String(M1_CLIPS[0]["clip"]), 0.45, 0.6, 0.6, 0.06, 0.01)
+		arena.play_sfx(SFX_SWING, -6.0, 0.8)
+		arena.shake(3.0, 0.2)
+	_was_spinning = spinning
+	if spinning:
+		_spin_yaw += SPIN_SPEED * delta
+		rig.rotation.y = _yaw + _spin_yaw
+		if Engine.get_process_frames() % 12 == 0:
+			arena.spawn_shockwave(enemy.position, enemy.attack_range, Color(1.0, 0.86, 0.55, 0.9), 0.25, 0.85)

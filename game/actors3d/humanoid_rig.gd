@@ -186,7 +186,9 @@ func _process(delta: float) -> void:
 		_apply_speed()
 
 	if _clip_end >= 0.0:
-		var finished := not player.is_playing()
+		# Durante el hit-stop (speed_scale 0) is_playing() puede dar false: no es el
+		# final del clip. Darlo por terminado ahí congelaba la pose a medio golpe.
+		var finished := _hitstop <= 0.0 and not player.is_playing()
 		var pos := _clip_end if finished else player.current_animation_position
 		if _clip_contact >= 0.0 and pos >= _clip_contact:
 			_clip_contact = -1.0
