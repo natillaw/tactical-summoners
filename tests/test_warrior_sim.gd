@@ -140,7 +140,7 @@ func _test_charge_hits_and_slows() -> void:
 	_step(world, 30, _input(Vector2(1, 0), false, false, Vector2.ZERO, false, false, true))
 
 	_check(dummy.health < dummy.max_health, "Charge impacta y daña al dummy")
-	_check(dummy.is_slowed(), "Charge aplica ralentización")
+	_check(dummy.stun_timer > 0.0, "Charge aturde al chocar")
 	_check(world.warrior.rage() >= 20.0, "Charge genera Rage al impactar")
 	_check(world.warrior.position.distance_to(start) > 80.0, "Charge desplaza al Warrior")
 	_check(world.warrior.cooldown_left("E") > 0.0, "Charge deja cooldown activo")

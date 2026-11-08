@@ -196,7 +196,7 @@ const PARRY: Dictionary = {
 	"sfx": "parry",
 }
 
-## E: engage con daño y ralentización al impactar.
+## E: engage con daño y aturdimiento (1 s) al impactar.
 const CHARGE: Dictionary = {
 	"id": &"charge",
 	"name": "Charge",
@@ -204,7 +204,7 @@ const CHARGE: Dictionary = {
 	"slot": "E",
 	"kind": "mobility",
 	"role": "Movilidad / iniciación",
-	"description": "Carga hacia delante; el primer enemigo alcanzado recibe daño y queda ralentizado.",
+	"description": "Carga hacia delante; el primer enemigo alcanzado recibe daño y queda aturdido 1 s.",
 	"implemented": true,
 	"selectable": true,
 	"cast": "dash",
@@ -218,7 +218,7 @@ const CHARGE: Dictionary = {
 	"radius": 46.0,
 	"damage_mult": 1.5,
 	"rage_gain": 20.0,
-	"effects": {"slow": {"factor": 0.60, "duration": 1.5}},
+	"effects": {"stun": 1.0},
 	"move_factor": 0.0,
 	"vfx": "melee/thrust",
 	"impact_vfx": "impacts/ground-slam",
