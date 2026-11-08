@@ -7,6 +7,13 @@ const SRC := "res://assets/models/anims/xbot_upward_thrust.fbx"
 const DST := "res://assets/models/characters/warrior.glb"
 const OUT := "res://assets/models/anims/thrust_retargeted.res"
 const FPS := 30.0
+## Piernas y pelvis salen de UAL Sword_Dash (una estocada a pie): el original de
+## Mixamo es un salto. Ventana usada en el juego (fracciones): 0.30–0.62 -> Dash 0–0.46.
+const DASH_LIB := "res://assets/models/anims/UAL2_Standard.glb"
+const DASH_ANIM := "Sword_Dash"
+const WINDOW := Vector2(0.30, 0.62)
+const DASH_END := 0.46
+const FROM_DASH := ["pelvis", "thigh_l", "calf_l", "foot_l", "ball_l", "thigh_r", "calf_r", "foot_r", "ball_r"]
 # hueso UAL: [hueso mixamo, hueso UAL hijo, hueso mixamo hijo]
 const CHAINS := {
 	"pelvis": ["Hips", "spine_01", "Spine"],
@@ -57,6 +64,16 @@ func _init() -> void:
 	var dx := _skel_xform(dst_root, dsk)
 	var sanim := (src_root.find_child("AnimationPlayer", true, false) as AnimationPlayer).get_animation("mixamo_com")
 	var prefix := String(dst_root.get_path_to(dsk))
+	var dash_root: Node = (load(DASH_LIB) as PackedScene).instantiate()
+	var dash := (dash_root.find_child("AnimationPlayer", true, false) as AnimationPlayer).get_animation(DASH_ANIM)
+	var dash_rot := {}
+	var dash_pos := -1
+	for tr in dash.get_track_count():
+		var bone := String(dash.track_get_path(tr)).get_slice(":", 1)
+		if dash.track_get_type(tr) == Animation.TYPE_ROTATION_3D:
+			dash_rot[bone] = tr
+		elif dash.track_get_type(tr) == Animation.TYPE_POSITION_3D and bone == "pelvis":
+			dash_pos = tr
 
 	var mm := {}  # nombre mixamo corto -> índice
 	for i in ssk.get_bone_count():
@@ -104,6 +121,8 @@ func _init() -> void:
 			match sanim.track_get_type(tr):
 				Animation.TYPE_ROTATION_3D: ssk.set_bone_pose_rotation(bi, sanim.rotation_track_interpolate(tr, t))
 				Animation.TYPE_POSITION_3D: ssk.set_bone_pose_position(bi, sanim.position_track_interpolate(tr, t))
+		var frac := t / sanim.length
+		var dt := clampf((frac - WINDOW.x) / (WINDOW.y - WINDOW.x), 0.0, 1.0) * DASH_END * dash.length
 		var sgl := _globals(ssk, false)
 		var sg := {}
 		for k in mm: sg[k] = sx * sgl[mm[k]]
@@ -113,7 +132,10 @@ func _init() -> void:
 			var name := dsk.get_bone_name(i)
 			var par := dsk.get_bone_parent(i)
 			var rest_b := rest_g[i].basis.orthonormalized()
-			if CHAINS.has(name):
+			if FROM_DASH.has(name) and dash_rot.has(name):
+				var dl := Basis(dash.rotation_track_interpolate(dash_rot[name], dt))
+				g[i] = (g[par] * dl) if par >= 0 else dl
+			elif CHAINS.has(name):
 				var c: Array = CHAINS[name]
 				if String(c[1]) == "":
 					# cabeza: rotación global relativa al reposo mixamo
@@ -132,7 +154,8 @@ func _init() -> void:
 			out.rotation_track_insert_key(tracks[i], t, local.get_rotation_quaternion())
 		var hp: Vector3 = yfix * (sg["Hips"].origin - srest_g["Hips"].origin) * scale
 		hp.y *= 0.35  # el original es un salto; aquí queda casi a ras de suelo
-		out.position_track_insert_key(ptr, t, pelvis_local_rest.origin + hp)
+		var ppos: Vector3 = dash.position_track_interpolate(dash_pos, dt) if dash_pos >= 0 else pelvis_local_rest.origin + hp
+		out.position_track_insert_key(ptr, t, ppos)
 	out.loop_mode = Animation.LOOP_NONE
 	print("SAVE ", ResourceSaver.save(out, OUT), " frames=", n_frames, " prefix=", prefix)
 	quit()

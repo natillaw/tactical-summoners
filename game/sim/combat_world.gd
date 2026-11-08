@@ -110,7 +110,8 @@ func clamp_to_arena(desired: Vector2, radius: float) -> Vector2:
 	return pos
 
 
-func resolve_position(desired: Vector2, radius: float) -> Vector2:
+## `ignore`: el propio cuerpo que se mueve (si no, un enemigo choca consigo mismo).
+func resolve_position(desired: Vector2, radius: float, ignore: Object = null) -> Vector2:
 	var pos := desired
 	pos.x = clampf(pos.x, bounds.position.x + radius, bounds.end.x - radius)
 	pos.y = clampf(pos.y, bounds.position.y + radius, bounds.end.y - radius)
@@ -126,7 +127,7 @@ func resolve_position(desired: Vector2, radius: float) -> Vector2:
 			pos = center + diff.normalized() * min_distance
 
 	for dummy: DummySim in dummies:
-		if not dummy.alive:
+		if not dummy.alive or dummy == ignore:
 			continue
 		var diff := pos - dummy.position
 		var min_distance := radius + dummy.radius

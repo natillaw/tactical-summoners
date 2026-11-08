@@ -8,9 +8,9 @@ extends DummyActor3D
 const ENEMY_MODEL := "res://assets/models/characters/warrior.glb"
 const ENEMY_SWORD := "res://assets/models/props/sword_bronze.glb"
 const ANIM_SWORD_IDLE := "ual1/Sword_Idle"
-const ANIM_RUN := "ual1/Walk"
+const ANIM_RUN := "ual1/Jog_Fwd"
 const ANIM_SPRINT := "ual1/Sprint"
-const RUN_ANIM_SPEED := 1.5
+const RUN_ANIM_SPEED := 3.6
 const CLIP_SLASH := {"clip": "ual2/Sword_Regular_A", "from": 0.0, "to": 1.0, "contact": 0.55}
 const TINT := Color(1.0, 0.55, 0.5)
 
@@ -56,7 +56,7 @@ func _process(delta: float) -> void:
 			if enemy.is_charging():
 				rig.play(ANIM_SPRINT, 0.08)
 			elif enemy.moving:
-				rig.play(ANIM_RUN, 0.12, clampf(View3D.meters(EnemySim.MOVE_SPEED) / RUN_ANIM_SPEED, 0.7, 1.3))
+				rig.play(ANIM_RUN, 0.12, clampf(View3D.meters(EnemySim.MOVE_SPEED) / RUN_ANIM_SPEED, 0.6, 1.3))
 			else:
 				rig.play(ANIM_SWORD_IDLE, 0.18)
 	if enemy.guard_timer > 0.0:
