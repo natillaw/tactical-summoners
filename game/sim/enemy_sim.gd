@@ -14,7 +14,7 @@ extends DummySim
 signal charge_started(direction: Vector2)
 signal guard_started()
 
-const MOVE_SPEED := 92.0           # el Warrior corre a 168
+const MOVE_SPEED := 66.0           # ritmo de paseo; el Warrior corre a 168
 const CHARGE_SPEED := 480.0
 const CHARGE_TIME := 0.34
 const CHARGE_MIN := 200.0
@@ -35,6 +35,8 @@ var guard_timer: float = 0.0
 var guard_used: bool = false
 var moving: bool = false
 var _strafe_sign: float = 1.0
+var _phase_time: float = 0.0       # alterna ráfagas de movimiento y pausas
+var _phase_moving: bool = true
 
 
 func _init(p_world: Object = null, p_position: Vector2 = Vector2.ZERO, p_level: int = 1) -> void:
@@ -87,11 +89,18 @@ func _think(delta: float, warrior: Object) -> void:
 		charge_started.emit(charge_direction)
 		return
 
+	_phase_time -= delta
+	if _phase_time <= 0.0:
+		_phase_moving = not _phase_moving
+		_phase_time = world.rng.randf_range(0.6, 1.1) if _phase_moving else world.rng.randf_range(0.5, 1.0)
+
 	var step_dir := Vector2.ZERO
 	if cooldown <= 0.25:
 		# Golpe listo: entra a distancia de golpe.
 		if distance > ENGAGE_DISTANCE:
 			step_dir = dir
+	elif not _phase_moving:
+		pass  # pausa: se queda quieto vigilando
 	elif distance < SPACING_MIN:
 		step_dir = -dir * 0.7 + dir.orthogonal() * _strafe_sign * 0.4
 	elif distance > SPACING_MAX:
