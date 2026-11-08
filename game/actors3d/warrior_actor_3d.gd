@@ -43,7 +43,7 @@ const M1_CLIPS := [
 	{"clip": "ual2/Sword_Regular_B", "from": 0.0, "to": 1.0, "contact": 0.49},
 	{"clip": "ual2/Sword_Regular_C", "from": 0.0, "to": 0.62, "contact": 0.34},
 ]
-const CLIP_THRUST := {"clip": "custom/thrust", "from": 0.5, "to": 1.45, "contact": 0.98}
+const CLIP_THRUST := {"clip": "custom/thrust", "from": 0.30, "to": 0.62, "contact": 0.45}
 const CLIP_SLAM := {"clip": "ual2/Sword_Heavy_Combo", "from": 0.52, "to": 0.80, "contact": 0.63}
 const CLIP_PARRY := {"clip": "ual2/Sword_Block", "from": 0.0, "to": 0.45, "contact": 0.08}
 const CLIP_ROLL := {"clip": "ual1/Roll", "from": 0.0, "to": 0.78, "contact": 0.55}
