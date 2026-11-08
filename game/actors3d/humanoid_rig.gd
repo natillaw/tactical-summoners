@@ -62,6 +62,12 @@ func setup(model_path: String) -> void:
 		if not player.has_animation_library(lib_name):
 			player.add_animation_library(lib_name, _library(lib_name))
 
+	# Animaciones propias (retargeteadas desde Mixamo con tools/bake_thrust.gd).
+	if not player.has_animation_library("custom"):
+		var custom := AnimationLibrary.new()
+		custom.add_animation("thrust", load("res://assets/models/anims/thrust_retargeted.res"))
+		player.add_animation_library("custom", custom)
+
 	_flash_material = StandardMaterial3D.new()
 	_flash_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_flash_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA

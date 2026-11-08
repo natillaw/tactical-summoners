@@ -61,18 +61,22 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_V:
-		arena.set_third_person(not arena.third_person)
-		crosshair.visible = arena.third_person
-	elif event is InputEventMouseMotion and arena.third_person and not loadout_panel.visible:
+	if loadout_panel.visible:
+		return
+	if event is InputEventMouseMotion:
 		arena.tp_look(event.relative)
+	elif event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			arena.tp_zoom_by(-0.1)
+		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			arena.tp_zoom_by(0.1)
 
 
 func _process(_delta: float) -> void:
-	var want := Input.MOUSE_MODE_CAPTURED if arena.third_person and not loadout_panel.visible else Input.MOUSE_MODE_VISIBLE
+	var want := Input.MOUSE_MODE_CAPTURED if not loadout_panel.visible else Input.MOUSE_MODE_VISIBLE
 	if Input.mouse_mode != want:
 		Input.mouse_mode = want
-	crosshair.visible = arena.third_person and not loadout_panel.visible
+	crosshair.visible = not loadout_panel.visible
 
 
 func _exit_tree() -> void:
@@ -107,10 +111,9 @@ func _read_input() -> InputMessage:
 	message.tick = TickManager.current_tick + 1
 	message.peer_id = 1
 	message.move_dir = Input.get_vector("move_left", "move_right", "move_up", "move_down")
-	if arena.third_person:
-		var fwd := arena.cam_forward_sim()
-		var right := Vector2(-fwd.y, fwd.x)
-		message.move_dir = (fwd * -message.move_dir.y + right * message.move_dir.x).limit_length(1.0)
+	var fwd := arena.cam_forward_sim()
+	var right := Vector2(-fwd.y, fwd.x)
+	message.move_dir = (fwd * -message.move_dir.y + right * message.move_dir.x).limit_length(1.0)
 
 	message.aim_dir = world.warrior.aim_dir
 	var mouse: Variant = arena.mouse_sim()
