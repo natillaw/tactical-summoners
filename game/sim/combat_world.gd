@@ -53,7 +53,7 @@ func step(delta: float, tick_number: int = -1) -> void:
 	else:
 		tick += 1
 
-	warrior.step(tick, delta, pending_input)
+	warrior.step(tick, delta, pending_input.to_dict() if pending_input != null else {})
 	for dummy: DummySim in dummies:
 		dummy.step(tick, delta, warrior)
 
@@ -71,6 +71,26 @@ func get_living_dummies() -> Array:
 		if dummy.alive:
 			living.append(dummy)
 	return living
+
+
+## Como resolve_position(), pero solo tiene en cuenta muros y pilares. Se usa
+## para destinos de salto/banner, que deben poder caer sobre un enemigo.
+func clamp_to_arena(desired: Vector2, radius: float) -> Vector2:
+	var pos := desired
+	pos.x = clampf(pos.x, bounds.position.x + radius, bounds.end.x - radius)
+	pos.y = clampf(pos.y, bounds.position.y + radius, bounds.end.y - radius)
+
+	for obstacle: Dictionary in obstacles:
+		var center: Vector2 = obstacle["position"]
+		var obstacle_radius := float(obstacle["radius"])
+		var diff := pos - center
+		var min_distance := radius + obstacle_radius
+		if diff.length_squared() < min_distance * min_distance:
+			if diff.length_squared() < 0.0001:
+				diff = Vector2.RIGHT
+			pos = center + diff.normalized() * min_distance
+
+	return pos
 
 
 func resolve_position(desired: Vector2, radius: float) -> Vector2:

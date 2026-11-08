@@ -1,122 +1,346 @@
-## WarriorKit — datos canónicos de la clase Warrior (documento de clases v2).
+## WarriorKit — datos canónicos del Warrior de Combat Tower.
 ##
-## Esta clase es la única fuente de verdad de los números provisionales del
-## Warrior. La simulación (game/sim/warrior_sim.gd) lee estos diccionarios; no
-## tiene valores de combate hardcodeados. Los 15 talents del Skill Book están
-## definidos como datos, pero solo M1, M2 y la pasiva están implementados en el
-## primer corte. `implemented` marca lo que ya se puede jugar.
+## Esta clase es la única fuente de verdad de las 7 habilidades del kit y de la
+## pasiva Last Stand. La simulación (game/sim/warrior_sim.gd) lee estos
+## diccionarios; no tiene números de combate hardcodeados.
+##
+## Slots fijos:
+##   LMB   → Heavy Strikes   (combo de 3 golpes)
+##   RMB   → Piercing Thrust (estocada lineal)
+## Slots seleccionables (loadout por defecto):
+##   SPACE → Combat Roll
+##   Q     → Parry
+##   E     → Charge
+##   R     → Seismic Break
+##   F     → Bladestorm (ultimate)
+##
+## Sin variantes, sin builds: el jugador elige cuándo usar cada habilidad.
 class_name WarriorKit
 extends RefCounted
 
-const ClassResourceScript := preload("res://combat/class_resource.gd")
+const RageScript := preload("res://combat/rage.gd")
 
-const CLASS_ID := "warrior"
-const CLASS_NAME := "Warrior"
-const RESOURCE_NAME := "Rage"
-const MAX_RAGE := 100.0
-const SPECIAL_COST := 30.0
-const ULTIMATE_CHARGE_MAX := 100.0
+const CLASS_ID: StringName = &"warrior"
+const CLASS_NAME: String = "Warrior"
+const RESOURCE_NAME: String = "Rage"
+const MAX_RAGE: float = 100.0
+const ULTIMATE_COST: float = 100.0
+const SPECIAL_COST: float = 30.0
 
-## M1: rápido, fiable, poca Rage. Sin combo.
-const M1 := {
-	"id": &"warrior_m1",
-	"name": "Sword Slash",
+const SLOT_M1 := "M1"
+const SLOT_M2 := "M2"
+const SELECTABLE_SLOTS: Array = ["SPACE", "Q", "E", "R", "F"]
+const SLOT_ORDER: Array = ["M1", "M2", "SPACE", "Q", "E", "R", "F"]
+
+const ACTION_KEYS := {
+	"M1": "m1",
+	"M2": "m2",
+	"SPACE": "space",
+	"Q": "q",
+	"E": "e",
+	"R": "r",
+	"F": "f",
+}
+
+const SLOT_LABELS := {
+	"M1": "LMB",
+	"M2": "RMB",
+	"SPACE": "SPACE",
+	"Q": "Q",
+	"E": "E",
+	"R": "R",
+	"F": "F",
+}
+
+## M1: combo de tres golpes. El multiplicador se indexa con combo_index.
+const M1: Dictionary = {
+	"id": &"heavy_strikes",
+	"name": "Heavy Strikes",
+	"short": "STRIKE",
 	"slot": "M1",
 	"kind": "basic",
 	"role": "Daño / presión",
-	"description": "Corte horizontal rápido. Genera poca Rage al acertar.",
-	"windup": 0.12,
+	"description": "Combo de tres golpes pesados. El tercero golpea más fuerte.",
+	"implemented": true,
+	"selectable": false,
+	"cast": "melee",
+	"anim": "slash",
+	"windup": 0.16,
 	"active": 0.12,
 	"recovery": 0.18,
-	"cooldown": 0.05,
-	"range": 78.0,
-	"arc": 110.0,
-	"damage_mult": 1.0,
-	"rage_gain": 8.0,
-	"rage_cap": 16.0,
-	"anim": "slash",
-	"implemented": true,
+	"cooldown": 0.35,
+	"cost": 0.0,
+	"range": 80.0,
+	"arc": 120.0,
+	"damage_mult": [1.0, 1.25, 1.6],
+	"rage_gain": 12.0,
+	"move_factor": 0.35,
+	"combo_reset_window": 0.85,
+	"vfx": "melee/sword-slash",
+	"finisher_vfx": "melee/heavy-cleave",
+	"impact_vfx": "impacts/hit-spark",
+	"vfx_scale": 0.58,
+	"vfx_speed": 1.35,
+	"finisher_scale": 0.66,
+	"finisher_speed": 1.55,
+	"impact_scale": 0.55,
+	"impact_speed": 1.30,
+	"sfx": "slash",
 }
 
-## M2: lento y pesado; más daño y más Rage. Castiga compromisos.
-const M2 := {
-	"id": &"warrior_m2",
-	"name": "Heavy Strike",
+## M2: estocada lineal, más alcance y daño que M1.
+const M2: Dictionary = {
+	"id": &"piercing_thrust",
+	"name": "Piercing Thrust",
+	"short": "THRUST",
 	"slot": "M2",
 	"kind": "basic",
-	"role": "Burst / castigo",
-	"description": "Golpe vertical lento y potente, con recuperación mayor y más Rage.",
-	"windup": 0.30,
-	"active": 0.12,
-	"recovery": 0.35,
-	"cooldown": 0.20,
-	"range": 70.0,
-	"arc": 80.0,
-	"damage_mult": 2.1,
-	"rage_gain": 14.0,
-	"rage_cap": 20.0,
+	"role": "Daño / alcance",
+	"description": "Estocada estrecha y precisa que atraviesa a los enemigos en línea.",
+	"implemented": true,
+	"selectable": false,
+	"cast": "line",
 	"anim": "thrust",
+	"windup": 0.18,
+	"active": 0.10,
+	"recovery": 0.24,
+	"cooldown": 1.5,
+	"cost": 0.0,
+	"range": 125.0,
+	"width": 34.0,
+	"damage_mult": 1.5,
+	"rage_gain": 10.0,
+	"move_factor": 0.15,
+	"vfx": "melee/thrust",
+	"impact_vfx": "impacts/hit-spark",
+	"vfx_scale": 0.70,
+	"vfx_speed": 1.40,
+	"impact_scale": 0.50,
+	"impact_speed": 1.35,
+	"sfx": "thrust",
+}
+
+## SPACE: movilidad defensiva con iframes.
+const COMBAT_ROLL: Dictionary = {
+	"id": &"combat_roll",
+	"name": "Combat Roll",
+	"short": "ROLL",
+	"slot": "SPACE",
+	"kind": "mobility",
+	"role": "Movilidad / evasión",
+	"description": "Rueda en la dirección de movimiento con una ventana breve de invulnerabilidad.",
 	"implemented": true,
+	"selectable": true,
+	"cast": "dash",
+	"anim": "run",
+	"windup": 0.04,
+	"active": 0.24,
+	"recovery": 0.10,
+	"cooldown": 4.0,
+	"cost": 15.0,
+	"distance": 190.0,
+	"damage_mult": 0.0,
+	"evade": true,
+	"move_factor": 0.0,
+	"vfx": "melee/spin-slash",
+	"vfx_tint": [0.55, 0.78, 1.0, 0.85],
+	"trail_vfx": "impacts/hit-spark",
+	"impact_vfx": "",
+	"vfx_scale": 0.55,
+	"vfx_speed": 1.90,
+	"trail_scale": 0.40,
+	"trail_speed": 1.50,
+	"trail_interval": 0.07,
+	"sfx": "roll",
 }
 
-## Pasiva: Vengeful Fury (nueva en la v2). No se acumula; el daño periódico no la activa.
-const PASSIVE := {
-	"id": &"vengeful_fury",
-	"name": "Vengeful Fury",
-	"description": "Al recibir un golpe directo, el siguiente Heavy Strike hace +30% de daño durante 4 s.",
-	"window": 4.0,
-	"bonus": 0.30,
+## Q: postura defensiva que desvía un ataque frontal y contraataca.
+const PARRY: Dictionary = {
+	"id": &"parry",
+	"name": "Parry",
+	"short": "PARRY",
+	"slot": "Q",
+	"kind": "counter",
+	"role": "Defensa / contraataque",
+	"description": "Desvía un ataque frontal durante una ventana breve y responde con un corte.",
 	"implemented": true,
+	"selectable": true,
+	"cast": "counter",
+	"anim": "slash",
+	"windup": 0.06,
+	"active": 0.45,
+	"recovery": 0.22,
+	"cooldown": 6.0,
+	"cost": 20.0,
+	"damage_mult": 0.0,
+	"counter_mult": 1.8,
+	"counter_range": 90.0,
+	"counter_arc": 120.0,
+	"counter_reduce": 1.0,
+	"counter_effects": {},
+	"move_factor": 0.0,
+	"vfx": "impacts/parry",
+	"vfx_scale": 0.62,
+	"vfx_speed": 1.25,
+	"guard_vfx": "holy/divine-shield",
+	"guard_tint": [0.70, 0.86, 1.0, 0.90],
+	"guard_scale": 0.65,
+	"guard_speed": 1.15,
+	"guard_lifetime": 0.60,
+	"counter_vfx": "melee/sword-slash",
+	"counter_scale": 0.62,
+	"counter_speed": 1.40,
+	"impact_vfx": "impacts/shield-block",
+	"impact_scale": 0.50,
+	"impact_speed": 1.35,
+	"sfx": "parry",
 }
 
-## Special: cuesta 30 Rage.
-const SPECIAL := {
-	"id": &"iron_counter",
-	"name": "Iron Counter",
-	"slot": "SPECIAL",
-	"kind": "special",
-	"role": "Contraataque",
-	"description": "Postura de contraataque frontal. Desvía un ataque bloqueable y responde con un corte potente.",
-	"cost": 30,
-	"cooldown": 12.0,
-	"implemented": false,
+## E: engage con daño y ralentización al impactar.
+const CHARGE: Dictionary = {
+	"id": &"charge",
+	"name": "Charge",
+	"short": "CHARGE",
+	"slot": "E",
+	"kind": "mobility",
+	"role": "Movilidad / iniciación",
+	"description": "Carga hacia delante; el primer enemigo alcanzado recibe daño y queda ralentizado.",
+	"implemented": true,
+	"selectable": true,
+	"cast": "dash",
+	"anim": "run",
+	"windup": 0.10,
+	"active": 0.22,
+	"recovery": 0.20,
+	"cooldown": 7.0,
+	"cost": 0.0,
+	"distance": 210.0,
+	"radius": 46.0,
+	"damage_mult": 1.3,
+	"rage_gain": 20.0,
+	"effects": {"slow": {"factor": 0.60, "duration": 1.5}},
+	"move_factor": 0.0,
+	"vfx": "melee/thrust",
+	"impact_vfx": "impacts/ground-slam",
+	"vfx_scale": 0.66,
+	"vfx_speed": 1.50,
+	"trail_vfx": "impacts/hit-spark",
+	"trail_scale": 0.45,
+	"trail_speed": 1.50,
+	"trail_interval": 0.05,
+	"impact_scale": 0.52,
+	"impact_speed": 1.90,
+	"sfx": "charge",
 }
 
-## Ultimate: barra aparte de Ultimate Charge (0-100).
-const ULTIMATE := {
-	"id": &"war_gods_descent",
-	"name": "War God's Descent",
-	"slot": "ULTIMATE",
+## R: control de área con interrupción. Cuesta 30 Rage.
+const SEISMIC_BREAK: Dictionary = {
+	"id": &"seismic_break",
+	"name": "Seismic Break",
+	"short": "SEISMIC",
+	"slot": "R",
+	"kind": "control",
+	"role": "Control / AoE",
+	"description": "Golpea el suelo y genera una onda que daña e interrumpe a los enemigos cercanos.",
+	"implemented": true,
+	"selectable": true,
+	"cast": "aoe",
+	"anim": "thrust",
+	"windup": 0.32,
+	"active": 0.12,
+	"recovery": 0.28,
+	"cooldown": 9.0,
+	"cost": 30.0,
+	"radius": 120.0,
+	"damage_mult": 1.6,
+	"rage_gain": 0.0,
+	"effects": {"interrupt": true},
+	"move_factor": 0.0,
+	"vfx": "impacts/ground-slam",
+	"impact_vfx": "nature/quake",
+	"vfx_scale": 0.66,
+	"vfx_speed": 1.70,
+	"impact_scale": 0.80,
+	"impact_speed": 1.50,
+	"burst_vfx": "nature/earth-spike",
+	"burst_scale": 0.50,
+	"burst_speed": 1.30,
+	"burst_count": 3,
+	"burst_radius": 52.0,
+	"sfx": "slam",
+}
+
+## F: ultimate. Gira con la espada y golpea repetidamente alrededor.
+const BLADESTORM: Dictionary = {
+	"id": &"bladestorm",
+	"name": "Bladestorm",
+	"short": "STORM",
+	"slot": "F",
 	"kind": "ultimate",
-	"role": "Daño de área / iniciación",
-	"description": "Salto a una zona marcada con un golpe devastador; más daño en el centro y preparación esquivable.",
-	"charge": 100,
-	"cooldown": 60.0,
-	"implemented": false,
+	"role": "Daño / AoE",
+	"description": "Ultimate: giro de acero continuo que daña a todos los enemigos alrededor.",
+	"implemented": true,
+	"selectable": true,
+	"cast": "aoe",
+	"anim": "slash",
+	"windup": 0.20,
+	"active": 1.6,
+	"recovery": 0.35,
+	"cooldown": 1.0,
+	"cost": 40.0,
+	"charge": 100.0,
+	"radius": 105.0,
+	"damage_mult": 0.75,
+	"damage_interval": 0.20,
+	"rage_gain": 6.0,
+	"move_factor": 0.55,
+	"vfx": "melee/spin-slash",
+	"vfx_tint": [1.0, 0.86, 0.55, 0.90],
+	"impact_vfx": "impacts/hit-spark",
+	"vfx_scale": 0.82,
+	"vfx_speed": 1.55,
+	"tick_vfx_scale": 0.68,
+	"tick_vfx_speed": 1.80,
+	"impact_scale": 0.45,
+	"impact_speed": 1.40,
+	"sfx": "bladestorm",
 }
 
-## Skill Book completo (15 habilidades normales). Costes y cooldowns provisionales.
-const SKILL_BOOK := [
-	{"id": &"cleaving_strike", "name": "Cleaving Strike", "role": "Daño / AoE", "cost": 20, "cooldown": 6.0, "description": "Corte horizontal amplio que daña a todos los enemigos alcanzados.", "implemented": false},
-	{"id": &"crushing_blow", "name": "Crushing Blow", "role": "Burst / castigo", "cost": 25, "cooldown": 10.0, "description": "Golpe descendente muy pesado; interrumpe habilidades canalizadas si conecta.", "implemented": false},
-	{"id": &"piercing_thrust", "name": "Piercing Thrust", "role": "Daño preciso", "cost": 15, "cooldown": 5.0, "description": "Estocada rápida y lineal con más alcance que M1.", "implemented": false},
-	{"id": &"whirlwind", "name": "Whirlwind", "role": "Daño / AoE", "cost": 30, "cooldown": 9.0, "description": "Giro con la espada extendida que golpea alrededor, con límite de impactos.", "implemented": false},
-	{"id": &"parry", "name": "Parry", "role": "Defensa", "cost": 20, "cooldown": 10.0, "description": "Desvía un ataque frontal en una ventana breve; si acierta, permite contraatacar.", "implemented": false},
-	{"id": &"iron_guard", "name": "Iron Guard", "role": "Defensa / mitigación", "cost": 15, "cooldown": 8.0, "description": "Postura defensiva temporal que reduce el daño frontal y la velocidad de movimiento.", "implemented": false},
-	{"id": &"retaliation", "name": "Retaliation", "role": "Contraataque", "cost": 20, "cooldown": 8.0, "description": "Prepara una respuesta potente si recibe un ataque durante la ventana.", "implemented": false},
-	{"id": &"combat_roll", "name": "Combat Roll", "role": "Movilidad / evasión", "cost": 10, "cooldown": 6.0, "description": "Rodar en una dirección con una ventana breve de evasión.", "implemented": false},
-	{"id": &"heroic_leap", "name": "Heroic Leap", "role": "Movilidad / iniciación", "cost": 20, "cooldown": 12.0, "description": "Salto a una ubicación seleccionada con golpe al aterrizar; el impacto se muestra antes.", "implemented": false},
-	{"id": &"relentless_pursuit", "name": "Relentless Pursuit", "role": "Movilidad / persecución", "cost": 15, "cooldown": 9.0, "description": "Carga frontal con daño al impactar y ralentización breve.", "implemented": false},
-	{"id": &"ground_stomp", "name": "Ground Stomp", "role": "Control / AoE", "cost": 25, "cooldown": 11.0, "description": "Golpea el suelo y ralentiza brevemente a los enemigos cercanos.", "implemented": false},
-	{"id": &"earth_splitter", "name": "Earth Splitter", "role": "Control de zona", "cost": 30, "cooldown": 12.0, "description": "Fisura frontal que daña y ralentiza a los enemigos alcanzados.", "implemented": false},
-	{"id": &"sundering_strike", "name": "Sundering Strike", "role": "Debilitamiento", "cost": 20, "cooldown": 10.0, "description": "Golpe que reduce temporalmente la armadura del objetivo; no se acumula.", "implemented": false},
-	{"id": &"battle_cry", "name": "Battle Cry", "role": "Mejora / ofensiva", "cost": 25, "cooldown": 15.0, "description": "Aumenta temporalmente el Attack Power propio y de aliados cercanos.", "implemented": false},
-	{"id": &"war_banner", "name": "War Banner", "role": "Apoyo / Control de zona", "cost": 30, "cooldown": 18.0, "description": "Planta un estandarte que reduce el daño recibido por aliados cercanos.", "implemented": false},
-]
+## Pasiva: Last Stand. A vida baja gana daño y velocidad temporalmente.
+const PASSIVE: Dictionary = {
+	"id": &"last_stand",
+	"name": "Last Stand",
+	"slot": "PASSIVE",
+	"kind": "passive",
+	"role": "Pasiva",
+	"description": "Al bajar del 30% de vida, gana +50% de daño y +25% de velocidad durante 5 s.",
+	"implemented": true,
+	"threshold": 0.30,
+	"damage_bonus": 1.50,
+	"speed_bonus": 1.25,
+	"duration": 5.0,
+	"cooldown": 10.0,
+}
+
+## Alias de compatibilidad: la Special del kit actual es Parry y la Ultimate
+## es Bladestorm. El loadout sólo expone las cinco habilidades seleccionables.
+const SPECIAL: Dictionary = PARRY
+const ULTIMATE: Dictionary = BLADESTORM
+
+const DEFAULT_LOADOUT: Dictionary = {
+	"SPACE": &"combat_roll",
+	"Q": &"parry",
+	"E": &"charge",
+	"R": &"seismic_break",
+	"F": &"bladestorm",
+}
+
+const ALL_ABILITIES: Array = [M1, M2, COMBAT_ROLL, PARRY, CHARGE, SEISMIC_BREAK, BLADESTORM]
+const POOL_ABILITIES: Array = [COMBAT_ROLL, PARRY, CHARGE, SEISMIC_BREAK, BLADESTORM]
 
 
-static func create_rage_resource() -> ClassResourceScript:
-	var resource := ClassResourceScript.new()
+static func create_rage_resource() -> Rage:
+	var resource: Rage = RageScript.new()
 	resource.resource_name = RESOURCE_NAME
 	resource.current_amount = 0.0
 	resource.max_amount = MAX_RAGE
@@ -128,6 +352,10 @@ static func get_basics() -> Dictionary:
 	return {"M1": M1.duplicate(true), "M2": M2.duplicate(true)}
 
 
+static func get_passive() -> Dictionary:
+	return PASSIVE.duplicate(true)
+
+
 static func get_special() -> Dictionary:
 	return SPECIAL.duplicate(true)
 
@@ -136,12 +364,91 @@ static func get_ultimate() -> Dictionary:
 	return ULTIMATE.duplicate(true)
 
 
+## Las 7 habilidades del kit (básicas incluidas), para datos y tests.
 static func get_skill_book() -> Array:
-	return SKILL_BOOK.duplicate(true)
+	var book: Array = []
+	for entry: Dictionary in ALL_ABILITIES:
+		book.append(entry.duplicate(true))
+	return book
 
 
-static func all_ids() -> Array[StringName]:
-	var ids: Array[StringName] = []
-	for entry: Dictionary in SKILL_BOOK:
+## Las 5 cartas que el loadout puede asignar a SPACE/Q/E/R/F.
+static func get_pool() -> Array:
+	var pool: Array = []
+	for entry: Dictionary in POOL_ABILITIES:
+		pool.append(entry.duplicate(true))
+	return pool
+
+
+static func all_ids() -> Array:
+	var ids: Array = []
+	for entry: Dictionary in ALL_ABILITIES:
 		ids.append(entry["id"])
 	return ids
+
+
+static func pool_ids() -> Array:
+	var ids: Array = []
+	for entry: Dictionary in POOL_ABILITIES:
+		ids.append(entry["id"])
+	return ids
+
+
+static func ability_by_id(id: StringName) -> Dictionary:
+	for entry: Dictionary in ALL_ABILITIES:
+		if entry["id"] == id:
+			return entry.duplicate(true)
+	return {}
+
+
+static func has_ability(id: StringName) -> bool:
+	return not ability_by_id(id).is_empty()
+
+
+## Habilidad por defecto de un slot. La simulación usa su loadout real.
+static func ability_for_slot(slot: String) -> Dictionary:
+	if slot == "M1":
+		return M1.duplicate(true)
+	if slot == "M2":
+		return M2.duplicate(true)
+	var id: StringName = DEFAULT_LOADOUT.get(slot, &"")
+	if id == &"":
+		return {}
+	return ability_by_id(id)
+
+
+static func default_loadout() -> Dictionary:
+	return DEFAULT_LOADOUT.duplicate(true)
+
+
+static func loadout_to_strings(loadout: Dictionary) -> Dictionary:
+	var out: Dictionary = {}
+	for slot: String in SELECTABLE_SLOTS:
+		out[slot] = String(loadout.get(slot, DEFAULT_LOADOUT[slot]))
+	return out
+
+
+## Valida y completa un loadout leído de disco. Sólo admite cartas del pool.
+static func sanitize_loadout(raw: Dictionary) -> Dictionary:
+	var out: Dictionary = {}
+	for slot: String in SELECTABLE_SLOTS:
+		var id := StringName(String(raw.get(slot, String(DEFAULT_LOADOUT[slot]))))
+		if not POOL_ABILITIES.any(func(entry: Dictionary) -> bool: return entry["id"] == id):
+			id = DEFAULT_LOADOUT[slot]
+		out[slot] = id
+	return out
+
+
+static func slot_label(slot: String) -> String:
+	return String(SLOT_LABELS.get(slot, slot))
+
+
+static func cost_label(ability: Dictionary) -> String:
+	var cost := float(ability.get("cost", 0.0))
+	if String(ability.get("kind", "")) == "ultimate":
+		if cost > 0.0:
+			return "%dR+ULT" % roundi(cost)
+		return "ULT"
+	if cost > 0.0:
+		return "%d R" % roundi(cost)
+	return ""

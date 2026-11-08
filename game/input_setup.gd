@@ -1,8 +1,9 @@
 ## Registers the input map at runtime (before the main scene loads).
 ##
-## Keeping the map in code means the game and the headless suites share the
-## exact same actions, and the project does not depend on editor-generated
-## [input] blocks. Actions are never rebuilt twice (hot reload safe).
+## Esquema Battlerite: LMB/RMB para M1/M2, y Space/Q/E/R/F para los cinco
+## slots seleccionables. El loadout se edita con Tab (pausa la simulación).
+## Mantener el mapa en código hace que el juego y las suites headless compartan
+## exactamente las mismas acciones.
 extends Node
 
 const ACTIONS := {
@@ -12,12 +13,24 @@ const ACTIONS := {
 	"move_right": [KEY_D, KEY_RIGHT],
 	"attack_m1": [],
 	"attack_m2": [],
-	"dodge": [KEY_SPACE],
-	"special": [KEY_Q],
-	"ultimate": [KEY_F],
+	"slot_space": [KEY_SPACE],
+	"slot_q": [KEY_Q],
+	"slot_e": [KEY_E],
+	"slot_r": [KEY_R],
+	"slot_f": [KEY_F],
+	"toggle_loadout": [KEY_TAB],
+	"restart_training": [KEY_F2],
+	"refill_resources": [KEY_F4],
 	"toggle_debug_overlay": [KEY_F3],
-	"restart_training": [KEY_R],
 	"quit_game": [KEY_ESCAPE],
+}
+
+const SLOT_ACTIONS := {
+	"SPACE": "slot_space",
+	"Q": "slot_q",
+	"E": "slot_e",
+	"R": "slot_r",
+	"F": "slot_f",
 }
 
 
