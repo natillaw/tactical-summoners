@@ -45,6 +45,7 @@ func _run() -> void:
 	_test_snapshot()
 	_test_collision()
 	_test_weapon_level_items_enemy()
+	_test_jump_and_enemy_spacing()
 
 	print("== %d checks, %d failed ==" % [_checks, _failures])
 	print("RESULT: %s" % ("PASS" if _failures == 0 else "FAIL"))
@@ -127,7 +128,7 @@ func _test_combat_roll() -> void:
 	_step(world, 30, null)
 	_check(world.warrior.position.distance_to(start) > 100.0, "Combat Roll desplaza al Warrior")
 	_check(world.warrior.rage() <= rage_before - 15.0 + 0.01, "Combat Roll consume 15 Rage")
-	_check(world.warrior.cooldown_left("SPACE") > 0.0, "Combat Roll deja cooldown activo")
+	_check(world.warrior.cooldown_left("SHIFT") > 0.0, "Combat Roll deja cooldown activo")
 
 
 func _test_charge_hits_and_slows() -> void:
@@ -332,8 +333,8 @@ func _test_loadout_affects_casts() -> void:
 	world.warrior.assign_slot(&"Q", &"heavy_strikes")
 	_check(String(world.warrior.ability_for_slot("Q")["id"]) == "combat_roll", "assign_slot rechaza habilidades no seleccionables")
 
-	world.warrior.set_loadout({"SPACE": &"bogus", "Q": &"parry"})
-	_check(String(world.warrior.ability_for_slot("SPACE")["id"]) == "combat_roll", "set_loadout repara ids inválidos")
+	world.warrior.set_loadout({"SHIFT": &"bogus", "Q": &"parry"})
+	_check(String(world.warrior.ability_for_slot("SHIFT")["id"]) == "combat_roll", "set_loadout repara ids inválidos")
 	_check(String(world.warrior.ability_for_slot("Q")["id"]) == "parry", "set_loadout conserva ids válidos")
 
 
@@ -418,7 +419,7 @@ func _input(
 		m1: bool,
 		m2: bool,
 		move: Vector2 = Vector2.ZERO,
-		space: bool = false,
+		shift: bool = false,
 		q: bool = false,
 		e: bool = false,
 		r: bool = false,
@@ -429,7 +430,7 @@ func _input(
 	message.peer_id = 1
 	message.move_dir = move
 	message.aim_dir = aim.normalized()
-	message.actions = {"m1": m1, "m2": m2, "space": space, "q": q, "e": e, "r": r, "f": f}
+	message.actions = {"m1": m1, "m2": m2, "shift": shift, "q": q, "e": e, "r": r, "f": f}
 	return message
 
 
@@ -521,3 +522,26 @@ func _test_weapon_level_items_enemy() -> void:
 	_check(not enemy.alive and w2.warrior.progression.xp + w2.warrior.progression.level * 1000 > xp_before - 1, "Matar al enemigo da XP")
 	var e60 := EnemySim.new(w2, Vector2.ZERO, 60)
 	_check(e60.max_health > 7000.0 and e60.attack_damage > 250.0, "El enemigo nv60 escala vida y daño")
+
+
+func _test_jump_and_enemy_spacing() -> void:
+	var world := _make_world(false, 8)
+	var w = world.warrior
+	var msg = InputMessageScript.new()
+	msg.actions = {"jump": true}
+	world.submit_input(msg)
+	world.step(DT)
+	var peak := 0.0
+	for i in 60:
+		world.step(DT)
+		peak = maxf(peak, w.height)
+	_check(peak > 40.0 and w.height == 0.0, "Space salta y aterriza (pico %d px)" % int(peak))
+	# El Soldado no se queda pegado: tras golpear mantiene distancia.
+	var w2 := _make_world(false, 9)
+	var enemy: EnemySim = w2.add_enemy(w2.warrior.position + Vector2(150, 0), 1)
+	var close_ticks := 0
+	for i in 600:
+		w2.step(DT)
+		if enemy.position.distance_to(w2.warrior.position) < 40.0:
+			close_ticks += 1
+	_check(close_ticks < 30, "El Soldado no se queda encima del jugador (%d ticks pegado)" % close_ticks)

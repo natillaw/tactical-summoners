@@ -133,22 +133,22 @@ func _test_pool_and_loadout() -> void:
 		_check(default.has(slot), "loadout por defecto tiene %s" % slot)
 		_check(WarriorKit.has_ability(StringName(String(default[slot]))), "%s contiene una habilidad real" % slot)
 
-	_check(StringName(String(default["SPACE"])) == &"combat_roll", "SPACE por defecto es Combat Roll")
+	_check(StringName(String(default["SHIFT"])) == &"combat_roll", "SHIFT por defecto es Combat Roll")
 	_check(StringName(String(default["Q"])) == &"parry", "Q por defecto es Parry")
 	_check(StringName(String(default["E"])) == &"charge", "E por defecto es Charge")
 	_check(StringName(String(default["R"])) == &"seismic_break", "R por defecto es Seismic Break")
 	_check(StringName(String(default["F"])) == &"bladestorm", "F por defecto es Bladestorm")
 
-	var dirty := {"SPACE": &"does_not_exist", "Q": &"parry"}
+	var dirty := {"SHIFT": &"does_not_exist", "Q": &"parry"}
 	var clean := WarriorKit.sanitize_loadout(dirty)
 	_check(clean.size() == 5, "sanitize_loadout rellena todos los slots")
-	_check(clean["SPACE"] == WarriorKit.DEFAULT_LOADOUT["SPACE"], "ids inválidas caen al default")
+	_check(clean["SHIFT"] == WarriorKit.DEFAULT_LOADOUT["SHIFT"], "ids inválidas caen al default")
 	_check(clean["Q"] == &"parry", "ids válidas se preservan")
 	_check(clean["F"] == WarriorKit.DEFAULT_LOADOUT["F"], "slots faltantes caen al default")
 
 	var strings := WarriorKit.loadout_to_strings(default)
 	_check(String(strings["F"]) == "bladestorm", "loadout_to_strings serializa ids")
-	_check(WarriorKit.slot_label("SPACE") == "SPACE", "etiquetas de slot legibles")
+	_check(WarriorKit.slot_label("SHIFT") == "SHIFT", "etiquetas de slot legibles")
 	_check(WarriorKit.ability_by_id(&"not_real").is_empty(), "habilidades desconocidas resuelven a vacío")
 
 	var copy := WarriorKit.ability_by_id(&"parry")

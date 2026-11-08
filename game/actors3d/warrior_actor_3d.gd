@@ -28,6 +28,7 @@ const SFX_SPIN := preload("res://assets/audio/sfx/ninja/Magic_Skill/Magic2.wav")
 
 const ANIM_IDLE := "ual1/Sword_Idle"
 const ANIM_RUN := "ual1/Jog_Fwd"
+const ANIM_JUMP := "ual1/Jump"
 const ANIM_SPRINT := "ual1/Sprint"
 const ANIM_HIT := "ual1/Hit_Chest"
 const ANIM_DEATH := "ual1/Death01"
@@ -173,7 +174,7 @@ func _connect_signals() -> void:
 func _process(delta: float) -> void:
 	if sim == null:
 		return
-	position = View3D.to3(sim.position)
+	position = View3D.to3(sim.position, View3D.meters(sim.height))
 
 	if not sim.alive:
 		trail.emitting = false
@@ -212,6 +213,9 @@ func _update_facing(delta: float) -> void:
 
 func _update_locomotion() -> void:
 	if sim.is_attacking():
+		return
+	if sim.is_airborne():
+		rig.play(ANIM_JUMP, 0.1)
 		return
 	var speed_m := View3D.meters(sim.velocity.length())
 	if speed_m > 0.4:

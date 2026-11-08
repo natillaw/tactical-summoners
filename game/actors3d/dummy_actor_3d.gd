@@ -12,8 +12,6 @@ const SFX_SWING := preload("res://assets/audio/sfx/ninja/Whoosh_Slash/Whoosh.wav
 const SFX_IMPACT := preload("res://assets/audio/sfx/ninja/Hit_Impact/Impact2.wav")
 
 const ANIM_IDLE := "ual1/Idle"
-const ANIM_RUN := "ual1/Jog_Fwd"
-const ANIM_SPRINT := "ual1/Sprint"
 const ANIM_HIT := "ual1/Hit_Chest"
 const ANIM_DEATH := "ual1/Death01"
 const CLIP_PUNCH := {"clip": "ual1/Punch_Cross", "from": 0.0, "to": 0.55, "contact": 0.22}
@@ -31,8 +29,10 @@ var _telegraph: FxShape
 var _bar_root: Node3D
 var _bar_fill: MeshInstance3D
 var _bar_mat: StandardMaterial3D
-var _label: Label3D
-var _enemy: EnemySim
+## Sobrescribibles por subclases (EnemyActor3D) antes de setup().
+var model_path: String = MODEL
+var anim_idle: String = ANIM_IDLE
+var attack_clip: Dictionary = CLIP_PUNCH
 
 
 func setup(p_sim: DummySim, p_arena: Arena3D) -> void:
@@ -42,20 +42,9 @@ func setup(p_sim: DummySim, p_arena: Arena3D) -> void:
 	rig = HumanoidRig.new()
 	rig.name = "Rig"
 	add_child(rig)
-	rig.setup(MODEL)
-	_tint(Color(0.85, 0.62, 0.42) if sim.auto_attack else Color(0.72, 0.68, 0.62))
+	rig.setup(model_path)
+	_dress()
 
-	var stand := MeshInstance3D.new()
-	var stand_mesh := CylinderMesh.new()
-	stand_mesh.top_radius = 0.42
-	stand_mesh.bottom_radius = 0.48
-	stand_mesh.height = 0.08
-	stand.mesh = stand_mesh
-	var stand_mat := StandardMaterial3D.new()
-	stand_mat.albedo_color = Color(0.25, 0.18, 0.12)
-	stand.material_override = stand_mat
-	stand.position.y = 0.04
-	add_child(stand)
 
 	_telegraph = FxShape.new().setup(FxShape.Mode.SECTOR, View3D.meters(DummySim.ATTACK_RANGE), Color(1.0, 0.25, 0.15, 1.0))
 	_telegraph.set_param("arc", deg_to_rad(DummySim.ATTACK_ARC))
@@ -67,23 +56,10 @@ func setup(p_sim: DummySim, p_arena: Arena3D) -> void:
 	add_child(_telegraph)
 
 	_build_health_bar()
-	if sim is EnemySim:
-		_enemy = sim as EnemySim
-		_tint(Color(1.0, 0.55, 0.5))
-		_label = Label3D.new()
-		_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-		_label.no_depth_test = true
-		_label.fixed_size = false
-		_label.pixel_size = 0.0045
-		_label.font_size = 40
-		_label.outline_size = 10
-		_label.modulate = Color(1.0, 0.7, 0.55)
-		_label.position.y = BAR_HEIGHT + 0.25
-		add_child(_label)
 
 	_yaw = View3D.yaw_for(sim.facing)
 	rig.rotation.y = _yaw
-	rig.play(ANIM_IDLE, 0.0)
+	rig.play(anim_idle, 0.0)
 	position = View3D.to3(sim.position)
 	_was_alive = sim.alive
 
@@ -92,6 +68,22 @@ func setup(p_sim: DummySim, p_arena: Arena3D) -> void:
 	sim.attack_missed.connect(_on_attack_missed)
 	sim.died.connect(_on_died)
 	sim.revived.connect(_on_revived)
+
+
+## Aspecto del muñeco (tinte + peana); EnemyActor3D lo sustituye.
+func _dress() -> void:
+	_tint(Color(0.85, 0.62, 0.42) if sim.auto_attack else Color(0.72, 0.68, 0.62))
+	var stand := MeshInstance3D.new()
+	var stand_mesh := CylinderMesh.new()
+	stand_mesh.top_radius = 0.42
+	stand_mesh.bottom_radius = 0.48
+	stand_mesh.height = 0.08
+	stand.mesh = stand_mesh
+	var stand_mat := StandardMaterial3D.new()
+	stand_mat.albedo_color = Color(0.25, 0.18, 0.12)
+	stand.material_override = stand_mat
+	stand.position.y = 0.04
+	add_child(stand)
 
 
 func _tint(color: Color) -> void:
@@ -152,16 +144,6 @@ func _process(delta: float) -> void:
 		_yaw = lerp_angle(_yaw, View3D.yaw_for(target), 1.0 - exp(-10.0 * delta))
 		rig.rotation.y = _yaw
 
-	if _enemy != null:
-		_label.text = "Soldado  Nv.%d" % _enemy.level
-		_label.visible = _enemy.alive
-		if _enemy.alive and _enemy.state == DummySim.State.IDLE:
-			var want := ANIM_SPRINT if _enemy.is_charging() else (ANIM_RUN if _enemy.is_moving() else ANIM_IDLE)
-			if rig.current() in [ANIM_IDLE, ANIM_RUN, ANIM_SPRINT, ""] and rig.current() != want:
-				rig.play(want, 0.12)
-		if _enemy.guard_timer > 0.0 and _enemy.alive:
-			rig.flash(Color(0.5, 0.7, 1.0), 0.05)
-
 	var telegraphing := sim.alive and sim.state == DummySim.State.TELEGRAPH
 	_telegraph.visible = telegraphing
 	if telegraphing:
@@ -191,7 +173,7 @@ func on_struck(from: Vector2, hitstop: float, heavy: bool) -> void:
 	if not sim.alive:
 		return
 	if sim.state != DummySim.State.TELEGRAPH:
-		rig.play_clip(ANIM_HIT, 0.0, 1.0, 0.5, 0.09 if heavy else 0.07, 0.15, ANIM_IDLE, 0.03)
+		rig.play_clip(ANIM_HIT, 0.0, 1.0, 0.5, 0.09 if heavy else 0.07, 0.15, anim_idle, 0.03)
 	rig.hitstop(hitstop)
 	var away := (sim.position - from).normalized()
 	if away.length_squared() > 0.0:
@@ -203,9 +185,9 @@ func on_struck(from: Vector2, hitstop: float, heavy: bool) -> void:
 
 
 func _on_telegraph_started(_direction: Vector2, _radius: float, _arc_degrees: float) -> void:
-	var c := CLIP_PUNCH
+	var c := attack_clip
 	rig.play_clip(String(c["clip"]), float(c["from"]), float(c["to"]), float(c["contact"]),
-		DummySim.TELEGRAPH_SECONDS, DummySim.RECOVER_SECONDS, ANIM_IDLE)
+		DummySim.TELEGRAPH_SECONDS, DummySim.RECOVER_SECONDS, anim_idle)
 	arena.play_sfx(SFX_ALERT, -13.0, randf_range(0.96, 1.06))
 
 
@@ -229,4 +211,4 @@ func _on_died() -> void:
 
 func _on_revived() -> void:
 	rig.position = Vector3.ZERO
-	rig.play(ANIM_IDLE, 0.25, 1.0, true)
+	rig.play(anim_idle, 0.25, 1.0, true)

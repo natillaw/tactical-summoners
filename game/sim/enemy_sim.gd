@@ -1,25 +1,30 @@
 ## EnemySim — "Soldado": enemigo cuerpo a cuerpo basado en el Warrior.
 ##
-## Hereda el golpe con telegraph del muñeco (parry/interrupción funcionan) y
-## añade IA: persigue, y tiene tres habilidades de guerrero:
-##  - Golpe: cono con telegraph (heredado).
-##  - Carga: se lanza hacia el jugador si está lejos y encadena un golpe.
+## Hereda el golpe con telegraph del muñeco (parry/interrupción/salto funcionan)
+## y añade IA y tres habilidades de guerrero:
+##  - Golpe: cono con telegraph (heredado de DummySim).
+##  - Carga: si el jugador está lejos, se lanza hacia él y encadena un golpe.
 ##  - Guardia: una vez, por debajo del 50 % de vida, reduce el daño recibido.
-## Vida y daño escalan con el nivel (a nivel 60 ~7.8k de vida y ~320 de golpe).
+## Tras golpear se retira a media distancia y rodea al jugador en vez de quedarse
+## pegado; solo se acerca cuando el golpe está listo.
+## Vida y daño escalan con el nivel (nivel 60: ~7.8k de vida, ~320 por golpe).
 class_name EnemySim
 extends DummySim
 
 signal charge_started(direction: Vector2)
 signal guard_started()
 
-const MOVE_SPEED := 92.0
-const CHARGE_SPEED := 520.0
+const MOVE_SPEED := 92.0           # el Warrior corre a 168
+const CHARGE_SPEED := 480.0
 const CHARGE_TIME := 0.34
-const CHARGE_MIN := 190.0
+const CHARGE_MIN := 200.0
 const CHARGE_MAX := 420.0
-const CHARGE_COOLDOWN := 7.0
+const CHARGE_COOLDOWN := 8.0
 const GUARD_SECONDS := 2.5
 const GUARD_REDUCTION := 0.6
+const ENGAGE_DISTANCE := ATTACK_RANGE * 0.8   # se acerca hasta aquí para golpear
+const SPACING_MIN := 120.0                     # tras golpear: distancia de respeto
+const SPACING_MAX := 170.0
 
 var level: int = 1
 var xp_reward: int = 30
@@ -28,6 +33,8 @@ var charge_cooldown: float = 3.0
 var charge_direction: Vector2 = Vector2.ZERO
 var guard_timer: float = 0.0
 var guard_used: bool = false
+var moving: bool = false
+var _strafe_sign: float = 1.0
 
 
 func _init(p_world: Object = null, p_position: Vector2 = Vector2.ZERO, p_level: int = 1) -> void:
@@ -38,11 +45,11 @@ func _init(p_world: Object = null, p_position: Vector2 = Vector2.ZERO, p_level: 
 
 func set_level(lvl: int) -> void:
 	level = clampi(lvl, 1, Progression.MAX_LEVEL)
-	var ratio := health / maxf(max_health, 1.0) if max_health > 0.0 else 1.0
+	var ratio := clampf(health / maxf(max_health, 1.0), 0.0, 1.0)
 	max_health = 120.0 + 130.0 * (level - 1)
 	attack_damage = 17.0 + 5.0 * level
 	xp_reward = 30 + 10 * level
-	health = max_health if not alive else clampf(ratio, 0.05, 1.0) * max_health
+	health = ratio * max_health if alive else 0.0
 	health_changed.emit(health, max_health)
 
 
@@ -53,19 +60,21 @@ func step(tick_number: int, delta: float, warrior: Object) -> void:
 	if alive and warrior != null and warrior.alive:
 		_think(delta, warrior)
 	super.step(tick_number, delta, warrior)
-	_moved = position.distance_squared_to(before) > 0.01
+	moving = position.distance_squared_to(before) > 0.01
 
 
 func _think(delta: float, warrior: Object) -> void:
 	var to_target: Vector2 = warrior.position - position
 	var distance := to_target.length()
-	var slow := slow_factor if slow_timer > 0.0 else 1.0
+	var dir := to_target / maxf(distance, 0.001)
+	var speed := MOVE_SPEED * (slow_factor if slow_timer > 0.0 else 1.0)
 
 	if charge_timer > 0.0:
 		charge_timer -= delta
 		position = world.resolve_position(position + charge_direction * CHARGE_SPEED * delta, radius)
-		if charge_timer <= 0.0:
-			cooldown = 0.0  # nada más aterrizar, golpea
+		if charge_timer <= 0.0 or distance <= ENGAGE_DISTANCE:
+			charge_timer = 0.0
+			cooldown = 0.0  # al llegar, golpea
 		return
 
 	if state != State.IDLE or interrupted_timer > 0.0:
@@ -74,23 +83,32 @@ func _think(delta: float, warrior: Object) -> void:
 	if charge_cooldown <= 0.0 and distance >= CHARGE_MIN and distance <= CHARGE_MAX:
 		charge_cooldown = CHARGE_COOLDOWN
 		charge_timer = CHARGE_TIME
-		charge_direction = to_target.normalized()
+		charge_direction = dir
 		charge_started.emit(charge_direction)
 		return
 
-	if distance > ATTACK_RANGE * 0.75:
-		position = world.resolve_position(position + to_target.normalized() * MOVE_SPEED * slow * delta, radius)
+	var step_dir := Vector2.ZERO
+	if cooldown <= 0.25:
+		# Golpe listo: entra a distancia de golpe.
+		if distance > ENGAGE_DISTANCE:
+			step_dir = dir
+	elif distance < SPACING_MIN:
+		step_dir = -dir * 0.7 + dir.orthogonal() * _strafe_sign * 0.4
+	elif distance > SPACING_MAX:
+		step_dir = dir
+	else:
+		step_dir = dir.orthogonal() * _strafe_sign * 0.6
+	if step_dir != Vector2.ZERO:
+		position = world.resolve_position(position + step_dir.limit_length(1.0) * speed * delta, radius)
+
+
+func _resolve_attack(warrior: Object) -> void:
+	super._resolve_attack(warrior)
+	_strafe_sign = -_strafe_sign
 
 
 func is_charging() -> bool:
 	return charge_timer > 0.0
-
-
-func is_moving() -> bool:
-	return alive and _moved
-
-
-var _moved: bool = false
 
 
 func take_damage(amount: float, source_position: Vector2 = Vector2.ZERO, effects: Dictionary = {}) -> float:

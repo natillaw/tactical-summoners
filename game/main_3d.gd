@@ -1,11 +1,12 @@
 ## Main3D — punto de entrada del prototipo 3D de Reflections.
 ##
-## Igual que main.gd (2D) pero con Arena3D: la simulación, el HUD, el editor de
-## loadout y el overlay de debug son exactamente los mismos. Solo cambia cómo se
-## lee el apuntado: un rayo desde la cámara al plano del suelo.
+## Los nodos (Arena, Level, HUD…) están en main_3d.tscn; aquí solo se crea la
+## simulación y se traduce el input. Cámara en tercera persona: el apuntado es un
+## rayo desde la mira central al suelo y WASD es relativo a la cámara.
 ##
-## Esquema Battlerite: LMB/RMB = M1/M2; Space/Q/E/R/F = slots seleccionables.
-## Tab abre el editor (pausa TickManager), F2 reinicia y F4 rellena Rage/Ultimate.
+## LMB/RMB = M1/M2; Shift/Q/E/R/F = slots; Space = saltar; rueda = zoom.
+## Tab abre el editor (pausa TickManager), F2 reinicia, F4 rellena Rage/Ultimate,
+## F5/F6/F7 = debug de nivel y armas.
 extends Node3D
 
 @onready var arena: Arena3D = $Arena
@@ -38,8 +39,8 @@ func _refresh_status() -> void:
 		w.progression.level, w.progression.xp, Progression.xp_to_next(w.progression.level),
 		weapon.item_name, ItemRarity.display(weapon.rarity),
 	]
-	var line2 := "%d–%d daño · vel %.1f · AP %d     (F5 +5 niveles · F6 arma aleatoria · F7 nivel 60)" % [
-		weapon.weapon_min, weapon.weapon_max, weapon.weapon_speed, w.stats.get_attack_power(),
+	var line2 := "%d–%d daño · vel %.1f · AP %d · golpe medio %d" % [
+		weapon.weapon_min, weapon.weapon_max, weapon.weapon_speed, w.stats.get_attack_power(), w.average_hit(),
 	]
 	status_label.text = line1 + "\n" + line2
 	status_label.add_theme_color_override("font_color", ItemRarity.color(weapon.rarity))
@@ -118,7 +119,8 @@ func _read_input() -> InputMessage:
 	message.actions = {
 		"m1": Input.is_action_pressed("attack_m1"),
 		"m2": Input.is_action_pressed("attack_m2"),
-		"space": Input.is_action_pressed("slot_space"),
+		"shift": Input.is_action_pressed("slot_shift"),
+		"jump": Input.is_action_pressed("jump"),
 		"q": Input.is_action_pressed("slot_q"),
 		"e": Input.is_action_pressed("slot_e"),
 		"r": Input.is_action_pressed("slot_r"),

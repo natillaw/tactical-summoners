@@ -22,7 +22,7 @@ const RAGE := Color(0.93, 0.35, 0.20, 1.0)
 const ULTIMATE := Color(0.55, 0.80, 1.0, 1.0)
 const SHIELD := Color(0.62, 0.82, 0.95, 1.0)
 
-const BAR_KEYS := ["M1", "M2", "SPACE", "Q", "E", "R", "F"]
+const BAR_KEYS := ["M1", "M2", "SHIFT", "Q", "E", "R", "F"]
 const SLOT_W := 52.0
 const SLOT_H := 44.0
 const SLOT_GAP := 3.0
@@ -301,17 +301,20 @@ func _draw_sword_icon(center: Vector2, angle: float, color: Color, heavy: bool) 
 
 
 func _draw_controls() -> void:
-	_panel(Rect2(536, 284, 96, 70))
+	_panel(Rect2(536, 254, 96, 100))
 	var lines := [
 		"LMB/RMB ATK",
 		"WASD MOVE",
+		"SPACE JUMP",
+		"SHIFT ROLL",
 		"TAB LOADOUT",
 		"F2 RESET",
 		"F4 REFILL",
 		"F3 DEBUG",
+		"F5-F7 LVL/ARMA",
 	]
 	for i: int in range(lines.size()):
-		_draw_text(String(lines[i]), Vector2(542, 295 + i * 10), 7, MUTED, HORIZONTAL_ALIGNMENT_RIGHT, 84)
+		_draw_text(String(lines[i]), Vector2(542, 265 + i * 10), 7, MUTED, HORIZONTAL_ALIGNMENT_RIGHT, 84)
 
 
 # --- Overlays ---------------------------------------------------------------

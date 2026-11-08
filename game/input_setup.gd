@@ -1,6 +1,6 @@
 ## Registers the input map at runtime (before the main scene loads).
 ##
-## Esquema Battlerite: LMB/RMB para M1/M2, y Space/Q/E/R/F para los cinco
+## Esquema Battlerite: LMB/RMB para M1/M2, y Shift/Q/E/R/F (Space = saltar) para los cinco
 ## slots seleccionables. El loadout se edita con Tab (pausa la simulación).
 ## Mantener el mapa en código hace que el juego y las suites headless compartan
 ## exactamente las mismas acciones.
@@ -13,7 +13,8 @@ const ACTIONS := {
 	"move_right": [KEY_D, KEY_RIGHT],
 	"attack_m1": [],
 	"attack_m2": [],
-	"slot_space": [KEY_SPACE],
+	"slot_shift": [KEY_SHIFT],
+	"jump": [KEY_SPACE],
 	"slot_q": [KEY_Q],
 	"slot_e": [KEY_E],
 	"slot_r": [KEY_R],
@@ -26,7 +27,7 @@ const ACTIONS := {
 }
 
 const SLOT_ACTIONS := {
-	"SPACE": "slot_space",
+	"SHIFT": "slot_shift",
 	"Q": "slot_q",
 	"E": "slot_e",
 	"R": "slot_r",
