@@ -197,6 +197,11 @@ Arena (Node2D)           construye el mapa y spawnea actores; lee la sim
 GameHud (Control)        vida, Rage, cooldowns, pasiva, muerte
 ```
 
+**Presentación 3D (desde 2026-11-08, ver `docs/DECISIONES.md` D-004):**
+`game/main_3d.gd` monta `Arena3D` (`game/world3d/`), `WarriorActor3D` y
+`DummyActor3D` (`game/actors3d/`) y los VFX de `game/vfx3d/`. La simulación,
+el HUD y el loadout son los mismos que en 2D.
+
 Regla dura: **la simulación solo cambia en `WarriorSim.step()`**. Los actores,
 VFX, cámara y HUD son presentación y leen el estado o escuchan señales.
 

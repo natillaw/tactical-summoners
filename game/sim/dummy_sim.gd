@@ -2,6 +2,9 @@
 ##
 ## Vive dentro de CombatWorld (RefCounted, sin nodos) para poder probarse en
 ## headless. La presentación (game/actors/dummy_actor.gd) solo lee su estado.
+##
+## Acepta efectos de las habilidades del Warrior: ralentización, vulnerabilidad
+## e interrupción. No se mueve, así que la ralentización afecta a su telegráfico.
 class_name DummySim
 extends RefCounted
 
@@ -12,6 +15,8 @@ signal attack_missed()
 signal hit(amount: float, position: Vector2)
 signal died()
 signal revived()
+signal interrupted()
+signal effect_applied(effect_name: String, seconds: float)
 
 enum State { IDLE, TELEGRAPH, RECOVER, DEAD }
 
@@ -40,6 +45,12 @@ var hit_flash_ticks: int = 0
 var radius: float = RADIUS
 var attack_direction: Vector2 = Vector2.LEFT
 
+var slow_factor: float = 1.0
+var slow_timer: float = 0.0
+var vulnerable_amount: float = 0.0
+var vulnerable_timer: float = 0.0
+var interrupted_timer: float = 0.0
+
 
 func _init(p_world: Object = null, p_position: Vector2 = Vector2.ZERO, p_auto_attack: bool = true) -> void:
 	world = p_world
@@ -49,6 +60,8 @@ func _init(p_world: Object = null, p_position: Vector2 = Vector2.ZERO, p_auto_at
 
 
 func step(tick_number: int, delta: float, warrior: Object) -> void:
+	_tick_effects(delta)
+
 	if not alive:
 		state_time += delta
 		if state_time >= RESPAWN_SECONDS:
@@ -66,22 +79,37 @@ func step(tick_number: int, delta: float, warrior: Object) -> void:
 	if not auto_attack:
 		return
 
+	var speed := slow_factor if slow_timer > 0.0 else 1.0
+
 	match state:
 		State.IDLE:
 			if warrior != null and warrior.alive and cooldown <= 0.0:
 				if position.distance_to(warrior.position) <= ATTACK_RANGE:
 					_start_telegraph()
 		State.TELEGRAPH:
-			state_time += delta
+			state_time += delta * speed
 			if state_time >= TELEGRAPH_SECONDS:
 				_resolve_attack(warrior)
 		State.RECOVER:
-			state_time += delta
+			state_time += delta * speed
 			if state_time >= RECOVER_SECONDS:
 				state = State.IDLE
 				state_time = 0.0
 		_:
 			pass
+
+
+func _tick_effects(delta: float) -> void:
+	if interrupted_timer > 0.0:
+		interrupted_timer = maxf(0.0, interrupted_timer - delta)
+	if slow_timer > 0.0:
+		slow_timer = maxf(0.0, slow_timer - delta)
+		if slow_timer <= 0.0:
+			slow_factor = 1.0
+	if vulnerable_timer > 0.0:
+		vulnerable_timer = maxf(0.0, vulnerable_timer - delta)
+		if vulnerable_timer <= 0.0:
+			vulnerable_amount = 0.0
 
 
 func _start_telegraph() -> void:
@@ -110,18 +138,39 @@ func _resolve_attack(warrior: Object) -> void:
 		attack_missed.emit()
 		return
 
-	var dealt: float = warrior.take_damage(ATTACK_DAMAGE, position, false)
+	# Parry del Warrior: desvía el ataque y contraataca.
+	if warrior != null and warrior.alive and warrior.is_parrying():
+		var parry_time: float = float(warrior.state_time)
+		var parry_window: float = float(warrior.parry_window_end_time())
+		var in_window: bool = parry_time <= parry_window
+		var facing_warrior: Vector2 = (position - warrior.position).normalized() as Vector2
+		var facing_ok: bool = absf(attack_direction.dot(facing_warrior)) > 0.5
+		if in_window and facing_ok:
+			warrior.parry_trigger(true)
+			attack_missed.emit()
+			return
+
+	var dealt: float = warrior.take_damage(ATTACK_DAMAGE, position, {})
 	attack_landed.emit(dealt)
 
 
-func take_damage(amount: float) -> float:
+func take_damage(amount: float, source_position: Vector2 = Vector2.ZERO, effects: Dictionary = {}) -> float:
 	if not alive or amount <= 0.0:
 		return 0.0
-	var dealt := minf(amount, health)
+
+	var incoming := amount
+	if vulnerable_timer > 0.0:
+		incoming *= 1.0 + vulnerable_amount
+
+	var dealt := minf(incoming, health)
 	health -= dealt
 	hit_flash_ticks = 6
 	health_changed.emit(health, max_health)
 	hit.emit(dealt, position)
+
+	if not effects.is_empty():
+		apply_effects(effects)
+
 	if health <= 0.0:
 		health = 0.0
 		alive = false
@@ -131,6 +180,32 @@ func take_damage(amount: float) -> float:
 	return dealt
 
 
+func apply_effects(effects: Dictionary) -> void:
+	var slow: Dictionary = effects.get("slow", {})
+	if not slow.is_empty():
+		slow_factor = clampf(float(slow.get("factor", 0.6)), 0.1, 1.0)
+		slow_timer = float(slow.get("duration", 1.0))
+		effect_applied.emit("slow", slow_timer)
+
+	var vulnerable: Dictionary = effects.get("vulnerable", {})
+	if not vulnerable.is_empty():
+		vulnerable_amount = float(vulnerable.get("amount", 0.2))
+		vulnerable_timer = float(vulnerable.get("duration", 5.0))
+		effect_applied.emit("vulnerable", vulnerable_timer)
+
+	if bool(effects.get("interrupt", false)):
+		interrupt()
+
+
+func interrupt() -> void:
+	interrupted_timer = 0.5
+	if state == State.TELEGRAPH:
+		state = State.IDLE
+		state_time = 0.0
+		cooldown = maxf(cooldown, 1.2)
+		interrupted.emit()
+
+
 func revive() -> void:
 	alive = true
 	health = max_health
@@ -138,6 +213,11 @@ func revive() -> void:
 	state_time = 0.0
 	cooldown = 1.0
 	hit_flash_ticks = 0
+	slow_factor = 1.0
+	slow_timer = 0.0
+	vulnerable_amount = 0.0
+	vulnerable_timer = 0.0
+	interrupted_timer = 0.0
 	health_changed.emit(health, max_health)
 	revived.emit()
 
@@ -145,11 +225,20 @@ func revive() -> void:
 func telegraph_progress() -> float:
 	if state != State.TELEGRAPH:
 		return 0.0
-	return clampf(state_time / TELEGRAPH_SECONDS, 0.0, 1.0)
+	var speed := slow_factor if slow_timer > 0.0 else 1.0
+	return clampf(state_time / maxf(TELEGRAPH_SECONDS / maxf(speed, 0.1), 0.001), 0.0, 1.0)
 
 
 func is_telegraphing() -> bool:
 	return state == State.TELEGRAPH
+
+
+func is_slowed() -> bool:
+	return slow_timer > 0.0
+
+
+func is_vulnerable() -> bool:
+	return vulnerable_timer > 0.0
 
 
 func snapshot() -> Dictionary:
@@ -160,4 +249,7 @@ func snapshot() -> Dictionary:
 		"alive": alive,
 		"state": state,
 		"telegraph": telegraph_progress(),
+		"slow": slow_timer,
+		"vulnerable": vulnerable_timer,
+		"interrupted": interrupted_timer,
 	}
