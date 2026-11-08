@@ -124,3 +124,9 @@ piezas del Medieval Village / Fantasy Props MegaKit; animación propia de estoca
 - **Items** (`game/items/`): rarezas Normal, Poco común, Raro, Épico, Único, Legendario (afijos 0/1/2/3/3/4). Armas: espada, hacha, maza, lanza, daga con rasgo propio (rasgos y efectos legendarios: solo datos, pendientes). F6 = arma aleatoria.
 - **Enemigo "Soldado"** (`game/sim/enemy_sim.gd`, base Warrior): Golpe con telegraph, Carga, Guardia (<50 % vida). Escala con el nivel y sigue el nivel del jugador (modo de prueba). Siguientes: casters, rogues, clérigo (curandero: matar primero).
 - **Editor de Godot:** `main_3d.tscn` ahora tiene los nodos (Arena, Level, HUD, Crosshair, Status, Loadout, Debug) y el escenario es `world3d/training_arena.tscn` con marcadores `Spawns/*` (meta enemy/level/hp). Los actores del jugador/enemigos se instancian en runtime.
+
+## 2026-11-08 — Salto, Soldado con skin, revisión
+- **Space = saltar, Shift = slot de movilidad** (Combat Roll). Saltar (>0.6 m) esquiva los golpes cuerpo a cuerpo.
+- **Arquetipos de enemigo/clase:** guerrero (Soldado, hecho), caster, rogue, clérigo (curandero) y **arquero**.
+- **Soldado:** modelo del Warrior teñido + espada, idle/correr/carga/ataque con espada. IA con espaciado: tras golpear se retira y rodea (120–170 px); solo entra a golpear con el ataque listo; la carga se detiene al llegar a distancia de golpe.
+- **Daño normalizado (WoW Classic):** el ritmo de las skills no depende del arma, así que el golpe usa la tirada del arma × 2.6/velocidad + AP/14 × 2.6. Antes las armas lentas eran siempre mejores (corregido).

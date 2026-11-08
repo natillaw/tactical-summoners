@@ -8,7 +8,7 @@
 ##   LMB   → Heavy Strikes   (combo de 3 golpes)
 ##   RMB   → Piercing Thrust (estocada lineal)
 ## Slots seleccionables (loadout por defecto):
-##   SPACE → Combat Roll
+##   SHIFT → Combat Roll
 ##   Q     → Parry
 ##   E     → Charge
 ##   R     → Seismic Break
@@ -29,13 +29,13 @@ const SPECIAL_COST: float = 30.0
 
 const SLOT_M1 := "M1"
 const SLOT_M2 := "M2"
-const SELECTABLE_SLOTS: Array = ["SPACE", "Q", "E", "R", "F"]
-const SLOT_ORDER: Array = ["M1", "M2", "SPACE", "Q", "E", "R", "F"]
+const SELECTABLE_SLOTS: Array = ["SHIFT", "Q", "E", "R", "F"]
+const SLOT_ORDER: Array = ["M1", "M2", "SHIFT", "Q", "E", "R", "F"]
 
 const ACTION_KEYS := {
 	"M1": "m1",
 	"M2": "m2",
-	"SPACE": "space",
+	"SHIFT": "shift",
 	"Q": "q",
 	"E": "e",
 	"R": "r",
@@ -45,7 +45,7 @@ const ACTION_KEYS := {
 const SLOT_LABELS := {
 	"M1": "LMB",
 	"M2": "RMB",
-	"SPACE": "SPACE",
+	"SHIFT": "SHIFT",
 	"Q": "Q",
 	"E": "E",
 	"R": "R",
@@ -120,12 +120,12 @@ const M2: Dictionary = {
 	"sfx": "thrust",
 }
 
-## SPACE: movilidad defensiva con iframes.
+## SHIFT: movilidad defensiva con iframes.
 const COMBAT_ROLL: Dictionary = {
 	"id": &"combat_roll",
 	"name": "Combat Roll",
 	"short": "ROLL",
-	"slot": "SPACE",
+	"slot": "SHIFT",
 	"kind": "mobility",
 	"role": "Movilidad / evasión",
 	"description": "Rueda en la dirección de movimiento con una ventana breve de invulnerabilidad.",
@@ -328,7 +328,7 @@ const SPECIAL: Dictionary = PARRY
 const ULTIMATE: Dictionary = BLADESTORM
 
 const DEFAULT_LOADOUT: Dictionary = {
-	"SPACE": &"combat_roll",
+	"SHIFT": &"combat_roll",
 	"Q": &"parry",
 	"E": &"charge",
 	"R": &"seismic_break",
@@ -372,7 +372,7 @@ static func get_skill_book() -> Array:
 	return book
 
 
-## Las 5 cartas que el loadout puede asignar a SPACE/Q/E/R/F.
+## Las 5 cartas que el loadout puede asignar a SHIFT/Q/E/R/F.
 static func get_pool() -> Array:
 	var pool: Array = []
 	for entry: Dictionary in POOL_ABILITIES:

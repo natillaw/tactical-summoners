@@ -358,7 +358,7 @@ func _spawn_actors() -> void:
 			dummy_sim = world.add_dummy(spawn["position"], false)
 			dummy_sim.max_health = float(spawn.get("hp", 4000.0))
 			dummy_sim.health = dummy_sim.max_health
-		var dummy := DummyActor3D.new()
+		var dummy: DummyActor3D = EnemyActor3D.new() if dummy_sim is EnemySim else DummyActor3D.new()
 		dummy.name = "Dummy"
 		add_child(dummy)
 		dummy.setup(dummy_sim, self)

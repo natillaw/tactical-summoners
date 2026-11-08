@@ -17,6 +17,8 @@ signal attack_state_changed(state: int)
 signal attack_hit(skill: Dictionary, target: Object, damage: float, critical: bool, position: Vector2)
 signal attack_finished(skill: Dictionary)
 signal weapon_changed(item: Item)
+signal jumped()
+signal landed()
 signal damage_taken(amount: float, source_position: Vector2, is_dot: bool)
 signal died()
 signal cast_event(event: String, skill: Dictionary, at: Vector2, direction: Vector2)
@@ -36,6 +38,13 @@ const MAX_HEALTH := 300.0
 const BUFFER_SECONDS := 0.22
 const CRIT_MULTIPLIER := 2.0  # como WoW Classic
 const BASE_CRIT := 0.05
+## Velocidad normalizada (WoW Classic para golpes instantáneos): el ritmo de las
+## skills no depende del arma, así que el daño por golpe se normaliza a esta
+## velocidad. Así una daga no es peor que un hacha: difieren en dispersión y rasgo.
+const NORMALIZED_SPEED := 2.6
+## Salto (altura en píxeles de sim; 40 px = 1 m).
+const JUMP_VELOCITY := 520.0
+const GRAVITY := 2200.0
 
 const RAGE_ON_HIT_TAKEN := 5.0
 const ULTIMATE_ON_HIT := 8.0
@@ -53,6 +62,8 @@ var aim_dir: Vector2 = Vector2.RIGHT
 var progression := Progression.new()
 var weapon: Item = ItemFactory.starter_sword()
 var stats := CharacterStats.new()
+var height: float = 0.0
+var vertical_velocity: float = 0.0
 
 var max_health: float = MAX_HEALTH
 var health: float = MAX_HEALTH
@@ -127,6 +138,35 @@ func recompute_stats(heal: bool) -> void:
 	health_changed.emit(health, max_health)
 
 
+## Daño base de un golpe: tirada del arma normalizada + AP/14 · velocidad normalizada.
+func roll_hit() -> float:
+	var speed := maxf(stats.get_stat(&"weapon_speed"), 0.1)
+	var roll := _rng.randf_range(stats.get_stat(&"weapon_min"), stats.get_stat(&"weapon_max"))
+	return roll * NORMALIZED_SPEED / speed + stats.get_attack_power() / 14.0 * NORMALIZED_SPEED
+
+
+## Daño medio de un golpe (para UI y tests).
+func average_hit() -> float:
+	var speed := maxf(stats.get_stat(&"weapon_speed"), 0.1)
+	var avg := (stats.get_stat(&"weapon_min") + stats.get_stat(&"weapon_max")) * 0.5
+	return avg * NORMALIZED_SPEED / speed + stats.get_attack_power() / 14.0 * NORMALIZED_SPEED
+
+
+func is_airborne() -> bool:
+	return height > 0.0 or vertical_velocity > 0.0
+
+
+func _update_jump(delta: float) -> void:
+	if not is_airborne():
+		return
+	vertical_velocity -= GRAVITY * delta
+	height += vertical_velocity * delta
+	if height <= 0.0:
+		height = 0.0
+		vertical_velocity = 0.0
+		landed.emit()
+
+
 func equip_weapon(item: Item) -> void:
 	weapon = item
 	recompute_stats(false)
@@ -151,6 +191,7 @@ func step(tick_number: int, delta: float, input: Variant) -> void:
 
 	_update_attack(delta)
 	_update_movement(delta)
+	_update_jump(delta)
 	_update_last_stand()
 
 
@@ -174,6 +215,13 @@ func _read_input(input: Variant) -> void:
 			buffered_slot = slot
 			buffer_timer = BUFFER_SECONDS
 		_prev_actions[key] = pressed
+
+	var jump_pressed := bool(actions.get("jump", false))
+	if jump_pressed and not bool(_prev_actions.get("jump", false)) and alive and not is_airborne():
+		vertical_velocity = JUMP_VELOCITY
+		height = 0.001
+		jumped.emit()
+	_prev_actions["jump"] = jump_pressed
 
 	var m1_pressed := bool(actions.get("m1", false))
 	var m1_was := bool(_prev_actions.get("m1", false))
@@ -531,7 +579,7 @@ func _damage_area(center: Vector2, radius: float, mult: float, effects: Dictiona
 func _hit_target(target: Object, mult: float, effects: Dictionary) -> void:
 	_hit_targets[target] = true
 
-	var damage := stats.roll_weapon_damage(_rng) * mult
+	var damage := roll_hit() * mult
 	var critical := _rng.randf() < stats.get_crit_chance()
 	if critical:
 		damage *= CRIT_MULTIPLIER
@@ -834,6 +882,8 @@ func reset(spawn: Vector2 = Vector2(480, 380)) -> void:
 	aim_dir = Vector2.RIGHT
 	health = max_health
 	alive = true
+	height = 0.0
+	vertical_velocity = 0.0
 	state = AttackState.IDLE
 	state_time = 0.0
 	current_skill = {}
@@ -884,6 +934,7 @@ func snapshot() -> Dictionary:
 		"position": [position.x, position.y],
 		"velocity": [velocity.x, velocity.y],
 		"aim": [aim_dir.x, aim_dir.y],
+		"height": height,
 		"health": health,
 		"max_health": max_health,
 		"rage": resource.get_current(),

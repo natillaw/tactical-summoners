@@ -69,9 +69,9 @@ func _ready() -> void:
 
 	world.warrior.debug_refill()
 	_aim_at_dummy(world)
-	Input.action_press("slot_space")
+	Input.action_press("slot_shift")
 	await _shot("09_roll", 0.14)
-	Input.action_release("slot_space")
+	Input.action_release("slot_shift")
 	await _wait(0.6)
 
 	_aim_at_dummy(world)

@@ -29,6 +29,8 @@ const TELEGRAPH_SECONDS := 0.72
 const RECOVER_SECONDS := 0.35
 const COOLDOWN_SECONDS := 2.60
 const RESPAWN_SECONDS := 3.0
+## Por encima de esta altura (px) el golpe pasa por debajo del jugador.
+const JUMP_DODGE_HEIGHT := 24.0
 
 var world: Object = null
 var position: Vector2 = Vector2.ZERO
@@ -130,7 +132,7 @@ func _resolve_attack(warrior: Object) -> void:
 		return
 
 	var to_target: Vector2 = warrior.position - position
-	if to_target.length() > ATTACK_RANGE:
+	if float(warrior.get("height")) > JUMP_DODGE_HEIGHT or to_target.length() > ATTACK_RANGE:
 		attack_missed.emit()
 		return
 

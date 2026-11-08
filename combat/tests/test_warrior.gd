@@ -124,7 +124,7 @@ func _test_skill_book() -> void:
 	_check(loadout.size() == 5, "the default loadout is complete")
 	for slot: String in WarriorKit.SELECTABLE_SLOTS:
 		_check(WarriorKit.has_ability(StringName(String(loadout[slot]))), "%s holds a real ability" % slot)
-	_check(WarriorKit.sanitize_loadout({"SPACE": &"bogus"})["SPACE"] == WarriorKit.DEFAULT_LOADOUT["SPACE"], "sanitize_loadout repairs bad ids")
+	_check(WarriorKit.sanitize_loadout({"SHIFT": &"bogus"})["SHIFT"] == WarriorKit.DEFAULT_LOADOUT["SHIFT"], "sanitize_loadout repairs bad ids")
 
 	var roles := ""
 	for entry: Dictionary in book:
