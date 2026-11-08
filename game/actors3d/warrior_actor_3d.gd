@@ -72,6 +72,7 @@ var sim: WarriorSim
 var arena: Arena3D
 var rig: HumanoidRig
 var sword: Node3D
+var _hurt_time: float = 0.0
 var trail: WeaponTrail
 
 var _yaw: float = 0.0
@@ -213,6 +214,10 @@ func _update_facing(delta: float) -> void:
 
 func _update_locomotion() -> void:
 	if sim.is_attacking():
+		_hurt_time = 0.0
+		return
+	if _hurt_time > 0.0:
+		_hurt_time -= get_process_delta_time()
 		return
 	if sim.is_airborne():
 		rig.play(ANIM_JUMP, 0.1)
@@ -415,7 +420,8 @@ func _on_damage_taken(_amount: float, _source_position: Vector2, is_dot: bool) -
 		return
 	rig.flash(Color(1.0, 0.25, 0.2), 0.14)
 	if not sim.is_attacking() and sim.alive:
-		rig.play(ANIM_HIT, 0.05, 1.3, true)
+		_hurt_time = 0.32
+		rig.play_clip(ANIM_HIT, 0.0, 0.8, 0.25, 0.06, 0.26, ANIM_IDLE, 0.04)
 	arena.play_sfx(SFX_HURT, -6.0, randf_range(0.92, 1.05))
 	arena.shake(3.2, 0.18)
 

@@ -185,8 +185,9 @@ func _process(delta: float) -> void:
 		_hitstop = maxf(0.0, _hitstop - delta)
 		_apply_speed()
 
-	if _clip_end >= 0.0 and player.is_playing():
-		var pos := player.current_animation_position
+	if _clip_end >= 0.0:
+		var finished := not player.is_playing()
+		var pos := _clip_end if finished else player.current_animation_position
 		if _clip_contact >= 0.0 and pos >= _clip_contact:
 			_clip_contact = -1.0
 			_speed = _clip_post_speed

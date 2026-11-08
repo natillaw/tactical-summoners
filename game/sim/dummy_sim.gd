@@ -53,6 +53,7 @@ var slow_timer: float = 0.0
 var vulnerable_amount: float = 0.0
 var vulnerable_timer: float = 0.0
 var interrupted_timer: float = 0.0
+var stun_timer: float = 0.0
 
 
 func _init(p_world: Object = null, p_position: Vector2 = Vector2.ZERO, p_auto_attack: bool = true) -> void:
@@ -79,7 +80,7 @@ func step(tick_number: int, delta: float, warrior: Object) -> void:
 
 	cooldown = maxf(0.0, cooldown - delta)
 
-	if not auto_attack:
+	if not auto_attack or stun_timer > 0.0:
 		return
 
 	var speed := slow_factor if slow_timer > 0.0 else 1.0
@@ -105,6 +106,8 @@ func step(tick_number: int, delta: float, warrior: Object) -> void:
 func _tick_effects(delta: float) -> void:
 	if interrupted_timer > 0.0:
 		interrupted_timer = maxf(0.0, interrupted_timer - delta)
+	if stun_timer > 0.0:
+		stun_timer = maxf(0.0, stun_timer - delta)
 	if slow_timer > 0.0:
 		slow_timer = maxf(0.0, slow_timer - delta)
 		if slow_timer <= 0.0:
@@ -199,6 +202,12 @@ func apply_effects(effects: Dictionary) -> void:
 	if bool(effects.get("interrupt", false)):
 		interrupt()
 
+	var stun := float(effects.get("stun", 0.0))
+	if stun > 0.0:
+		stun_timer = maxf(stun_timer, stun)
+		interrupt()
+		effect_applied.emit("stun", stun)
+
 
 func interrupt() -> void:
 	interrupted_timer = 0.5
@@ -221,6 +230,7 @@ func revive() -> void:
 	vulnerable_amount = 0.0
 	vulnerable_timer = 0.0
 	interrupted_timer = 0.0
+	stun_timer = 0.0
 	health_changed.emit(health, max_health)
 	revived.emit()
 
@@ -255,4 +265,5 @@ func snapshot() -> Dictionary:
 		"slow": slow_timer,
 		"vulnerable": vulnerable_timer,
 		"interrupted": interrupted_timer,
+		"stun": stun_timer,
 	}

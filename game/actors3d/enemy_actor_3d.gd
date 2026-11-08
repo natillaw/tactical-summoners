@@ -13,6 +13,8 @@ const ANIM_SPRINT := "ual1/Sprint"
 const RUN_ANIM_SPEED := 3.6
 const CLIP_SLASH := {"clip": "ual2/Sword_Regular_A", "from": 0.0, "to": 1.0, "contact": 0.55}
 const TINT := Color(1.0, 0.55, 0.5)
+const CLIP_ROLL := {"clip": "ual1/Roll", "from": 0.0, "to": 0.78, "contact": 0.55}
+const ANIM_STUN := "ual1/Hit_Head"
 
 var enemy: EnemySim
 var _label: Label3D
@@ -35,6 +37,12 @@ func setup(p_sim: DummySim, p_arena: Arena3D) -> void:
 	_label.modulate = Color(1.0, 0.7, 0.55)
 	_label.position.y = BAR_HEIGHT + 0.25
 	add_child(_label)
+	enemy.rolled.connect(func(_d: Vector2) -> void:
+		var c := CLIP_ROLL
+		rig.play_clip(String(c["clip"]), float(c["from"]), float(c["to"]), float(c["contact"]), EnemySim.ROLL_TIME * 0.7, EnemySim.ROLL_TIME * 0.5, ANIM_SWORD_IDLE))
+	enemy.effect_applied.connect(func(effect: String, _s: float) -> void:
+		if effect == "stun":
+			rig.play_clip(ANIM_STUN, 0.0, 1.0, 0.3, 0.1, 0.8, ANIM_SWORD_IDLE))
 
 
 func _dress() -> void:
@@ -47,10 +55,12 @@ func _process(delta: float) -> void:
 	if enemy == null:
 		return
 	_label.visible = enemy.alive
-	_label.text = "Soldado  Nv.%d" % enemy.level
+	_label.text = ("¡ATURDIDO!  " if enemy.stun_timer > 0.0 else "") + "Soldado  Nv.%d" % enemy.level
 	if not enemy.alive:
 		return
-	if enemy.state == DummySim.State.IDLE:
+	if enemy.stun_timer > 0.0:
+		rig.flash(Color(1.0, 0.9, 0.3), 0.05)
+	elif enemy.state == DummySim.State.IDLE and not enemy.is_rolling():
 		var current := rig.current()
 		if current in [ANIM_SWORD_IDLE, ANIM_RUN, ANIM_SPRINT, ""]:
 			if enemy.is_charging():

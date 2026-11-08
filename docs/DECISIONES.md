@@ -130,3 +130,8 @@ piezas del Medieval Village / Fantasy Props MegaKit; animación propia de estoca
 - **Arquetipos de enemigo/clase:** guerrero (Soldado, hecho), caster, rogue, clérigo (curandero) y **arquero**.
 - **Soldado:** modelo del Warrior teñido + espada, idle/correr/carga/ataque con espada. IA con espaciado: tras golpear se retira y rodea (120–170 px); solo entra a golpear con el ataque listo; la carga se detiene al llegar a distancia de golpe.
 - **Daño normalizado (WoW Classic):** el ritmo de las skills no depende del arma, así que el golpe usa la tirada del arma × 2.6/velocidad + AP/14 × 2.6. Antes las armas lentas eran siempre mejores (corregido).
+
+## 2026-11-08 — Soldado más "jugador", Charge aturde, hurt
+- Charge aturde 1 s (antes ralentizaba). Enemigos aturdidos no se mueven ni atacan.
+- Soldado: corre a 120 (jugador 168), rodea cambiando de lado, combos de 2 golpes (45 %), rueda para esquivar cuando empiezas un ataque cerca (55 %, cd 3.5 s), golpe cada 1.7 s.
+- Fix: los clips que terminaban en to=1.0 se quedaban congelados en el último frame (pose "mirando arriba"); ahora enlazan siempre con la siguiente animación. Hurt del jugador visible.
