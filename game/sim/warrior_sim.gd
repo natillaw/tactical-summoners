@@ -26,6 +26,7 @@ signal parry_success(skill: Dictionary, source_position: Vector2)
 signal evaded(amount: float)
 signal last_stand_changed(active: bool, seconds_left: float)
 signal loadout_changed(loadout: Dictionary)
+signal stunned(seconds: float)
 
 enum AttackState { IDLE, WINDUP, ACTIVE, RECOVERY }
 
@@ -63,6 +64,7 @@ var progression := Progression.new()
 var weapon: Item = ItemFactory.starter_sword()
 var stats := CharacterStats.new()
 var height: float = 0.0
+var stun_timer: float = 0.0
 var vertical_velocity: float = 0.0
 
 var max_health: float = MAX_HEALTH
@@ -187,6 +189,12 @@ func step(tick_number: int, delta: float, input: Variant) -> void:
 
 	if not alive:
 		velocity = Vector2.ZERO
+		return
+
+	if stun_timer > 0.0:
+		stun_timer = maxf(0.0, stun_timer - delta)
+		velocity = Vector2.ZERO
+		_update_jump(delta)
 		return
 
 	_update_attack(delta)
@@ -373,8 +381,9 @@ func _start_ability(slot: String) -> bool:
 		else:
 			combo_index = 0
 
-	var id := String(ability["id"])
-	cooldowns[id] = cooldown_total(slot)
+	# M1 no tiene cooldown: solo lo limita su propia animación.
+	if slot != "M1":
+		cooldowns[String(ability["id"])] = cooldown_total(slot)
 
 	attack_state_changed.emit(state)
 	attack_started.emit(current_skill, attack_aim)
@@ -728,6 +737,10 @@ func take_damage(amount: float, source_position: Vector2 = Vector2.ZERO, effects
 	health_changed.emit(health, max_health)
 	damage_taken.emit(dealt, source_position, false)
 
+	var stun := float(effects.get("stun", 0.0))
+	if stun > 0.0 and health > 0.0:
+		_apply_stun(stun)
+
 	if health <= 0.0:
 		health = 0.0
 		alive = false
@@ -739,6 +752,27 @@ func take_damage(amount: float, source_position: Vector2 = Vector2.ZERO, effects
 		died.emit()
 
 	return dealt
+
+
+## Aturdimiento (Charge enemigo): cancela el ataque en curso y bloquea el control.
+func _apply_stun(seconds: float) -> void:
+	stun_timer = maxf(stun_timer, seconds)
+	state = AttackState.IDLE
+	state_time = 0.0
+	current_skill = {}
+	current_slot = ""
+	parry_active = false
+	parry_window_end = 0.0
+	_dash_remaining = 0.0
+	buffered_slot = ""
+	buffer_timer = 0.0
+	velocity = Vector2.ZERO
+	attack_state_changed.emit(state)
+	stunned.emit(seconds)
+
+
+func is_stunned() -> bool:
+	return stun_timer > 0.0
 
 
 func _is_evading() -> bool:
@@ -884,6 +918,7 @@ func reset(spawn: Vector2 = Vector2(480, 380)) -> void:
 	alive = true
 	height = 0.0
 	vertical_velocity = 0.0
+	stun_timer = 0.0
 	state = AttackState.IDLE
 	state_time = 0.0
 	current_skill = {}

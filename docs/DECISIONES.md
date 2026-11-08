@@ -135,3 +135,10 @@ piezas del Medieval Village / Fantasy Props MegaKit; animación propia de estoca
 - Charge aturde 1 s (antes ralentizaba). Enemigos aturdidos no se mueven ni atacan.
 - Soldado: corre a 120 (jugador 168), rodea cambiando de lado, combos de 2 golpes (45 %), rueda para esquivar cuando empiezas un ataque cerca (55 %, cd 3.5 s), golpe cada 1.7 s.
 - Fix: los clips que terminaban en to=1.0 se quedaban congelados en el último frame (pose "mirando arriba"); ahora enlazan siempre con la siguiente animación. Hurt del jugador visible.
+
+## 2026-11-08 — M1 sin cooldown, golpes en volumen, Soldado con el kit completo
+- **M1 sin cooldown** (jugador y enemigo): solo lo limita su animación (0.46 s por golpe, combo de 3).
+- **Pose congelada:** al entrar en hit-stop `is_playing()` daba false y el rig daba el clip por terminado, dejándolo pausado a mitad de golpe. Ya no se evalúa el final del clip durante el hit-stop.
+- **Daño en volumen:** los ataques del enemigo ya no pasan por debajo del salto (altura de golpe 90 px > pico del salto 61 px). Solo la voltereta (iframes) o el parry los evitan.
+- **Soldado "como un jugador"** (usa los datos de `WarriorKit`): M1 en combo de 3 sin cooldown, Golpe pesado / Estocada / Ruptura sísmica con telegraph (cono, línea, círculo), Carga que daña y aturde 0.8 s al jugador, Parry que contraataca, Voltereta, Bladestorm (<50 % vida), Last Stand (<30 %), Guardia. Decide cada pocas décimas y reacciona a tus ataques con parry o voltereta.
+- El jugador puede ser aturdido (`WarriorSim.stun_timer`): cancela el ataque y bloquea el control.

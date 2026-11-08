@@ -29,8 +29,12 @@ const TELEGRAPH_SECONDS := 0.72
 const RECOVER_SECONDS := 0.35
 const COOLDOWN_SECONDS := 2.60
 const RESPAWN_SECONDS := 3.0
-## Por encima de esta altura (px) el golpe pasa por debajo del jugador.
-const JUMP_DODGE_HEIGHT := 24.0
+## Los golpes ocupan un volumen (cilindro/cono), no solo el suelo: esta altura
+## (px de sim, 40 px = 1 m) supera el pico del salto (~61 px), así que saltar no
+## esquiva. Solo la voltereta (invulnerable) o el parry los evitan.
+const HIT_HEIGHT := 90.0
+## Radio del cuerpo del jugador (para el alcance de los golpes).
+const TARGET_RADIUS := 14.0
 
 var world: Object = null
 var position: Vector2 = Vector2.ZERO
@@ -47,6 +51,14 @@ var facing: Vector2 = Vector2.LEFT
 var hit_flash_ticks: int = 0
 var radius: float = RADIUS
 var attack_direction: Vector2 = Vector2.LEFT
+## Ataque con telegraph en curso (el muñeco usa los valores por defecto).
+var attack_name: String = "heavy"
+var attack_range: float = ATTACK_RANGE
+var attack_arc: float = ATTACK_ARC
+var attack_mult: float = 1.0
+var telegraph_seconds: float = TELEGRAPH_SECONDS
+var recover_seconds: float = RECOVER_SECONDS
+var attack_effects: Dictionary = {}
 
 var slow_factor: float = 1.0
 var slow_timer: float = 0.0
@@ -87,16 +99,14 @@ func step(tick_number: int, delta: float, warrior: Object) -> void:
 
 	match state:
 		State.IDLE:
-			if warrior != null and warrior.alive and cooldown <= 0.0:
-				if position.distance_to(warrior.position) <= ATTACK_RANGE:
-					_start_telegraph()
+			_idle_decision(warrior)
 		State.TELEGRAPH:
 			state_time += delta * speed
-			if state_time >= TELEGRAPH_SECONDS:
+			if state_time >= telegraph_seconds:
 				_resolve_attack(warrior)
 		State.RECOVER:
 			state_time += delta * speed
-			if state_time >= RECOVER_SECONDS:
+			if state_time >= recover_seconds:
 				state = State.IDLE
 				state_time = 0.0
 		_:
@@ -118,46 +128,72 @@ func _tick_effects(delta: float) -> void:
 			vulnerable_amount = 0.0
 
 
-func _start_telegraph() -> void:
+## Qué hace el muñeco en reposo (EnemySim lo sustituye por su IA).
+func _idle_decision(warrior: Object) -> void:
+	if warrior != null and warrior.alive and cooldown <= 0.0:
+		if position.distance_to(warrior.position) <= ATTACK_RANGE:
+			_start_telegraph()
+
+
+## Empieza un ataque con telegraph. `attack` puede traer: name, range, arc (360 =
+## círculo), mult, seconds, recover y effects.
+func _start_telegraph(attack: Dictionary = {}) -> void:
 	state = State.TELEGRAPH
 	state_time = 0.0
 	attack_direction = facing
-	telegraph_started.emit(attack_direction, ATTACK_RANGE, ATTACK_ARC)
+	attack_name = String(attack.get("name", "heavy"))
+	attack_range = float(attack.get("range", ATTACK_RANGE))
+	attack_arc = float(attack.get("arc", ATTACK_ARC))
+	attack_mult = float(attack.get("mult", 1.0))
+	telegraph_seconds = float(attack.get("seconds", TELEGRAPH_SECONDS))
+	recover_seconds = float(attack.get("recover", RECOVER_SECONDS))
+	attack_effects = attack.get("effects", {})
+	telegraph_started.emit(attack_direction, attack_range, attack_arc)
 
 
 func _resolve_attack(warrior: Object) -> void:
 	state = State.RECOVER
 	state_time = 0.0
 	cooldown = COOLDOWN_SECONDS
+	_strike(warrior, attack_direction, attack_range, attack_arc, attack_damage * attack_mult, attack_effects)
 
+
+## Golpe en volumen: alcance horizontal + arco (360 = círculo) + altura. Devuelve
+## true si hizo daño. Gestiona el parry del jugador y la voltereta (en take_damage).
+func _strike(warrior: Object, direction: Vector2, reach: float, arc: float, damage: float, effects: Dictionary = {}) -> bool:
 	if warrior == null or not warrior.alive:
 		attack_missed.emit()
-		return
+		return false
 
 	var to_target: Vector2 = warrior.position - position
-	if float(warrior.get("height")) > JUMP_DODGE_HEIGHT or to_target.length() > ATTACK_RANGE:
+	if float(warrior.get("height")) > HIT_HEIGHT or to_target.length() > reach + TARGET_RADIUS:
 		attack_missed.emit()
-		return
+		return false
 
-	var angle_degrees := rad_to_deg(attack_direction.angle_to(to_target))
-	if absf(angle_degrees) > ATTACK_ARC * 0.5:
-		attack_missed.emit()
-		return
+	if arc < 359.0:
+		var angle_degrees := rad_to_deg(direction.angle_to(to_target))
+		if absf(angle_degrees) > arc * 0.5:
+			attack_missed.emit()
+			return false
 
 	# Parry del Warrior: desvía el ataque y contraataca.
-	if warrior != null and warrior.alive and warrior.is_parrying():
+	if warrior.is_parrying():
 		var parry_time: float = float(warrior.state_time)
 		var parry_window: float = float(warrior.parry_window_end_time())
 		var in_window: bool = parry_time <= parry_window
 		var facing_warrior: Vector2 = (position - warrior.position).normalized() as Vector2
-		var facing_ok: bool = absf(attack_direction.dot(facing_warrior)) > 0.5
+		var facing_ok: bool = absf(direction.dot(facing_warrior)) > 0.5
 		if in_window and facing_ok:
 			warrior.parry_trigger(true)
 			attack_missed.emit()
-			return
+			return false
 
-	var dealt: float = warrior.take_damage(attack_damage, position, {})
+	var dealt: float = warrior.take_damage(damage, position, effects)
+	if dealt <= 0.0:
+		attack_missed.emit()
+		return false
 	attack_landed.emit(dealt)
+	return true
 
 
 func take_damage(amount: float, source_position: Vector2 = Vector2.ZERO, effects: Dictionary = {}) -> float:
@@ -239,7 +275,7 @@ func telegraph_progress() -> float:
 	if state != State.TELEGRAPH:
 		return 0.0
 	var speed := slow_factor if slow_timer > 0.0 else 1.0
-	return clampf(state_time / maxf(TELEGRAPH_SECONDS / maxf(speed, 0.1), 0.001), 0.0, 1.0)
+	return clampf(state_time / maxf(telegraph_seconds / maxf(speed, 0.1), 0.001), 0.0, 1.0)
 
 
 func is_telegraphing() -> bool:

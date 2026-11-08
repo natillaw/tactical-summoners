@@ -139,12 +139,12 @@ func _process(delta: float) -> void:
 		_on_revived()
 	_was_alive = sim.alive
 
-	var target := sim.attack_direction if sim.state == DummySim.State.TELEGRAPH else sim.facing
+	var target := sim.attack_direction if sim.is_telegraphing() else sim.facing
 	if sim.alive and target.length_squared() > 0.0001:
 		_yaw = lerp_angle(_yaw, View3D.yaw_for(target), 1.0 - exp(-10.0 * delta))
 		rig.rotation.y = _yaw
 
-	var telegraphing := sim.alive and sim.state == DummySim.State.TELEGRAPH
+	var telegraphing := sim.alive and sim.is_telegraphing()
 	_telegraph.visible = telegraphing
 	if telegraphing:
 		var progress := sim.telegraph_progress()
@@ -184,15 +184,23 @@ func on_struck(from: Vector2, hitstop: float, heavy: bool) -> void:
 		tw.tween_property(rig, "position", Vector3.ZERO, 0.16).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 
-func _on_telegraph_started(_direction: Vector2, _radius: float, _arc_degrees: float) -> void:
-	var c := attack_clip
+func _on_telegraph_started(_direction: Vector2, radius: float, arc_degrees: float) -> void:
+	# El telegraph se redimensiona por ataque: cono, línea estrecha o círculo.
+	_telegraph.scale = Vector3.ONE * (View3D.meters(radius) / View3D.meters(DummySim.ATTACK_RANGE))
+	_telegraph.set_param("arc", deg_to_rad(arc_degrees))
+	var c := _telegraph_clip(sim.attack_name)
 	rig.play_clip(String(c["clip"]), float(c["from"]), float(c["to"]), float(c["contact"]),
-		DummySim.TELEGRAPH_SECONDS, DummySim.RECOVER_SECONDS, anim_idle)
+		sim.telegraph_seconds, sim.recover_seconds, anim_idle)
 	arena.play_sfx(SFX_ALERT, -13.0, randf_range(0.96, 1.06))
 
 
+## Animación de cada ataque con telegraph (EnemyActor3D la sustituye).
+func _telegraph_clip(_attack_name: String) -> Dictionary:
+	return attack_clip
+
+
 func _on_attack_landed(damage: float) -> void:
-	var forward := sim.attack_direction * DummySim.ATTACK_RANGE * 0.55
+	var forward := sim.attack_direction * minf(sim.attack_range, 100.0) * 0.55
 	arena.spawn_impact(sim.position + forward, Color(0.95, 0.25, 0.18, 1.0), false)
 	arena.spawn_damage_number(sim.position + forward, damage, false, 2.0, Color(1.0, 0.45, 0.4))
 	arena.play_sfx(SFX_IMPACT, -6.0, randf_range(0.9, 1.0))

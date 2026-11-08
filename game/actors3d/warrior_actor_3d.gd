@@ -163,6 +163,7 @@ func _connect_signals() -> void:
 	sim.attack_hit.connect(_on_attack_hit)
 	sim.attack_finished.connect(_on_attack_finished)
 	sim.damage_taken.connect(_on_damage_taken)
+	sim.stunned.connect(_on_stunned)
 	sim.died.connect(_on_died)
 	sim.cast_event.connect(_on_cast_event)
 	sim.ultimate_changed.connect(_on_ultimate_changed)
@@ -424,6 +425,14 @@ func _on_damage_taken(_amount: float, _source_position: Vector2, is_dot: bool) -
 		rig.play_clip(ANIM_HIT, 0.0, 0.8, 0.25, 0.06, 0.26, ANIM_IDLE, 0.04)
 	arena.play_sfx(SFX_HURT, -6.0, randf_range(0.92, 1.05))
 	arena.shake(3.2, 0.18)
+
+
+func _on_stunned(seconds: float) -> void:
+	_hurt_time = seconds
+	trail.emitting = false
+	_stop_spin()
+	rig.play_clip("ual1/Hit_Head", 0.0, 1.0, 0.3, 0.1, maxf(seconds - 0.1, 0.2), ANIM_IDLE)
+	rig.flash(Color(1.0, 0.9, 0.3), 0.3)
 
 
 func _on_died() -> void:
