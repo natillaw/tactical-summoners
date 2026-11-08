@@ -42,7 +42,7 @@ const M1_CLIPS := [
 	{"clip": "ual2/Sword_Regular_B", "from": 0.0, "to": 1.0, "contact": 0.49},
 	{"clip": "ual2/Sword_Regular_C", "from": 0.0, "to": 0.62, "contact": 0.34},
 ]
-const CLIP_THRUST := {"clip": "ual2/Sword_Dash", "from": 0.0, "to": 0.46, "contact": 0.21}
+const CLIP_THRUST := {"clip": "custom/thrust", "from": 0.5, "to": 1.45, "contact": 0.98}
 const CLIP_SLAM := {"clip": "ual2/Sword_Heavy_Combo", "from": 0.52, "to": 0.80, "contact": 0.63}
 const CLIP_PARRY := {"clip": "ual2/Sword_Block", "from": 0.0, "to": 0.45, "contact": 0.08}
 const CLIP_ROLL := {"clip": "ual1/Roll", "from": 0.0, "to": 0.78, "contact": 0.55}
@@ -200,8 +200,7 @@ func _update_facing(delta: float) -> void:
 		rate = TURN_SPEED_ATTACK
 	elif sim.velocity.length_squared() > 64.0:
 		target_yaw = View3D.yaw_for(sim.velocity)
-	else:
-		target_yaw = View3D.yaw_for(sim.aim_dir)
+	# Quieto: conserva su orientación (la cámara orbita libre y se ve en 360°).
 	_yaw = lerp_angle(_yaw, target_yaw, 1.0 - exp(-rate * delta))
 
 	if _spinning:

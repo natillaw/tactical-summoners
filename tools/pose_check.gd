@@ -2,11 +2,11 @@ extends Node3D
 ## Pose check: renders rigs side by side playing given clips, close camera.
 
 const CASES := [
-	["res://assets/models/characters/warrior.glb", "ual2/Sword_Regular_C", 0.35],
-	["res://assets/models/characters/warrior.glb", "ual2/Sword_Regular_C", 0.39],
-	["res://assets/models/characters/warrior.glb", "ual2/Sword_Regular_C", 0.44],
-	["res://assets/models/characters/warrior.glb", "ual2/Sword_Heavy_Combo", 0.62],
-	["res://assets/models/characters/warrior.glb", "ual2/Sword_Heavy_Combo", 0.645],
+	["res://assets/models/characters/warrior.glb", "custom/thrust", 0.1],
+	["res://assets/models/characters/warrior.glb", "custom/thrust", 0.25],
+	["res://assets/models/characters/warrior.glb", "custom/thrust", 0.4],
+	["res://assets/models/characters/warrior.glb", "custom/thrust", 0.55],
+	["res://assets/models/characters/warrior.glb", "custom/thrust", 0.7],
 ]
 
 func _ready() -> void:

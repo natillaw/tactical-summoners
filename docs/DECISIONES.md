@@ -111,3 +111,9 @@ mismo rig y animaciones nuevas sin dibujar nada.
 armaduras más "warrior" que el outfit Ranger; sustituir el arena procedural por
 piezas del Medieval Village / Fantasy Props MegaKit; animación propia de estocada
 (UAL no trae una frontal limpia; ahora se usa `Sword_Dash` alineado).
+
+## 2026-11-08 — Solo tercera persona
+- Se elimina la cámara top-down: el juego es 100 % tercera persona (mira central, ratón capturado, rueda = zoom 0.3×–2.2×, cámara orbita libre; WASD relativo a la cámara).
+- Quieto, el personaje conserva su orientación (se ve 360° orbitando); al moverse/atacar gira.
+- Estocada propia: Mixamo "Upward Thrust" retargeteada a UAL con `tools/bake_thrust.gd` → `assets/models/anims/thrust_retargeted.res` (clip `custom/thrust`). Salto reducido al 35 %.
+- Archivado el pixel art/2D en `C:\dev\archivados\combat_2d_pixelart`.

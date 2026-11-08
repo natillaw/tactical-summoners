@@ -26,10 +26,7 @@ const DUMMY_SPAWNS := [
 
 # Cámara estilo Battlerite: alta, inclinada ~55°, sigue al jugador con un poco
 # de adelanto hacia el ratón.
-const CAM_OFFSET := Vector3(0.0, 10.0, 7.6)
 const CAM_FOV := 40.0
-const CAM_LEAD := 0.18
-const CAM_LEAD_MAX := 2.2
 const SHAKE_PX_TO_M := 0.025
 
 const STONE := Color(0.36, 0.37, 0.41)
@@ -46,7 +43,9 @@ var _sfx_pool: Array[AudioStreamPlayer] = []
 var _sfx_index: int = 0
 var _cam_focus: Vector3 = Vector3.ZERO
 ## Cámara en tercera persona (estilo Smite): ratón capturado, mira en el centro.
-var third_person: bool = false
+var tp_zoom: float = 1.0
+const TP_ZOOM_MIN := 0.3
+const TP_ZOOM_MAX := 2.2
 var tp_yaw: float = 0.0
 var tp_pitch: float = -0.35
 const TP_OFFSET := Vector3(0.9, 0.5, 4.2)
@@ -290,7 +289,7 @@ func _build_sfx_pool() -> void:
 func _build_camera() -> void:
 	camera = Camera3D.new()
 	camera.name = "Camera"
-	camera.fov = CAM_FOV
+	camera.fov = 70.0
 	camera.near = 0.3
 	camera.far = 120.0
 	add_child(camera)
@@ -322,13 +321,6 @@ func _process(delta: float) -> void:
 		return
 
 	var target := View3D.to3(world.warrior.position)
-	var mouse: Variant = null if third_person else mouse_world()
-	if mouse != null:
-		var lead: Vector3 = (mouse - target) * CAM_LEAD
-		lead.y = 0.0
-		if lead.length() > CAM_LEAD_MAX:
-			lead = lead.normalized() * CAM_LEAD_MAX
-		target += lead
 	_cam_focus = _cam_focus.lerp(target, 1.0 - exp(-8.0 * delta))
 
 	var shake := Vector3.ZERO
@@ -351,21 +343,13 @@ func _process(delta: float) -> void:
 
 
 func _place_camera(shake: Vector3) -> void:
-	if third_person:
-		var basis := Basis.from_euler(Vector3(tp_pitch, tp_yaw, 0.0))
-		camera.position = _cam_focus + Vector3(0, 1.4, 0) + basis * TP_OFFSET + shake
-		camera.basis = basis
-		return
-	camera.position = _cam_focus + CAM_OFFSET + shake
-	camera.look_at(_cam_focus + shake * 0.5 + Vector3(0, 0.6, 0), Vector3.UP)
+	var basis := Basis.from_euler(Vector3(tp_pitch, tp_yaw, 0.0))
+	camera.position = _cam_focus + Vector3(0, 1.4, 0) + basis * (TP_OFFSET * tp_zoom) + shake
+	camera.basis = basis
 
 
-func set_third_person(on: bool) -> void:
-	third_person = on
-	camera.fov = 70.0 if on else CAM_FOV
-	if on:
-		tp_yaw = 0.0
-		tp_pitch = -0.35
+func tp_zoom_by(step: float) -> void:
+	tp_zoom = clampf(tp_zoom * (1.0 + step), TP_ZOOM_MIN, TP_ZOOM_MAX)
 
 
 func tp_look(relative: Vector2) -> void:
@@ -379,22 +363,18 @@ func cam_forward_sim() -> Vector2:
 	return Vector2(f.x, f.z).normalized()
 
 
-## Punto del suelo (y = 0) bajo el ratón, o null si el rayo no lo corta.
+## Punto del suelo (y = 0) bajo la mira central, o null si el rayo no lo corta.
 func mouse_world() -> Variant:
 	if camera == null:
 		return null
-	var mouse := get_viewport().get_mouse_position()
-	if third_person:
-		mouse = get_viewport().get_visible_rect().size * 0.5
+	var mouse := get_viewport().get_visible_rect().size * 0.5  # mira central
 	var origin := camera.project_ray_origin(mouse)
 	var normal := camera.project_ray_normal(mouse)
 	var t := -origin.y / normal.y if absf(normal.y) > 0.0001 else -1.0
 	if t < 0.0:
-		if third_person:
-			var fwd := -camera.global_transform.basis.z
-			fwd.y = 0.0
-			return View3D.to3(world.warrior.position) + fwd.normalized() * 30.0
-		return null
+		var fwd := -camera.global_transform.basis.z
+		fwd.y = 0.0
+		return View3D.to3(world.warrior.position) + fwd.normalized() * 30.0
 	return origin + normal * t
 
 
