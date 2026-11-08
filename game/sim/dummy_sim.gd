@@ -35,6 +35,7 @@ var position: Vector2 = Vector2.ZERO
 var spawn_position: Vector2 = Vector2.ZERO
 var auto_attack: bool = true
 var max_health: float = MAX_HEALTH
+var attack_damage: float = ATTACK_DAMAGE
 var health: float = MAX_HEALTH
 var alive: bool = true
 var state: int = State.IDLE
@@ -150,7 +151,7 @@ func _resolve_attack(warrior: Object) -> void:
 			attack_missed.emit()
 			return
 
-	var dealt: float = warrior.take_damage(ATTACK_DAMAGE, position, {})
+	var dealt: float = warrior.take_damage(attack_damage, position, {})
 	attack_landed.emit(dealt)
 
 

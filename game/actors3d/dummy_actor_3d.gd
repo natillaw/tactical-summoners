@@ -12,6 +12,8 @@ const SFX_SWING := preload("res://assets/audio/sfx/ninja/Whoosh_Slash/Whoosh.wav
 const SFX_IMPACT := preload("res://assets/audio/sfx/ninja/Hit_Impact/Impact2.wav")
 
 const ANIM_IDLE := "ual1/Idle"
+const ANIM_RUN := "ual1/Jog_Fwd"
+const ANIM_SPRINT := "ual1/Sprint"
 const ANIM_HIT := "ual1/Hit_Chest"
 const ANIM_DEATH := "ual1/Death01"
 const CLIP_PUNCH := {"clip": "ual1/Punch_Cross", "from": 0.0, "to": 0.55, "contact": 0.22}
@@ -29,6 +31,8 @@ var _telegraph: FxShape
 var _bar_root: Node3D
 var _bar_fill: MeshInstance3D
 var _bar_mat: StandardMaterial3D
+var _label: Label3D
+var _enemy: EnemySim
 
 
 func setup(p_sim: DummySim, p_arena: Arena3D) -> void:
@@ -63,6 +67,19 @@ func setup(p_sim: DummySim, p_arena: Arena3D) -> void:
 	add_child(_telegraph)
 
 	_build_health_bar()
+	if sim is EnemySim:
+		_enemy = sim as EnemySim
+		_tint(Color(1.0, 0.55, 0.5))
+		_label = Label3D.new()
+		_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		_label.no_depth_test = true
+		_label.fixed_size = false
+		_label.pixel_size = 0.0045
+		_label.font_size = 40
+		_label.outline_size = 10
+		_label.modulate = Color(1.0, 0.7, 0.55)
+		_label.position.y = BAR_HEIGHT + 0.25
+		add_child(_label)
 
 	_yaw = View3D.yaw_for(sim.facing)
 	rig.rotation.y = _yaw
@@ -134,6 +151,16 @@ func _process(delta: float) -> void:
 	if sim.alive and target.length_squared() > 0.0001:
 		_yaw = lerp_angle(_yaw, View3D.yaw_for(target), 1.0 - exp(-10.0 * delta))
 		rig.rotation.y = _yaw
+
+	if _enemy != null:
+		_label.text = "Soldado  Nv.%d" % _enemy.level
+		_label.visible = _enemy.alive
+		if _enemy.alive and _enemy.state == DummySim.State.IDLE:
+			var want := ANIM_SPRINT if _enemy.is_charging() else (ANIM_RUN if _enemy.is_moving() else ANIM_IDLE)
+			if rig.current() in [ANIM_IDLE, ANIM_RUN, ANIM_SPRINT, ""] and rig.current() != want:
+				rig.play(want, 0.12)
+		if _enemy.guard_timer > 0.0 and _enemy.alive:
+			rig.flash(Color(0.5, 0.7, 1.0), 0.05)
 
 	var telegraphing := sim.alive and sim.state == DummySim.State.TELEGRAPH
 	_telegraph.visible = telegraphing

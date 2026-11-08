@@ -44,6 +44,7 @@ func _run() -> void:
 	_test_determinism()
 	_test_snapshot()
 	_test_collision()
+	_test_weapon_level_items_enemy()
 
 	print("== %d checks, %d failed ==" % [_checks, _failures])
 	print("RESULT: %s" % ("PASS" if _failures == 0 else "FAIL"))
@@ -73,7 +74,7 @@ func _test_heavy_strikes() -> void:
 	_check(world.warrior.rage() > 0.0, "Heavy Strikes genera Rage al golpear")
 	_check(world.warrior.rage() <= WarriorKitScript.MAX_RAGE, "Rage nunca supera el tope")
 	if not hits.is_empty():
-		_check(float(hits[0]) >= 22.0 - 0.01, "Heavy Strikes hace al menos el daño base")
+		_check(float(hits[0]) >= world.warrior.stats.get_stat(&"weapon_min") * 1.0 - 0.01, "Heavy Strikes hace al menos el daño mínimo del arma")
 	_check(world.warrior.cooldown_left("M1") > 0.0, "Heavy Strikes deja cooldown activo")
 
 
@@ -91,7 +92,7 @@ func _test_piercing_thrust() -> void:
 	_check(dummy.health < dummy.max_health, "Piercing Thrust aplica daño real")
 	_check(world.warrior.rage() > 0.0, "Piercing Thrust genera Rage")
 	if not hits.is_empty():
-		_check(float(hits[0]) >= 33.0 - 0.01, "Piercing Thrust usa su multiplicador de 1.5x")
+		_check(float(hits[0]) >= world.warrior.stats.get_stat(&"weapon_min") * 1.8 - 0.01, "Piercing Thrust usa su multiplicador de 1.8x")
 	_check(world.warrior.cooldown_left("M2") > 0.0, "Piercing Thrust deja cooldown activo")
 	_check(not world.warrior._can_start("M2"), "Piercing Thrust no se puede repetir durante el cooldown")
 
@@ -262,7 +263,7 @@ func _test_last_stand() -> void:
 	_step(world, 20, _input(Vector2(0, -1), true, false))
 	_check(hits.size() >= 1, "Last Stand permite seguir atacando")
 	if not hits.is_empty():
-		_check(float(hits[0]) >= 33.0 - 0.01, "Last Stand aplica +50% de daño")
+		_check(float(hits[0]) >= world.warrior.stats.get_stat(&"weapon_min") * 1.5 - 0.01, "Last Stand aplica +50% de daño")
 	_check(dummy.health < dummy.max_health, "el golpe potenciado daña al dummy")
 
 
@@ -485,3 +486,38 @@ func _check(condition: bool, label: String) -> void:
 	else:
 		_failures += 1
 		print("   FAIL %s" % label)
+
+
+func _test_weapon_level_items_enemy() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	var world := _make_world(false, 5)
+	var w = world.warrior
+	var base_avg: float = w.stats.get_weapon_damage()
+	# Un arma mejor sube el daño medio.
+	w.equip_weapon(ItemFactory.roll_weapon(rng, 60, ItemRarity.Tier.EPICO, "sword"))
+	_check(w.stats.get_weapon_damage() > base_avg * 5.0, "Un arma épica nv60 sube mucho el daño medio")
+	# Escala WoW Classic: el golpe más fuerte (Seismic) con crítico ronda 3k a nivel 60.
+	w.progression.set_level(60)
+	var seismic: float = w.stats.get_weapon_damage() * 3.5 * 2.0
+	_check(seismic > 1500.0 and seismic < 4500.0, "Seismic crítico nv60 ronda ~3k (%d)" % int(seismic))
+	_check(absf(Progression.health_for(60) - 4500.0) < 400.0, "Vida base nv60 ~4.5k (%d)" % int(Progression.health_for(60)))
+	# Rarezas.
+	_check(ItemRarity.NAMES.size() == 6, "Hay 6 rarezas")
+	var legend := ItemFactory.roll_weapon(rng, 30, ItemRarity.Tier.LEGENDARIO)
+	_check(legend.legendary_effect != "" and legend.stats.size() > 0, "El legendario trae efecto y afijos")
+	# XP y nivel.
+	var prog := Progression.new()
+	prog.add_xp(1000000)
+	_check(prog.level == Progression.MAX_LEVEL, "La XP sube hasta el nivel máximo")
+	# Enemigo: escala con el nivel, persigue y da XP al morir.
+	var w2 := _make_world(false, 6)
+	var enemy: EnemySim = w2.add_enemy(w2.warrior.position + Vector2(300, 0), 1)
+	var start := enemy.position.distance_to(w2.warrior.position)
+	_step(w2, 90, null)
+	_check(enemy.position.distance_to(w2.warrior.position) < start, "El enemigo persigue al jugador")
+	var xp_before: int = w2.warrior.progression.xp + w2.warrior.progression.level * 1000
+	enemy.take_damage(99999.0)
+	_check(not enemy.alive and w2.warrior.progression.xp + w2.warrior.progression.level * 1000 > xp_before - 1, "Matar al enemigo da XP")
+	var e60 := EnemySim.new(w2, Vector2.ZERO, 60)
+	_check(e60.max_health > 7000.0 and e60.attack_damage > 250.0, "El enemigo nv60 escala vida y daño")

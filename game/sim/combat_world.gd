@@ -11,6 +11,7 @@ signal tick_advanced(tick_number: int)
 
 const WarriorSimScript := preload("res://game/sim/warrior_sim.gd")
 const DummySimScript := preload("res://game/sim/dummy_sim.gd")
+const EnemySimScript := preload("res://game/sim/enemy_sim.gd")
 
 const DEFAULT_BOUNDS := Rect2(0, 0, 960, 640)
 
@@ -28,6 +29,7 @@ func _init(seed_value: int = 1337) -> void:
 	rng.seed = seed_value
 	warrior = WarriorSimScript.new(self)
 	warrior.position = Vector2(480, 380)
+	warrior.progression.leveled_up.connect(_sync_enemy_levels)
 
 
 func setup_arena(arena_bounds: Rect2, arena_obstacles: Array = []) -> void:
@@ -41,6 +43,15 @@ func add_dummy(spawn: Vector2, auto_attack: bool = true) -> DummySim:
 	var dummy := DummySimScript.new(self, spawn, auto_attack)
 	dummies.append(dummy)
 	return dummy
+
+
+## Enemigo guerrero (EnemySim): vive en `dummies`, así que colisiones, reset y
+## actores lo tratan igual que a un muñeco. Su nivel sigue al del jugador.
+func add_enemy(spawn: Vector2, level: int = 1) -> EnemySim:
+	var enemy := EnemySimScript.new(self, spawn, level)
+	dummies.append(enemy)
+	enemy.died.connect(func() -> void: warrior.gain_xp(enemy.xp_reward))
+	return enemy
 
 
 func submit_input(input: InputMessage) -> void:
@@ -63,6 +74,12 @@ func step(delta: float, tick_number: int = -1) -> void:
 
 func _on_tick(tick_number: int, delta: float) -> void:
 	step(delta, tick_number)
+
+
+func _sync_enemy_levels(level: int) -> void:
+	for dummy: DummySim in dummies:
+		if dummy is EnemySim:
+			(dummy as EnemySim).set_level(level)
 
 
 func get_living_dummies() -> Array:

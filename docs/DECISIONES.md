@@ -117,3 +117,10 @@ piezas del Medieval Village / Fantasy Props MegaKit; animación propia de estoca
 - Quieto, el personaje conserva su orientación (se ve 360° orbitando); al moverse/atacar gira.
 - Estocada propia: Mixamo "Upward Thrust" retargeteada a UAL con `tools/bake_thrust.gd` → `assets/models/anims/thrust_retargeted.res` (clip `custom/thrust`). Salto reducido al 35 %.
 - Archivado el pixel art/2D en `C:\dev\archivados\combat_2d_pixelart`.
+
+## 2026-11-08 — Daño por arma, nivel, items, enemigo, escenas del editor
+- **Daño (estilo WoW Classic):** golpe = tirada de arma (min–max) + AP/14·velocidad, × multiplicador de skill; crítico ×2, crit base 5 %. `CharacterStats` ya traía las fórmulas. Multiplicadores: Thrust 1.8, Charge 1.5, Seismic 3.5 (la más fuerte: ~3k con crítico a nv60). Sin números gigantes.
+- **Nivel 1–60** (`game/items/progression.gd`): Fuerza 20→166, vida 300→4.5k. XP al matar enemigos. Debug: F5 +5 niveles, F7 nivel 60.
+- **Items** (`game/items/`): rarezas Normal, Poco común, Raro, Épico, Único, Legendario (afijos 0/1/2/3/3/4). Armas: espada, hacha, maza, lanza, daga con rasgo propio (rasgos y efectos legendarios: solo datos, pendientes). F6 = arma aleatoria.
+- **Enemigo "Soldado"** (`game/sim/enemy_sim.gd`, base Warrior): Golpe con telegraph, Carga, Guardia (<50 % vida). Escala con el nivel y sigue el nivel del jugador (modo de prueba). Siguientes: casters, rogues, clérigo (curandero: matar primero).
+- **Editor de Godot:** `main_3d.tscn` ahora tiene los nodos (Arena, Level, HUD, Crosshair, Status, Loadout, Debug) y el escenario es `world3d/training_arena.tscn` con marcadores `Spawns/*` (meta enemy/level/hp). Los actores del jugador/enemigos se instancian en runtime.
