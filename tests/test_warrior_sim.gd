@@ -540,8 +540,13 @@ func _test_jump_and_enemy_spacing() -> void:
 	var w2 := _make_world(false, 9)
 	var enemy: EnemySim = w2.add_enemy(w2.warrior.position + Vector2(150, 0), 1)
 	var close_ticks := 0
+	var max_speed := 0.0
+	var prev := enemy.position
 	for i in 600:
 		w2.step(DT)
 		if enemy.position.distance_to(w2.warrior.position) < 40.0:
 			close_ticks += 1
+		max_speed = maxf(max_speed, enemy.position.distance_to(prev) / DT)
+		prev = enemy.position
+	_check(max_speed <= EnemySim.CHARGE_SPEED + 1.0, "El Soldado nunca supera su velocidad de carga (%d px/s)" % int(max_speed))
 	_check(close_ticks < 30, "El Soldado no se queda encima del jugador (%d ticks pegado)" % close_ticks)

@@ -14,8 +14,8 @@ extends DummySim
 signal charge_started(direction: Vector2)
 signal guard_started()
 
-const MOVE_SPEED := 66.0           # ritmo de paseo; el Warrior corre a 168
-const CHARGE_SPEED := 480.0
+const MOVE_SPEED := 96.0           # el Warrior corre a 168
+const CHARGE_SPEED := 360.0
 const CHARGE_TIME := 0.34
 const CHARGE_MIN := 200.0
 const CHARGE_MAX := 420.0
@@ -73,7 +73,7 @@ func _think(delta: float, warrior: Object) -> void:
 
 	if charge_timer > 0.0:
 		charge_timer -= delta
-		position = world.resolve_position(position + charge_direction * CHARGE_SPEED * delta, radius)
+		position = world.resolve_position(position + charge_direction * CHARGE_SPEED * delta, radius, self)
 		if charge_timer <= 0.0 or distance <= ENGAGE_DISTANCE:
 			charge_timer = 0.0
 			cooldown = 0.0  # al llegar, golpea
@@ -108,7 +108,7 @@ func _think(delta: float, warrior: Object) -> void:
 	else:
 		step_dir = dir.orthogonal() * _strafe_sign * 0.6
 	if step_dir != Vector2.ZERO:
-		position = world.resolve_position(position + step_dir.limit_length(1.0) * speed * delta, radius)
+		position = world.resolve_position(position + step_dir.limit_length(1.0) * speed * delta, radius, self)
 
 
 func _resolve_attack(warrior: Object) -> void:
