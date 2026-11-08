@@ -19,9 +19,9 @@ const PILLARS := [
 ]
 
 const DUMMY_SPAWNS := [
-	{"position": Vector2(480, 196), "auto_attack": true},
-	{"position": Vector2(660, 390), "auto_attack": false},
-	{"position": Vector2(300, 410), "auto_attack": false},
+	{"position": Vector2(480, 150), "enemy": true, "level": 1},
+	{"position": Vector2(680, 400)},
+	{"position": Vector2(280, 420)},
 ]
 
 # Cámara estilo Battlerite: alta, inclinada ~55°, sigue al jugador con un poco
@@ -55,6 +55,7 @@ var _shake_duration: float = 0.0
 var _shake_strength: float = 0.0
 var _rng := RandomNumberGenerator.new()
 var _torches: Array = []
+var _static_parent: Node3D
 
 
 func build(p_world: CombatWorld) -> void:
@@ -62,12 +63,12 @@ func build(p_world: CombatWorld) -> void:
 	_rng.seed = 90210
 	world.setup_arena(BOUNDS, _obstacles())
 
-	_build_environment()
-	_build_floor()
-	_build_walls()
-	_build_pillars()
-	_build_torches()
-	_build_emblem()
+	# El escenario estático vive en el editor (hijo "Level" = training_arena.tscn).
+	# Si falta, se genera por código (es también lo que usa tools/bake_arena_scene.gd).
+	if not has_node("Level"):
+		build_static(self)
+	_collect_torches()
+	_build_emblem(self)
 	_build_sfx_pool()
 
 	fx = Node3D.new()
@@ -76,6 +77,26 @@ func build(p_world: CombatWorld) -> void:
 
 	_build_camera()
 	_spawn_actors()
+
+
+## Genera el escenario estático (luces, suelo, muros, pilares, antorchas) bajo `parent`.
+func build_static(parent: Node3D) -> void:
+	_static_parent = parent
+	_build_environment()
+	_build_floor()
+	_build_walls()
+	_build_pillars()
+	_build_torches()
+
+
+func _collect_torches() -> void:
+	_torches.clear()
+	var i := 0
+	for torch: Node in get_tree().get_nodes_in_group("torches") if is_inside_tree() else []:
+		var light := torch.get_node_or_null("Light") as OmniLight3D
+		var flame := torch.get_node_or_null("Flame") as Node3D
+		if light != null and flame != null:
+				i += 1
 
 
 func _obstacles() -> Array:
@@ -110,7 +131,7 @@ func _build_environment() -> void:
 	var we := WorldEnvironment.new()
 	we.name = "Environment"
 	we.environment = env
-	add_child(we)
+	_static_parent.add_child(we)
 
 	var sun := DirectionalLight3D.new()
 	sun.name = "Moon"
@@ -121,7 +142,7 @@ func _build_environment() -> void:
 	sun.shadow_blur = 1.5
 	sun.directional_shadow_max_distance = 32.0
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
-	add_child(sun)
+	_static_parent.add_child(sun)
 
 
 func _build_floor() -> void:
@@ -137,8 +158,9 @@ func _build_floor() -> void:
 	out_mat.albedo_color = Color(0.06, 0.065, 0.08)
 	out_mat.roughness = 1.0
 	outside.material_override = out_mat
+	outside.name = "Outside"
 	outside.position = center + Vector3(0, -0.02, 0)
-	add_child(outside)
+	_static_parent.add_child(outside)
 
 	var floor_mesh := MeshInstance3D.new()
 	floor_mesh.name = "Floor"
@@ -149,7 +171,7 @@ func _build_floor() -> void:
 	mat.shader = preload("res://game/world3d/stone_floor.gdshader")
 	floor_mesh.material_override = mat
 	floor_mesh.position = View3D.to3(BOUNDS.get_center())
-	add_child(floor_mesh)
+	_static_parent.add_child(floor_mesh)
 
 
 func _build_walls() -> void:
@@ -177,15 +199,17 @@ func _build_walls() -> void:
 		mesh.size = size
 		box.mesh = mesh
 		box.material_override = mat
+		box.name = "Wall%d" % walls.find(entry)
 		box.position = pos + Vector3(0, size.y * 0.5, 0)
-		add_child(box)
+		_static_parent.add_child(box)
 		var cap := MeshInstance3D.new()
 		var cap_mesh := BoxMesh.new()
 		cap_mesh.size = Vector3(size.x + 0.08, 0.1, size.z + 0.08)
 		cap.mesh = cap_mesh
 		cap.material_override = cap_mat
+		cap.name = "WallCap%d" % walls.find(entry)
 		cap.position = pos + Vector3(0, size.y + 0.05, 0)
-		add_child(cap)
+		_static_parent.add_child(cap)
 
 
 func _build_pillars() -> void:
@@ -198,8 +222,9 @@ func _build_pillars() -> void:
 	var r := View3D.meters(PILLAR_RADIUS_PX)
 	for point: Vector2 in PILLARS:
 		var root := Node3D.new()
+		root.name = "Pillar%d" % PILLARS.find(point)
 		root.position = View3D.to3(point)
-		add_child(root)
+		_static_parent.add_child(root)
 		var parts := [
 			[CylinderMesh.new(), r * 1.35, r * 1.45, 0.28, 0.14, dark],
 			[CylinderMesh.new(), r * 0.82, r * 0.9, 2.2, 1.38, stone],
@@ -236,8 +261,10 @@ func _build_torches() -> void:
 	fire.emission_energy_multiplier = 4.0
 	for i: int in range(spots.size()):
 		var root := Node3D.new()
+		root.name = "Torch%d" % i
+		root.add_to_group("torches", true)
 		root.position = View3D.to3(spots[i], WALL_HEIGHT + 0.1)
-		add_child(root)
+		_static_parent.add_child(root)
 		var bowl := MeshInstance3D.new()
 		var bowl_mesh := CylinderMesh.new()
 		bowl_mesh.top_radius = 0.16
@@ -250,12 +277,14 @@ func _build_torches() -> void:
 		var flame_mesh := SphereMesh.new()
 		flame_mesh.radius = 0.11
 		flame_mesh.height = 0.3
+		flame.name = "Flame"
 		flame.mesh = flame_mesh
 		flame.material_override = fire
 		flame.position.y = 0.18
 		flame.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		root.add_child(flame)
 		var light := OmniLight3D.new()
+		light.name = "Light"
 		light.light_color = Color(1.0, 0.6, 0.28)
 		light.light_energy = 2.2
 		light.omni_range = 6.5
@@ -265,16 +294,16 @@ func _build_torches() -> void:
 		_torches.append({"light": light, "flame": flame, "phase": float(i) * 1.7})
 
 
-func _build_emblem() -> void:
+func _build_emblem(parent: Node3D) -> void:
 	var center := BOUNDS.get_center()
 	var ring := FxShape.new().setup(FxShape.Mode.RING, View3D.meters(168.0), Color(GOLD.r, GOLD.g, GOLD.b, 0.07))
 	ring.set_param("inner", 0.9)
 	ring.position = View3D.to3(center, 0.012)
-	add_child(ring)
+	parent.add_child(ring)
 	var inner_ring := FxShape.new().setup(FxShape.Mode.RING, View3D.meters(150.0), Color(GOLD.r, GOLD.g, GOLD.b, 0.04))
 	inner_ring.set_param("inner", 0.97)
 	inner_ring.position = View3D.to3(center, 0.012)
-	add_child(inner_ring)
+	parent.add_child(inner_ring)
 
 
 func _build_sfx_pool() -> void:
@@ -298,14 +327,37 @@ func _build_camera() -> void:
 	camera.make_current()
 
 
+## Lee los Marker3D de Level/Spawns (meta: enemy, level, hp). Sin ellos usa DUMMY_SPAWNS.
+func _read_spawns() -> Array:
+	var spawns := get_node_or_null("Level/Spawns")
+	if spawns == null:
+		return DUMMY_SPAWNS
+	var out: Array = []
+	for marker: Node in spawns.get_children():
+		if marker is Node3D:
+			out.append({
+				"position": View3D.to2((marker as Node3D).position),
+				"enemy": bool(marker.get_meta("enemy", false)),
+				"level": int(marker.get_meta("level", 1)),
+				"hp": float(marker.get_meta("hp", 4000.0)),
+			})
+	return out
+
+
 func _spawn_actors() -> void:
 	warrior_actor = WarriorActor3D.new()
 	warrior_actor.name = "Warrior"
 	add_child(warrior_actor)
 	warrior_actor.setup(world.warrior, self)
 
-	for spawn: Dictionary in DUMMY_SPAWNS:
-		var dummy_sim := world.add_dummy(spawn["position"], bool(spawn["auto_attack"]))
+	for spawn: Dictionary in _read_spawns():
+		var dummy_sim: DummySim
+		if bool(spawn.get("enemy", false)):
+			dummy_sim = world.add_enemy(spawn["position"], int(spawn.get("level", 1)))
+		else:
+			dummy_sim = world.add_dummy(spawn["position"], false)
+			dummy_sim.max_health = float(spawn.get("hp", 4000.0))
+			dummy_sim.health = dummy_sim.max_health
 		var dummy := DummyActor3D.new()
 		dummy.name = "Dummy"
 		add_child(dummy)

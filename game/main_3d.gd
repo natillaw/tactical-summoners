@@ -8,59 +8,52 @@
 ## Tab abre el editor (pausa TickManager), F2 reinicia y F4 rellena Rage/Ultimate.
 extends Node3D
 
-const DebugOverlayScene := preload("res://ui/debug_overlay.tscn")
+@onready var arena: Arena3D = $Arena
+@onready var hud: GameHud = $HudLayer/Hud
+@onready var crosshair: Control = $HudLayer/Crosshair
+@onready var status_label: Label = $HudLayer/Status
+@onready var loadout_panel: LoadoutPanel = $LoadoutLayer/LoadoutPanel
+@onready var debug_overlay: CanvasLayer = $DebugOverlay
 
 var world: CombatWorld
-var arena: Arena3D
-var hud: GameHud
-var loadout_panel: LoadoutPanel
-var crosshair: Control
+var _loot_rng := RandomNumberGenerator.new()
 
 
 func _ready() -> void:
 	world = CombatWorld.new(1337)
-
-	arena = Arena3D.new()
-	arena.name = "Arena"
-	add_child(arena)
+	_loot_rng.seed = 4242
 	arena.build(world)
-
-	var hud_layer := CanvasLayer.new()
-	hud_layer.name = "HudLayer"
-	hud_layer.layer = 10
-	add_child(hud_layer)
-
-	hud = GameHud.new()
-	hud.name = "Hud"
-	hud_layer.add_child(hud)
 	hud.bind(world)
-
-	var loadout_layer := CanvasLayer.new()
-	loadout_layer.name = "LoadoutLayer"
-	loadout_layer.layer = 20
-	add_child(loadout_layer)
-
-	loadout_panel = LoadoutPanel.new()
-	loadout_panel.name = "LoadoutPanel"
-	loadout_layer.add_child(loadout_panel)
 	loadout_panel.set_world(world)
-
-	var debug_overlay: CanvasLayer = DebugOverlayScene.instantiate()
-	debug_overlay.name = "DebugOverlay"
-	add_child(debug_overlay)
-	# Oculto por defecto (tapa el HUD); F3 lo muestra.
-	debug_overlay.visible = false
-
-	crosshair = Crosshair.new()
-	crosshair.set_anchors_preset(Control.PRESET_FULL_RECT)
-	crosshair.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	crosshair.visible = false
-	hud_layer.add_child(crosshair)
-
+	world.warrior.progression.leveled_up.connect(func(_l: int) -> void: _refresh_status())
+	world.warrior.weapon_changed.connect(func(_i: Item) -> void: _refresh_status())
+	_refresh_status()
 	TickManager.register(world)
 
 
+func _refresh_status() -> void:
+	var w := world.warrior
+	var weapon := w.weapon
+	var line1 := "Nv.%d   XP %d/%d   ·   %s [%s]" % [
+		w.progression.level, w.progression.xp, Progression.xp_to_next(w.progression.level),
+		weapon.item_name, ItemRarity.display(weapon.rarity),
+	]
+	var line2 := "%d–%d daño · vel %.1f · AP %d     (F5 +5 niveles · F6 arma aleatoria · F7 nivel 60)" % [
+		weapon.weapon_min, weapon.weapon_max, weapon.weapon_speed, w.stats.get_attack_power(),
+	]
+	status_label.text = line1 + "\n" + line2
+	status_label.add_theme_color_override("font_color", ItemRarity.color(weapon.rarity))
+
+
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		match event.physical_keycode:
+			KEY_F5: world.warrior.progression.set_level(world.warrior.progression.level + 5)
+			KEY_F6:
+				var item := ItemFactory.roll_weapon(_loot_rng, world.warrior.progression.level)
+				world.warrior.equip_weapon(item)
+				print(item.describe())
+			KEY_F7: world.warrior.progression.set_level(Progression.MAX_LEVEL)
 	if loadout_panel.visible:
 		return
 	if event is InputEventMouseMotion:
@@ -132,13 +125,3 @@ func _read_input() -> InputMessage:
 		"f": Input.is_action_pressed("slot_f"),
 	}
 	return message
-
-
-## Mira central para el modo tercera persona.
-class Crosshair extends Control:
-	func _draw() -> void:
-		var c := size * 0.5
-		var col := Color(1, 1, 1, 0.9)
-		draw_circle(c, 2.0, col)
-		for d: Vector2 in [Vector2.LEFT, Vector2.RIGHT, Vector2.UP, Vector2.DOWN]:
-			draw_line(c + d * 8.0, c + d * 16.0, col, 2.0)

@@ -1,6 +1,68 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=8 format=3]
 
-[ext_resource type="Script" path="res://game/main_3d.gd" id="1_main3d"]
+[ext_resource type="Script" path="res://game/main_3d.gd" id="1_main"]
+[ext_resource type="Script" path="res://game/world3d/arena_3d.gd" id="2_arena"]
+[ext_resource type="PackedScene" path="res://game/world3d/training_arena.tscn" id="3_level"]
+[ext_resource type="Script" path="res://game/ui/hud.gd" id="4_hud"]
+[ext_resource type="Script" path="res://game/ui/crosshair.gd" id="5_cross"]
+[ext_resource type="Script" path="res://game/ui/loadout_panel.gd" id="6_loadout"]
+[ext_resource type="PackedScene" path="res://ui/debug_overlay.tscn" id="7_debug"]
 
 [node name="Main3D" type="Node3D"]
-script = ExtResource("1_main3d")
+script = ExtResource("1_main")
+
+[node name="Arena" type="Node3D" parent="."]
+script = ExtResource("2_arena")
+
+[node name="Level" parent="Arena" instance=ExtResource("3_level")]
+
+[node name="HudLayer" type="CanvasLayer" parent="."]
+layer = 10
+
+[node name="Hud" type="Control" parent="HudLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("4_hud")
+
+[node name="Crosshair" type="Control" parent="HudLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("5_cross")
+
+[node name="Status" type="Label" parent="HudLayer"]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -330.0
+offset_top = -118.0
+offset_right = 330.0
+offset_bottom = -84.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 14
+horizontal_alignment = 1
+text = "Nv.1"
+
+[node name="LoadoutLayer" type="CanvasLayer" parent="."]
+layer = 20
+
+[node name="LoadoutPanel" type="Control" parent="LoadoutLayer"]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("6_loadout")
+
+[node name="DebugOverlay" parent="." instance=ExtResource("7_debug")]
+visible = false

@@ -16,6 +16,7 @@ signal attack_started(skill: Dictionary, direction: Vector2)
 signal attack_state_changed(state: int)
 signal attack_hit(skill: Dictionary, target: Object, damage: float, critical: bool, position: Vector2)
 signal attack_finished(skill: Dictionary)
+signal weapon_changed(item: Item)
 signal damage_taken(amount: float, source_position: Vector2, is_dot: bool)
 signal died()
 signal cast_event(event: String, skill: Dictionary, at: Vector2, direction: Vector2)
@@ -33,9 +34,8 @@ const FRICTION := 2100.0
 const MAX_HEALTH := 300.0
 
 const BUFFER_SECONDS := 0.22
-const CRIT_MULTIPLIER := 1.5
-const BASE_DAMAGE := 22.0
-const CRIT_CHANCE := 0.10
+const CRIT_MULTIPLIER := 2.0  # como WoW Classic
+const BASE_CRIT := 0.05
 
 const RAGE_ON_HIT_TAKEN := 5.0
 const ULTIMATE_ON_HIT := 8.0
@@ -48,6 +48,11 @@ var spawn_position: Vector2 = Vector2(480, 380)
 var velocity: Vector2 = Vector2.ZERO
 var move_input: Vector2 = Vector2.ZERO
 var aim_dir: Vector2 = Vector2.RIGHT
+
+## Progresión y equipo: el daño sale del arma (min–max) + Fuerza/AP, como WoW Classic.
+var progression := Progression.new()
+var weapon: Item = ItemFactory.starter_sword()
+var stats := CharacterStats.new()
 
 var max_health: float = MAX_HEALTH
 var health: float = MAX_HEALTH
@@ -100,7 +105,36 @@ func _init(p_world: Object = null) -> void:
 		_rng.seed = 1337
 	position = Vector2(480, 380)
 	spawn_position = position
+	progression.leveled_up.connect(func(_l: int) -> void: recompute_stats(true))
+	recompute_stats(false)
 	reset(position)
+
+
+## Recalcula stats desde nivel + arma. Con `heal` rellena la vida (al subir de nivel).
+func recompute_stats(heal: bool) -> void:
+	var gear: Dictionary = weapon.stats if weapon != null else {}
+	stats = CharacterStats.new()
+	stats.set_base_stat(&"strength", Progression.strength_for(progression.level) + float(gear.get("strength", 0.0)))
+	stats.set_base_stat(&"attack_power_bonus", float(gear.get("attack_power_bonus", 0.0)))
+	var sword_bonus := 0.03 if weapon != null and weapon.weapon_type == "sword" else 0.0
+	stats.set_base_stat(&"crit_chance", BASE_CRIT + float(gear.get("crit_chance", 0.0)) + sword_bonus)
+	stats.set_base_stat(&"weapon_min", weapon.weapon_min if weapon != null else 1.0)
+	stats.set_base_stat(&"weapon_max", weapon.weapon_max if weapon != null else 2.0)
+	stats.set_base_stat(&"weapon_speed", weapon.weapon_speed if weapon != null else 2.0)
+	var ratio := health / maxf(max_health, 1.0)
+	max_health = Progression.health_for(progression.level) + float(gear.get("stamina", 0.0)) * 10.0
+	health = max_health if heal else clampf(ratio, 0.0, 1.0) * max_health
+	health_changed.emit(health, max_health)
+
+
+func equip_weapon(item: Item) -> void:
+	weapon = item
+	recompute_stats(false)
+	weapon_changed.emit(item)
+
+
+func gain_xp(amount: int) -> void:
+	progression.add_xp(amount)
 
 
 # --- Tick -------------------------------------------------------------------
@@ -497,8 +531,8 @@ func _damage_area(center: Vector2, radius: float, mult: float, effects: Dictiona
 func _hit_target(target: Object, mult: float, effects: Dictionary) -> void:
 	_hit_targets[target] = true
 
-	var damage := BASE_DAMAGE * mult
-	var critical := _rng.randf() < CRIT_CHANCE
+	var damage := stats.roll_weapon_damage(_rng) * mult
+	var critical := _rng.randf() < stats.get_crit_chance()
 	if critical:
 		damage *= CRIT_MULTIPLIER
 
