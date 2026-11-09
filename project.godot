@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Reflections"
-run/main_scene="res://game/main_3d.tscn"
+run/main_scene="res://game/creator/character_creator.tscn"
 config/features=PackedStringArray("4.7")
 boot_splash/show_image=false
 config/icon="res://icon.svg"

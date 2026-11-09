@@ -169,3 +169,9 @@ piezas del Medieval Village / Fantasy Props MegaKit; animación propia de estoca
 - Nuevo cast `projectile` en la sim (`projectiles`, colisión con enemigos y paredes); DoT con `dps_mult` (escala con el daño del jugador).
 - `WarriorSim.set_class(id)` cambia kit/recurso/loadout; **F8** alterna Guerrero↔Mago en pruebas. HUD y loadout leen `ClassRegistry.active_kit()`.
 - Pendiente del Mago: modelo/túnica propios (hoy es el modelo del Warrior sin espada), VFX propios (orbes con FxShape), balance, y que el loadout elija entre más cartas.
+
+## 2026-11-08 — Creador de personaje, Mago solo arcano
+- Pantalla inicial `game/creator/character_creator.tscn` (escena principal): nombre, clase (Guerrero y Mago jugables; Rogue/Cleric/Arquero aparecen como "próximamente"), cuerpo (hombre/mujer), piel, pelo (6 estilos), color de pelo, cejas y ropa (Campesino, Explorador ±capucha, 10 armaduras de `assets/models/gear`). Vista previa 3D giratoria, botón Aleatorio y Jugar.
+- `CharacterBuilder` ensambla en runtime: cuerpo base + pelo + cejas + ropa injertando mallas al mismo esqueleto UE. `CharacterProfile` lleva la elección a `main_3d`. Assets extraídos a `assets/models/creator/` (~120 MB por las texturas 4K; recortar luego).
+- **Mago solo arcano** (`DamageSystem.Type.ARCANE`): Arcane Bolt, Arcane Orb (DoT arcano), Blink, Arcane Pulse, Arcane Rift (suelo), Starfall (suelo), Arcane Surge. Las subclases (pyromancer, frostmage...) añadirán su elemento encima.
+- Quitado F8 (cambio de clase en vivo, se cerraba el juego); la clase se elige ahora en el creador.

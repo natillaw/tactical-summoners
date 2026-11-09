@@ -37,8 +37,12 @@ var _flash_color: Color = Color.WHITE
 
 
 func setup(model_path: String) -> void:
-	var scene: PackedScene = load(model_path)
-	model = scene.instantiate()
+	setup_model((load(model_path) as PackedScene).instantiate() as Node3D)
+
+
+## Igual que setup(), con un modelo ya construido (CharacterBuilder).
+func setup_model(p_model: Node3D) -> void:
+	model = p_model
 	add_child(model)
 	skeleton = model.find_child("Skeleton3D", true, false) as Skeleton3D
 	for node in model.find_children("*", "MeshInstance3D", true, false):

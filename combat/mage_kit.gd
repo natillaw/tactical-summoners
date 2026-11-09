@@ -4,8 +4,9 @@
 ## pasiva Last Stand. La simulación (game/sim/warrior_sim.gd) lee estos
 ## diccionarios; no tiene números de combate hardcodeados.
 ##
-## Slots: LMB Arcane Bolt, RMB Fireball; SHIFT Blink, Q Frost Nova,
-## E Poison Cloud, R Meteor, F Arcane Surge (ultimate). Skills de suelo (Smite): E, R, F.
+## Solo magia ARCANA (las subclases pyromancer, frostmage... añadirán su elemento).
+## Slots: LMB Arcane Bolt, RMB Arcane Orb; SHIFT Blink, Q Arcane Pulse,
+## E Arcane Rift, R Starfall, F Arcane Surge (ultimate). Skills de suelo (Smite): E, R, F.
 class_name MageKit
 extends RefCounted
 
@@ -50,22 +51,22 @@ const M1: Dictionary = {
 	"id": &"arcane_bolt", "name": "Arcane Bolt", "short": "BOLT", "slot": "M1",
 	"kind": "basic", "role": "Daño a distancia", "description": "Disparo arcano sin cooldown.",
 	"implemented": true, "selectable": false, "cast": "projectile", "anim": "cast",
-	"damage_type": 1,  # DamageSystem.Type.MAGIC
+	"damage_type": 7,  # DamageSystem.Type.ARCANE
 	"windup": 0.20, "active": 0.05, "recovery": 0.18, "cooldown": 0.0, "cost": 0.0,
 	"speed": 520.0, "range": 480.0, "hit_radius": 10.0, "damage_mult": 0.9,
-	"rage_gain": 3.0, "move_factor": 0.6, "color": [0.7, 0.55, 1.0],
+	"rage_gain": 3.0, "move_factor": 0.6, "color": [0.7, 0.5, 1.0],
 }
 
 ## M2: bola de fuego con quemadura.
 const M2: Dictionary = {
-	"id": &"fireball", "name": "Fireball", "short": "FIRE", "slot": "M2",
-	"kind": "basic", "role": "Daño / quemadura", "description": "Bola de fuego que quema al objetivo.",
+	"id": &"arcane_orb", "name": "Arcane Orb", "short": "ORB", "slot": "M2",
+	"kind": "basic", "role": "Daño / quemadura", "description": "Orbe arcano lento que corroe al objetivo con daño arcano en el tiempo.",
 	"implemented": true, "selectable": false, "cast": "projectile", "anim": "cast",
-	"damage_type": 2,  # FIRE
+	"damage_type": 7,  # DamageSystem.Type.ARCANE
 	"windup": 0.35, "active": 0.05, "recovery": 0.25, "cooldown": 2.5, "cost": 10.0,
 	"speed": 420.0, "range": 520.0, "hit_radius": 14.0, "damage_mult": 1.8,
-	"effects": {"dot": {"damage_type": 2, "dps_mult": 0.35, "duration": 4.0}},
-	"rage_gain": 0.0, "move_factor": 0.4, "color": [1.0, 0.5, 0.15],
+	"effects": {"dot": {"damage_type": 7, "dps_mult": 0.35, "duration": 4.0}},
+	"rage_gain": 0.0, "move_factor": 0.4, "color": [0.85, 0.55, 1.0],
 }
 
 const BLINK: Dictionary = {
@@ -77,32 +78,32 @@ const BLINK: Dictionary = {
 	"vfx_tint": [0.7, 0.55, 1.0, 0.85],
 }
 
-const FROST_NOVA: Dictionary = {
-	"id": &"frost_nova", "name": "Frost Nova", "short": "NOVA", "slot": "Q",
-	"kind": "control", "role": "Control", "description": "Onda helada a tu alrededor: daña y ralentiza.",
+const ARCANE_PULSE: Dictionary = {
+	"id": &"arcane_pulse", "name": "Arcane Pulse", "short": "PULSE", "slot": "Q",
+	"kind": "control", "role": "Control", "description": "Pulso arcano a tu alrededor: daña y ralentiza.",
 	"implemented": true, "selectable": true, "cast": "aoe", "anim": "cast",
-	"damage_type": 3,  # FROST
+	"damage_type": 7,  # DamageSystem.Type.ARCANE
 	"windup": 0.20, "active": 0.10, "recovery": 0.25, "cooldown": 9.0, "cost": 25.0,
 	"radius": 130.0, "damage_mult": 1.2, "effects": {"slow": {"factor": 0.5, "duration": 3.0}},
 	"rage_gain": 0.0, "move_factor": 0.0,
 }
 
-const POISON_CLOUD: Dictionary = {
-	"id": &"poison_cloud", "name": "Poison Cloud", "short": "POISON", "slot": "E",
-	"kind": "control", "role": "Daño en el tiempo", "description": "Apunta al suelo: nube que envenena a los que alcanza.",
+const ARCANE_RIFT: Dictionary = {
+	"id": &"arcane_rift", "name": "Arcane Rift", "short": "RIFT", "slot": "E",
+	"kind": "control", "role": "Daño en el tiempo", "description": "Apunta al suelo: grieta arcana que corroe a quienes la pisan.",
 	"implemented": true, "selectable": true, "cast": "aoe", "anim": "cast", "target": "ground",
-	"damage_type": 4,  # POISON
+	"damage_type": 7,  # DamageSystem.Type.ARCANE
 	"windup": 0.30, "active": 0.10, "recovery": 0.25, "cooldown": 10.0, "cost": 25.0,
 	"range": 300.0, "radius": 110.0, "damage_mult": 0.5,
-	"effects": {"dot": {"damage_type": 4, "dps_mult": 0.6, "duration": 6.0}},
+	"effects": {"dot": {"damage_type": 7, "dps_mult": 0.6, "duration": 6.0}},
 	"rage_gain": 0.0, "move_factor": 0.3,
 }
 
-const METEOR: Dictionary = {
-	"id": &"meteor", "name": "Meteor", "short": "METEOR", "slot": "R",
-	"kind": "control", "role": "Daño en área", "description": "Apunta al suelo: un meteoro cae con gran daño de fuego.",
+const STARFALL: Dictionary = {
+	"id": &"starfall", "name": "Starfall", "short": "STARFALL", "slot": "R",
+	"kind": "control", "role": "Daño en área", "description": "Apunta al suelo: un starfallo cae con gran daño de fuego.",
 	"implemented": true, "selectable": true, "cast": "aoe", "anim": "cast", "target": "ground",
-	"damage_type": 2,
+	"damage_type": 7,
 	"windup": 0.60, "active": 0.10, "recovery": 0.30, "cooldown": 14.0, "cost": 40.0,
 	"range": 320.0, "radius": 100.0, "damage_mult": 4.0,
 	"rage_gain": 0.0, "move_factor": 0.2,
@@ -112,7 +113,7 @@ const ARCANE_SURGE: Dictionary = {
 	"id": &"arcane_surge", "name": "Arcane Surge", "short": "SURGE", "slot": "F",
 	"kind": "ultimate", "role": "Ultimate", "description": "Ultimate: explosión arcana enorme donde apuntes.",
 	"implemented": true, "selectable": true, "cast": "aoe", "anim": "cast", "target": "ground",
-	"damage_type": 1,
+	"damage_type": 7,
 	"windup": 0.50, "active": 0.10, "recovery": 0.40, "cooldown": 1.0, "cost": 0.0, "charge": 100.0,
 	"range": 320.0, "radius": 160.0, "damage_mult": 6.0,
 	"rage_gain": 0.0, "move_factor": 0.2,
@@ -126,15 +127,15 @@ const PASSIVE: Dictionary = {
 	"duration": 5.0, "cooldown": 12.0,
 }
 
-const SPECIAL: Dictionary = FROST_NOVA
+const SPECIAL: Dictionary = ARCANE_PULSE
 const ULTIMATE: Dictionary = ARCANE_SURGE
 
 const DEFAULT_LOADOUT: Dictionary = {
-	"SHIFT": &"blink", "Q": &"frost_nova", "E": &"poison_cloud", "R": &"meteor", "F": &"arcane_surge",
+	"SHIFT": &"blink", "Q": &"arcane_pulse", "E": &"arcane_rift", "R": &"starfall", "F": &"arcane_surge",
 }
 
-const ALL_ABILITIES: Array = [M1, M2, BLINK, FROST_NOVA, POISON_CLOUD, METEOR, ARCANE_SURGE]
-const POOL_ABILITIES: Array = [BLINK, FROST_NOVA, POISON_CLOUD, METEOR, ARCANE_SURGE]
+const ALL_ABILITIES: Array = [M1, M2, BLINK, ARCANE_PULSE, ARCANE_RIFT, STARFALL, ARCANE_SURGE]
+const POOL_ABILITIES: Array = [BLINK, ARCANE_PULSE, ARCANE_RIFT, STARFALL, ARCANE_SURGE]
 
 
 static func create_rage_resource() -> Rage:
