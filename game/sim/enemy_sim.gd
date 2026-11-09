@@ -465,7 +465,7 @@ func _is_frontal(source_position: Vector2) -> bool:
 
 func take_damage(amount: float, source_position: Vector2 = Vector2.ZERO, effects: Dictionary = {}) -> float:
 	# Parry: desvía el golpe frontal y contraataca.
-	if alive and is_parrying() and not _parry_done and _is_frontal(source_position):
+	if alive and not bool(effects.get("tick", false)) and is_parrying() and not _parry_done and _is_frontal(source_position):
 		_parry_done = true
 		parried.emit()
 		var warrior: Object = world.warrior

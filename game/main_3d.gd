@@ -71,6 +71,7 @@ func _process(_delta: float) -> void:
 	if Input.mouse_mode != want:
 		Input.mouse_mode = want
 	crosshair.visible = not loadout_panel.visible
+	_update_ground_marker()
 
 
 func _exit_tree() -> void:
@@ -115,6 +116,8 @@ func _read_input() -> InputMessage:
 		var aim: Vector2 = mouse - world.warrior.position
 		if aim.length_squared() > 4.0:
 			message.aim_dir = aim.normalized()
+		message.aim_point = mouse
+		message.has_aim_point = true
 
 	message.actions = {
 		"m1": Input.is_action_pressed("attack_m1"),
@@ -127,3 +130,18 @@ func _read_input() -> InputMessage:
 		"f": Input.is_action_pressed("slot_f"),
 	}
 	return message
+
+
+## Marcador de skills de suelo (Smite): sigue a la mira, limitado al alcance.
+func _update_ground_marker() -> void:
+	if world == null:
+		return
+	var warrior := world.warrior
+	var mouse: Variant = arena.mouse_sim()
+	var slot := warrior.ground_slot_ready()
+	if slot.is_empty() or mouse == null or loadout_panel.visible:
+		arena.set_ground_marker(false, Vector2.ZERO, 0.0)
+		return
+	var ability := warrior.ability_for_slot(slot)
+	var point := warrior.clamp_ground_point(mouse, ability)
+	arena.set_ground_marker(true, point, float(ability.get("radius", 100.0)))

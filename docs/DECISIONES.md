@@ -158,3 +158,8 @@ piezas del Medieval Village / Fantasy Props MegaKit; animación propia de estoca
 
 ## 2026-11-08 — Rendimientos decrecientes de CC
 - `combat/cc_diminish.gd`: el stun encadenado (jugador y enemigos) dura 100 % → 50 % → 25 % → inmune, y se reinicia a los 15 s. Evita el stun-lock eterno sin poise. Mismo sistema para roots y silencios cuando existan.
+
+## 2026-11-08 — Skills de suelo, DoTs, registro de clases
+- **Apuntado manual tipo Smite:** `InputMessage.aim_point` (punto del suelo bajo la mira). Una skill con `"target": "ground"` + `range` cae donde apuntas (limitada al alcance); un anillo en el suelo muestra el destino mientras la skill está lista. Seismic Break (R) es la primera (alcance 260). Sin punto apuntado cae sobre el jugador.
+- **DoTs:** `combat/dot_tracker.gd`; `effects.dot = {damage_type, dps, duration}` en cualquier skill. Tick cada 0.5 s, respeta resistencias, mismo tipo refresca. Jugador y enemigos.
+- **`combat/class_registry.gd`:** `WarriorSim` ya no importa `WarriorKit` directo, usa `ClassRegistry.kit(id)`. Contrato mínimo de un kit en `REQUIRED` (testeado). Añadir clase = su kit + una línea en KITS. (La sim aún se llama WarriorSim: falta generalizarla a `PlayerSim` al llegar la 2ª clase.)

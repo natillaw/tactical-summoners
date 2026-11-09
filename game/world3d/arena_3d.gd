@@ -578,3 +578,22 @@ func dummy_actor_for(sim: Object) -> DummyActor3D:
 		if actor.sim == sim:
 			return actor
 	return null
+
+
+# --- Marcador de skills de suelo ---------------------------------------------------
+
+var _ground_marker: FxShape
+
+
+func set_ground_marker(active: bool, at: Vector2, radius_px: float) -> void:
+	if _ground_marker == null:
+		_ground_marker = FxShape.new().setup(FxShape.Mode.RING, 1.0, Color(1.0, 0.7, 0.3, 0.9))
+		_ground_marker.set_param("inner", 0.9)
+		_ground_marker.set_param("fill", 0.12)
+		_ground_marker.set_param("pulse", 1.0)
+		_ground_marker.visible = false
+		add_child(_ground_marker)
+	_ground_marker.visible = active
+	if active:
+		_ground_marker.position = View3D.to3(at, 0.05)
+		_ground_marker.scale = Vector3.ONE * View3D.meters(radius_px)
