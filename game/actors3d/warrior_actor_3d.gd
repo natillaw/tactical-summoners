@@ -48,6 +48,7 @@ const CLIP_THRUST := {"clip": "ual2/Sword_Dash", "from": 0.08, "to": 0.40, "cont
 const CLIP_SLAM := {"clip": "ual2/Sword_Heavy_Combo", "from": 0.52, "to": 0.80, "contact": 0.63}
 const CLIP_PARRY := {"clip": "ual2/Sword_Block", "from": 0.0, "to": 0.45, "contact": 0.08}
 const CLIP_ROLL := {"clip": "ual1/Roll", "from": 0.0, "to": 0.78, "contact": 0.55}
+const CLIP_BLOCK_REACT := {"clip": "class/standing_block_react_large", "from": 0.08, "to": 0.6, "contact": 0.23}
 const CLIP_COUNTER := {"clip": "ual2/Sword_Regular_B", "from": 0.25, "to": 1.0, "contact": 0.49}
 const CLIP_CHARGE_HIT := {"clip": "ual2/Sword_Regular_C", "from": 0.2, "to": 0.62, "contact": 0.34}
 
@@ -193,6 +194,7 @@ func _connect_signals() -> void:
 	sim.attack_finished.connect(_on_attack_finished)
 	sim.damage_taken.connect(_on_damage_taken)
 	sim.stunned.connect(_on_stunned)
+	sim.visibility_changed.connect(_set_invisible)
 	sim.died.connect(_on_died)
 	sim.cast_event.connect(_on_cast_event)
 	sim.ultimate_changed.connect(_on_ultimate_changed)
@@ -229,6 +231,8 @@ func _process(delta: float) -> void:
 func _update_facing(delta: float) -> void:
 	var target_yaw := _yaw
 	var rate := TURN_SPEED
+	if sim.class_id == &"ranger" and not sim.is_attacking():
+		target_yaw = View3D.yaw_for(sim.aim_dir)  # el arquero apunta siempre hacia donde mira
 	if sim.is_attacking():
 		target_yaw = View3D.yaw_for(sim.attack_aim) - _align_yaw
 		rate = TURN_SPEED_ATTACK
@@ -255,12 +259,35 @@ func _update_locomotion() -> void:
 		rig.play(ANIM_JUMP, 0.1)
 		return
 	var speed_m := View3D.meters(sim.velocity.length())
-	if speed_m > 0.4:
+	if speed_m > 0.4 and sim.class_id == &"ranger":
+		rig.play(_strafe_anim(), 0.1, clampf(speed_m / 2.0, 0.6, 2.2))
+	elif speed_m > 0.4:
 		var anim := ANIM_SPRINT if sim.current_move_speed_multiplier() > 1.15 else ANIM_RUN
 		var ref := RUN_ANIM_SPEED * (1.6 if anim == ANIM_SPRINT else 1.0)
 		rig.play(anim, 0.12, clampf(speed_m / ref, 0.6, 1.6))
 	else:
-		rig.play(ANIM_IDLE, 0.18)
+		rig.play(_idle_anim(), 0.18)
+
+
+## Idle por clase: el rogue con la daga en guardia, el ranger apuntando.
+func _idle_anim() -> String:
+	match sim.class_id:
+		&"rogue":
+			return "class/knife_idle"
+		&"ranger":
+			return "class/standing_aim_idle_01"
+		_:
+			return ANIM_IDLE
+
+
+## Caminata de apuntado del ranger según la dirección de movimiento respecto a la mira.
+func _strafe_anim() -> String:
+	var angle := rad_to_deg(sim.aim_dir.angle_to(sim.velocity))
+	if absf(angle) <= 45.0:
+		return "class/standing_aim_walk_forward"
+	if absf(angle) >= 135.0:
+		return "class/standing_aim_walk_back"
+	return "class/standing_aim_walk_right" if angle > 0.0 else "class/standing_aim_walk_left"
 
 
 func _update_dash_fx(delta: float) -> void:
@@ -287,8 +314,6 @@ func _on_attack_started(skill: Dictionary, direction: Vector2) -> void:
 			_play_clip(c, windup, post)
 		"piercing_thrust":
 			_play_clip(CLIP_THRUST, windup, post)
-		"seismic_break":
-			_play_clip(CLIP_SLAM, windup, post)
 		"parry":
 			_play_clip(CLIP_PARRY, windup, float(skill.get("active", 0.45)))
 		"bladestorm":
@@ -301,7 +326,11 @@ func _on_attack_started(skill: Dictionary, direction: Vector2) -> void:
 				_play_clip(M1_CLIPS[int(list[_cast_index % list.size()])], windup, post)
 				_cast_index += 1
 			elif skill.has("full_clip"):
-				_play_clip(skill["full_clip"], windup, post)
+				var full: Dictionary = skill["full_clip"]
+				if bool(full.get("late", false)):  # el golpe cae al aterrizar
+					_play_clip(full, windup + float(skill.get("active", 0.1)), float(skill.get("recovery", 0.2)))
+				else:
+					_play_clip(full, windup, post)
 	_yaw = View3D.yaw_for(direction) - _align_yaw
 	rig.rotation.y = _yaw
 
@@ -377,7 +406,10 @@ func _on_cast_event(event: String, skill: Dictionary, at: Vector2, direction: Ve
 		"dash_start":
 			_align_yaw = 0.0
 			_yaw = View3D.yaw_for(direction)
-			if String(skill.get("id", "")) == "combat_roll":
+			if skill.has("fall_clip"):
+				# Evasive Leap: salto hacia atrás con la animación de caída en pleno vuelo
+				rig.play(String(skill["fall_clip"]), 0.05, 1.0, true)
+			elif String(skill.get("id", "")) == "combat_roll":
 				_play_clip(CLIP_ROLL, active * 0.7, active * 0.3 + recovery)
 				arena.play_sfx(SFX_ROLL, -9.0, 0.9)
 			else:
@@ -413,7 +445,7 @@ func _on_cast_event(event: String, skill: Dictionary, at: Vector2, direction: Ve
 			arena.play_sfx(SFX_MAGIC, -12.0, 1.1)
 			arena.shake(1.2, 0.08)
 		"parry_success":
-			_play_clip(CLIP_COUNTER, 0.05, recovery, ANIM_IDLE)
+			_play_clip(CLIP_BLOCK_REACT, 0.08, recovery, ANIM_IDLE)
 			arena.spawn_swipe(
 				sim.position, direction, float(skill.get("counter_range", 90.0)),
 				float(skill.get("counter_arc", 120.0)), COLOR_GUARD, 0.06, 0.2, 0.95, _swing_dir
@@ -436,6 +468,13 @@ func _on_cast_event(event: String, skill: Dictionary, at: Vector2, direction: Ve
 			ArcaneFx.burst(arena, View3D.to3(at, 1.1), hit_color, 36, 4.0, 0.13)
 			arena.spawn_shockwave(at, 34.0, hit_color, 0.3, 0.7)
 			arena.play_sfx(SFX_HIT, -6.0, 1.1)
+		"vanish":
+			ArcaneFx.burst(arena, View3D.to3(at, 1.0), Color(0.35, 0.28, 0.45), 60, 2.5, 0.28)
+			ArcaneFx.column(arena, View3D.to3(at), Color(0.45, 0.35, 0.6), 2.0)
+			arena.play_sfx(SFX_ROLL, -5.0, 0.7)
+		"leap_start":
+			arena.spawn_dust(at, 12, 0.6)
+			arena.play_sfx(SFX_CHARGE, -8.0, 0.9)
 		"blink_out":
 			var blink_color := DamageSystem.color_of(DamageSystem.type_of(skill))
 			ArcaneFx.column(arena, View3D.to3(at), blink_color, 2.2)
@@ -566,6 +605,14 @@ func _on_damage_taken(_amount: float, _source_position: Vector2, is_dot: bool) -
 	arena.shake(3.2, 0.18)
 
 
+## Vanish: el personaje se ve semitransparente mientras es invisible.
+func _set_invisible(on: bool) -> void:
+	for mi: Node in rig.model.find_children("*", "MeshInstance3D", true, false):
+		(mi as MeshInstance3D).transparency = 0.65 if on else 0.0
+	if not on:
+		ArcaneFx.burst(arena, View3D.to3(sim.position, 1.0), Color(0.45, 0.35, 0.6), 30, 2.0, 0.2)
+
+
 func _on_stunned(seconds: float) -> void:
 	_hurt_time = seconds
 	trail.emitting = false
@@ -584,6 +631,7 @@ func _on_died() -> void:
 
 
 func _restore_visual() -> void:
+	_set_invisible(false)
 	rig.visible = true
 	_dead_visual = false
 	rig.play(ANIM_IDLE, 0.2, 1.0, true)

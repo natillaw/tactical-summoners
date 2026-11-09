@@ -56,6 +56,7 @@ func _run() -> void:
 	_test_blink_and_hold_aim()
 	_test_rogue_ranger()
 	_test_shadowstep_backstab()
+	_test_anim_skills()
 
 	print("== %d checks, %d failed ==" % [_checks, _failures])
 	print("RESULT: %s" % ("PASS" if _failures == 0 else "FAIL"))
@@ -200,7 +201,7 @@ func _test_seismic_break() -> void:
 	var rage_before := world.warrior.rage()
 
 	_step(world, 3, _input(Vector2(0, -1), false, false, Vector2.ZERO, false, false, false, true))  # mantener R = apuntar
-	_step(world, 25, _input(Vector2(0, -1), false, false))  # soltar = lanzar
+	_step(world, 80, _input(Vector2(0, -1), false, false))  # soltar = lanzar (salto de 0.85 s)
 
 	_check(world.warrior.rage() <= rage_before - 30.0 + 0.01, "Seismic Break consume 30 Rage")
 	_check(dummy.health < dummy.max_health, "Seismic Break daña en área")
@@ -805,3 +806,63 @@ func _test_shadowstep_backstab() -> void:
 		world2.step(DT)
 	_check(w2.position.distance_to(start + Vector2(150, 0)) < 30.0 and is_equal_approx(e2.health, hp2), "Shadowstep sin objetivo: solo teletransporta al punto apuntado")
 	w2.set_class(&"warrior")
+
+
+func _test_anim_skills() -> void:
+	# Vanish: invisible 5 s; los enemigos no atacan; atacar rompe la invisibilidad.
+	var world := _make_world(false, 91)
+	var w = world.warrior
+	w.set_class(&"rogue")
+	w.reset(w.position)
+	var e: EnemySim = world.add_enemy(w.position + Vector2(70, 0), 1)
+	w.debug_refill()
+	w.buffered_slot = "Q"
+	w.buffer_timer = 1.0
+	_step(world, 30, null)
+	_check(w.is_invisible(), "Vanish vuelve invisible al Rogue")
+	var hp: float = w.health
+	_step(world, 150, null)  # ~2.5 s con el enemigo pegado
+	_check(is_equal_approx(w.health, hp), "Los enemigos no atacan a un Rogue invisible")
+	_step(world, 150, null)
+	_check(not w.is_invisible(), "La invisibilidad dura unos 5 s")
+	w.set_class(&"warrior")
+	# Kick: empuja al enemigo.
+	var world2 := _make_world(false, 92)
+	var r = world2.warrior
+	r.set_class(&"ranger")
+	r.reset(r.position)
+	var d: DummySim = world2.dummies[0]
+	d.position = r.position + Vector2(0, -60)
+	var before: float = d.position.distance_to(r.position)
+	r.buffered_slot = "E"
+	r.buffer_timer = 1.0
+	r.aim_dir = Vector2(0, -1)
+	_step(world2, 40, _input(Vector2(0, -1), false, false))
+	_check(d.position.distance_to(r.position) > before + 80.0, "Kick empuja al enemigo (%d px)" % int(d.position.distance_to(r.position) - before))
+	# Evasive Leap: sube y vuelve a caer.
+	r.debug_refill()
+	r.buffered_slot = "SHIFT"
+	r.buffer_timer = 1.0
+	var peak := 0.0
+	for i in 40:
+		world2.submit_input(_duplicate_input(_input(Vector2(0, -1), false, false)))
+		world2.step(DT)
+		peak = maxf(peak, r.height)
+	_check(peak > 20.0 and r.height == 0.0, "Evasive Leap salta y cae (pico %d px)" % int(peak))
+	r.set_class(&"warrior")
+	# Seismic Break: el Warrior salta hasta el punto apuntado.
+	var world3 := _make_world(false, 93)
+	var ward = world3.warrior
+	var start: Vector2 = ward.position
+	var msg = _input(Vector2(0, -1), false, false, Vector2.ZERO, false, false, false, true)
+	msg.aim_point = start + Vector2(0, -200)
+	msg.has_aim_point = true
+	ward.debug_refill()
+	_step(world3, 3, msg)
+	msg.actions["r"] = false
+	var air_peak := 0.0
+	for i in 70:
+		world3.submit_input(_duplicate_input(msg))
+		world3.step(DT)
+		air_peak = maxf(air_peak, ward.height)
+	_check(ward.position.distance_to(start + Vector2(0, -200)) < 25.0 and air_peak > 40.0, "Seismic Break: salto hasta el punto apuntado (pico %d px)" % int(air_peak))

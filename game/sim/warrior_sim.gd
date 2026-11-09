@@ -28,6 +28,7 @@ signal last_stand_changed(active: bool, seconds_left: float)
 signal loadout_changed(loadout: Dictionary)
 signal stunned(seconds: float)
 signal class_changed(class_id: StringName)
+signal visibility_changed(invisible: bool)
 
 enum AttackState { IDLE, WINDUP, ACTIVE, RECOVERY }
 
@@ -101,6 +102,10 @@ var kit: GDScript = ClassRegistry.kit(&"warrior")
 var projectiles: Array = []
 ## Slot de skill de suelo que se está apuntando (tecla mantenida); al soltar se lanza.
 var aiming_slot: String = ""
+## Invisibilidad (Vanish): los enemigos no te ven; atacar la rompe.
+var invisible_timer: float = 0.0
+var _leap_from: Vector2 = Vector2.ZERO
+var _leap_to: Vector2 = Vector2.ZERO
 var _next_projectile_id: int = 1
 var _regen: float = 0.0
 var _regen_delay: float = 0.0
@@ -171,6 +176,10 @@ func average_hit() -> float:
 	return avg * NORMALIZED_SPEED / speed + stats.get_attack_power() / 14.0 * NORMALIZED_SPEED
 
 
+func is_invisible() -> bool:
+	return invisible_timer > 0.0
+
+
 func is_airborne() -> bool:
 	return height > 0.0 or vertical_velocity > 0.0
 
@@ -178,6 +187,8 @@ func is_airborne() -> bool:
 func _update_jump(delta: float) -> void:
 	if not is_airborne():
 		return
+	if state == AttackState.ACTIVE and (String(current_skill.get("cast", "")) == "leap_slam" or float(current_skill.get("hop", 0.0)) > 0.0):
+		return  # la altura la lleva la propia skill
 	vertical_velocity -= GRAVITY * delta
 	height += vertical_velocity * delta
 	if height <= 0.0:
@@ -298,6 +309,10 @@ func _to_vec(value: Variant) -> Vector2:
 
 
 func _tick_timers(delta: float) -> void:
+	if invisible_timer > 0.0:
+		invisible_timer = maxf(0.0, invisible_timer - delta)
+		if invisible_timer <= 0.0:
+			visibility_changed.emit(false)
 	if _regen > 0.0 and alive:
 		_since_spend += delta
 		if _since_spend >= _regen_delay:
@@ -465,6 +480,14 @@ func _enter_active() -> void:
 			_spawn_projectile()
 		"teleport":
 			_do_teleport()
+		"leap_slam":
+			_leap_from = position
+			_leap_to = world.resolve_position(_cast_point, RADIUS) if world != null else _cast_point
+			cast_event.emit("leap_start", current_skill, position, attack_aim)
+		"buff":
+			invisible_timer = float(current_skill.get("invisible", 5.0))
+			cast_event.emit("vanish", current_skill, position, attack_aim)
+			visibility_changed.emit(true)
 		"line":
 			_damage_line(
 				float(current_skill.get("range", 100.0)),
@@ -483,7 +506,11 @@ func _enter_active() -> void:
 
 func _update_active(delta: float) -> void:
 	var cast := String(current_skill.get("cast", "melee"))
-	if cast == "dash":
+	if cast == "leap_slam":
+		var u := clampf(state_time / maxf(float(current_skill.get("active", 0.5)), 0.001), 0.0, 1.0)
+		position = _leap_from.lerp(_leap_to, u)
+		height = float(current_skill.get("leap_height", 70.0)) * 4.0 * u * (1.0 - u)
+	elif cast == "dash":
 		_update_dash(delta)
 	elif String(current_skill.get("id", "")) == "bladestorm":
 		_spin_tick += delta
@@ -502,6 +529,12 @@ func _update_active(delta: float) -> void:
 
 
 func _enter_recovery() -> void:
+	if String(current_skill.get("cast", "")) == "leap_slam":
+		height = 0.0
+		position = _leap_to
+		cast_event.emit("slam", current_skill, position, attack_aim)
+		_hit_targets.clear()
+		_damage_area(position, float(current_skill.get("radius", 100.0)), _current_multiplier(), _effects(), 1.0)
 	state = AttackState.RECOVERY
 	state_time -= float(current_skill.get("active", 0.1))
 	parry_active = false
@@ -541,6 +574,10 @@ func _update_dash(delta: float) -> void:
 	var desired := position + attack_aim * float(current_skill.get("dir", 1.0)) * step
 	position = world.resolve_position(desired, RADIUS) if world != null else desired
 	_dash_remaining = maxf(0.0, _dash_remaining - step)
+	var hop := float(current_skill.get("hop", 0.0))
+	if hop > 0.0:
+		var progress := 1.0 - _dash_remaining / maxf(distance, 0.001)
+		height = hop * 4.0 * progress * (1.0 - progress)
 
 	if float(current_skill.get("damage_mult", 0.0)) > 0.0:
 		var radius := float(current_skill.get("radius", 40.0))
@@ -651,6 +688,9 @@ func _hit_target(target: Object, mult: float, effects: Dictionary, skill: Dictio
 	if dealt <= 0.0:
 		return
 
+	if invisible_timer > 0.0:
+		invisible_timer = 0.0
+		visibility_changed.emit(false)
 	_gain_rage(float(sk.get("rage_gain", 0.0)))
 	_gain_ultimate(ULTIMATE_ON_HIT)
 	combo_timer = float(sk.get("combo_reset_window", 0.85))
@@ -690,7 +730,7 @@ func _resolve_pending_parry() -> void:
 
 
 func _update_movement(delta: float) -> void:
-	if state == AttackState.ACTIVE and String(current_skill.get("cast", "")) == "dash":
+	if state == AttackState.ACTIVE and String(current_skill.get("cast", "")) in ["dash", "leap_slam"]:
 		velocity = Vector2.ZERO
 		return
 
@@ -1125,6 +1165,7 @@ func reset(spawn: Vector2 = Vector2(480, 380)) -> void:
 	height = 0.0
 	vertical_velocity = 0.0
 	stun_timer = 0.0
+	invisible_timer = 0.0
 	cc.reset()
 	dots.clear()
 	state = AttackState.IDLE

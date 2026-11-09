@@ -125,7 +125,7 @@ func step(tick_number: int, delta: float, warrior: Object) -> void:
 	_seismic_cooldown = maxf(0.0, _seismic_cooldown - delta)
 	_spin_cooldown = maxf(0.0, _spin_cooldown - delta)
 	var before := position
-	if alive and warrior != null and warrior.alive:
+	if alive and warrior != null and warrior.alive and not warrior.is_invisible():
 		_think(delta, warrior)
 	super.step(tick_number, delta, warrior)
 	moving = position.distance_squared_to(before) > 0.01
@@ -156,7 +156,7 @@ func _think(delta: float, warrior: Object) -> void:
 	_warrior_was_attacking = warrior_attacking
 	_breath = maxf(0.0, _breath - delta)
 
-	if stun_timer > 0.0:
+	if stun_timer > 0.0 or knock_timer > 0.0:
 		_cancel_actions()
 		return
 
@@ -411,9 +411,9 @@ func interrupt() -> void:
 
 
 ## Pierde el golpe cuando está en fase de preparación (los telegraph los gestiona DummySim).
-func apply_effects(effects: Dictionary) -> void:
-	super.apply_effects(effects)
-	if stun_timer > 0.0:
+func apply_effects(effects: Dictionary, source: Vector2 = Vector2.ZERO) -> void:
+	super.apply_effects(effects, source)
+	if stun_timer > 0.0 or knock_timer > 0.0:
 		_cancel_actions()
 
 
