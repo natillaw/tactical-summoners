@@ -29,6 +29,7 @@ signal loadout_changed(loadout: Dictionary)
 signal stunned(seconds: float)
 signal class_changed(class_id: StringName)
 signal visibility_changed(invisible: bool)
+signal cast_cancelled(skill: Dictionary)
 
 enum AttackState { IDLE, WINDUP, ACTIVE, RECOVERY }
 
@@ -104,6 +105,7 @@ var projectiles: Array = []
 var aiming_slot: String = ""
 ## Invisibilidad (Vanish): los enemigos no te ven; atacar la rompe.
 var invisible_timer: float = 0.0
+var _cast_hit: bool = false
 var _leap_from: Vector2 = Vector2.ZERO
 var _leap_to: Vector2 = Vector2.ZERO
 var _next_projectile_id: int = 1
@@ -356,6 +358,9 @@ func _update_attack(delta: float) -> void:
 
 	match state:
 		AttackState.WINDUP:
+			if bool(current_skill.get("cast_bar", false)) and (_cast_hit or move_input.length() > 0.1):
+				_cancel_cast()
+				return
 			if state_time >= float(current_skill.get("windup", 0.0)):
 				_enter_active()
 		AttackState.ACTIVE:
@@ -367,6 +372,30 @@ func _update_attack(delta: float) -> void:
 				_finish_attack()
 		_:
 			pass
+
+
+## Cast con barra: moverse o recibir un golpe antes de completarla la cancela (se devuelve el coste).
+func _cancel_cast() -> void:
+	var skill := current_skill
+	_gain_rage(float(skill.get("cost", 0.0)))
+	if String(skill.get("kind", "")) == "ultimate":
+		ultimate_charge = minf(kit.ULTIMATE_COST, ultimate_charge + float(skill.get("charge", 100.0)))
+		ultimate_changed.emit(ultimate_charge, kit.ULTIMATE_COST)
+	cooldowns[String(skill["id"])] = 0.6
+	state = AttackState.IDLE
+	state_time = 0.0
+	current_skill = {}
+	current_slot = ""
+	_cast_hit = false
+	attack_state_changed.emit(state)
+	cast_cancelled.emit(skill)
+
+
+## Progreso (0..1) de la barra de cast en curso, o -1 si no hay.
+func cast_progress() -> float:
+	if state == AttackState.WINDUP and bool(current_skill.get("cast_bar", false)):
+		return clampf(state_time / maxf(float(current_skill.get("windup", 1.0)), 0.01), 0.0, 1.0)
+	return -1.0
 
 
 func _try_start_attack() -> void:
@@ -390,7 +419,30 @@ func _can_start(slot: String) -> bool:
 		return false
 	if cooldown_left(slot) > 0.0:
 		return false
+	if bool(ability.get("requires_behind", false)) and not _has_behind_target(ability):
+		return false
 	return _can_afford(ability)
+
+
+## Flanqueo: el objetivo mira en la misma dirección que la línea jugador -> objetivo.
+func _is_behind(target: Object) -> bool:
+	var away: Vector2 = (target.position - position).normalized()
+	return (target.facing as Vector2).dot(away) > 0.25
+
+
+## ¿Hay un enemigo a tiro, en el cono de la skill y de espaldas a mí?
+func _has_behind_target(ability: Dictionary) -> bool:
+	var reach := float(ability.get("range", 70.0))
+	var arc := float(ability.get("arc", 100.0))
+	for target: Object in _living_targets():
+		var to_target: Vector2 = target.position - position
+		if to_target.length() > reach + float(target.radius) + 15.0:
+			continue
+		if absf(rad_to_deg(aim_dir.angle_to(to_target))) > arc * 0.5 + 10.0:
+			continue
+		if _is_behind(target):
+			return true
+	return false
 
 
 func _can_afford(ability: Dictionary) -> bool:
@@ -416,6 +468,7 @@ func _start_ability(slot: String) -> bool:
 
 	current_skill = ability
 	current_slot = slot
+	_cast_hit = false
 	attack_aim = aim_dir
 	state = AttackState.WINDUP
 	state_time = 0.0
@@ -697,6 +750,8 @@ func _hit_target(target: Object, mult: float, effects: Dictionary, skill: Dictio
 	var type := DamageSystem.type_of(sk)
 	var result := DamageSystem.roll(roll_hit(), mult, stats.get_crit_chance(), type, _rng)
 	var damage: float = result["amount"]
+	if bool(sk.get("flank", false)) and not _is_behind(target):
+		damage *= 0.8  # el Rogue pierde 20 % de daño si ataca de frente
 	var critical: bool = result["critical"]
 	var fx := effects.duplicate()
 	fx[DamageSystem.KEY] = type
@@ -898,7 +953,7 @@ func is_stunned() -> bool:
 func _apply_dot_effect(effects: Dictionary) -> void:
 	var dot: Dictionary = effects.get("dot", {})
 	if not dot.is_empty():
-		dots.add(int(dot.get(DamageSystem.KEY, DamageSystem.Type.POISON)), float(dot.get("dps", 5.0)), float(dot.get("duration", 5.0)))
+		dots.add(int(dot.get(DamageSystem.KEY, DamageSystem.Type.POISON)), float(dot.get("dps", 5.0)), float(dot.get("duration", 5.0)), int(dot.get("stacks", 1)))
 
 
 func _tick_dots(delta: float) -> void:

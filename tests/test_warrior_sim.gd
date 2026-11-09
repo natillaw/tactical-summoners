@@ -59,6 +59,7 @@ func _run() -> void:
 	_test_anim_skills()
 	_test_rogue_rework()
 	_test_ranger_rework()
+	_test_flank_stacks_castbar()
 
 	print("== %d checks, %d failed ==" % [_checks, _failures])
 	print("RESULT: %s" % ("PASS" if _failures == 0 else "FAIL"))
@@ -954,3 +955,72 @@ func _test_ranger_rework() -> void:
 	k.reset(k.position)
 	_check(String(k.kit.KICK["cast"]) == "line", "Kick es una patada en línea")
 	k.set_class(&"warrior")
+
+
+func _test_flank_stacks_castbar() -> void:
+	# Cheap Shot solo por la espalda; M1 de frente hace menos daño.
+	var world := _make_world(false, 121)
+	var w = world.warrior
+	w.set_class(&"rogue")
+	w.reset(w.position)
+	var d: DummySim = world.dummies[0]
+	d.position = w.position + Vector2(0, -50)
+	w.aim_dir = Vector2(0, -1)
+	d.facing = Vector2(0, 1)  # mira hacia el jugador: de frente
+	w.debug_refill()
+	_check(not w._can_start("E"), "Cheap Shot no se puede lanzar de frente")
+	d.facing = Vector2(0, -1)  # de espaldas
+	_check(w._can_start("E"), "Cheap Shot sí se puede lanzar por la espalda")
+	d.facing = Vector2(0, 1)
+	var front := 0.0
+	var back := 0.0
+	for i in 40:
+		w._rng.seed = 5 + i
+		w._hit_targets.clear()
+		w.current_skill = w.kit.M1.duplicate(true)
+		var h1: float = d.health
+		d.facing = Vector2(0, 1)
+		w._hit_target(d, 1.0, {})
+		front += h1 - d.health
+		d.health = d.max_health
+		w._rng.seed = 5 + i
+		w._hit_targets.clear()
+		d.facing = Vector2(0, -1)
+		var h2: float = d.health
+		w._hit_target(d, 1.0, {})
+		back += h2 - d.health
+		d.health = d.max_health
+	_check(front < back * 0.9, "El Rogue hace menos daño de frente que por la espalda (%d vs %d)" % [int(front), int(back)])
+	# Veneno: se acumula hasta 3 veces.
+	var tracker := DotTracker.new()
+	for i in 5:
+		tracker.add(DamageSystem.Type.POISON, 10.0, 5.0, 3)
+	_check(tracker.stacks_of(DamageSystem.Type.POISON) == 3, "El veneno se acumula como máximo 3 veces")
+	var per_second := 0.0
+	for hit: Dictionary in tracker.tick(1.0):
+		per_second += float(hit["amount"])
+	_check(is_equal_approx(per_second, 22.0), "3 acumulaciones = 2.2x el daño por segundo (%.1f)" % per_second)
+	w.set_class(&"warrior")
+	# Barra de cast: el disparo concentrado se cancela al moverse y sale quieto.
+	var world2 := _make_world(false, 122)
+	var r = world2.warrior
+	r.set_class(&"ranger")
+	r.reset(r.position)
+	var t: DummySim = world2.dummies[0]
+	t.position = r.position + Vector2(0, -150)
+	r.aim_dir = Vector2(0, -1)
+	var before: float = t.health
+	r.debug_refill()
+	r.buffered_slot = "M2"
+	r.buffer_timer = 1.0
+	_step(world2, 40, _input(Vector2(0, -1), false, false))
+	_check(r.cast_progress() > 0.2 and r.cast_progress() < 0.9, "La barra de cast del disparo concentrado avanza (%.2f)" % r.cast_progress())
+	var moving = _input(Vector2(0, -1), false, false, Vector2(1, 0))
+	_step(world2, 5, moving)
+	_check(r.cast_progress() < 0.0 and is_equal_approx(t.health, before), "Moverse cancela el cast y no sale disparo")
+	_step(world2, 60, _input(Vector2(0, -1), false, false))
+	r.buffered_slot = "M2"
+	r.buffer_timer = 1.0
+	_step(world2, 140, _input(Vector2(0, -1), false, false))
+	_check(t.health < before, "Quieto, el disparo concentrado sale con la barra llena")
+	r.set_class(&"warrior")

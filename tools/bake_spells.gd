@@ -12,7 +12,7 @@ const DST := "res://assets/models/characters/warrior.glb"
 var OUT := "res://assets/models/anims/spells.res"
 const FPS := 30.0
 const LOWER := ["pelvis", "thigh_l", "calf_l", "foot_l", "ball_l", "thigh_r", "calf_r", "foot_r", "ball_r"]
-const CHAINS := {
+var CHAINS := {
 	"pelvis": ["Hips", "spine_01", "Spine"],
 	"spine_01": ["Spine", "spine_02", "Spine1"],
 	"spine_02": ["Spine1", "spine_03", "Spine2"],
@@ -54,7 +54,17 @@ func _globals(sk: Skeleton3D, rest: bool) -> Array[Transform3D]:
 	return out
 
 
+func _add_fingers() -> void:
+	# Dedos: sin esto las manos quedan abiertas (UAL index_01_l <-> Mixamo LeftHandIndex1...).
+	for side in [["l", "Left"], ["r", "Right"]]:
+		for finger in [["thumb", "Thumb"], ["index", "Index"], ["middle", "Middle"], ["ring", "Ring"], ["pinky", "Pinky"]]:
+			for n in range(1, 4):
+				var child: String = "%s_0%d_%s" % [finger[0], n + 1, side[0]] if n < 3 else "%s_04_leaf_%s" % [finger[0], side[0]]
+				CHAINS["%s_0%d_%s" % [finger[0], n, side[0]]] = ["%sHand%s%d" % [side[1], finger[1], n], child, "%sHand%s%d" % [side[1], finger[1], n + 1]]
+
+
 func _init() -> void:
+	_add_fingers()
 	var args := OS.get_cmdline_user_args()
 	if args.size() >= 2:
 		DIR = args[0]

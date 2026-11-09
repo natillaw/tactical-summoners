@@ -258,7 +258,7 @@ func apply_effects(effects: Dictionary, source: Vector2 = Vector2.ZERO) -> void:
 
 	var dot: Dictionary = effects.get("dot", {})
 	if not dot.is_empty():
-		dots.add(int(dot.get(DamageSystem.KEY, DamageSystem.Type.POISON)), float(dot.get("dps", 5.0)), float(dot.get("duration", 5.0)))
+		dots.add(int(dot.get(DamageSystem.KEY, DamageSystem.Type.POISON)), float(dot.get("dps", 5.0)), float(dot.get("duration", 5.0)), int(dot.get("stacks", 1)))
 
 	var stun := cc.apply("stun", float(effects.get("stun", 0.0))) if effects.has("stun") else 0.0
 	if stun > 0.0:

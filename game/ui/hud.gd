@@ -65,6 +65,7 @@ func _draw() -> void:
 	_draw_status(warrior)
 	_draw_buffs(warrior)
 	_draw_abilities(warrior)
+	_draw_cast_bar(warrior)
 	_draw_controls()
 
 	if _sim_last_stand_active(warrior) and warrior.alive:
@@ -73,6 +74,17 @@ func _draw() -> void:
 	_draw_damage_flash()
 	if not warrior.alive:
 		_draw_death()
+
+
+## Barra de cast sobre la barra de skills (Concentrated Shot, hechizos fuertes del mago).
+func _draw_cast_bar(warrior: WarriorSim) -> void:
+	var progress := warrior.cast_progress()
+	if progress < 0.0:
+		return
+	var rect := Rect2(220, 288, 200, 8)
+	draw_rect(rect.grow(1.0), Color(0.04, 0.04, 0.06, 0.9))
+	draw_rect(Rect2(rect.position, Vector2(rect.size.x * progress, rect.size.y)), Color(1.0, 0.82, 0.3, 1.0))
+	_draw_text(String(warrior.current_skill.get("name", "")), Vector2(220, 285), 7, TEXT, HORIZONTAL_ALIGNMENT_CENTER, 200)
 
 
 func _sim_last_stand_active(warrior: WarriorSim) -> bool:

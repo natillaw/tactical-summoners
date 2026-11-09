@@ -56,13 +56,13 @@ const M1: Dictionary = {
 
 ## M2: disparo cargado, más potente, más alcance y atraviesa. La carga frena el movimiento.
 const M2: Dictionary = {
-	"id": &"charged_shot", "name": "Charged Shot", "short": "CHARGE", "slot": "M2",
-	"kind": "basic", "role": "Daño / penetración", "description": "Carga el arco: flecha potente que atraviesa enemigos.",
-	"implemented": true, "selectable": false, "cast": "projectile", "anim": "cast",
-	"clip": {"anim": "class/standing_aim_overdraw", "start": 0.7, "contact": 1.33, "end": 1.8},
-	"windup": 0.65, "active": 0.05, "recovery": 0.30, "cooldown": 1.0, "cost": 20.0,
-	"speed": 800.0, "range": 760.0, "hit_radius": 10.0, "damage_mult": 2.4, "pierce": true,
-	"rage_gain": 0.0, "move_factor": 0.15, "color": [1.0, 0.85, 0.4],
+	"id": &"charged_shot", "name": "Concentrated Shot", "short": "FOCUS", "slot": "M2",
+	"kind": "basic", "role": "Daño / penetración", "description": "Disparo concentrado: barra de cast de 1.4 s. Solo sale con la barra llena; si te mueves o te golpean, se cancela. Atraviesa enemigos.",
+	"implemented": true, "selectable": false, "cast": "projectile", "anim": "cast", "cast_bar": true,
+	"clip": {"anim": "class/standing_aim_overdraw", "start": 0.3, "contact": 1.33, "end": 1.8},
+	"windup": 1.4, "active": 0.05, "recovery": 0.30, "cooldown": 1.0, "cost": 20.0,
+	"speed": 800.0, "range": 760.0, "hit_radius": 10.0, "damage_mult": 3.2, "pierce": true,
+	"rage_gain": 0.0, "move_factor": 0.0, "color": [1.0, 0.85, 0.4],
 }
 
 const EVASIVE_LEAP: Dictionary = {
