@@ -26,6 +26,8 @@ var rig: HumanoidRig
 var _yaw: float = 0.0
 var _was_alive: bool = true
 var _telegraph: FxShape
+var _dot_aura: CPUParticles3D
+var _dot_aura_type: int = -2
 var _bar_root: Node3D
 var _bar_fill: MeshInstance3D
 var _bar_mat: StandardMaterial3D
@@ -152,6 +154,7 @@ func _process(delta: float) -> void:
 		_telegraph.set_param("progress", progress)
 		_telegraph.set_param("intensity", 0.6 + 0.6 * progress)
 
+	_update_dot_aura()
 	_bar_root.visible = sim.alive
 	if sim.alive:
 		var ratio := clampf(sim.health / maxf(sim.max_health, 1.0), 0.0, 1.0)
@@ -166,6 +169,21 @@ func _process(delta: float) -> void:
 
 	if sim.hit_flash_ticks > 0 and sim.alive:
 		rig.flash(Color(1.0, 0.95, 0.85), 0.08)
+
+
+## Burbujas del color del daño en el tiempo (verde = veneno) mientras dure el DoT.
+func _update_dot_aura() -> void:
+	var type: int = sim.dots.dominant_type() if sim.alive else -1
+	if type == _dot_aura_type:
+		return
+	_dot_aura_type = type
+	if _dot_aura != null:
+		_dot_aura.queue_free()
+		_dot_aura = null
+	if type >= 0:
+		var color: Color = ArcaneFx.POISON if type == DamageSystem.Type.POISON else DamageSystem.color_of(type)
+		_dot_aura = ArcaneFx.dot_aura(color)
+		add_child(_dot_aura)
 
 
 ## Llamado por el actor del Warrior cuando un golpe conecta.

@@ -193,3 +193,9 @@ piezas del Medieval Village / Fantasy Props MegaKit; animación propia de estoca
 - **Ranger** (`combat/ranger_kit.gd`, Energy, regen 14/s): Quick Shot (gratis), Charged Shot (atraviesa), Evasive Leap (salto atrás), Multishot (3 flechas), Frost Trap, Volley, Rain of Arrows. Proyectiles con `count/spread/pierce`; dash con `dir: -1`.
 - **Maná del Mago:** regen 1.5/s tras 2 s sin gastar, x4 fuera de combate (5 s sin golpes), sin ganancia por golpe; Arcane Bolt cuesta 4. Constantes de regeneración por kit (`RESOURCE_REGEN`, `_DELAY`, `_OOC_MULT`).
 - Cara femenina: el recorte del cuerpo fallaba con la malla femenina (datos custom); ya corregido. `tools/bake_spells.gd` acepta carpeta/salida para convertir otros FBX de Mixamo (p. ej. animaciones del Warrior).
+
+## 2026-11-08 — Rogue: M1 libre, Shadowstep con backstab, Fan of Knives (WotLK), VFX por clase
+- Rogue M1 (Twin Fang) sin coste. **Shadowstep**: teleport al punto apuntado; si hay un enemigo bajo la mira aparece a su espalda y lo apuñala (×2.2).
+- **Fan of Knives** al estilo WotLK: estallido instantáneo de cuchillos en todas direcciones que golpea a todos los cercanos y aplica veneno (VFX: 14 cuchillos disparados + nube verde). **Backstab** aturda 1 s (con DR).
+- **Veneno verde**: ráfagas verdes al golpear y aura de burbujas verdes sobre el enemigo mientras dure el DoT (`DotTracker.dominant_type()` -> color del tipo).
+- VFX para Warrior/Rogue/Ranger en `arcane_fx.gd`: chispas de impacto (acero/oro), escombros (Seismic), lluvia de flechas, cristales de hielo, boca de arma; partículas con textura radial suave (antes eran cuadrados).

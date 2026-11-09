@@ -55,6 +55,7 @@ func _run() -> void:
 	_test_mage()
 	_test_blink_and_hold_aim()
 	_test_rogue_ranger()
+	_test_shadowstep_backstab()
 
 	print("== %d checks, %d failed ==" % [_checks, _failures])
 	print("RESULT: %s" % ("PASS" if _failures == 0 else "FAIL"))
@@ -755,9 +756,8 @@ func _test_rogue_ranger() -> void:
 	w.attack_started.connect(func(_s: Dictionary, _d: Vector2) -> void: starts[0] += 1)
 	var msg = _input(Vector2(0, -1), true, false)
 	_step(world, 70, msg)  # ~1.2 s con M1 mantenido
-	_check(starts[0] == 2, "Rogue: solo 2 ataques seguidos antes de quedarse sin Energy (%d)" % starts[0])
-	_step(world, 150, msg)
-	_check(starts[0] >= 3 and starts[0] <= 5, "Rogue: tras esperar recupera Energy y vuelve a atacar (%d)" % starts[0])
+	_check(starts[0] >= 3, "Rogue: M1 no cuesta Energy, se puede spamear (%d en 1.2 s)" % starts[0])
+	_check(w.rage() > 95.0, "Rogue: M1 no gasta Energy")
 	var w2 := _make_world(false, 72)
 	var r = w2.warrior
 	r.set_class(&"ranger")
@@ -767,3 +767,41 @@ func _test_rogue_ranger() -> void:
 	_check(r.projectiles.size() == 3, "Multishot lanza 3 flechas en abanico")
 	_check(ClassRegistry.missing(&"rogue").is_empty() and ClassRegistry.missing(&"ranger").is_empty(), "Rogue y Ranger cumplen el contrato de kit")
 	r.set_class(&"warrior")
+
+
+func _test_shadowstep_backstab() -> void:
+	var world := _make_world(false, 81)
+	var w = world.warrior
+	w.set_class(&"rogue")
+	w.reset(w.position)
+	var enemy: DummySim = world.dummies[0]
+	enemy.position = w.position + Vector2(0, -150)
+	enemy.facing = (w.position - enemy.position).normalized()  # mira hacia el jugador
+	var hp: float = enemy.health
+	var msg = _input(Vector2(0, -1), false, false, Vector2.ZERO, true)
+	msg.aim_point = enemy.position
+	msg.has_aim_point = true
+	_step(world, 4, msg)
+	msg.actions["shift"] = false
+	for i in 40:
+		world.submit_input(_duplicate_input(msg))
+		world.step(DT)
+	var behind: bool = w.position.y < enemy.position.y  # al otro lado del enemigo
+	_check(behind and enemy.health < hp, "Shadowstep apuntando al enemigo: aparece a su espalda y lo apuñala")
+	var world2 := _make_world(false, 82)
+	var w2 = world2.warrior
+	w2.set_class(&"rogue")
+	w2.reset(w2.position)
+	var start: Vector2 = w2.position
+	var e2: DummySim = world2.dummies[0]
+	var hp2: float = e2.health
+	var m2 = _input(Vector2(0, 1), false, false, Vector2.ZERO, true)
+	m2.aim_point = start + Vector2(150, 0)
+	m2.has_aim_point = true
+	_step(world2, 4, m2)
+	m2.actions["shift"] = false
+	for i in 40:
+		world2.submit_input(_duplicate_input(m2))
+		world2.step(DT)
+	_check(w2.position.distance_to(start + Vector2(150, 0)) < 30.0 and is_equal_approx(e2.health, hp2), "Shadowstep sin objetivo: solo teletransporta al punto apuntado")
+	w2.set_class(&"warrior")
