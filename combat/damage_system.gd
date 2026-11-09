@@ -6,7 +6,7 @@
 class_name DamageSystem
 extends RefCounted
 
-enum Type { PHYSICAL, MAGIC, FIRE, FROST, POISON, HOLY, SHADOW }
+enum Type { PHYSICAL, MAGIC, FIRE, FROST, POISON, HOLY, SHADOW, ARCANE }
 
 ## Nombre visible, color de número flotante y si ignora la armadura (reservado).
 const TYPES := {
@@ -17,6 +17,7 @@ const TYPES := {
 	Type.POISON: {"name": "Veneno", "color": Color(0.5, 0.9, 0.3)},
 	Type.HOLY: {"name": "Sagrado", "color": Color(1.0, 0.95, 0.6)},
 	Type.SHADOW: {"name": "Sombra", "color": Color(0.55, 0.3, 0.7)},
+	Type.ARCANE: {"name": "Arcano", "color": Color(0.78, 0.5, 1.0)},
 }
 const KEY := "damage_type"
 const CRIT_MULTIPLIER := 2.0  # como WoW Classic

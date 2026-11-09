@@ -22,6 +22,8 @@ var _loot_rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	world = CombatWorld.new(1337)
+	if CharacterProfile.chosen:
+		world.warrior.set_class(CharacterProfile.class_id)
 	_loot_rng.seed = 4242
 	arena.build(world)
 	hud.bind(world)
@@ -55,8 +57,6 @@ func _unhandled_input(event: InputEvent) -> void:
 				world.warrior.equip_weapon(item)
 				print(item.describe())
 			KEY_F7: world.warrior.progression.set_level(Progression.MAX_LEVEL)
-			KEY_F8:  # cambiar de clase (prueba): Guerrero <-> Mago
-				world.warrior.set_class(&"mage" if world.warrior.class_id == &"warrior" else &"warrior")
 	if loadout_panel.visible:
 		return
 	if event is InputEventMouseMotion:

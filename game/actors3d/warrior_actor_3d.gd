@@ -103,7 +103,10 @@ func setup(p_sim: WarriorSim, p_arena: Arena3D) -> void:
 	rig = HumanoidRig.new()
 	rig.name = "Rig"
 	add_child(rig)
-	rig.setup(model_path)
+	if CharacterProfile.chosen:
+		rig.setup_model(CharacterBuilder.build(CharacterProfile.appearance))
+	else:
+		rig.setup(model_path)
 
 	sword = (load(sword_path) as PackedScene).instantiate()
 	rig.attach_to_hand(sword)
