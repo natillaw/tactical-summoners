@@ -146,3 +146,7 @@ piezas del Medieval Village / Fantasy Props MegaKit; animación propia de estoca
 ## 2026-11-08 — Sistema de daño único y actores como escenas
 - `combat/damage_system.gd` centraliza tipo de daño, crítico y resistencias (físico, mágico, fuego, hielo, veneno, sagrado, sombra). Los kits por clase solo declaran `damage_type`; jugador y enemigos mitigan con `resist`. Sin fórmulas de daño duplicadas por clase.
 - Presentación de actores en escenas (`player_actor.tscn`, `soldier_actor.tscn`, `dummy_actor.tscn`) con propiedades exportadas; la simulación sigue siendo código sin nodos (tests headless / netcode).
+
+## 2026-11-08 — Estocada con Sword_Dash, combo de M1 arreglado
+- El thrust usaba un clip de Mixamo que termina en pose diagonal hacia arriba y quedaba pausado ahí. Ahora usa el lance de Sword_Dash y todos los clips de ataque del jugador vuelven a idle al terminar.
+- Bug del combo: la ventana solo se armaba al conectar, así que fallar reiniciaba siempre al golpe A (parecía un solo ataque). Ahora corre desde que acaba cada golpe: A→B→C.
