@@ -66,6 +66,8 @@ var vulnerable_amount: float = 0.0
 var vulnerable_timer: float = 0.0
 var interrupted_timer: float = 0.0
 var stun_timer: float = 0.0
+## Resistencias por tipo de daño (DamageSystem.Type → fracción).
+var resist: Dictionary = {}
 
 
 func _init(p_world: Object = null, p_position: Vector2 = Vector2.ZERO, p_auto_attack: bool = true) -> void:
@@ -200,7 +202,7 @@ func take_damage(amount: float, source_position: Vector2 = Vector2.ZERO, effects
 	if not alive or amount <= 0.0:
 		return 0.0
 
-	var incoming := amount
+	var incoming := DamageSystem.mitigate(amount, DamageSystem.type_of(effects), resist)
 	if vulnerable_timer > 0.0:
 		incoming *= 1.0 + vulnerable_amount
 

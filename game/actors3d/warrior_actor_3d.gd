@@ -68,6 +68,10 @@ const TURN_SPEED := 16.0
 const TURN_SPEED_ATTACK := 40.0
 const SPIN_SPEED := 15.0
 
+## Editables desde el editor (warrior_actor.tscn).
+@export var model_path: String = MODEL
+@export var sword_path: String = SWORD
+
 var sim: WarriorSim
 var arena: Arena3D
 var rig: HumanoidRig
@@ -97,9 +101,9 @@ func setup(p_sim: WarriorSim, p_arena: Arena3D) -> void:
 	rig = HumanoidRig.new()
 	rig.name = "Rig"
 	add_child(rig)
-	rig.setup(MODEL)
+	rig.setup(model_path)
 
-	sword = (load(SWORD) as PackedScene).instantiate()
+	sword = (load(sword_path) as PackedScene).instantiate()
 	rig.attach_to_hand(sword)
 	var blade_base := Node3D.new()
 	blade_base.position = Vector3(0, 0.14, 0)

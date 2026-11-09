@@ -49,6 +49,7 @@ func _run() -> void:
 	_test_m1_chains_without_cooldown()
 	_test_attacks_hit_in_volume()
 	_test_enemy_warrior_kit()
+	_test_damage_types()
 
 	print("== %d checks, %d failed ==" % [_checks, _failures])
 	print("RESULT: %s" % ("PASS" if _failures == 0 else "FAIL"))
@@ -626,3 +627,15 @@ func _test_enemy_warrior_kit() -> void:
 	var hp4: float = w4.health
 	_step(world4, 160, null)
 	_check(ended[0] and w4.health < hp4, "El Soldado usa Bladestorm y daña")
+
+
+func _test_damage_types() -> void:
+	var world := _make_world(false, 31)
+	var d: DummySim = world.dummies[0]
+	d.resist = {DamageSystem.Type.FIRE: 0.5, DamageSystem.Type.POISON: -0.5}
+	var phys := d.take_damage(100.0, Vector2.ZERO, {})
+	d.health = d.max_health
+	var fire := d.take_damage(100.0, Vector2.ZERO, {DamageSystem.KEY: DamageSystem.Type.FIRE})
+	d.health = d.max_health
+	var poison := d.take_damage(100.0, Vector2.ZERO, {DamageSystem.KEY: DamageSystem.Type.POISON})
+	_check(is_equal_approx(phys, 100.0) and is_equal_approx(fire, 50.0) and is_equal_approx(poison, 150.0), "Las resistencias por tipo de daño se aplican (físico/fuego/veneno)")

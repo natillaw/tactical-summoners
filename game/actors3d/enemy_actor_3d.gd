@@ -29,6 +29,12 @@ const SPIN_SPEED := 15.0
 const COLOR_GUARD := Color(0.55, 0.8, 1.0, 0.9)
 const COLOR_RAGE := Color(1.0, 0.42, 0.15, 1.0)
 
+## Editables desde el editor (soldier_actor.tscn).
+@export var enemy_name: String = "Soldado"
+@export var tint: Color = TINT
+@export_file("*.glb") var enemy_model: String = ENEMY_MODEL
+@export_file("*.glb") var enemy_sword: String = ENEMY_SWORD
+
 var enemy: EnemySim
 var _label: Label3D
 var _spin_yaw: float = 0.0
@@ -37,12 +43,12 @@ var _was_spinning: bool = false
 
 func setup(p_sim: DummySim, p_arena: Arena3D) -> void:
 	enemy = p_sim as EnemySim
-	model_path = ENEMY_MODEL
+	model_path = enemy_model
 	anim_idle = ANIM_SWORD_IDLE
 	attack_clip = CLIP_SLASH
 	super.setup(p_sim, p_arena)
 
-	rig.attach_to_hand((load(ENEMY_SWORD) as PackedScene).instantiate())
+	rig.attach_to_hand((load(enemy_sword) as PackedScene).instantiate())
 	_label = Label3D.new()
 	_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	_label.no_depth_test = true
@@ -109,7 +115,7 @@ func _telegraph_clip(attack: String) -> Dictionary:
 
 func _dress() -> void:
 	# Sin peana: es un enemigo, no un muñeco. Armadura teñida de rojo.
-	_tint(TINT)
+	_tint(tint)
 
 
 func _process(delta: float) -> void:
@@ -117,7 +123,7 @@ func _process(delta: float) -> void:
 	if enemy == null:
 		return
 	_label.visible = enemy.alive
-	_label.text = ("¡ATURDIDO!  " if enemy.stun_timer > 0.0 else "") + "Soldado  Nv.%d" % enemy.level
+	_label.text = ("¡ATURDIDO!  " if enemy.stun_timer > 0.0 else "") + enemy_name + "  Nv.%d" % enemy.level
 	if not enemy.alive:
 		return
 	if enemy.stun_timer > 0.0:
