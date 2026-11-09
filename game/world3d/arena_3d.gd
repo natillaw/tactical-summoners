@@ -7,7 +7,7 @@ class_name Arena3D
 extends Node3D
 
 ## Actores como escenas: ábrelas en el editor para ajustar modelo, tinte, nombre...
-const WARRIOR_SCENE := preload("res://game/actors3d/warrior_actor.tscn")
+const PLAYER_SCENE := preload("res://game/actors3d/player_actor.tscn")
 const SOLDIER_SCENE := preload("res://game/actors3d/soldier_actor.tscn")
 const DUMMY_SCENE := preload("res://game/actors3d/dummy_actor.tscn")
 
@@ -350,8 +350,8 @@ func _read_spawns() -> Array:
 
 
 func _spawn_actors() -> void:
-	warrior_actor = WARRIOR_SCENE.instantiate() as WarriorActor3D
-	warrior_actor.name = "Warrior"
+	warrior_actor = PLAYER_SCENE.instantiate() as WarriorActor3D
+	warrior_actor.name = "Player"
 	add_child(warrior_actor)
 	warrior_actor.setup(world.warrior, self)
 
