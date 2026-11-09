@@ -68,7 +68,7 @@ const TURN_SPEED := 16.0
 const TURN_SPEED_ATTACK := 40.0
 const SPIN_SPEED := 15.0
 
-## Editables desde el editor (warrior_actor.tscn).
+## Editables desde el editor (player_actor.tscn).
 @export var model_path: String = MODEL
 @export var sword_path: String = SWORD
 

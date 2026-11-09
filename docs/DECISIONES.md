@@ -145,4 +145,4 @@ piezas del Medieval Village / Fantasy Props MegaKit; animación propia de estoca
 
 ## 2026-11-08 — Sistema de daño único y actores como escenas
 - `combat/damage_system.gd` centraliza tipo de daño, crítico y resistencias (físico, mágico, fuego, hielo, veneno, sagrado, sombra). Los kits por clase solo declaran `damage_type`; jugador y enemigos mitigan con `resist`. Sin fórmulas de daño duplicadas por clase.
-- Presentación de actores en escenas (`warrior_actor.tscn`, `soldier_actor.tscn`, `dummy_actor.tscn`) con propiedades exportadas; la simulación sigue siendo código sin nodos (tests headless / netcode).
+- Presentación de actores en escenas (`player_actor.tscn`, `soldier_actor.tscn`, `dummy_actor.tscn`) con propiedades exportadas; la simulación sigue siendo código sin nodos (tests headless / netcode).
