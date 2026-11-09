@@ -179,3 +179,10 @@ piezas del Medieval Village / Fantasy Props MegaKit; animación propia de estoca
 - Fix creador: el cuerpo base se recorta a cabeza/cuello/manos cuando hay ropa (la piel asomaba por la tela); cejas propias del cuerpo eliminadas (salían blancas) y se usan las del pack de pelo; pose de vista previa = Idle normal; eliminadas las armaduras generadas por script (solo ropa Quaternius).
 
 - Fix creador: el recorte del cuerpo comparaba el hueso 'Head' con minúsculas y borraba la cara (ahora case-insensitive). La vista previa se renderizaba a 640x360 (stretch canvas_items 2x) y se veía pixelada; ahora renderiza a 900x1100 en una textura. UI del creador compacta para que quepan todos los botones.
+
+## 2026-11-08 — Mago: mana, Blink teleport, apuntado por mantener, Magic Spell Pack, VFX arcanos
+- HUD lee el recurso/nombre/pasiva de la clase activa (Mana en azul, "MAGO"). El maná empieza lleno.
+- **Blink = teletransporte** (`cast: "teleport"`): desapareces (columna de chispas) y apareces en el punto apuntado (alcance 280), invulnerable durante el cast.
+- **Skills de suelo: mantener la tecla = apuntar (marcador), soltar = lanzar** (también Seismic Break del Warrior). El marcador solo se ve mientras la tecla está mantenida.
+- **Magic Spell Pack** (Mixamo) retargeteado al esqueleto UAL con `tools/bake_spells.gd` -> `assets/models/anims/spells.res` (clip completo y `_upper`). El mago castea con la animación de tren superior sobre la locomoción (`HumanoidRig.overlay`), así que se mueve mientras lanza. Los tiempos de cada clip (start/contact/end) están en `mage_kit.gd`.
+- VFX arcanos procedurales (`game/vfx3d/arcane_fx.gd`): orbe con estela de chispas y luz, ráfagas, columnas; sin assets externos.

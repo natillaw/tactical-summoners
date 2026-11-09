@@ -174,7 +174,10 @@ static func _crop_to_head_and_hands(mi: MeshInstance3D, skeleton: Skeleton3D) ->
 				kept.append(index[t + 1])
 				kept.append(index[t + 2])
 		arrays[Mesh.ARRAY_INDEX] = kept
-		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		for custom in [Mesh.ARRAY_CUSTOM0, Mesh.ARRAY_CUSTOM1, Mesh.ARRAY_CUSTOM2, Mesh.ARRAY_CUSTOM3]:
+			arrays[custom] = null  # el cuerpo femenino trae datos custom que no se pueden reinsertar
+		var flags: int = src.surface_get_format(s) & Mesh.ARRAY_FLAG_USE_8_BONE_WEIGHTS
+		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays, [], {}, flags)
 		out.surface_set_material(out.get_surface_count() - 1, src.surface_get_material(s))
 	mi.mesh = out
 

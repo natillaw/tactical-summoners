@@ -53,6 +53,7 @@ func _run() -> void:
 	_test_cc_diminishing()
 	_test_dots_registry_ground()
 	_test_mage()
+	_test_blink_and_hold_aim()
 
 	print("== %d checks, %d failed ==" % [_checks, _failures])
 	print("RESULT: %s" % ("PASS" if _failures == 0 else "FAIL"))
@@ -196,7 +197,8 @@ func _test_seismic_break() -> void:
 	dummy.state_time = 0.0
 	var rage_before := world.warrior.rage()
 
-	_step(world, 25, _input(Vector2(0, -1), false, false, Vector2.ZERO, false, false, false, true))
+	_step(world, 3, _input(Vector2(0, -1), false, false, Vector2.ZERO, false, false, false, true))  # mantener R = apuntar
+	_step(world, 25, _input(Vector2(0, -1), false, false))  # soltar = lanzar
 
 	_check(world.warrior.rage() <= rage_before - 30.0 + 0.01, "Seismic Break consume 30 Rage")
 	_check(dummy.health < dummy.max_health, "Seismic Break daña en área")
@@ -684,6 +686,8 @@ func _test_dots_registry_ground() -> void:
 	msg.has_aim_point = true
 	ward.debug_refill()
 	var hp2: float = target.health
+	_step(w2, 3, msg)
+	msg.actions["r"] = false
 	_step(w2, 60, msg)
 	_check(target.health < hp2, "Seismic cae en el punto apuntado (lejos del jugador)")
 	_check(ward.clamp_ground_point(far, ward.ability_for_slot("R")).distance_to(ward.position) <= 260.01, "El punto de suelo se limita al alcance")
@@ -714,3 +718,25 @@ func _test_mage() -> void:
 	_step(w3, 60, null)
 	_check(w3.warrior.rage() > low, "El maná se regenera")
 	w3.warrior.set_class(&"warrior")
+
+
+func _test_blink_and_hold_aim() -> void:
+	var world := _make_world(false, 61)
+	var w = world.warrior
+	w.set_class(&"mage")
+	w.reset(w.position)
+	var start: Vector2 = w.position
+	var msg = _input(Vector2(0, -1), false, false, Vector2.ZERO, true)  # SHIFT = Blink (suelo)
+	msg.aim_point = start + Vector2(0, -200)
+	msg.has_aim_point = true
+	_step(world, 5, msg)
+	_check(not w.ground_slot_ready().is_empty() and w.position.distance_to(start) < 1.0, "Mantener Blink apunta sin lanzar todavía")
+	msg.actions["shift"] = false
+	var evaded := false
+	for i in 30:
+		world.submit_input(_duplicate_input(msg))
+		world.step(DT)
+		evaded = evaded or w.take_damage(1.0, Vector2.ZERO, {}) == 0.0
+	_check(w.position.distance_to(start + Vector2(0, -200)) < 30.0, "Blink teletransporta al punto apuntado (%d px)" % int(w.position.distance_to(start)))
+	_check(w.ground_slot_ready().is_empty(), "Al soltar desaparece el marcador de apuntado")
+	w.set_class(&"warrior")

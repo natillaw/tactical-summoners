@@ -16,12 +16,17 @@ extends Node3D
 const UAL1 := "res://assets/models/anims/UAL1_Standard.glb"
 const UAL2 := "res://assets/models/anims/UAL2_Standard.glb"
 
+const SPELLS := "res://assets/models/anims/spells.res"
+
 static var _libraries: Dictionary = {}
 static var _warned: Dictionary = {}
 
 var model: Node3D
 var skeleton: Skeleton3D
 var player: AnimationPlayer
+## Segundo reproductor para animaciones de tren superior (castear mientras corres).
+var overlay: AnimationPlayer
+var _overlay_end: float = -1.0
 var meshes: Array[MeshInstance3D] = []
 
 var _clip_end: float = -1.0
@@ -71,6 +76,17 @@ func setup_model(p_model: Node3D) -> void:
 		var custom := AnimationLibrary.new()
 		custom.add_animation("thrust", load("res://assets/models/anims/thrust_retargeted.res"))
 		player.add_animation_library("custom", custom)
+
+	# Hechizos (Magic Spell Pack retargeteado con tools/bake_spells.gd): cada clip tiene
+	# versión completa y "_upper" (solo tren superior) para el overlay.
+	if ResourceLoader.exists(SPELLS):
+		var spells := load(SPELLS) as AnimationLibrary
+		player.add_animation_library("spell", spells)
+		overlay = AnimationPlayer.new()
+		overlay.name = "Overlay"
+		model.add_child(overlay)  # después de `player`: procesa más tarde y gana en el tren superior
+		overlay.root_node = player.root_node
+		overlay.add_animation_library("spell", spells)
 
 	_flash_material = StandardMaterial3D.new()
 	_flash_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -160,6 +176,23 @@ func play_clip(
 	_clip_after_blend = 0.18
 
 
+## Reproduce un tramo de un clip de tren superior encima de la locomoción. Tiempos en
+## segundos del clip: empieza en `start`, el golpe cae en `contact` (que ocurrirá a los
+## `to_contact` segundos) y termina en `end`.
+func play_overlay(anim: String, start: float, contact: float, end: float, to_contact: float, blend: float = 0.08) -> void:
+	if overlay == null or not overlay.has_animation(anim):
+		return
+	overlay.play(anim, blend, maxf((contact - start) / maxf(to_contact, 0.03), 0.1))
+	overlay.seek(start, true)
+	_overlay_end = end
+
+
+func stop_overlay() -> void:
+	if overlay != null:
+		overlay.stop()
+	_overlay_end = -1.0
+
+
 func set_speed(speed: float) -> void:
 	_speed = speed
 	_apply_speed()
@@ -204,6 +237,9 @@ func _process(delta: float) -> void:
 				play(_clip_after, _clip_after_blend)
 			else:
 				player.pause()
+
+	if _overlay_end >= 0.0 and (not overlay.is_playing() or overlay.current_animation_position >= _overlay_end):
+		stop_overlay()
 
 	if _flash > 0.0:
 		_flash = maxf(0.0, _flash - delta)
