@@ -187,6 +187,30 @@ func play_overlay(anim: String, start: float, contact: float, end: float, to_con
 	_overlay_end = end
 
 
+const LOWER_BONES := ["pelvis", "thigh_l", "calf_l", "foot_l", "ball_l", "thigh_r", "calf_r", "foot_r", "ball_r", "root"]
+
+
+## Nombre (en el overlay) de la versión de solo tren superior de un clip de las librerías
+## UAL; se crea al vuelo quitando las pistas de piernas y pelvis.
+func upper_variant(path: String) -> String:
+	if overlay == null or not player.has_animation(path):
+		return path
+	var key := path.replace("/", "_")
+	if not overlay.has_animation("up/" + key):
+		var copy := player.get_animation(path).duplicate() as Animation
+		for i in range(copy.get_track_count() - 1, -1, -1):
+			if String(copy.track_get_path(i)).get_slice(":", 1) in LOWER_BONES:
+				copy.remove_track(i)
+		var lib: AnimationLibrary
+		if overlay.has_animation_library("up"):
+			lib = overlay.get_animation_library("up")
+		else:
+			lib = AnimationLibrary.new()
+			overlay.add_animation_library("up", lib)
+		lib.add_animation(key, copy)
+	return "up/" + key
+
+
 func stop_overlay() -> void:
 	if overlay != null:
 		overlay.stop()
