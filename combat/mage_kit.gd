@@ -48,7 +48,12 @@ const SLOT_LABELS := {
 
 ## M1: proyectil arcano sin cooldown.
 const M1: Dictionary = {
-	"id": &"arcane_bolt", "name": "Arcane Bolt", "short": "BOLT", "slot": "M1",
+	"id": &"arcane_bolt",
+	"clips": [
+		{"name": "standing_1h_magic_attack_01", "start": 0.5, "contact": 0.8, "end": 1.3},
+		{"name": "standing_1h_magic_attack_02", "start": 0.3, "contact": 0.53, "end": 1.0},
+		{"name": "standing_1h_magic_attack_03", "start": 0.5, "contact": 0.8, "end": 1.4},
+	], "name": "Arcane Bolt", "short": "BOLT", "slot": "M1",
 	"kind": "basic", "role": "Daño a distancia", "description": "Disparo arcano sin cooldown.",
 	"implemented": true, "selectable": false, "cast": "projectile", "anim": "cast",
 	"damage_type": 7,  # DamageSystem.Type.ARCANE
@@ -59,7 +64,8 @@ const M1: Dictionary = {
 
 ## M2: bola de fuego con quemadura.
 const M2: Dictionary = {
-	"id": &"arcane_orb", "name": "Arcane Orb", "short": "ORB", "slot": "M2",
+	"id": &"arcane_orb",
+	"clip": {"name": "standing_2h_magic_attack_01", "start": 0.7, "contact": 1.13, "end": 1.7}, "name": "Arcane Orb", "short": "ORB", "slot": "M2",
 	"kind": "basic", "role": "Daño / quemadura", "description": "Orbe arcano lento que corroe al objetivo con daño arcano en el tiempo.",
 	"implemented": true, "selectable": false, "cast": "projectile", "anim": "cast",
 	"damage_type": 7,  # DamageSystem.Type.ARCANE
@@ -70,26 +76,31 @@ const M2: Dictionary = {
 }
 
 const BLINK: Dictionary = {
-	"id": &"blink", "name": "Blink", "short": "BLINK", "slot": "SHIFT",
-	"kind": "mobility", "role": "Movilidad", "description": "Salto arcano corto con invulnerabilidad.",
-	"implemented": true, "selectable": true, "cast": "dash", "anim": "run",
-	"windup": 0.02, "active": 0.12, "recovery": 0.08, "cooldown": 6.0, "cost": 15.0,
-	"distance": 220.0, "damage_mult": 0.0, "evade": true, "move_factor": 0.0,
-	"vfx_tint": [0.7, 0.55, 1.0, 0.85],
+	"id": &"blink",
+	"clip": {"name": "standing_1h_cast_spell_01", "start": 0.3, "contact": 0.6, "end": 1.0},
+	"name": "Blink", "short": "BLINK", "slot": "SHIFT",
+	"kind": "mobility", "role": "Movilidad", "description": "Teletransporte: desapareces y apareces donde apuntes (mantén para apuntar, suelta para lanzar).",
+	"implemented": true, "selectable": true, "cast": "teleport", "anim": "cast", "target": "ground",
+	"damage_type": 7,  # DamageSystem.Type.ARCANE
+	"windup": 0.14, "active": 0.04, "recovery": 0.12, "cooldown": 6.0, "cost": 15.0,
+	"range": 280.0, "radius": 22.0, "damage_mult": 0.0, "evade": true, "move_factor": 0.0,
+	"color": [0.75, 0.5, 1.0],
 }
 
 const ARCANE_PULSE: Dictionary = {
-	"id": &"arcane_pulse", "name": "Arcane Pulse", "short": "PULSE", "slot": "Q",
+	"id": &"arcane_pulse",
+	"clip": {"name": "standing_2h_magic_area_attack_01", "start": 0.95, "contact": 1.27, "end": 1.8}, "name": "Arcane Pulse", "short": "PULSE", "slot": "Q",
 	"kind": "control", "role": "Control", "description": "Pulso arcano a tu alrededor: daña y ralentiza.",
 	"implemented": true, "selectable": true, "cast": "aoe", "anim": "cast",
 	"damage_type": 7,  # DamageSystem.Type.ARCANE
-	"windup": 0.20, "active": 0.10, "recovery": 0.25, "cooldown": 9.0, "cost": 25.0,
+	"windup": 0.30, "active": 0.10, "recovery": 0.25, "cooldown": 9.0, "cost": 25.0,
 	"radius": 130.0, "damage_mult": 1.2, "effects": {"slow": {"factor": 0.5, "duration": 3.0}},
 	"rage_gain": 0.0, "move_factor": 0.0,
 }
 
 const ARCANE_RIFT: Dictionary = {
-	"id": &"arcane_rift", "name": "Arcane Rift", "short": "RIFT", "slot": "E",
+	"id": &"arcane_rift",
+	"clip": {"name": "standing_2h_cast_spell_01", "start": 0.33, "contact": 0.63, "end": 1.3}, "name": "Arcane Rift", "short": "RIFT", "slot": "E",
 	"kind": "control", "role": "Daño en el tiempo", "description": "Apunta al suelo: grieta arcana que corroe a quienes la pisan.",
 	"implemented": true, "selectable": true, "cast": "aoe", "anim": "cast", "target": "ground",
 	"damage_type": 7,  # DamageSystem.Type.ARCANE
@@ -100,17 +111,19 @@ const ARCANE_RIFT: Dictionary = {
 }
 
 const STARFALL: Dictionary = {
-	"id": &"starfall", "name": "Starfall", "short": "STARFALL", "slot": "R",
+	"id": &"starfall",
+	"clip": {"name": "standing_2h_magic_area_attack_02", "start": 0.9, "contact": 1.8, "end": 2.4}, "name": "Starfall", "short": "STARFALL", "slot": "R",
 	"kind": "control", "role": "Daño en área", "description": "Apunta al suelo: un starfallo cae con gran daño de fuego.",
 	"implemented": true, "selectable": true, "cast": "aoe", "anim": "cast", "target": "ground",
 	"damage_type": 7,
-	"windup": 0.60, "active": 0.10, "recovery": 0.30, "cooldown": 14.0, "cost": 40.0,
+	"windup": 0.90, "active": 0.10, "recovery": 0.30, "cooldown": 14.0, "cost": 40.0,
 	"range": 320.0, "radius": 100.0, "damage_mult": 4.0,
 	"rage_gain": 0.0, "move_factor": 0.2,
 }
 
 const ARCANE_SURGE: Dictionary = {
-	"id": &"arcane_surge", "name": "Arcane Surge", "short": "SURGE", "slot": "F",
+	"id": &"arcane_surge",
+	"clip": {"name": "standing_2h_magic_attack_05", "start": 1.4, "contact": 2.07, "end": 2.7}, "name": "Arcane Surge", "short": "SURGE", "slot": "F",
 	"kind": "ultimate", "role": "Ultimate", "description": "Ultimate: explosión arcana enorme donde apuntes.",
 	"implemented": true, "selectable": true, "cast": "aoe", "anim": "cast", "target": "ground",
 	"damage_type": 7,
@@ -246,8 +259,8 @@ static func cost_label(ability: Dictionary) -> String:
 	var cost := float(ability.get("cost", 0.0))
 	if String(ability.get("kind", "")) == "ultimate":
 		if cost > 0.0:
-			return "%dR+ULT" % roundi(cost)
+			return "%dMP+ULT" % roundi(cost)
 		return "ULT"
 	if cost > 0.0:
-		return "%d R" % roundi(cost)
+		return "%d MP" % roundi(cost)
 	return ""

@@ -94,6 +94,7 @@ var _clip_info: Dictionary = {}
 var _align_yaw: float = 0.0
 var _swing_dir: float = 1.0
 var _orbs: Dictionary = {}
+var _cast_index: int = 0
 
 
 func setup(p_sim: WarriorSim, p_arena: Arena3D) -> void:
@@ -225,7 +226,7 @@ func _update_facing(delta: float) -> void:
 
 
 func _update_locomotion() -> void:
-	if sim.is_attacking():
+	if sim.is_attacking() and String(_current_skill.get("anim", "")) != "cast":
 		_hurt_time = 0.0
 		return
 	if _hurt_time > 0.0:
@@ -275,9 +276,23 @@ func _on_attack_started(skill: Dictionary, direction: Vector2) -> void:
 			_play_clip(M1_CLIPS[2], windup, 0.2)
 		_:
 			if String(skill.get("anim", "")) == "cast":
-				_play_clip({"clip": "ual1/Spell_Simple_Shoot", "from": 0.0, "to": 1.0, "contact": 0.4}, windup, post)
+				_play_cast_overlay(skill, windup)
 	_yaw = View3D.yaw_for(direction) - _align_yaw
 	rig.rotation.y = _yaw
+
+
+## Hechizo: animación de tren superior sobre la locomoción (castea y se mueve a la vez).
+func _play_cast_overlay(skill: Dictionary, windup: float) -> void:
+	var c: Dictionary = {}
+	if skill.has("clips"):
+		var list: Array = skill["clips"]
+		c = list[_cast_index % list.size()]
+		_cast_index += 1
+	elif skill.has("clip"):
+		c = skill["clip"]
+	if c.is_empty():
+		return
+	rig.play_overlay("spell/%s_upper" % String(c["name"]), float(c["start"]), float(c["contact"]), float(c["end"]), windup)
 
 
 func _play_clip(c: Dictionary, to_contact: float, after: float, then: String = ANIM_IDLE) -> void:
@@ -355,6 +370,9 @@ func _on_cast_event(event: String, skill: Dictionary, at: Vector2, direction: Ve
 			rig.hitstop(0.07)
 		"slam":
 			var radius := float(skill.get("radius", 120.0))
+			if DamageSystem.type_of(skill) == DamageSystem.Type.ARCANE:
+				_arcane_slam(at, radius, skill)
+				return
 			arena.spawn_shockwave(at, radius, COLOR_EARTH, 0.5, 0.7)
 			arena.spawn_shockwave(at, radius * 0.55, Color(1.0, 0.85, 0.6, 0.45), 0.3, 0.75)
 			arena.spawn_ground_flash(at, radius, Color(1.0, 0.45, 0.15, 0.5), 0.4)
@@ -378,9 +396,25 @@ func _on_cast_event(event: String, skill: Dictionary, at: Vector2, direction: Ve
 			rig.hitstop(0.1)
 		"projectile":
 			arena.play_sfx(SFX_MAGIC, -9.0, randf_range(0.95, 1.1))
+			ArcaneFx.burst(arena, View3D.to3(at + direction * 18.0, 1.2), DamageSystem.color_of(DamageSystem.type_of(skill)), 14, 1.5, 0.1)
 		"projectile_hit":
-			arena.spawn_impact(at, DamageSystem.color_of(DamageSystem.type_of(skill)), true)
+			var hit_color := DamageSystem.color_of(DamageSystem.type_of(skill))
+			ArcaneFx.burst(arena, View3D.to3(at, 1.1), hit_color, 36, 4.0, 0.13)
+			arena.spawn_shockwave(at, 34.0, hit_color, 0.3, 0.7)
 			arena.play_sfx(SFX_HIT, -6.0, 1.1)
+		"blink_out":
+			var blink_color := DamageSystem.color_of(DamageSystem.type_of(skill))
+			ArcaneFx.column(arena, View3D.to3(at), blink_color, 2.2)
+			ArcaneFx.burst(arena, View3D.to3(at, 1.0), blink_color, 40, 3.0, 0.12)
+			arena.play_sfx(SFX_MAGIC, -6.0, 1.4)
+			rig.visible = false
+			trail.emitting = false
+		"blink_in":
+			var in_color := DamageSystem.color_of(DamageSystem.type_of(skill))
+			ArcaneFx.column(arena, View3D.to3(at), in_color, 2.2)
+			ArcaneFx.burst(arena, View3D.to3(at, 1.0), in_color, 40, 3.0, 0.12)
+			arena.spawn_shockwave(at, 40.0, in_color, 0.35, 0.7)
+			get_tree().create_timer(0.12).timeout.connect(func() -> void: rig.visible = true)
 		"spin_start":
 			_spinning = true
 			_spin_yaw = 0.0
@@ -400,6 +434,18 @@ func _on_cast_event(event: String, skill: Dictionary, at: Vector2, direction: Ve
 			_stop_spin()
 		_:
 			pass
+
+
+## Impacto de un hechizo de suelo arcano: anillos, columna de chispas y destello.
+func _arcane_slam(at: Vector2, radius: float, skill: Dictionary) -> void:
+	var color := DamageSystem.color_of(DamageSystem.Type.ARCANE)
+	arena.spawn_shockwave(at, radius, color, 0.6, 0.7)
+	arena.spawn_shockwave(at, radius * 0.6, color.lightened(0.4), 0.4, 0.75)
+	arena.spawn_ground_flash(at, radius, Color(color.r, color.g, color.b, 0.55), 0.5)
+	ArcaneFx.column(arena, View3D.to3(at), color, 3.0)
+	ArcaneFx.burst(arena, View3D.to3(at, 0.8), color, 70, 5.0, 0.16)
+	arena.play_sfx(SFX_MAGIC, -3.0, 0.8)
+	arena.shake(3.0 + radius * 0.012, 0.25)
 
 
 func _stop_spin() -> void:
@@ -462,6 +508,7 @@ func _on_died() -> void:
 
 
 func _restore_visual() -> void:
+	rig.visible = true
 	_dead_visual = false
 	rig.play(ANIM_IDLE, 0.2, 1.0, true)
 
@@ -488,13 +535,14 @@ func _update_orbs() -> void:
 		seen[id] = true
 		if not _orbs.has(id):
 			var rgb: Array = (p["skill"] as Dictionary).get("color", [1.0, 0.8, 0.4])
-			var orb := FxShape.new().setup(FxShape.Mode.DISC, 0.28, Color(rgb[0], rgb[1], rgb[2], 0.95))
+			var big := 1.5 if float((p["skill"] as Dictionary).get("hit_radius", 10.0)) > 12.0 else 1.0
+			var orb := ArcaneFx.make_orb(Color(rgb[0], rgb[1], rgb[2]), big)
 			arena.add_child(orb)
 			_orbs[id] = orb
-		(_orbs[id] as FxShape).position = View3D.to3(p["pos"], 1.15)
+		(_orbs[id] as Node3D).position = View3D.to3(p["pos"], 1.15)
 	for id: int in _orbs.keys():
 		if not seen.has(id):
-			(_orbs[id] as FxShape).queue_free()
+			(_orbs[id] as Node3D).queue_free()
 			_orbs.erase(id)
 
 

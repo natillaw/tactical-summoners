@@ -120,7 +120,7 @@ func _sim_cooldown_total(warrior: WarriorSim, slot: String) -> float:
 
 func _draw_status(warrior: WarriorSim) -> void:
 	_panel(Rect2(10, 6, 246, 88))
-	_draw_text("WARRIOR", Vector2(16, 24), 14, GOLD)
+	_draw_text(String(ClassRegistry.active_kit().CLASS_NAME).to_upper(), Vector2(16, 24), 14, GOLD)
 	_draw_text("TRAINING GROUNDS", Vector2(112, 23), 7, MUTED)
 
 	var health_ratio: float = warrior.health / maxf(warrior.max_health, 1.0)
@@ -131,12 +131,14 @@ func _draw_status(warrior: WarriorSim) -> void:
 		Vector2(16, 39), 7, TEXT, HORIZONTAL_ALIGNMENT_CENTER, 234
 	)
 
+	var resource_name := String(ClassRegistry.active_kit().RESOURCE_NAME)
+	var resource_color := Color(0.30, 0.50, 1.0, 1.0) if resource_name == "Mana" else RAGE
 	var rage_ratio: float = _sim_rage(warrior) / maxf(_sim_rage_max(warrior), 1.0)
-	_bar(Rect2(16, 45, 234, 8), rage_ratio, RAGE)
+	_bar(Rect2(16, 45, 234, 8), rage_ratio, resource_color)
 	if _sim_rage(warrior) >= _sim_rage_max(warrior):
 		draw_rect(Rect2(16, 45, 234, 8), GOLD, false, 1.0)
 	_draw_text(
-		"RAGE  %d / %d" % [floori(_sim_rage(warrior)), floori(_sim_rage_max(warrior))],
+		"%s  %d / %d" % [resource_name.to_upper(), floori(_sim_rage(warrior)), floori(_sim_rage_max(warrior))],
 		Vector2(16, 52), 7, TEXT, HORIZONTAL_ALIGNMENT_CENTER, 234
 	)
 
@@ -147,7 +149,7 @@ func _draw_status(warrior: WarriorSim) -> void:
 		Vector2(16, 65), 7, TEXT, HORIZONTAL_ALIGNMENT_CENTER, 234
 	)
 
-	var passive := "PASSIVE  LAST STAND"
+	var passive := "PASSIVE  " + String(ClassRegistry.active_kit().PASSIVE["name"]).to_upper()
 	var passive_color := MUTED
 	if _sim_last_stand_active(warrior):
 		passive += "  ACTIVE %.1fs" % _sim_last_stand_seconds(warrior)

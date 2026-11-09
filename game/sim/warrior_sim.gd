@@ -99,6 +99,8 @@ var last_stand_cooldown: float = 0.0
 var class_id: StringName = &"warrior"
 var kit: GDScript = ClassRegistry.kit(&"warrior")
 var projectiles: Array = []
+## Slot de skill de suelo que se está apuntando (tecla mantenida); al soltar se lanza.
+var aiming_slot: String = ""
 var _next_projectile_id: int = 1
 var _regen: float = 0.0
 var loadout: Dictionary = kit.default_loadout()
@@ -206,6 +208,7 @@ func step(tick_number: int, delta: float, input: Variant) -> void:
 	cc.tick(delta)
 	_tick_dots(delta)
 	if stun_timer > 0.0:
+		aiming_slot = ""
 		stun_timer = maxf(0.0, stun_timer - delta)
 		velocity = Vector2.ZERO
 		_update_jump(delta)
@@ -237,7 +240,15 @@ func _read_input(input: Variant) -> void:
 		var key := String(kit.ACTION_KEYS[slot])
 		var pressed := bool(actions.get(key, false))
 		var was := bool(_prev_actions.get(key, false))
-		if pressed and not was:
+		if is_ground(ability_for_slot(slot)):
+			# Skills de suelo: mantener la tecla = apuntar (marcador); soltar = lanzar.
+			if pressed and not was and alive and stun_timer <= 0.0:
+				aiming_slot = slot
+			elif not pressed and was and aiming_slot == slot:
+				aiming_slot = ""
+				buffered_slot = slot
+				buffer_timer = BUFFER_SECONDS
+		elif pressed and not was:
 			buffered_slot = slot
 			buffer_timer = BUFFER_SECONDS
 		_prev_actions[key] = pressed
@@ -446,6 +457,10 @@ func _enter_active() -> void:
 				)
 		"projectile":
 			_spawn_projectile()
+		"teleport":
+			cast_event.emit("blink_out", current_skill, position, attack_aim)
+			position = world.resolve_position(_cast_point, RADIUS) if world != null else _cast_point
+			cast_event.emit("blink_in", current_skill, position, attack_aim)
 		"line":
 			_damage_line(
 				float(current_skill.get("range", 100.0)),
@@ -843,7 +858,7 @@ func _tick_dots(delta: float) -> void:
 func _is_evading() -> bool:
 	if state != AttackState.ACTIVE:
 		return false
-	if String(current_skill.get("cast", "")) != "dash":
+	if not String(current_skill.get("cast", "")) in ["dash", "teleport"]:
 		return false
 	return bool(current_skill.get("evade", false))
 
@@ -963,6 +978,7 @@ func set_class(id: StringName) -> void:
 	resource = kit.create_rage_resource()
 	loadout = kit.default_loadout()
 	projectiles.clear()
+	aiming_slot = ""
 	cooldowns.clear()
 	ultimate_charge = 0.0
 	state = AttackState.IDLE
@@ -990,14 +1006,14 @@ func clamp_ground_point(point: Vector2, ability: Dictionary) -> Vector2:
 	return position + (point - position).limit_length(reach)
 
 
-## Slot de skill de suelo listo para lanzar (para mostrar el marcador), o "".
+## Slot de suelo que se está apuntando y se puede lanzar (para mostrar el marcador), o "".
 func ground_slot_ready() -> String:
-	if state != AttackState.IDLE or not alive or stun_timer > 0.0:
+	if aiming_slot.is_empty() or not alive or stun_timer > 0.0:
 		return ""
-	for slot: String in kit.SELECTABLE_SLOTS:
-		if is_ground(ability_for_slot(slot)) and _can_start(slot):
-			return slot
-	return ""
+	var ability := ability_for_slot(aiming_slot)
+	if cooldown_left(aiming_slot) > 0.0 or not _can_afford(ability):
+		return ""
+	return aiming_slot
 
 
 # --- Consultas --------------------------------------------------------------
@@ -1092,7 +1108,9 @@ func reset(spawn: Vector2 = Vector2(480, 380)) -> void:
 	_prev_actions.clear()
 	_m1_held = false
 	last_combat_tick = 0
-	resource.current_amount = 0.0
+	# El maná empieza lleno; la Rage empieza vacía.
+	resource.current_amount = resource.max_amount if _regen > 0.0 else 0.0
+	aiming_slot = ""
 
 	health_changed.emit(health, max_health)
 	rage_changed.emit(resource.get_current(), resource.max_amount)
