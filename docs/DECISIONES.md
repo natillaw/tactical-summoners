@@ -217,3 +217,9 @@ piezas del Medieval Village / Fantasy Props MegaKit; animación propia de estoca
 - Rogue: **E Cheap Shot** (puñetazo, 40 Energy, aturde 1.5 s) reemplaza a Backstab. M1 alterna Sword_Regular_A (mano derecha) y `ual1/Punch_Jab` (mano izquierda, medido por velocidad de manos); el jab no alinea el cuerpo (`no_align`).
 - Ranger: quitada la postura de apuntado; tras disparar vuelve a idle/carrera normal. Arco girado -90° sobre el eje del puño (medido: vertical en 3 poses). Kick es `cast: line` con impacto seco (polvo + sonido de golpe, sin estela de espada).
 - Ranger R = **Explosive Arrow** (proyectil que explota en área, `explode_radius`); F = **Rain of Arrows** en oleadas durante 2.1 s (`damage_interval`/`tick_mult` en aoe de suelo). Antes R (Volley) y F eran la misma lluvia.
+
+## 2026-11-08 — Cast bars, flanqueo del Rogue, veneno apilable, cámara fija estilo Smite
+- **Cast bar** (`cast_bar: true`): barra en el HUD; moverse o recibir un golpe antes de llenarla cancela el cast (se devuelve coste/carga, 0.6 s de cooldown). Usada en Concentrated Shot (Ranger M2, 1.4 s), y en el Mago: Arcane Orb (0.9 s), Starfall (1.6 s) y Arcane Surge (2.2 s); hay que estar quieto.
+- **Rogue:** Cheap Shot (E) solo se lanza por la espalda del enemigo (`requires_behind`), con la animación Stabbing; M1/M2 hacen -20 % de daño de frente (`flank`). Veneno de Fan of Knives se acumula hasta 3 veces (+60 % del dps base por acumulación, sin explosión) — `DotTracker.add(..., max_stacks)`.
+- **Dedos:** `tools/bake_spells.gd` ahora retargetea los dedos (antes las manos quedaban abiertas al disparar). Rehechos `spells.res` y `class_anims.res`.
+- **Cámara estilo Smite:** el personaje siempre mira hacia donde mira la cámara (siempre se ve su espalda); al moverse en diagonal el cuerpo se inclina hasta 60°; hacia atrás reproduce la carrera al revés. Para girar hay que girar la cámara.

@@ -67,14 +67,14 @@ const M1: Dictionary = {
 ## M2: bola de fuego con quemadura.
 const M2: Dictionary = {
 	"id": &"arcane_orb",
-	"clip": {"name": "standing_2h_magic_attack_01", "start": 0.7, "contact": 1.13, "end": 1.7}, "name": "Arcane Orb", "short": "ORB", "slot": "M2",
-	"kind": "basic", "role": "Daño / quemadura", "description": "Orbe arcano lento que corroe al objetivo con daño arcano en el tiempo.",
-	"implemented": true, "selectable": false, "cast": "projectile", "anim": "cast",
+	"clip": {"name": "standing_2h_magic_attack_01", "start": 0.4, "contact": 1.13, "end": 1.7}, "name": "Arcane Orb", "short": "ORB", "slot": "M2",
+	"kind": "basic", "role": "Daño / quemadura", "description": "Cast 0.9 s (quieto): orbe arcano lento que corroe al objetivo.",
+	"implemented": true, "selectable": false, "cast": "projectile", "cast_bar": true, "anim": "cast",
 	"damage_type": 7,  # DamageSystem.Type.ARCANE
-	"windup": 0.35, "active": 0.05, "recovery": 0.25, "cooldown": 2.5, "cost": 10.0,
+	"windup": 0.9, "active": 0.05, "recovery": 0.25, "cooldown": 2.5, "cost": 10.0,
 	"speed": 420.0, "range": 520.0, "hit_radius": 14.0, "damage_mult": 1.8,
 	"effects": {"dot": {"damage_type": 7, "dps_mult": 0.35, "duration": 4.0}},
-	"rage_gain": 0.0, "move_factor": 0.4, "color": [0.85, 0.55, 1.0],
+	"rage_gain": 0.0, "move_factor": 0.0, "color": [0.85, 0.55, 1.0],
 }
 
 const BLINK: Dictionary = {
@@ -114,24 +114,24 @@ const ARCANE_RIFT: Dictionary = {
 
 const STARFALL: Dictionary = {
 	"id": &"starfall",
-	"clip": {"name": "standing_2h_magic_area_attack_02", "start": 0.9, "contact": 1.8, "end": 2.4}, "name": "Starfall", "short": "STARFALL", "slot": "R",
+	"clip": {"name": "standing_2h_magic_area_attack_02", "start": 0.5, "contact": 1.8, "end": 2.4}, "name": "Starfall", "short": "STARFALL", "slot": "R",
 	"kind": "control", "role": "Daño en área", "description": "Apunta al suelo: un starfallo cae con gran daño de fuego.",
-	"implemented": true, "selectable": true, "cast": "aoe", "anim": "cast", "target": "ground",
+	"implemented": true, "selectable": true, "cast": "aoe", "cast_bar": true, "anim": "cast", "target": "ground",
 	"damage_type": 7,
-	"windup": 0.90, "active": 0.10, "recovery": 0.30, "cooldown": 14.0, "cost": 40.0,
+	"windup": 1.6, "active": 0.10, "recovery": 0.30, "cooldown": 14.0, "cost": 40.0,
 	"range": 320.0, "radius": 100.0, "damage_mult": 4.0,
-	"rage_gain": 0.0, "move_factor": 0.2,
+	"rage_gain": 0.0, "move_factor": 0.0,
 }
 
 const ARCANE_SURGE: Dictionary = {
 	"id": &"arcane_surge",
-	"clip": {"name": "standing_2h_magic_attack_05", "start": 1.4, "contact": 2.07, "end": 2.7}, "name": "Arcane Surge", "short": "SURGE", "slot": "F",
-	"kind": "ultimate", "role": "Ultimate", "description": "Ultimate: explosión arcana enorme donde apuntes.",
-	"implemented": true, "selectable": true, "cast": "aoe", "anim": "cast", "target": "ground",
+	"clip": {"name": "standing_2h_magic_attack_05", "start": 0.4, "contact": 2.07, "end": 2.7}, "name": "Arcane Surge", "short": "SURGE", "slot": "F",
+	"kind": "ultimate", "role": "Ultimate", "description": "Ultimate. Cast 2.2 s (quieto): explosión arcana enorme donde apuntes.",
+	"implemented": true, "selectable": true, "cast": "aoe", "cast_bar": true, "anim": "cast", "target": "ground",
 	"damage_type": 7,
-	"windup": 0.50, "active": 0.10, "recovery": 0.40, "cooldown": 1.0, "cost": 0.0, "charge": 100.0,
+	"windup": 2.2, "active": 0.10, "recovery": 0.40, "cooldown": 1.0, "cost": 0.0, "charge": 100.0,
 	"range": 320.0, "radius": 160.0, "damage_mult": 6.0,
-	"rage_gain": 0.0, "move_factor": 0.2,
+	"rage_gain": 0.0, "move_factor": 0.0,
 }
 
 ## Pasiva (mismo contrato que el Warrior): a vida baja, más daño y velocidad.

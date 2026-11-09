@@ -153,7 +153,7 @@ func play(anim: String, blend: float = 0.15, speed: float = 1.0, force: bool = f
 	if not force and current() == anim and player.is_playing():
 		_apply_speed()
 		return
-	player.play(anim, blend, 1.0)
+	player.play(anim, blend, 1.0, speed < 0.0)  # velocidad negativa = hacia atrás (retroceso)
 	_apply_speed()
 
 

@@ -46,9 +46,10 @@ const SLOT_LABELS := {
 ## M1: tajo rápido con una daga (alterna de mano). Básico spameable, sin coste.
 const M1: Dictionary = {
 	"id": &"twin_fang", "name": "Twin Fang", "short": "FANG", "slot": "M1",
-	"kind": "basic", "role": "Daño rápido", "description": "Tajos rápidos alternando daga derecha e izquierda. Sin coste: se puede spamear.",
+	"kind": "basic", "role": "Daño rápido", "description": "Tajos rápidos alternando daga derecha e izquierda. Sin coste. -20% de daño si atacas de frente.",
 	"implemented": true, "selectable": false, "cast": "melee", "anim": "slash",
 	"melee_clips": [0, 3],  # 0 = mano derecha, 3 = jab de la mano izquierda
+	"flank": true,
 	"windup": 0.09, "active": 0.08, "recovery": 0.14, "cooldown": 0.0, "cost": 0.0,
 	"range": 70.0, "arc": 100.0, "damage_mult": 1.0, "rage_gain": 0.0, "move_factor": 0.5,
 	"combo_reset_window": 0.85,
@@ -57,10 +58,10 @@ const M1: Dictionary = {
 ## M2: cruce de dagas, más daño.
 const M2: Dictionary = {
 	"id": &"cross_cut", "name": "Cross Cut", "short": "CUT", "slot": "M2",
-	"kind": "basic", "role": "Daño", "description": "Saltas hacia delante y cruzas ambas dagas al aterrizar.",
+	"kind": "basic", "role": "Daño", "description": "Saltas hacia delante y cruzas ambas dagas al aterrizar. -20% de daño de frente.",
 	"implemented": true, "selectable": false, "cast": "leap_slam", "anim": "slash",
 	"full_clip": {"clip": "class/mutant_jump_attack", "from": 0.32, "to": 0.58, "contact": 0.44, "late": true},
-	"lunge": 110.0, "leap_height": 45.0,
+	"lunge": 110.0, "leap_height": 45.0, "flank": true,
 	"windup": 0.15, "active": 0.30, "recovery": 0.25, "cooldown": 0.0, "cost": 60.0,
 	"range": 85.0, "arc": 140.0, "damage_mult": 1.7, "rage_gain": 0.0, "move_factor": 0.2,
 }
@@ -88,21 +89,22 @@ const VANISH: Dictionary = {
 
 const FAN_OF_KNIVES: Dictionary = {
 	"id": &"fan_of_knives", "name": "Fan of Knives", "short": "FAN", "slot": "R",
-	"kind": "control", "role": "Daño en área", "description": "Como en WotLK: das una vuelta de 360° lanzando cuchillos; golpean a todos los cercanos (poco daño) y los envenenan.",
+	"kind": "control", "role": "Daño en área", "description": "Como en WotLK: das una vuelta de 360° lanzando cuchillos; golpean a todos los cercanos (poco daño) y los envenenan (se acumula hasta 3 veces: más daño por segundo).",
 	"implemented": true, "selectable": true, "cast": "aoe", "anim": "slash", "spin": true,
 	"windup": 0.28, "active": 0.06, "recovery": 0.22, "cooldown": 5.0, "cost": 35.0,
 	"radius": 120.0, "damage_mult": 0.7, "rage_gain": 0.0, "move_factor": 0.3,
-	"effects": {"dot": {"damage_type": 4, "dps_mult": 0.5, "duration": 5.0}},
+	"effects": {"dot": {"damage_type": 4, "dps_mult": 0.5, "duration": 5.0, "stacks": 3}},
 	"knives": 14,
 }
 
 const CHEAP_SHOT: Dictionary = {
 	"id": &"cheap_shot", "name": "Cheap Shot", "short": "STUN", "slot": "E",
-	"kind": "control", "role": "Control / stun", "description": "Golpe sucio a la cara: poco daño, aturde 1.5 s.",
+	"kind": "control", "role": "Control / stun", "description": "Puñalada traicionera: solo se puede lanzar por la ESPALDA del enemigo. Poco daño, aturde 1.5 s.",
 	"implemented": true, "selectable": true, "cast": "melee", "anim": "slash",
-	"full_clip": {"clip": "ual1/Punch_Cross", "from": 0.0, "to": 0.55, "contact": 0.2},
+	"requires_behind": true,
+	"full_clip": {"clip": "class/stabbing", "from": 0.18, "to": 0.5, "contact": 0.27},
 	"windup": 0.12, "active": 0.08, "recovery": 0.25, "cooldown": 9.0, "cost": 40.0,
-	"range": 65.0, "arc": 80.0, "damage_mult": 0.6, "effects": {"stun": 1.5},
+	"range": 65.0, "arc": 80.0, "damage_mult": 0.8, "effects": {"stun": 1.5},
 	"rage_gain": 0.0, "move_factor": 0.3,
 }
 

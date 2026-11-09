@@ -201,6 +201,7 @@ func _connect_signals() -> void:
 	sim.damage_taken.connect(_on_damage_taken)
 	sim.stunned.connect(_on_stunned)
 	sim.visibility_changed.connect(_set_invisible)
+	sim.cast_cancelled.connect(func(_skill: Dictionary) -> void: rig.stop_overlay())
 	sim.died.connect(_on_died)
 	sim.cast_event.connect(_on_cast_event)
 	sim.ultimate_changed.connect(_on_ultimate_changed)
@@ -235,16 +236,18 @@ func _process(delta: float) -> void:
 
 
 func _update_facing(delta: float) -> void:
-	var target_yaw := _yaw
+	# Cámara estilo Smite: el personaje siempre mira hacia donde mira la cámara (siempre se ve su
+	# espalda). Al moverse en diagonal el cuerpo se inclina hasta 60° hacia el movimiento.
+	var cam_yaw := View3D.yaw_for(arena.cam_forward_sim())
+	var target_yaw := cam_yaw
 	var rate := TURN_SPEED
-	if _aiming_stance() and not sim.is_attacking():
-		target_yaw = View3D.yaw_for(sim.aim_dir)  # tras disparar, mantiene la postura de apuntado un rato
 	if sim.is_attacking():
 		target_yaw = View3D.yaw_for(sim.attack_aim) - _align_yaw
 		rate = TURN_SPEED_ATTACK
 	elif sim.velocity.length_squared() > 64.0:
-		target_yaw = View3D.yaw_for(sim.velocity)
-	# Quieto: conserva su orientación (la cámara orbita libre y se ve en 360°).
+		var offset := wrapf(View3D.yaw_for(sim.velocity) - cam_yaw, -PI, PI)
+		if absf(offset) <= deg_to_rad(100.0):
+			target_yaw = cam_yaw + clampf(offset, deg_to_rad(-60.0), deg_to_rad(60.0))
 	_yaw = lerp_angle(_yaw, target_yaw, 1.0 - exp(-rate * delta))
 
 	if _spinning:
@@ -274,6 +277,8 @@ func _update_locomotion() -> void:
 	var speed_m := View3D.meters(sim.velocity.length())
 	if speed_m > 0.4 and _aiming_stance():
 		rig.play(_strafe_anim(), 0.1, clampf(speed_m / 2.0, 0.6, 2.2))
+	elif speed_m > 0.4 and _moving_back():
+		rig.play(ANIM_RUN, 0.12, -clampf(speed_m / RUN_ANIM_SPEED, 0.6, 1.6))
 	elif speed_m > 0.4:
 		var anim := ANIM_SPRINT if sim.current_move_speed_multiplier() > 1.15 else ANIM_RUN
 		var ref := RUN_ANIM_SPEED * (1.6 if anim == ANIM_SPRINT else 1.0)
@@ -283,6 +288,12 @@ func _update_locomotion() -> void:
 
 
 ## Idle por clase: el rogue con la daga en guardia, el ranger apuntando.
+## ¿Se mueve de espaldas respecto a donde mira la cámara? (animación de carrera al revés)
+func _moving_back() -> bool:
+	var offset := wrapf(View3D.yaw_for(sim.velocity) - View3D.yaw_for(arena.cam_forward_sim()), -PI, PI)
+	return absf(offset) > deg_to_rad(100.0)
+
+
 func _idle_anim() -> String:
 	match sim.class_id:
 		&"rogue":
