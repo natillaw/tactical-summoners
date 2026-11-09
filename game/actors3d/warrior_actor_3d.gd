@@ -42,6 +42,7 @@ const M1_CLIPS := [
 	{"clip": "ual2/Sword_Regular_A", "from": 0.0, "to": 1.0, "contact": 0.55},
 	{"clip": "ual2/Sword_Regular_B", "from": 0.0, "to": 1.0, "contact": 0.49},
 	{"clip": "ual2/Sword_Regular_C", "from": 0.0, "to": 0.62, "contact": 0.34},
+	{"clip": "ual1/Punch_Jab", "from": 0.0, "to": 0.6, "contact": 0.2, "no_align": true},  # mano izquierda
 ]
 ## Estocada: el lance frontal de Sword_Dash (el clip custom/thrust era un tajo hacia arriba).
 const CLIP_THRUST := {"clip": "ual2/Sword_Dash", "from": 0.08, "to": 0.40, "contact": 0.21}
@@ -119,7 +120,7 @@ func setup(p_sim: WarriorSim, p_arena: Arena3D) -> void:
 	rig.attach_to_hand(sword, "r" if weapon_paths[1] != "bow" else "l")
 	sword.scale = Vector3.ONE * weapon_scale
 	if String(weapon_paths[1]) == "bow":
-		sword.rotate_object_local(Vector3.RIGHT, deg_to_rad(90.0))  # el arco venía horizontal: eje largo -> vertical
+		sword.rotate_object_local(Vector3.UP, deg_to_rad(-90.0))  # girar sobre el eje del puño deja el arco vertical (medido en 3 poses)
 	if weapon_paths.size() > 2:
 		var offhand := (load(weapon_paths[2]) as PackedScene).instantiate() as Node3D
 		rig.attach_to_hand(offhand, "l")
@@ -316,8 +317,6 @@ func _update_dash_fx(delta: float) -> void:
 
 func _on_attack_started(skill: Dictionary, direction: Vector2) -> void:
 	_current_skill = skill
-	if sim.class_id == &"ranger":
-		_aim_stance = 2.5
 	if bool(skill.get("spin", false)):
 		# Vuelta de 360° durante la preparación, con la pose del brazo extendido.
 		var turn_time := maxf(float(skill.get("windup", 0.3)), 0.1)
@@ -378,7 +377,7 @@ func _play_cast_overlay(skill: Dictionary, windup: float) -> void:
 
 func _play_clip(c: Dictionary, to_contact: float, after: float, then: String = ANIM_IDLE) -> void:
 	var info: Dictionary = _clip_info.get(_clip_key(c), {})
-	_align_yaw = float(info.get("yaw", 0.0))
+	_align_yaw = 0.0 if bool(c.get("no_align", false)) else float(info.get("yaw", 0.0))
 	_swing_dir = float(info.get("sweep", 1.0))
 	rig.play_clip(
 		String(c["clip"]), float(c["from"]), float(c["to"]), float(c["contact"]),
@@ -388,6 +387,14 @@ func _play_clip(c: Dictionary, to_contact: float, after: float, then: String = A
 
 func _on_attack_state_changed(state: int) -> void:
 	if _current_skill.is_empty():
+		return
+	if String(_current_skill.get("id", "")) in ["kick", "cheap_shot"]:
+		# Golpes de pie/puño: sin estela ni sonido de espada, un impacto seco.
+		if state == WarriorSim.AttackState.ACTIVE:
+			arena.spawn_dust(sim.position + sim.attack_aim * 40.0, 7, 0.5)
+			arena.play_sfx(SFX_HIT_HEAVY, -4.0, 0.7)
+			arena.shake(2.0, 0.1)
+		trail.emitting = false
 		return
 	var cast := String(_current_skill.get("cast", "melee"))
 	if state == WarriorSim.AttackState.ACTIVE and (cast == "melee" or cast == "line"):
@@ -501,6 +508,15 @@ func _on_cast_event(event: String, skill: Dictionary, at: Vector2, direction: Ve
 		"leap_start":
 			arena.spawn_dust(at, 12, 0.6)
 			arena.play_sfx(SFX_CHARGE, -8.0, 0.9)
+		"explosion":
+			var boom_color := Color(1.0, 0.6, 0.2)
+			var boom_radius := float(skill.get("explode_radius", 100.0))
+			ArcaneFx.burst(arena, View3D.to3(at, 0.8), boom_color, 70, 5.5, 0.16)
+			ArcaneFx.debris(arena, View3D.to3(at), View3D.meters(boom_radius))
+			arena.spawn_shockwave(at, boom_radius, boom_color, 0.45, 0.7)
+			arena.spawn_ground_flash(at, boom_radius, Color(1.0, 0.5, 0.15, 0.55), 0.4)
+			arena.play_sfx(SFX_SLAM, -3.0, 1.1)
+			arena.shake(3.5, 0.2)
 		"blink_out":
 			var blink_color := DamageSystem.color_of(DamageSystem.type_of(skill))
 			ArcaneFx.column(arena, View3D.to3(at), blink_color, 2.2)
@@ -527,6 +543,9 @@ func _on_cast_event(event: String, skill: Dictionary, at: Vector2, direction: Ve
 			arena.play_sfx(SFX_SPIN, -6.0, 1.0)
 			arena.shake(3.6, 0.22)
 		"aoe_tick":
+			if String(skill.get("id", "")) == "rain_of_arrows":
+				ArcaneFx.arrow_rain(arena, View3D.to3(at), View3D.meters(float(skill.get("radius", 170.0))), 12)
+				return
 			arena.spawn_shockwave(at, float(skill.get("radius", 105.0)), COLOR_FINISHER, 0.25, 0.85)
 			arena.shake(1.4, 0.08)
 		"spin_end":
@@ -558,8 +577,8 @@ func _class_slam(at: Vector2, radius: float, skill: Dictionary) -> bool:
 			arena.play_sfx(SFX_HIT_HEAVY, -2.0, 0.85)
 			arena.shake(5.0, 0.25)
 			rig.hitstop(0.1)
-		"volley", "rain_of_arrows":
-			ArcaneFx.arrow_rain(arena, ground, meters_r, 26 if String(skill["id"]) == "volley" else 48)
+		"rain_of_arrows":
+			ArcaneFx.arrow_rain(arena, ground, meters_r, 24)
 			arena.spawn_shockwave(at, radius, Color(1.0, 0.85, 0.5, 0.8), 0.5, 0.85)
 			arena.play_sfx(SFX_HIT, -5.0, 0.9)
 		"frost_trap":
@@ -624,6 +643,8 @@ func _spawn_hit_fx(skill: Dictionary, hit_position: Vector2, heavy: bool) -> voi
 		color = ArcaneFx.POISON
 		ArcaneFx.burst(arena, View3D.to3(hit_position, 1.0), ArcaneFx.POISON, 30, 2.5, 0.12)
 	ArcaneFx.hit_sparks(arena, View3D.to3(hit_position, 1.1), color, View3D.dir3(sim.attack_aim), 18, heavy)
+	if (skill.get("effects", {}) as Dictionary).has("stun"):
+		ArcaneFx.burst(arena, View3D.to3(hit_position, 1.6), Color(1.0, 0.9, 0.3), 24, 2.0, 0.13)
 
 
 func _on_attack_finished(_skill: Dictionary) -> void:
