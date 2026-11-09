@@ -142,3 +142,7 @@ piezas del Medieval Village / Fantasy Props MegaKit; animación propia de estoca
 - **Daño en volumen:** los ataques del enemigo ya no pasan por debajo del salto (altura de golpe 90 px > pico del salto 61 px). Solo la voltereta (iframes) o el parry los evitan.
 - **Soldado "como un jugador"** (usa los datos de `WarriorKit`): M1 en combo de 3 sin cooldown, Golpe pesado / Estocada / Ruptura sísmica con telegraph (cono, línea, círculo), Carga que daña y aturde 0.8 s al jugador, Parry que contraataca, Voltereta, Bladestorm (<50 % vida), Last Stand (<30 %), Guardia. Decide cada pocas décimas y reacciona a tus ataques con parry o voltereta.
 - El jugador puede ser aturdido (`WarriorSim.stun_timer`): cancela el ataque y bloquea el control.
+
+## 2026-11-08 — Sistema de daño único y actores como escenas
+- `combat/damage_system.gd` centraliza tipo de daño, crítico y resistencias (físico, mágico, fuego, hielo, veneno, sagrado, sombra). Los kits por clase solo declaran `damage_type`; jugador y enemigos mitigan con `resist`. Sin fórmulas de daño duplicadas por clase.
+- Presentación de actores en escenas (`warrior_actor.tscn`, `soldier_actor.tscn`, `dummy_actor.tscn`) con propiedades exportadas; la simulación sigue siendo código sin nodos (tests headless / netcode).

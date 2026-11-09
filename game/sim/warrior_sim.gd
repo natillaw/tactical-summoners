@@ -37,7 +37,6 @@ const FRICTION := 2100.0
 const MAX_HEALTH := 300.0
 
 const BUFFER_SECONDS := 0.22
-const CRIT_MULTIPLIER := 2.0  # como WoW Classic
 const BASE_CRIT := 0.05
 ## Velocidad normalizada (WoW Classic para golpes instantáneos): el ritmo de las
 ## skills no depende del arma, así que el daño por golpe se normaliza a esta
@@ -65,6 +64,8 @@ var weapon: Item = ItemFactory.starter_sword()
 var stats := CharacterStats.new()
 var height: float = 0.0
 var stun_timer: float = 0.0
+## Resistencias por tipo de daño (DamageSystem.Type → fracción).
+var resist: Dictionary = {}
 var vertical_velocity: float = 0.0
 
 var max_health: float = MAX_HEALTH
@@ -588,12 +589,14 @@ func _damage_area(center: Vector2, radius: float, mult: float, effects: Dictiona
 func _hit_target(target: Object, mult: float, effects: Dictionary) -> void:
 	_hit_targets[target] = true
 
-	var damage := roll_hit() * mult
-	var critical := _rng.randf() < stats.get_crit_chance()
-	if critical:
-		damage *= CRIT_MULTIPLIER
+	var type := DamageSystem.type_of(current_skill)
+	var result := DamageSystem.roll(roll_hit(), mult, stats.get_crit_chance(), type, _rng)
+	var damage: float = result["amount"]
+	var critical: bool = result["critical"]
+	var fx := effects.duplicate()
+	fx[DamageSystem.KEY] = type
 
-	var dealt: float = target.take_damage(damage, position, effects)
+	var dealt: float = target.take_damage(damage, position, fx)
 	if dealt <= 0.0:
 		return
 
@@ -728,6 +731,7 @@ func take_damage(amount: float, source_position: Vector2 = Vector2.ZERO, effects
 		evaded.emit(amount)
 		return 0.0
 
+	amount = DamageSystem.mitigate(amount, DamageSystem.type_of(effects), resist)
 	var dealt := minf(amount, health)
 	health -= dealt
 	_gain_rage(RAGE_ON_HIT_TAKEN)

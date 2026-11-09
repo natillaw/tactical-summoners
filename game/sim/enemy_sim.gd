@@ -63,6 +63,8 @@ const LAST_STAND_SECONDS := 5.0
 ## Ataques con telegraph (rangos y radios salen de WarriorKit).
 const HEAVY := {"name": "heavy", "range": 92.0, "arc": 70.0, "mult": 1.0, "seconds": 0.72, "recover": 0.35}
 
+## Tipo de daño de sus ataques (los enemigos de otros tipos solo cambian esto).
+var damage_type: int = DamageSystem.Type.PHYSICAL
 var level: int = 1
 var xp_reward: int = 30
 var act: int = Act.NONE
@@ -418,7 +420,9 @@ func apply_effects(effects: Dictionary) -> void:
 func _strike(warrior: Object, direction: Vector2, reach: float, arc: float, damage: float, effects: Dictionary = {}) -> bool:
 	if last_stand_timer > 0.0:
 		damage *= float(WarriorKit.PASSIVE["damage_bonus"])
-	return super._strike(warrior, direction, reach, arc, damage, effects)
+	var fx := effects.duplicate()
+	fx[DamageSystem.KEY] = damage_type
+	return super._strike(warrior, direction, reach, arc, damage, fx)
 
 
 func is_rolling() -> bool:

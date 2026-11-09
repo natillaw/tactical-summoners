@@ -6,6 +6,11 @@
 class_name Arena3D
 extends Node3D
 
+## Actores como escenas: ábrelas en el editor para ajustar modelo, tinte, nombre...
+const WARRIOR_SCENE := preload("res://game/actors3d/warrior_actor.tscn")
+const SOLDIER_SCENE := preload("res://game/actors3d/soldier_actor.tscn")
+const DUMMY_SCENE := preload("res://game/actors3d/dummy_actor.tscn")
+
 const SIZE := Vector2(960.0, 640.0)
 const WALL := 40.0
 const BOUNDS := Rect2(WALL, WALL, SIZE.x - WALL * 2.0, SIZE.y - WALL * 2.0)
@@ -345,7 +350,7 @@ func _read_spawns() -> Array:
 
 
 func _spawn_actors() -> void:
-	warrior_actor = WarriorActor3D.new()
+	warrior_actor = WARRIOR_SCENE.instantiate() as WarriorActor3D
 	warrior_actor.name = "Warrior"
 	add_child(warrior_actor)
 	warrior_actor.setup(world.warrior, self)
@@ -358,7 +363,7 @@ func _spawn_actors() -> void:
 			dummy_sim = world.add_dummy(spawn["position"], false)
 			dummy_sim.max_health = float(spawn.get("hp", 4000.0))
 			dummy_sim.health = dummy_sim.max_health
-		var dummy: DummyActor3D = EnemyActor3D.new() if dummy_sim is EnemySim else DummyActor3D.new()
+		var dummy: DummyActor3D = (SOLDIER_SCENE if dummy_sim is EnemySim else DUMMY_SCENE).instantiate() as DummyActor3D
 		dummy.name = "Dummy"
 		add_child(dummy)
 		dummy.setup(dummy_sim, self)
