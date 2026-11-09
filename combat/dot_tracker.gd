@@ -13,7 +13,7 @@ var _dots: Array = []
 
 ## `max_stacks` > 1: aplicar el mismo tipo otra vez acumula (hasta ese máximo); cada acumulación
 ## suma +60 % del dps base (1.0x, 1.6x, 2.2x), sin explotar ni nada más. Siempre refresca la duración.
-func add(type: int, dps: float, duration: float, max_stacks: int = 1) -> void:
+func add(type: int, dps: float, duration: float, max_stacks: int = 1, meta: Dictionary = {}) -> void:
 	for dot: Dictionary in _dots:
 		if int(dot["type"]) == type:
 			if max_stacks > 1:
@@ -23,8 +23,10 @@ func add(type: int, dps: float, duration: float, max_stacks: int = 1) -> void:
 				dot["base"] = maxf(float(dot["base"]), dps)
 			dot["dps"] = float(dot["base"]) * (1.0 + 0.6 * float(int(dot["stacks"]) - 1))
 			dot["left"] = maxf(float(dot["left"]), duration)
+			if not meta.is_empty():
+				dot["meta"] = meta
 			return
-	_dots.append({"type": type, "dps": dps, "base": dps, "stacks": 1, "left": duration, "acc": 0.0})
+	_dots.append({"type": type, "dps": dps, "base": dps, "stacks": 1, "left": duration, "acc": 0.0, "meta": meta})
 
 
 func stacks_of(type: int) -> int:
@@ -41,7 +43,8 @@ func tick(delta: float) -> Array:
 		dot["acc"] = float(dot["acc"]) + delta
 		while float(dot["acc"]) >= INTERVAL:
 			dot["acc"] = float(dot["acc"]) - INTERVAL
-			out.append({"type": int(dot["type"]), "amount": float(dot["dps"]) * INTERVAL})
+			var meta: Dictionary = dot.get("meta", {})
+			out.append({"type": int(dot["type"]), "amount": float(dot["dps"]) * INTERVAL, "skill_id": String(meta.get("skill_id", "")), "src": meta.get("src", null)})
 	_dots = _dots.filter(func(d: Dictionary) -> bool: return float(d["left"]) > 0.0)
 	return out
 

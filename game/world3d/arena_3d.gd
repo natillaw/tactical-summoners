@@ -43,6 +43,7 @@ var camera: Camera3D
 var fx: Node3D
 var warrior_actor: WarriorActor3D
 var dummy_actors: Array[DummyActor3D] = []
+var enemy_actors: Array[WarriorActor3D] = []
 
 var _sfx_pool: Array[AudioStreamPlayer] = []
 var _sfx_index: int = 0
@@ -343,10 +344,23 @@ func _read_spawns() -> Array:
 			out.append({
 				"position": View3D.to2((marker as Node3D).position),
 				"enemy": bool(marker.get_meta("enemy", false)),
+				"enemy_class": String(marker.get_meta("enemy_class", "")),
 				"level": int(marker.get_meta("level", 1)),
 				"hp": float(marker.get_meta("hp", 4000.0)),
 			})
 	return out
+
+
+## Enemigo que juega una clase (mismos skills que un jugador) con IA y nivel.
+func spawn_class_enemy(class_id: StringName, at: Vector2, level: int = 1) -> WarriorSim:
+	var fighter := world.add_fighter(class_id, 1, at, level)
+	var actor := PLAYER_SCENE.instantiate() as WarriorActor3D
+	actor.enemy_mode = true
+	actor.name = "Enemy_" + fighter.display_name
+	add_child(actor)
+	actor.setup(fighter, self)
+	enemy_actors.append(actor)
+	return fighter
 
 
 func _spawn_actors() -> void:
@@ -357,6 +371,9 @@ func _spawn_actors() -> void:
 
 	for spawn: Dictionary in _read_spawns():
 		var dummy_sim: DummySim
+		if String(spawn.get("enemy_class", "")) != "":
+			spawn_class_enemy(StringName(String(spawn["enemy_class"])), spawn["position"], int(spawn.get("level", 1)))
+			continue
 		if bool(spawn.get("enemy", false)):
 			dummy_sim = world.add_enemy(spawn["position"], int(spawn.get("level", 1)))
 		else:

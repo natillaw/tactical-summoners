@@ -57,6 +57,9 @@ func _unhandled_input(event: InputEvent) -> void:
 				world.warrior.equip_weapon(item)
 				print(item.describe())
 			KEY_F7: world.warrior.progression.set_level(Progression.MAX_LEVEL)
+			KEY_F9:  # enemigo de clase al azar delante del jugador (con su nivel)
+				var pool: Array = BalanceSim.CLASS_IDS
+				arena.spawn_class_enemy(pool[randi() % pool.size()], world.warrior.position + Vector2(260.0, randf_range(-90.0, 90.0)), world.warrior.progression.level)
 	if loadout_panel.visible:
 		return
 	if event is InputEventMouseMotion:

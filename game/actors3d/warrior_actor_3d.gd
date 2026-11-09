@@ -97,6 +97,11 @@ var _align_yaw: float = 0.0
 var _swing_dir: float = 1.0
 var _orbs: Dictionary = {}
 var _cast_index: int = 0
+## Enemigo de clase: misma presentación que el jugador pero con IA, nombre y barra de vida.
+var enemy_mode: bool = false
+var _overhead: Node3D
+var _bar_fill: MeshInstance3D
+var _name_label: Label3D
 var _aim_stance: float = 0.0
 var _spin_rate: float = 15.0
 var _spin_limit: float = 1e9
@@ -109,7 +114,15 @@ func setup(p_sim: WarriorSim, p_arena: Arena3D) -> void:
 	rig = HumanoidRig.new()
 	rig.name = "Rig"
 	add_child(rig)
-	if CharacterProfile.chosen:
+	if enemy_mode:
+		var look := RandomNumberGenerator.new()
+		look.seed = hash(str(sim.class_id)) + int(sim.position.x * 31.0 + sim.position.y)
+		var opts := CharacterBuilder.random_options(look)
+		opts["outfit"] = ["ranger", "ranger_hood", "peasant"][look.randi() % 3]
+		rig.setup_model(CharacterBuilder.build(opts))
+		for mi: MeshInstance3D in rig.meshes:
+			CharacterBuilder._tint(mi, Color(1.0, 0.66, 0.6))  # tinte rojizo: se distingue del jugador
+	elif CharacterProfile.chosen:
 		rig.setup_model(CharacterBuilder.build(CharacterProfile.appearance))
 	else:
 		rig.setup(model_path)
@@ -163,6 +176,8 @@ func setup(p_sim: WarriorSim, p_arena: Arena3D) -> void:
 
 	_yaw = View3D.yaw_for(sim.aim_dir)
 	rig.play(ANIM_IDLE, 0.0)
+	if enemy_mode:
+		_build_overhead()
 	_connect_signals()
 	position = View3D.to3(sim.position)
 
@@ -176,6 +191,61 @@ func _weapon_paths() -> Array:
 			return ["res://assets/models/props/bow.fbx", "bow"]
 		_:
 			return [sword_path, "sword"]
+
+
+## Nombre + barra de vida sobre la cabeza (enemigos de clase).
+func _build_overhead() -> void:
+	_overhead = Node3D.new()
+	_overhead.position.y = 2.25
+	add_child(_overhead)
+	var back := MeshInstance3D.new()
+	var back_mesh := QuadMesh.new()
+	back_mesh.size = Vector2(0.96, 0.14)
+	back.mesh = back_mesh
+	var back_mat := StandardMaterial3D.new()
+	back_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	back_mat.albedo_color = Color(0.04, 0.04, 0.06, 0.9)
+	back_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	back_mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	back_mat.no_depth_test = true
+	back.material_override = back_mat
+	_overhead.add_child(back)
+	_bar_fill = MeshInstance3D.new()
+	var fill_mesh := QuadMesh.new()
+	fill_mesh.size = Vector2(0.9, 0.09)
+	_bar_fill.mesh = fill_mesh
+	var fill_mat := StandardMaterial3D.new()
+	fill_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	fill_mat.albedo_color = Color(0.9, 0.3, 0.25)
+	fill_mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	fill_mat.no_depth_test = true
+	fill_mat.render_priority = 1
+	_bar_fill.material_override = fill_mat
+	_overhead.add_child(_bar_fill)
+	_name_label = Label3D.new()
+	_name_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_name_label.no_depth_test = true
+	_name_label.pixel_size = 0.003
+	_name_label.font_size = 40
+	_name_label.outline_size = 10
+	_name_label.modulate = Color(1.0, 0.7, 0.55)
+	_name_label.position.y = 0.22
+	_overhead.add_child(_name_label)
+
+
+func _update_overhead() -> void:
+	_overhead.visible = sim.alive
+	_name_label.text = "%s  Nv.%d" % [sim.display_name, sim.progression.level]
+	var ratio := clampf(sim.health / maxf(sim.max_health, 1.0), 0.0, 1.0)
+	_bar_fill.scale = Vector3(maxf(ratio, 0.001), 1.0, 1.0)
+	var cam := get_viewport().get_camera_3d()
+	if cam != null:
+		_bar_fill.global_position = _overhead.global_position - cam.global_transform.basis.x * (1.0 - ratio) * 0.45
+
+
+func _shake(amount: float, seconds: float) -> void:
+	if not enemy_mode:  # los golpes de los enemigos no sacuden la cámara del jugador
+		arena.shake(amount, seconds)
 
 
 func _analyze_clips(tip_in_hand: Vector3) -> void:
@@ -215,6 +285,8 @@ func _process(delta: float) -> void:
 	if sim == null:
 		return
 	position = View3D.to3(sim.position, View3D.meters(sim.height))
+	if enemy_mode and _overhead != null:
+		_update_overhead()
 
 	if not sim.alive:
 		trail.emitting = false
@@ -238,7 +310,7 @@ func _process(delta: float) -> void:
 func _update_facing(delta: float) -> void:
 	# Cámara estilo Smite: el personaje siempre mira hacia donde mira la cámara (siempre se ve su
 	# espalda). Al moverse en diagonal el cuerpo se inclina hasta 60° hacia el movimiento.
-	var cam_yaw := View3D.yaw_for(arena.cam_forward_sim())
+	var cam_yaw := View3D.yaw_for(sim.aim_dir if enemy_mode else arena.cam_forward_sim())
 	var target_yaw := cam_yaw
 	var rate := TURN_SPEED
 	if sim.is_attacking():
@@ -290,7 +362,8 @@ func _update_locomotion() -> void:
 ## Idle por clase: el rogue con la daga en guardia, el ranger apuntando.
 ## ¿Se mueve de espaldas respecto a donde mira la cámara? (animación de carrera al revés)
 func _moving_back() -> bool:
-	var offset := wrapf(View3D.yaw_for(sim.velocity) - View3D.yaw_for(arena.cam_forward_sim()), -PI, PI)
+	var reference: Vector2 = sim.aim_dir if enemy_mode else arena.cam_forward_sim()
+	var offset := wrapf(View3D.yaw_for(sim.velocity) - View3D.yaw_for(reference), -PI, PI)
 	return absf(offset) > deg_to_rad(100.0)
 
 
@@ -404,7 +477,7 @@ func _on_attack_state_changed(state: int) -> void:
 		if state == WarriorSim.AttackState.ACTIVE:
 			arena.spawn_dust(sim.position + sim.attack_aim * 40.0, 7, 0.5)
 			arena.play_sfx(SFX_HIT_HEAVY, -4.0, 0.7)
-			arena.shake(2.0, 0.1)
+			_shake(2.0, 0.1)
 		trail.emitting = false
 		return
 	var cast := String(_current_skill.get("cast", "melee"))
@@ -414,9 +487,9 @@ func _on_attack_state_changed(state: int) -> void:
 		_spawn_cast_vfx(_current_skill)
 		_play_cast_sfx(_current_skill)
 		if _is_finisher():
-			arena.shake(3.4, 0.18)
+			_shake(3.4, 0.18)
 		elif _is_heavy(_current_skill):
-			arena.shake(2.4, 0.14)
+			_shake(2.4, 0.14)
 	elif state == WarriorSim.AttackState.RECOVERY:
 		trail.emitting = false
 
@@ -468,7 +541,7 @@ func _on_cast_event(event: String, skill: Dictionary, at: Vector2, direction: Ve
 			arena.spawn_impact(at + direction * 18.0, COLOR_RAGE, true)
 			arena.spawn_shockwave(at + direction * 18.0, float(skill.get("radius", 46.0)) * 1.4, COLOR_RAGE, 0.3)
 			arena.play_sfx(SFX_HIT_HEAVY, -4.0, 0.9)
-			arena.shake(2.8, 0.16)
+			_shake(2.8, 0.16)
 			rig.hitstop(0.07)
 		"slam":
 			var radius := float(skill.get("radius", 120.0))
@@ -483,11 +556,11 @@ func _on_cast_event(event: String, skill: Dictionary, at: Vector2, direction: Ve
 			arena.spawn_dust(at, 22, View3D.meters(radius) * 0.9)
 			arena.spawn_impact(at + direction * 26.0, COLOR_EARTH, true, 0.2, 1.4)
 			arena.play_sfx(SFX_SLAM, -6.0, 1.0)
-			arena.shake(5.0, 0.30)
+			_shake(5.0, 0.30)
 			rig.hitstop(0.09)
 		"parry_stance":
 			arena.play_sfx(SFX_MAGIC, -12.0, 1.1)
-			arena.shake(1.2, 0.08)
+			_shake(1.2, 0.08)
 		"parry_success":
 			_play_clip(CLIP_BLOCK_REACT, 0.08, recovery, ANIM_IDLE)
 			arena.spawn_swipe(
@@ -496,7 +569,7 @@ func _on_cast_event(event: String, skill: Dictionary, at: Vector2, direction: Ve
 			)
 			arena.spawn_impact(at, COLOR_GUARD, true)
 			arena.play_sfx(SFX_PARRY, -2.0, 1.15)
-			arena.shake(2.6, 0.14)
+			_shake(2.6, 0.14)
 			rig.hitstop(0.1)
 		"projectile":
 			if DamageSystem.type_of(skill) == DamageSystem.Type.ARCANE:
@@ -527,7 +600,7 @@ func _on_cast_event(event: String, skill: Dictionary, at: Vector2, direction: Ve
 			arena.spawn_shockwave(at, boom_radius, boom_color, 0.45, 0.7)
 			arena.spawn_ground_flash(at, boom_radius, Color(1.0, 0.5, 0.15, 0.55), 0.4)
 			arena.play_sfx(SFX_SLAM, -3.0, 1.1)
-			arena.shake(3.5, 0.2)
+			_shake(3.5, 0.2)
 		"blink_out":
 			var blink_color := DamageSystem.color_of(DamageSystem.type_of(skill))
 			ArcaneFx.column(arena, View3D.to3(at), blink_color, 2.2)
@@ -552,13 +625,13 @@ func _on_cast_event(event: String, skill: Dictionary, at: Vector2, direction: Ve
 			# mientras el modelo gira: lee como un tajo continuo.
 			rig.play_clip(String(M1_CLIPS[0]["clip"]), 0.45, 0.6, 0.6, 0.06, 0.01)
 			arena.play_sfx(SFX_SPIN, -6.0, 1.0)
-			arena.shake(3.6, 0.22)
+			_shake(3.6, 0.22)
 		"aoe_tick":
 			if String(skill.get("id", "")) == "rain_of_arrows":
 				ArcaneFx.arrow_rain(arena, View3D.to3(at), View3D.meters(float(skill.get("radius", 170.0))), 12)
 				return
 			arena.spawn_shockwave(at, float(skill.get("radius", 105.0)), COLOR_FINISHER, 0.25, 0.85)
-			arena.shake(1.4, 0.08)
+			_shake(1.4, 0.08)
 		"spin_end":
 			_stop_spin()
 		_:
@@ -575,18 +648,18 @@ func _class_slam(at: Vector2, radius: float, skill: Dictionary) -> bool:
 			arena.spawn_shockwave(at, radius, ArcaneFx.POISON, 0.35, 0.8)
 			ArcaneFx.poison_cloud(arena, ground, meters_r * 0.6, 1.6)
 			arena.play_sfx(SFX_SLASH, -4.0, 1.3)
-			arena.shake(2.0, 0.12)
+			_shake(2.0, 0.12)
 		"cross_cut":
 			ArcaneFx.hit_sparks(arena, ground + Vector3(0, 0.3, 0), ArcaneFx.STEEL, View3D.dir3(sim.attack_aim), 22, true)
 			arena.spawn_dust(at, 8, 0.5)
-			arena.shake(2.4, 0.14)
+			_shake(2.4, 0.14)
 		"death_sentence":
 			var dark := Color(0.85, 0.15, 0.2)
 			ArcaneFx.hit_sparks(arena, ground + Vector3(0, 1.0, 0) + View3D.dir3(sim.attack_aim) * 0.8, dark, View3D.dir3(sim.attack_aim), 40, true)
 			ArcaneFx.burst(arena, ground + Vector3(0, 0.8, 0), dark, 50, 4.0, 0.14)
 			arena.spawn_shockwave(at, 90.0, dark, 0.45, 0.7)
 			arena.play_sfx(SFX_HIT_HEAVY, -2.0, 0.85)
-			arena.shake(5.0, 0.25)
+			_shake(5.0, 0.25)
 			rig.hitstop(0.1)
 		"rain_of_arrows":
 			ArcaneFx.arrow_rain(arena, ground, meters_r, 24)
@@ -613,7 +686,7 @@ func _arcane_slam(at: Vector2, radius: float, skill: Dictionary) -> void:
 	ArcaneFx.column(arena, View3D.to3(at), color, 3.0)
 	ArcaneFx.burst(arena, View3D.to3(at, 0.8), color, 70, 5.0, 0.16)
 	arena.play_sfx(SFX_MAGIC, -3.0, 0.8)
-	arena.shake(3.0 + radius * 0.012, 0.25)
+	_shake(3.0 + radius * 0.012, 0.25)
 
 
 func _stop_spin() -> void:
@@ -634,7 +707,7 @@ func _on_attack_hit(skill: Dictionary, target: Object, damage: float, critical: 
 	var color := Color(1.0, 0.86, 0.42) if critical else Color(1.0, 0.72, 0.35)
 	arena.spawn_impact(hit_position, color, heavy)
 	arena.play_sfx(SFX_HIT_HEAVY if heavy else SFX_HIT, -5.0, randf_range(0.92, 1.06))
-	arena.shake(3.2 if heavy else 2.0, 0.14)
+	_shake(3.2 if heavy else 2.0, 0.14)
 	# Hit-stop: congelar atacante y víctima unas centésimas da peso al golpe.
 	var stop := 0.085 if heavy else 0.055
 	rig.hitstop(stop)
@@ -673,7 +746,7 @@ func _on_damage_taken(_amount: float, _source_position: Vector2, is_dot: bool) -
 		_hurt_time = 0.32
 		rig.play_clip(ANIM_HIT, 0.0, 0.8, 0.25, 0.06, 0.26, ANIM_IDLE, 0.04)
 	arena.play_sfx(SFX_HURT, -6.0, randf_range(0.92, 1.05))
-	arena.shake(3.2, 0.18)
+	_shake(3.2, 0.18)
 
 
 ## Vanish: el personaje se ve semitransparente mientras es invisible.
@@ -698,7 +771,7 @@ func _on_died() -> void:
 	trail.emitting = false
 	rig.play_clip(ANIM_DEATH, 0.0, 1.0, 0.4, 0.4, 0.9)
 	arena.play_sfx(SFX_DEATH, -4.0, 0.9)
-	arena.shake(5.0, 0.35)
+	_shake(5.0, 0.35)
 
 
 func _restore_visual() -> void:
