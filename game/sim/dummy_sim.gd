@@ -17,6 +17,7 @@ signal died()
 signal revived()
 signal interrupted()
 signal effect_applied(effect_name: String, seconds: float)
+signal dot_damage(amount: float, meta: Dictionary)
 
 enum State { IDLE, TELEGRAPH, RECOVER, DEAD }
 
@@ -127,6 +128,7 @@ func _tick_effects(delta: float) -> void:
 	cc.tick(delta)
 	for hit: Dictionary in dots.tick(delta):
 		take_damage(float(hit["amount"]), position, {DamageSystem.KEY: int(hit["type"]), "tick": true})
+		dot_damage.emit(float(hit["amount"]), hit)
 	if interrupted_timer > 0.0:
 		interrupted_timer = maxf(0.0, interrupted_timer - delta)
 	if stun_timer > 0.0:
@@ -258,7 +260,7 @@ func apply_effects(effects: Dictionary, source: Vector2 = Vector2.ZERO) -> void:
 
 	var dot: Dictionary = effects.get("dot", {})
 	if not dot.is_empty():
-		dots.add(int(dot.get(DamageSystem.KEY, DamageSystem.Type.POISON)), float(dot.get("dps", 5.0)), float(dot.get("duration", 5.0)), int(dot.get("stacks", 1)))
+		dots.add(int(dot.get(DamageSystem.KEY, DamageSystem.Type.POISON)), float(dot.get("dps", 5.0)), float(dot.get("duration", 5.0)), int(dot.get("stacks", 1)), {"skill_id": dot.get("skill_id", ""), "src": dot.get("src", null)})
 
 	var stun := cc.apply("stun", float(effects.get("stun", 0.0))) if effects.has("stun") else 0.0
 	if stun > 0.0:

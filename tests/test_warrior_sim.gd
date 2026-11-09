@@ -60,6 +60,7 @@ func _run() -> void:
 	_test_rogue_rework()
 	_test_ranger_rework()
 	_test_flank_stacks_castbar()
+	_test_class_enemies_and_balance_sim()
 
 	print("== %d checks, %d failed ==" % [_checks, _failures])
 	print("RESULT: %s" % ("PASS" if _failures == 0 else "FAIL"))
@@ -1024,3 +1025,31 @@ func _test_flank_stacks_castbar() -> void:
 	_step(world2, 140, _input(Vector2(0, -1), false, false))
 	_check(t.health < before, "Quieto, el disparo concentrado sale con la barra llena")
 	r.set_class(&"warrior")
+
+
+func _test_class_enemies_and_balance_sim() -> void:
+	# Enemigo de clase: ataca al jugador con las skills de su clase.
+	var world := _make_world(false, 131)
+	var foe := world.add_fighter(&"mage", 1, world.warrior.position + Vector2(0, -200), 3, "Mago")
+	_check(foe.team == 1 and foe.alive and foe.progression.level == 3, "add_fighter crea un enemigo de clase con nivel")
+	var hp_before: float = world.warrior.health
+	_step(world, 600, null)
+	_check(world.warrior.health < hp_before, "El enemigo de clase (Mago) ataca al jugador (%d de daño)" % int(hp_before - world.warrior.health))
+	# El jugador también le pega (es objetivo válido).
+	_check(world.targets_for(world.warrior).has(foe), "El enemigo de clase es un objetivo para el jugador")
+	# Simulador: DPS en muñeco y overrides de balance.
+	BalanceData.clear()
+	var base := BalanceSim.dps_race({"class": "rogue", "level": 1, "seconds": 20, "seed": 3})
+	_check(float(base["damage"]) > 0.0 and (base["skills"] as Array).size() > 0, "dps_race devuelve daño y desglose por skill")
+	BalanceData.set_class_mod(&"rogue", "damage_mult", 2.0)
+	var boosted := BalanceSim.dps_race({"class": "rogue", "level": 1, "seconds": 20, "seed": 3})
+	_check(float(boosted["damage"]) > float(base["damage"]) * 1.6, "El multiplicador de daño de clase se refleja en el simulador")
+	BalanceData.clear()
+	BalanceData.set_skill_value("twin_fang", "damage_mult", 3.0)
+	var skilled := BalanceSim.dps_race({"class": "rogue", "level": 1, "seconds": 20, "seed": 3})
+	_check(float(skilled["damage"]) > float(base["damage"]) * 1.3, "Un override de skill cambia el daño en el simulador")
+	BalanceData.clear()
+	var duel := BalanceSim.run_many({"a": [{"class": "warrior", "level": 1}], "b": [{"class": "mage", "level": 1}], "max_seconds": 60}, 3)
+	_check(int(duel["wins"]["A"]) + int(duel["wins"]["B"]) + int(duel["wins"]["empate"]) == 3, "Los duelos 1v1 registran sus resultados")
+	var team := BalanceSim.team_match({"a": [{"class": "warrior"}, {"class": "mage"}], "b": [{"class": "rogue"}], "max_seconds": 30, "seed": 5})
+	_check((team["fighters"] as Array).size() == 3, "Los combates por equipos (2v1) funcionan")

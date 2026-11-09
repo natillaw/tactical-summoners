@@ -22,6 +22,9 @@ var obstacles: Array = []
 var warrior: WarriorSim
 var dummies: Array = []
 var pending_input: InputMessage = null
+## Otros combatientes (enemigos de clase, rivales del simulador); el jugador es `warrior`.
+var fighters: Array = []
+var warrior_bot: BotBrain = null
 
 
 func _init(seed_value: int = 1337) -> void:
@@ -64,7 +67,12 @@ func step(delta: float, tick_number: int = -1) -> void:
 	else:
 		tick += 1
 
-	warrior.step(tick, delta, pending_input.to_dict() if pending_input != null else {})
+	var player_input: Variant = pending_input.to_dict() if pending_input != null else {}
+	if warrior_bot != null:
+		player_input = warrior_bot.think(warrior, self, delta)
+	warrior.step(tick, delta, player_input)
+	for fighter: WarriorSim in fighters:
+		fighter.step(tick, delta, fighter.brain.think(fighter, self, delta) if fighter.brain != null else {})
 	for dummy: DummySim in dummies:
 		dummy.step(tick, delta, warrior)
 
@@ -80,6 +88,39 @@ func _sync_enemy_levels(level: int) -> void:
 	for dummy: DummySim in dummies:
 		if dummy is EnemySim:
 			(dummy as EnemySim).set_level(level)
+
+
+func all_fighters() -> Array:
+	var all: Array = [warrior]
+	all.append_array(fighters)
+	return all
+
+
+## Objetivos de `sim`: muñecos/enemigos clásicos (equipo 1) y combatientes del otro equipo.
+func targets_for(sim: Object) -> Array:
+	var out: Array = []
+	if int(sim.get("team")) == 0:
+		for dummy: DummySim in dummies:
+			if dummy.alive:
+				out.append(dummy)
+	for fighter: WarriorSim in all_fighters():
+		if fighter != sim and fighter.alive and fighter.team != int(sim.get("team")):
+			out.append(fighter)
+	return out
+
+
+## Añade un combatiente que juega una clase con IA (BotBrain).
+func add_fighter(class_id: StringName, team: int, spawn: Vector2, level: int = 1, display_name: String = "") -> WarriorSim:
+	var fighter: WarriorSim = WarriorSimScript.new(self)
+	fighter.set_class(class_id)
+	fighter.team = team
+	fighter.display_name = display_name if display_name != "" else String(fighter.kit.CLASS_NAME)
+	fighter.spawn_position = spawn
+	fighter.reset(spawn)
+	fighter.progression.set_level(level)
+	fighter.brain = BotBrain.new(rng.randi())
+	fighters.append(fighter)
+	return fighter
 
 
 func get_living_dummies() -> Array:
@@ -136,6 +177,16 @@ func resolve_position(desired: Vector2, radius: float, ignore: Object = null) ->
 				diff = Vector2.RIGHT
 			pos = dummy.position + diff.normalized() * min_distance
 
+	for fighter: WarriorSim in all_fighters():
+		if not fighter.alive or fighter == ignore:
+			continue
+		var gap := pos - fighter.position
+		var min_gap := radius + fighter.radius
+		if gap.length_squared() < min_gap * min_gap:
+			if gap.length_squared() < 0.0001:
+				gap = Vector2.RIGHT
+			pos = fighter.position + gap.normalized() * min_gap
+
 	return pos
 
 
@@ -146,6 +197,8 @@ func reset() -> void:
 	for dummy: DummySim in dummies:
 		dummy.position = dummy.spawn_position
 		dummy.revive()
+	for fighter: WarriorSim in fighters:
+		fighter.reset(fighter.spawn_position)
 
 
 func snapshot() -> Dictionary:

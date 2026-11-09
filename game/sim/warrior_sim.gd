@@ -30,6 +30,7 @@ signal stunned(seconds: float)
 signal class_changed(class_id: StringName)
 signal visibility_changed(invisible: bool)
 signal cast_cancelled(skill: Dictionary)
+signal dot_damage(amount: float, meta: Dictionary)
 
 enum AttackState { IDLE, WINDUP, ACTIVE, RECOVERY }
 
@@ -67,6 +68,17 @@ var weapon: Item = ItemFactory.starter_sword()
 var stats := CharacterStats.new()
 var height: float = 0.0
 var stun_timer: float = 0.0
+## Combate entre clases: equipo, tamaño, hacia dónde mira, multiplicadores de balance, IA.
+var team: int = 0
+var radius: float = RADIUS
+var facing: Vector2 = Vector2.RIGHT
+var mods: Dictionary = {}
+var brain: BotBrain = null
+var display_name: String = ""
+var slow_timer: float = 0.0
+var slow_factor: float = 1.0
+var knock_vel: Vector2 = Vector2.ZERO
+var knock_timer: float = 0.0
 var cc := CCDiminish.new()
 ## Resistencias por tipo de daño (DamageSystem.Type → fracción).
 var resist: Dictionary = {}
@@ -142,6 +154,7 @@ func _init(p_world: Object = null) -> void:
 		_rng.seed = 1337
 	position = Vector2(480, 380)
 	spawn_position = position
+	mods = BalanceData.class_mods(class_id)
 	progression.leveled_up.connect(func(_l: int) -> void: recompute_stats(true))
 	recompute_stats(false)
 	reset(position)
@@ -159,7 +172,7 @@ func recompute_stats(heal: bool) -> void:
 	stats.set_base_stat(&"weapon_max", weapon.weapon_max if weapon != null else 2.0)
 	stats.set_base_stat(&"weapon_speed", weapon.weapon_speed if weapon != null else 2.0)
 	var ratio := health / maxf(max_health, 1.0)
-	max_health = Progression.health_for(progression.level) + float(gear.get("stamina", 0.0)) * 10.0
+	max_health = (Progression.health_for(progression.level) + float(gear.get("stamina", 0.0)) * 10.0) * float(mods.get("health_mult", 1.0))
 	health = max_health if heal else clampf(ratio, 0.0, 1.0) * max_health
 	health_changed.emit(health, max_health)
 
@@ -215,6 +228,7 @@ func gain_xp(amount: int) -> void:
 func step(tick_number: int, delta: float, input: Variant) -> void:
 	tick = tick_number
 	_read_input(input)
+	facing = aim_dir
 	_tick_timers(delta)
 
 	if not alive:
@@ -311,6 +325,11 @@ func _to_vec(value: Variant) -> Vector2:
 
 
 func _tick_timers(delta: float) -> void:
+	if slow_timer > 0.0:
+		slow_timer = maxf(0.0, slow_timer - delta)
+	if knock_timer > 0.0:
+		knock_timer -= delta
+		position = world.resolve_position(position + knock_vel * delta, RADIUS, self) if world != null else position
 	if invisible_timer > 0.0:
 		invisible_timer = maxf(0.0, invisible_timer - delta)
 		if invisible_timer <= 0.0:
@@ -319,7 +338,7 @@ func _tick_timers(delta: float) -> void:
 		_since_spend += delta
 		if _since_spend >= _regen_delay:
 			var out_of_combat := tick - last_combat_tick > 300  # 5 s sin golpes
-			_gain_rage(_regen * (_regen_ooc if out_of_combat else 1.0) * delta)
+			_gain_rage(_regen * (_regen_ooc if out_of_combat else 1.0) * float(mods.get("regen_mult", 1.0)) * delta)
 	var keys: Array = cooldowns.keys().duplicate()
 	for key: Variant in keys:
 		var left := float(cooldowns[key]) - delta
@@ -546,7 +565,7 @@ func _enter_active() -> void:
 					if ahead > 0.0 and side < float(target.radius) + RADIUS + 10.0:
 						lunge = minf(lunge, maxf(ahead - (float(target.radius) + RADIUS + 6.0), 0.0))
 				leap_target = position + attack_aim * lunge
-			_leap_to = world.resolve_position(leap_target, RADIUS) if world != null else leap_target
+			_leap_to = world.resolve_position(leap_target, RADIUS, self) if world != null else leap_target
 			cast_event.emit("leap_start", current_skill, position, attack_aim)
 		"buff":
 			invisible_timer = float(current_skill.get("invisible", 5.0))
@@ -647,7 +666,7 @@ func _update_dash(delta: float) -> void:
 	if step <= 0.0:
 		return
 	var desired := position + attack_aim * float(current_skill.get("dir", 1.0)) * step
-	position = world.resolve_position(desired, RADIUS) if world != null else desired
+	position = world.resolve_position(desired, RADIUS, self) if world != null else desired
 	_dash_remaining = maxf(0.0, _dash_remaining - step)
 	var hop := float(current_skill.get("hop", 0.0))
 	if hop > 0.0:
@@ -689,7 +708,7 @@ func _effects() -> Dictionary:
 func _living_targets() -> Array:
 	if world == null:
 		return []
-	return world.get_living_dummies()
+	return world.targets_for(self) if world.has_method("targets_for") else world.get_living_dummies()
 
 
 func _damage_melee(range_value: float, arc: float, mult: float, effects: Dictionary) -> int:
@@ -748,10 +767,11 @@ func _hit_target(target: Object, mult: float, effects: Dictionary, skill: Dictio
 	var sk: Dictionary = skill if not skill.is_empty() else current_skill
 
 	var type := DamageSystem.type_of(sk)
-	var result := DamageSystem.roll(roll_hit(), mult, stats.get_crit_chance(), type, _rng)
+	var result := DamageSystem.roll(roll_hit(), mult, stats.get_crit_chance() + float(mods.get("crit_bonus", 0.0)), type, _rng)
 	var damage: float = result["amount"]
 	if bool(sk.get("flank", false)) and not _is_behind(target):
 		damage *= 0.8  # el Rogue pierde 20 % de daño si ataca de frente
+	damage *= float(mods.get("damage_mult", 1.0))
 	var critical: bool = result["critical"]
 	var fx := effects.duplicate()
 	fx[DamageSystem.KEY] = type
@@ -759,6 +779,8 @@ func _hit_target(target: Object, mult: float, effects: Dictionary, skill: Dictio
 		var dot: Dictionary = (fx["dot"] as Dictionary).duplicate()
 		if dot.has("dps_mult"):
 			dot["dps"] = average_hit() * float(dot["dps_mult"])
+		dot["skill_id"] = String(sk.get("id", ""))
+		dot["src"] = self
 		fx["dot"] = dot
 
 	var dealt: float = target.take_damage(damage, position, fx)
@@ -819,14 +841,14 @@ func _update_movement(delta: float) -> void:
 	if last_stand_active:
 		factor *= float(kit.PASSIVE.get("speed_bonus", 1.25))
 
-	var desired := move_input * MOVE_SPEED * factor
+	var desired := move_input * MOVE_SPEED * factor * float(mods.get("speed_mult", 1.0)) * (slow_factor if slow_timer > 0.0 else 1.0)
 	var rate := ACCELERATION if move_input.length_squared() > 0.0001 else FRICTION
 	velocity = velocity.move_toward(desired, rate * delta)
 	if velocity.length_squared() < 0.01:
 		velocity = Vector2.ZERO
 	position += velocity * delta
 	if world != null:
-		position = world.resolve_position(position, RADIUS)
+		position = world.resolve_position(position, RADIUS, self)
 
 
 # --- Rage / Ultimate --------------------------------------------------------
@@ -911,6 +933,7 @@ func take_damage(amount: float, source_position: Vector2 = Vector2.ZERO, effects
 	damage_taken.emit(dealt, source_position, false)
 
 	_apply_dot_effect(effects)
+	_apply_status_effects(effects, source_position)
 	var stun := cc.apply("stun", float(effects.get("stun", 0.0))) if effects.has("stun") else 0.0
 	if stun > 0.0 and health > 0.0:
 		_apply_stun(stun)
@@ -949,11 +972,25 @@ func is_stunned() -> bool:
 	return stun_timer > 0.0
 
 
+## Slow, empuje e interrupción recibidos de otras skills (como en DummySim).
+func _apply_status_effects(effects: Dictionary, source: Vector2) -> void:
+	var slow: Dictionary = effects.get("slow", {})
+	if not slow.is_empty():
+		slow_factor = clampf(float(slow.get("factor", 0.6)), 0.1, 1.0)
+		slow_timer = float(slow.get("duration", 1.0))
+	var knockback := float(effects.get("knockback", 0.0))
+	if knockback > 0.0 and source != Vector2.ZERO:
+		knock_vel = (position - source).normalized() * (knockback / 0.18)
+		knock_timer = 0.18
+	if bool(effects.get("interrupt", false)) and state == AttackState.WINDUP:
+		_cancel_cast()
+
+
 ## Efectos en el tiempo: effects.dot = {damage_type, dps, duration}.
 func _apply_dot_effect(effects: Dictionary) -> void:
 	var dot: Dictionary = effects.get("dot", {})
 	if not dot.is_empty():
-		dots.add(int(dot.get(DamageSystem.KEY, DamageSystem.Type.POISON)), float(dot.get("dps", 5.0)), float(dot.get("duration", 5.0)), int(dot.get("stacks", 1)))
+		dots.add(int(dot.get(DamageSystem.KEY, DamageSystem.Type.POISON)), float(dot.get("dps", 5.0)), float(dot.get("duration", 5.0)), int(dot.get("stacks", 1)), {"skill_id": dot.get("skill_id", ""), "src": dot.get("src", null)})
 
 
 func _tick_dots(delta: float) -> void:
@@ -964,6 +1001,7 @@ func _tick_dots(delta: float) -> void:
 		health -= dealt
 		health_changed.emit(health, max_health)
 		damage_taken.emit(dealt, position, true)
+		dot_damage.emit(dealt, hit)
 		if health <= 0.0:
 			health = 0.0
 			alive = false
@@ -1014,14 +1052,22 @@ func parry_trigger(success: bool) -> void:
 
 
 func ability_for_slot(slot: String) -> Dictionary:
+	var ability: Dictionary = {}
 	if slot == "M1":
-		return kit.M1.duplicate(true)
-	if slot == "M2":
-		return kit.M2.duplicate(true)
-	var id := StringName(String(loadout.get(slot, "")))
-	if id == &"":
-		return {}
-	return kit.ability_by_id(id)
+		ability = kit.M1.duplicate(true)
+	elif slot == "M2":
+		ability = kit.M2.duplicate(true)
+	else:
+		var id := StringName(String(loadout.get(slot, "")))
+		if id == &"":
+			return {}
+		ability = kit.ability_by_id(id)
+	if not ability.is_empty():
+		# Sobrescrituras de balance (res://data/balance.json / Laboratorio de Balance)
+		var overrides := BalanceData.skill_override(String(ability.get("id", "")))
+		for key: String in overrides:
+			ability[key] = overrides[key]
+	return ability
 
 
 func ability_name_for_slot(slot: String) -> String:
@@ -1121,7 +1167,7 @@ func _do_teleport() -> void:
 				break
 		if victim != null:
 			destination = victim.position - (victim.facing as Vector2) * (float(victim.radius) + RADIUS + 6.0)
-	position = world.resolve_position(destination, RADIUS) if world != null else destination
+	position = world.resolve_position(destination, RADIUS, self) if world != null else destination
 	if victim != null:
 		attack_aim = (victim.position - position).normalized()
 	cast_event.emit("blink_in", current_skill, position, attack_aim)
@@ -1133,8 +1179,10 @@ func _do_teleport() -> void:
 ## Cambia de clase (kit, recurso, loadout) y reinicia el estado de combate.
 func set_class(id: StringName) -> void:
 	class_id = id
-	ClassRegistry.active = id
+	if world == null or world.get("warrior") == self:
+		ClassRegistry.active = id  # la UI sigue al jugador, no a los enemigos de clase
 	kit = ClassRegistry.kit(id)
+	mods = BalanceData.class_mods(id)
 	var consts := kit.get_script_constant_map()
 	_regen = float(consts.get("RESOURCE_REGEN", 0.0))
 	_regen_delay = float(consts.get("RESOURCE_REGEN_DELAY", 0.0))
@@ -1154,6 +1202,7 @@ func set_class(id: StringName) -> void:
 		resource.current_amount = resource.max_amount
 	rage_changed.emit(resource.get_current(), resource.max_amount)
 	ultimate_changed.emit(ultimate_charge, kit.ULTIMATE_COST)
+	recompute_stats(true)
 	loadout_changed.emit(loadout_to_strings())
 	class_changed.emit(id)
 
@@ -1195,7 +1244,7 @@ func cooldown_total(slot: String) -> float:
 	var ability := ability_for_slot(slot)
 	if ability.is_empty():
 		return 0.0
-	return float(ability.get("windup", 0.0)) + float(ability.get("active", 0.0)) + float(ability.get("recovery", 0.0)) + float(ability.get("cooldown", 0.0))
+	return float(ability.get("windup", 0.0)) + float(ability.get("active", 0.0)) + float(ability.get("recovery", 0.0)) + float(ability.get("cooldown", 0.0)) * float(mods.get("cooldown_mult", 1.0))
 
 
 func is_attacking() -> bool:
