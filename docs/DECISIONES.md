@@ -175,3 +175,5 @@ piezas del Medieval Village / Fantasy Props MegaKit; animación propia de estoca
 - `CharacterBuilder` ensambla en runtime: cuerpo base + pelo + cejas + ropa injertando mallas al mismo esqueleto UE. `CharacterProfile` lleva la elección a `main_3d`. Assets extraídos a `assets/models/creator/` (~120 MB por las texturas 4K; recortar luego).
 - **Mago solo arcano** (`DamageSystem.Type.ARCANE`): Arcane Bolt, Arcane Orb (DoT arcano), Blink, Arcane Pulse, Arcane Rift (suelo), Starfall (suelo), Arcane Surge. Las subclases (pyromancer, frostmage...) añadirán su elemento encima.
 - Quitado F8 (cambio de clase en vivo, se cerraba el juego); la clase se elige ahora en el creador.
+
+- Fix creador: el cuerpo base se recorta a cabeza/cuello/manos cuando hay ropa (la piel asomaba por la tela); cejas propias del cuerpo eliminadas (salían blancas) y se usan las del pack de pelo; pose de vista previa = Idle normal; eliminadas las armaduras generadas por script (solo ropa Quaternius).

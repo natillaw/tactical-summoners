@@ -6,7 +6,7 @@
 extends Control
 
 const GAME_SCENE := "res://game/main_3d.tscn"
-const ANIM_PREVIEW := "ual1/Sword_Idle"
+const ANIM_PREVIEW := "ual1/Idle"
 
 ## Clases: las que no tienen kit todavía se muestran pero no se pueden jugar.
 const CLASSES := [
@@ -108,10 +108,10 @@ func _build_stage(viewport: SubViewport) -> void:
 	sun.light_energy = 1.2
 	viewport.add_child(sun)
 	var cam := Camera3D.new()
-	cam.position = Vector3(0.0, 1.15, 3.4)
+	cam.position = Vector3(0.0, 1.0, 4.6)
 	cam.fov = 38.0
 	viewport.add_child(cam)
-	cam.look_at(Vector3(0.0, 0.95, 0.0))
+	cam.look_at(Vector3(0.0, 0.85, 0.0))
 	_preview_root = Node3D.new()
 	viewport.add_child(_preview_root)
 

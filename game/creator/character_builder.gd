@@ -9,7 +9,6 @@ class_name CharacterBuilder
 extends RefCounted
 
 const DIR := "res://assets/models/creator/"
-const GEAR_DIR := "res://assets/models/gear/"
 
 const SEXES := {"male": "Hombre", "female": "Mujer"}
 const BODY_FILE := {"male": "Superhero_Male_FullBody.gltf", "female": "Superhero_Female_FullBody.gltf"}
@@ -44,16 +43,6 @@ const OUTFITS := {
 	"peasant": {"name": "Campesino", "dir": "outfits/", "file": "Peasant.gltf", "sex": true},
 	"ranger": {"name": "Explorador", "dir": "outfits/", "file": "Ranger.gltf", "sex": true, "hide": ["Hood"]},
 	"ranger_hood": {"name": "Explorador (capucha)", "dir": "outfits/", "file": "Ranger.gltf", "sex": true},
-	"recluta": {"name": "Armadura recluta", "gear": "armor_recluta.glb"},
-	"soldado": {"name": "Armadura soldado", "gear": "armor_soldado.glb"},
-	"bronce": {"name": "Armadura bronce", "gear": "armor_bronce.glb"},
-	"hierro": {"name": "Armadura hierro", "gear": "armor_hierro.glb"},
-	"tunica1": {"name": "Túnica 1", "gear": "armor_rnd01_tunic.glb"},
-	"tunica2": {"name": "Túnica 2", "gear": "armor_rnd02_tunic.glb"},
-	"tunica3": {"name": "Túnica 3", "gear": "armor_rnd03_tunic.glb"},
-	"placas": {"name": "Placas", "gear": "armor_rnd04_plate.glb"},
-	"cuero1": {"name": "Cuero 1", "gear": "armor_rnd05_leather.glb"},
-	"cuero2": {"name": "Cuero 2", "gear": "armor_rnd06_leather.glb"},
 }
 
 
@@ -78,9 +67,19 @@ static func build(opts: Dictionary) -> Node3D:
 	var skeleton := root.find_child("Skeleton3D", true, false) as Skeleton3D
 
 	var tone: Color = SKINS.get(String(o["skin"]), Color.WHITE)
+	var has_outfit := String(o["outfit"]) != "none"
 	for mi: MeshInstance3D in _meshes(root):
-		if not "Eye" in String(mi.name):
-			_tint(mi, tone)
+		var mesh_name := String(mi.name)
+		if mesh_name == "Eyebrows":
+			# Las cejas propias del cuerpo no se pueden teñir bien: se usan las del pack de pelo.
+			mi.get_parent().remove_child(mi)
+			mi.free()
+			continue
+		if mesh_name == "Eyes":
+			continue
+		_tint(mi, tone)
+		if has_outfit:
+			_crop_to_head_and_hands(mi, skeleton)
 
 	var hair: Dictionary = HAIRS.get(String(o["hair"]), HAIRS["none"])
 	if String(hair["file"]) != "":
@@ -94,9 +93,7 @@ static func build(opts: Dictionary) -> Node3D:
 
 	var outfit: Dictionary = OUTFITS.get(String(o["outfit"]), OUTFITS["none"])
 	var path := ""
-	if outfit.has("gear"):
-		path = GEAR_DIR + String(outfit["gear"])
-	elif outfit.has("file"):
+	if outfit.has("file"):
 		var file := String(outfit["file"])
 		if bool(outfit.get("sex", false)):
 			file = ("Male_" if sex == "male" else "Female_") + file
@@ -139,3 +136,51 @@ static func _tint(mi: MeshInstance3D, color: Color) -> void:
 			var mat := (base as StandardMaterial3D).duplicate() as StandardMaterial3D
 			mat.albedo_color = mat.albedo_color * color
 			mi.set_surface_override_material(i, mat)
+
+
+## Con ropa puesta, la piel del torso/brazos/piernas asomaba por los agujeros de la tela.
+## Se recorta el cuerpo base a cabeza, cuello y manos (por el hueso dominante de cada vértice).
+static func _crop_to_head_and_hands(mi: MeshInstance3D, skeleton: Skeleton3D) -> void:
+	var src := mi.mesh as ArrayMesh
+	if src == null or mi.skin == null:
+		return
+	var out := ArrayMesh.new()
+	for s in range(src.get_surface_count()):
+		var arrays := src.surface_get_arrays(s)
+		var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var bones: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
+		var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
+		var index: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+		if verts.is_empty() or bones.is_empty() or index.is_empty():
+			return
+		var stride := bones.size() / verts.size()
+		var keep := PackedByteArray()
+		keep.resize(verts.size())
+		for v in range(verts.size()):
+			var best := 0
+			var best_weight := -1.0
+			for k in range(stride):
+				if weights[v * stride + k] > best_weight:
+					best_weight = weights[v * stride + k]
+					best = bones[v * stride + k]
+			var bone_name := String(mi.skin.get_bind_name(best))
+			if bone_name.is_empty():
+				bone_name = skeleton.get_bone_name(mi.skin.get_bind_bone(best))
+			keep[v] = 1 if _keeps_bone(bone_name) else 0
+		var kept := PackedInt32Array()
+		for t in range(0, index.size(), 3):
+			if keep[index[t]] == 1 and keep[index[t + 1]] == 1 and keep[index[t + 2]] == 1:
+				kept.append(index[t])
+				kept.append(index[t + 1])
+				kept.append(index[t + 2])
+		arrays[Mesh.ARRAY_INDEX] = kept
+		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		out.surface_set_material(out.get_surface_count() - 1, src.surface_get_material(s))
+	mi.mesh = out
+
+
+static func _keeps_bone(bone_name: String) -> bool:
+	for prefix: String in ["head", "neck", "hand", "thumb", "index", "middle", "ring", "pinky"]:
+		if bone_name.begins_with(prefix):
+			return true
+	return false
