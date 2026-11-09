@@ -472,6 +472,10 @@ func _enter_recovery() -> void:
 
 func _finish_attack() -> void:
 	var finished := current_skill
+	# La ventana del combo corre desde que acaba el golpe (antes solo se armaba al
+	# conectar, así que fallar reiniciaba siempre al primer golpe: un solo ataque).
+	if String(finished.get("slot", "")) == "M1":
+		combo_timer = float(finished.get("combo_reset_window", 0.85))
 	state = AttackState.IDLE
 	state_time = 0.0
 	current_skill = {}
