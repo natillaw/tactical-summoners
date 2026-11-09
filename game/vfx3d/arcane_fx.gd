@@ -113,3 +113,17 @@ static func column(parent: Node, at: Vector3, color: Color, height: float = 2.0)
 	var tween := holder.create_tween()
 	tween.tween_interval(1.0)
 	tween.tween_callback(holder.queue_free)
+
+
+## Flecha: asta alargada brillante con estela fina.
+static func make_arrow(color: Color) -> Node3D:
+	var root := Node3D.new()
+	var shaft := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(0.04, 0.04, 0.7)
+	mesh.material = _additive(color.lightened(0.4))
+	(mesh.material as StandardMaterial3D).billboard_mode = BaseMaterial3D.BILLBOARD_DISABLED
+	shaft.mesh = mesh
+	root.add_child(shaft)
+	root.add_child(sparks(color, 18, 0.3, 0.2, 0.05, false))
+	return root

@@ -186,3 +186,10 @@ piezas del Medieval Village / Fantasy Props MegaKit; animación propia de estoca
 - **Skills de suelo: mantener la tecla = apuntar (marcador), soltar = lanzar** (también Seismic Break del Warrior). El marcador solo se ve mientras la tecla está mantenida.
 - **Magic Spell Pack** (Mixamo) retargeteado al esqueleto UAL con `tools/bake_spells.gd` -> `assets/models/anims/spells.res` (clip completo y `_upper`). El mago castea con la animación de tren superior sobre la locomoción (`HumanoidRig.overlay`), así que se mueve mientras lanza. Los tiempos de cada clip (start/contact/end) están en `mage_kit.gd`.
 - VFX arcanos procedurales (`game/vfx3d/arcane_fx.gd`): orbe con estela de chispas y luz, ráfagas, columnas; sin assets externos.
+
+## 2026-11-08 — Rogue, Ranger, maná lento
+- Diseño base en `Downloads/new assets/Diseño de las cinco clases básicas.docx` (la clase del arquero se llama **Ranger**). Cleric queda para después.
+- **Rogue** (`combat/rogue_kit.gd`, Energy, regen 25/s): Twin Fang (50) y Cross Cut (60) cuestan Energy → 2 ataques seguidos y esperar ~1.4 s. Shadowstep (teleport), Poisoned Blades, Fan of Knives, Backstab, Death Sentence. Dagas KayKit.
+- **Ranger** (`combat/ranger_kit.gd`, Energy, regen 14/s): Quick Shot (gratis), Charged Shot (atraviesa), Evasive Leap (salto atrás), Multishot (3 flechas), Frost Trap, Volley, Rain of Arrows. Proyectiles con `count/spread/pierce`; dash con `dir: -1`.
+- **Maná del Mago:** regen 1.5/s tras 2 s sin gastar, x4 fuera de combate (5 s sin golpes), sin ganancia por golpe; Arcane Bolt cuesta 4. Constantes de regeneración por kit (`RESOURCE_REGEN`, `_DELAY`, `_OOC_MULT`).
+- Cara femenina: el recorte del cuerpo fallaba con la malla femenina (datos custom); ya corregido. `tools/bake_spells.gd` acepta carpeta/salida para convertir otros FBX de Mixamo (p. ej. animaciones del Warrior).

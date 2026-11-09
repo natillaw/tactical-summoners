@@ -132,7 +132,11 @@ func _draw_status(warrior: WarriorSim) -> void:
 	)
 
 	var resource_name := String(ClassRegistry.active_kit().RESOURCE_NAME)
-	var resource_color := Color(0.30, 0.50, 1.0, 1.0) if resource_name == "Mana" else RAGE
+	var resource_color := RAGE
+	if resource_name == "Mana":
+		resource_color = Color(0.30, 0.50, 1.0, 1.0)
+	elif resource_name == "Energy":
+		resource_color = Color(1.0, 0.85, 0.2, 1.0)
 	var rage_ratio: float = _sim_rage(warrior) / maxf(_sim_rage_max(warrior), 1.0)
 	_bar(Rect2(16, 45, 234, 8), rage_ratio, resource_color)
 	if _sim_rage(warrior) >= _sim_rage_max(warrior):

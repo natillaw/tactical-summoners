@@ -103,6 +103,9 @@ var projectiles: Array = []
 var aiming_slot: String = ""
 var _next_projectile_id: int = 1
 var _regen: float = 0.0
+var _regen_delay: float = 0.0
+var _regen_ooc: float = 1.0
+var _since_spend: float = 99.0
 var loadout: Dictionary = kit.default_loadout()
 var dots := DotTracker.new()
 ## Punto del suelo bajo la mira y destino de la skill de suelo en curso.
@@ -296,7 +299,10 @@ func _to_vec(value: Variant) -> Vector2:
 
 func _tick_timers(delta: float) -> void:
 	if _regen > 0.0 and alive:
-		_gain_rage(_regen * delta)
+		_since_spend += delta
+		if _since_spend >= _regen_delay:
+			var out_of_combat := tick - last_combat_tick > 300  # 5 s sin golpes
+			_gain_rage(_regen * (_regen_ooc if out_of_combat else 1.0) * delta)
 	var keys: Array = cooldowns.keys().duplicate()
 	for key: Variant in keys:
 		var left := float(cooldowns[key]) - delta
@@ -534,7 +540,7 @@ func _update_dash(delta: float) -> void:
 	var step := minf(distance / active_time * delta, _dash_remaining)
 	if step <= 0.0:
 		return
-	var desired := position + attack_aim * step
+	var desired := position + attack_aim * float(current_skill.get("dir", 1.0)) * step
 	position = world.resolve_position(desired, RADIUS) if world != null else desired
 	_dash_remaining = maxf(0.0, _dash_remaining - step)
 
@@ -723,6 +729,7 @@ func _gain_rage(amount: float) -> void:
 func _spend_rage(amount: float) -> void:
 	if amount <= 0.0:
 		return
+	_since_spend = 0.0
 	var before := resource.get_current()
 	resource.current_amount = maxf(0.0, before - amount)
 	if not is_equal_approx(before, resource.get_current()):
@@ -938,13 +945,18 @@ func loadout_to_strings() -> Dictionary:
 
 func _spawn_projectile() -> void:
 	var skill := current_skill
-	projectiles.append({
-		"id": _next_projectile_id, "pos": position + attack_aim * 16.0, "dir": attack_aim,
-		"speed": float(skill.get("speed", 450.0)), "left": float(skill.get("range", 400.0)),
-		"radius": float(skill.get("hit_radius", 10.0)), "skill": skill,
-		"mult": _current_multiplier(), "effects": _effects(),
-	})
-	_next_projectile_id += 1
+	var count := int(skill.get("count", 1))
+	var spread := deg_to_rad(float(skill.get("spread", 0.0)))
+	for k in range(count):
+		var dir := attack_aim.rotated((k - (count - 1) * 0.5) * spread)
+		projectiles.append({
+			"id": _next_projectile_id, "pos": position + dir * 16.0, "dir": dir,
+			"speed": float(skill.get("speed", 450.0)), "left": float(skill.get("range", 400.0)),
+			"radius": float(skill.get("hit_radius", 10.0)), "skill": skill,
+			"mult": _current_multiplier(), "effects": _effects(),
+			"pierce": bool(skill.get("pierce", false)), "hit": {},
+		})
+		_next_projectile_id += 1
 	cast_event.emit("projectile", skill, position, attack_aim)
 
 
@@ -957,10 +969,15 @@ func _update_projectiles(delta: float) -> void:
 		var consumed := false
 		for target: Object in _living_targets():
 			if (p["pos"] as Vector2).distance_to(target.position) <= float(p["radius"]) + float(target.radius):
+				if (p["hit"] as Dictionary).has(target):
+					continue
+				(p["hit"] as Dictionary)[target] = true
+				_hit_targets.erase(target)  # cada proyectil golpea por su cuenta
 				_hit_target(target, float(p["mult"]), p["effects"], p["skill"])
 				cast_event.emit("projectile_hit", p["skill"], p["pos"], p["dir"])
-				consumed = true
-				break
+				if not bool(p["pierce"]):
+					consumed = true
+					break
 		if world != null and not consumed:
 			var inside: Vector2 = world.clamp_to_arena(p["pos"], 1.0)
 			consumed = inside.distance_to(p["pos"]) > 2.0
@@ -974,7 +991,11 @@ func set_class(id: StringName) -> void:
 	class_id = id
 	ClassRegistry.active = id
 	kit = ClassRegistry.kit(id)
-	_regen = float(kit.get_script_constant_map().get("RESOURCE_REGEN", 0.0))
+	var consts := kit.get_script_constant_map()
+	_regen = float(consts.get("RESOURCE_REGEN", 0.0))
+	_regen_delay = float(consts.get("RESOURCE_REGEN_DELAY", 0.0))
+	_regen_ooc = float(consts.get("RESOURCE_OOC_MULT", 1.0))
+	_since_spend = 99.0
 	resource = kit.create_rage_resource()
 	loadout = kit.default_loadout()
 	projectiles.clear()

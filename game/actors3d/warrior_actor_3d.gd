@@ -109,13 +109,21 @@ func setup(p_sim: WarriorSim, p_arena: Arena3D) -> void:
 	else:
 		rig.setup(model_path)
 
-	sword = (load(sword_path) as PackedScene).instantiate()
-	rig.attach_to_hand(sword)
+	var weapon_paths := _weapon_paths()
+	sword = (load(weapon_paths[0]) as PackedScene).instantiate() as Node3D
+	var weapon_scale: float = {"dagger": 0.4, "bow": 0.5}.get(String(weapon_paths[1]), 1.0)
+	rig.attach_to_hand(sword, "r" if weapon_paths[1] != "bow" else "l")
+	sword.scale = Vector3.ONE * weapon_scale
+	if weapon_paths.size() > 2:
+		var offhand := (load(weapon_paths[2]) as PackedScene).instantiate() as Node3D
+		rig.attach_to_hand(offhand, "l")
+		offhand.scale = Vector3.ONE * weapon_scale
+	var tip_len := 0.92 if String(weapon_paths[1]) == "sword" else 0.4
 	var blade_base := Node3D.new()
 	blade_base.position = Vector3(0, 0.14, 0)
 	sword.add_child(blade_base)
 	var blade_tip := Node3D.new()
-	blade_tip.position = Vector3(0, 0.92, 0)
+	blade_tip.position = Vector3(0, tip_len, 0)
 	sword.add_child(blade_tip)
 	trail = WeaponTrail.new()
 	add_child(trail)
@@ -150,6 +158,17 @@ func setup(p_sim: WarriorSim, p_arena: Arena3D) -> void:
 	rig.play(ANIM_IDLE, 0.0)
 	_connect_signals()
 	position = View3D.to3(sim.position)
+
+
+## [ruta del arma principal, tipo, (ruta del arma de la otra mano)] según la clase.
+func _weapon_paths() -> Array:
+	match sim.class_id:
+		&"rogue":
+			return ["res://assets/models/props/dagger.fbx", "dagger", "res://assets/models/props/dagger.fbx"]
+		&"ranger":
+			return ["res://assets/models/props/bow.fbx", "bow"]
+		_:
+			return [sword_path, "sword"]
 
 
 func _analyze_clips(tip_in_hand: Vector3) -> void:
@@ -196,7 +215,7 @@ func _process(delta: float) -> void:
 	if _dead_visual:
 		_restore_visual()
 
-	sword.visible = sim.class_id == &"warrior"
+	sword.visible = sim.class_id in [&"warrior", &"rogue", &"ranger"]
 	_update_orbs()
 	_update_facing(delta)
 	_update_locomotion()
@@ -277,6 +296,12 @@ func _on_attack_started(skill: Dictionary, direction: Vector2) -> void:
 		_:
 			if String(skill.get("anim", "")) == "cast":
 				_play_cast_overlay(skill, windup)
+			elif skill.has("melee_clips"):
+				var list: Array = skill["melee_clips"]
+				_play_clip(M1_CLIPS[int(list[_cast_index % list.size()])], windup, post)
+				_cast_index += 1
+			elif skill.has("full_clip"):
+				_play_clip(skill["full_clip"], windup, post)
 	_yaw = View3D.yaw_for(direction) - _align_yaw
 	rig.rotation.y = _yaw
 
@@ -292,7 +317,8 @@ func _play_cast_overlay(skill: Dictionary, windup: float) -> void:
 		c = skill["clip"]
 	if c.is_empty():
 		return
-	rig.play_overlay("spell/%s_upper" % String(c["name"]), float(c["start"]), float(c["contact"]), float(c["end"]), windup)
+	var clip_name: String = ("spell/%s_upper" % String(c["name"])) if c.has("name") else rig.upper_variant(String(c["anim"]))
+	rig.play_overlay(clip_name, float(c["start"]), float(c["contact"]), float(c["end"]), windup)
 
 
 func _play_clip(c: Dictionary, to_contact: float, after: float, then: String = ANIM_IDLE) -> void:
@@ -536,10 +562,12 @@ func _update_orbs() -> void:
 		if not _orbs.has(id):
 			var rgb: Array = (p["skill"] as Dictionary).get("color", [1.0, 0.8, 0.4])
 			var big := 1.5 if float((p["skill"] as Dictionary).get("hit_radius", 10.0)) > 12.0 else 1.0
-			var orb := ArcaneFx.make_orb(Color(rgb[0], rgb[1], rgb[2]), big)
+			var skill_data: Dictionary = p["skill"]
+			var orb: Node3D = ArcaneFx.make_orb(Color(rgb[0], rgb[1], rgb[2]), big) if DamageSystem.type_of(skill_data) == DamageSystem.Type.ARCANE else ArcaneFx.make_arrow(Color(rgb[0], rgb[1], rgb[2]))
 			arena.add_child(orb)
 			_orbs[id] = orb
 		(_orbs[id] as Node3D).position = View3D.to3(p["pos"], 1.15)
+		(_orbs[id] as Node3D).rotation.y = View3D.yaw_for(p["dir"])
 	for id: int in _orbs.keys():
 		if not seen.has(id):
 			(_orbs[id] as Node3D).queue_free()

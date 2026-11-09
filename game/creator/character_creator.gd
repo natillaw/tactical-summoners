@@ -12,9 +12,9 @@ const ANIM_PREVIEW := "ual1/Idle"
 const CLASSES := [
 	{"id": &"warrior", "name": "Guerrero", "ready": true},
 	{"id": &"mage", "name": "Mago (arcano)", "ready": true},
-	{"id": &"rogue", "name": "Rogue (próximamente)", "ready": false},
+	{"id": &"rogue", "name": "Rogue (dagas, Energy)", "ready": true},
 	{"id": &"cleric", "name": "Cleric (próximamente)", "ready": false},
-	{"id": &"archer", "name": "Arquero (próximamente)", "ready": false},
+	{"id": &"ranger", "name": "Ranger (arquero, Energy)", "ready": true},
 ]
 
 var _opts: Dictionary = CharacterBuilder.default_options()

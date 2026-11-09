@@ -54,6 +54,7 @@ func _run() -> void:
 	_test_dots_registry_ground()
 	_test_mage()
 	_test_blink_and_hold_aim()
+	_test_rogue_ranger()
 
 	print("== %d checks, %d failed ==" % [_checks, _failures])
 	print("RESULT: %s" % ("PASS" if _failures == 0 else "FAIL"))
@@ -715,8 +716,11 @@ func _test_mage() -> void:
 	w3.warrior.set_class(&"mage")
 	w3.warrior._spend_rage(50.0)
 	var low: float = w3.warrior.rage()
-	_step(w3, 60, null)
-	_check(w3.warrior.rage() > low, "El maná se regenera")
+	_step(w3, 90, null)
+	var after_delay: float = w3.warrior.rage()
+	_check(is_equal_approx(after_delay, low), "El maná no regenera justo después de gastar (retraso de 2 s)")
+	_step(w3, 180, null)
+	_check(w3.warrior.rage() > after_delay and w3.warrior.rage() < after_delay + 10.0, "El maná regenera lento (%.1f en 3 s)" % (w3.warrior.rage() - after_delay))
 	w3.warrior.set_class(&"warrior")
 
 
@@ -740,3 +744,26 @@ func _test_blink_and_hold_aim() -> void:
 	_check(w.position.distance_to(start + Vector2(0, -200)) < 30.0, "Blink teletransporta al punto apuntado (%d px)" % int(w.position.distance_to(start)))
 	_check(w.ground_slot_ready().is_empty(), "Al soltar desaparece el marcador de apuntado")
 	w.set_class(&"warrior")
+
+
+func _test_rogue_ranger() -> void:
+	var world := _make_world(false, 71)
+	var w = world.warrior
+	w.set_class(&"rogue")
+	w.reset(w.position)
+	var starts := [0]
+	w.attack_started.connect(func(_s: Dictionary, _d: Vector2) -> void: starts[0] += 1)
+	var msg = _input(Vector2(0, -1), true, false)
+	_step(world, 70, msg)  # ~1.2 s con M1 mantenido
+	_check(starts[0] == 2, "Rogue: solo 2 ataques seguidos antes de quedarse sin Energy (%d)" % starts[0])
+	_step(world, 150, msg)
+	_check(starts[0] >= 3 and starts[0] <= 5, "Rogue: tras esperar recupera Energy y vuelve a atacar (%d)" % starts[0])
+	var w2 := _make_world(false, 72)
+	var r = w2.warrior
+	r.set_class(&"ranger")
+	r.current_skill = r.kit.MULTISHOT.duplicate(true)
+	r.attack_aim = Vector2(0, -1)
+	r._spawn_projectile()
+	_check(r.projectiles.size() == 3, "Multishot lanza 3 flechas en abanico")
+	_check(ClassRegistry.missing(&"rogue").is_empty() and ClassRegistry.missing(&"ranger").is_empty(), "Rogue y Ranger cumplen el contrato de kit")
+	r.set_class(&"warrior")

@@ -1,13 +1,15 @@
 ## Retarget (por dirección de huesos) de las animaciones Mixamo del Magic Spell Pack
 ## al esqueleto UAL. Uso: godot --headless --path . --script res://tools/bake_spells.gd
-## Guarda res://assets/models/anims/spells.res (AnimationLibrary) con, por clip,
+## Opcional: -- <carpeta con FBX de Mixamo> <salida .res> (p. ej. para las animaciones del Warrior:
+##   -- res://assets/models/anims/warrior/ res://assets/models/anims/warrior_anims.res)
+## Por defecto guarda res://assets/models/anims/spells.res (AnimationLibrary) con, por clip,
 ## la versión completa ("nombre") y la de solo tren superior ("nombre_upper"), que se
 ## reproduce encima de la locomoción para castear y moverse a la vez.
 extends SceneTree
 
-const DIR := "res://assets/models/anims/spells/"
+var DIR := "res://assets/models/anims/spells/"
 const DST := "res://assets/models/characters/warrior.glb"
-const OUT := "res://assets/models/anims/spells.res"
+var OUT := "res://assets/models/anims/spells.res"
 const FPS := 30.0
 const LOWER := ["pelvis", "thigh_l", "calf_l", "foot_l", "ball_l", "thigh_r", "calf_r", "foot_r", "ball_r"]
 const CHAINS := {
@@ -53,6 +55,10 @@ func _globals(sk: Skeleton3D, rest: bool) -> Array[Transform3D]:
 
 
 func _init() -> void:
+	var args := OS.get_cmdline_user_args()
+	if args.size() >= 2:
+		DIR = args[0]
+		OUT = args[1]
 	var dst_root: Node = (load(DST) as PackedScene).instantiate()
 	var dsk := dst_root.find_child("Skeleton3D", true, false) as Skeleton3D
 	var lib := AnimationLibrary.new()

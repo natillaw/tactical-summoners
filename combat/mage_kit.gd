@@ -16,8 +16,10 @@ const CLASS_ID: StringName = &"mage"
 const CLASS_NAME: String = "Mago"
 const RESOURCE_NAME: String = "Mana"
 const MAX_RAGE: float = 100.0
-## Maná que se regenera por segundo.
-const RESOURCE_REGEN: float = 6.0
+## Regeneración lenta: 1.5/s tras 2 s sin gastar maná; x4 fuera de combate (5 s sin golpes).
+const RESOURCE_REGEN: float = 1.5
+const RESOURCE_REGEN_DELAY: float = 2.0
+const RESOURCE_OOC_MULT: float = 4.0
 const ULTIMATE_COST: float = 100.0
 const SPECIAL_COST: float = 30.0
 
@@ -57,9 +59,9 @@ const M1: Dictionary = {
 	"kind": "basic", "role": "Daño a distancia", "description": "Disparo arcano sin cooldown.",
 	"implemented": true, "selectable": false, "cast": "projectile", "anim": "cast",
 	"damage_type": 7,  # DamageSystem.Type.ARCANE
-	"windup": 0.20, "active": 0.05, "recovery": 0.18, "cooldown": 0.0, "cost": 0.0,
+	"windup": 0.20, "active": 0.05, "recovery": 0.18, "cooldown": 0.0, "cost": 4.0,
 	"speed": 520.0, "range": 480.0, "hit_radius": 10.0, "damage_mult": 0.9,
-	"rage_gain": 3.0, "move_factor": 0.6, "color": [0.7, 0.5, 1.0],
+	"rage_gain": 0.0, "move_factor": 0.6, "color": [0.7, 0.5, 1.0],
 }
 
 ## M2: bola de fuego con quemadura.

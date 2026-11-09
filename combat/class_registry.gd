@@ -9,6 +9,8 @@ extends RefCounted
 const KITS := {
 	&"warrior": preload("res://combat/warrior_kit.gd"),
 	&"mage": preload("res://combat/mage_kit.gd"),
+	&"rogue": preload("res://combat/rogue_kit.gd"),
+	&"ranger": preload("res://combat/ranger_kit.gd"),
 }
 
 ## Clase del jugador activo (la UI lee de aquí su kit).
