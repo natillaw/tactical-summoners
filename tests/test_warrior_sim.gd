@@ -50,6 +50,7 @@ func _run() -> void:
 	_test_attacks_hit_in_volume()
 	_test_enemy_warrior_kit()
 	_test_damage_types()
+	_test_cc_diminishing()
 
 	print("== %d checks, %d failed ==" % [_checks, _failures])
 	print("RESULT: %s" % ("PASS" if _failures == 0 else "FAIL"))
@@ -639,3 +640,14 @@ func _test_damage_types() -> void:
 	d.health = d.max_health
 	var poison := d.take_damage(100.0, Vector2.ZERO, {DamageSystem.KEY: DamageSystem.Type.POISON})
 	_check(is_equal_approx(phys, 100.0) and is_equal_approx(fire, 50.0) and is_equal_approx(poison, 150.0), "Las resistencias por tipo de daño se aplican (físico/fuego/veneno)")
+
+
+func _test_cc_diminishing() -> void:
+	var cc := CCDiminish.new()
+	var a := cc.apply("stun", 1.0)
+	var b := cc.apply("stun", 1.0)
+	var c := cc.apply("stun", 1.0)
+	var d := cc.apply("stun", 1.0)
+	_check(is_equal_approx(a, 1.0) and is_equal_approx(b, 0.5) and is_equal_approx(c, 0.25) and d == 0.0, "El stun encadenado decrece 100/50/25 % y luego es inmune")
+	cc.tick(16.0)
+	_check(is_equal_approx(cc.apply("stun", 1.0), 1.0), "El rendimiento del CC se reinicia tras 15 s")

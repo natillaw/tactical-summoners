@@ -64,6 +64,7 @@ var weapon: Item = ItemFactory.starter_sword()
 var stats := CharacterStats.new()
 var height: float = 0.0
 var stun_timer: float = 0.0
+var cc := CCDiminish.new()
 ## Resistencias por tipo de daño (DamageSystem.Type → fracción).
 var resist: Dictionary = {}
 var vertical_velocity: float = 0.0
@@ -192,6 +193,7 @@ func step(tick_number: int, delta: float, input: Variant) -> void:
 		velocity = Vector2.ZERO
 		return
 
+	cc.tick(delta)
 	if stun_timer > 0.0:
 		stun_timer = maxf(0.0, stun_timer - delta)
 		velocity = Vector2.ZERO
@@ -745,7 +747,7 @@ func take_damage(amount: float, source_position: Vector2 = Vector2.ZERO, effects
 	health_changed.emit(health, max_health)
 	damage_taken.emit(dealt, source_position, false)
 
-	var stun := float(effects.get("stun", 0.0))
+	var stun := cc.apply("stun", float(effects.get("stun", 0.0))) if effects.has("stun") else 0.0
 	if stun > 0.0 and health > 0.0:
 		_apply_stun(stun)
 
@@ -927,6 +929,7 @@ func reset(spawn: Vector2 = Vector2(480, 380)) -> void:
 	height = 0.0
 	vertical_velocity = 0.0
 	stun_timer = 0.0
+	cc.reset()
 	state = AttackState.IDLE
 	state_time = 0.0
 	current_skill = {}

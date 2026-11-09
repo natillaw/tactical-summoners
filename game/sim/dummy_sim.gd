@@ -66,6 +66,7 @@ var vulnerable_amount: float = 0.0
 var vulnerable_timer: float = 0.0
 var interrupted_timer: float = 0.0
 var stun_timer: float = 0.0
+var cc := CCDiminish.new()
 ## Resistencias por tipo de daño (DamageSystem.Type → fracción).
 var resist: Dictionary = {}
 
@@ -116,6 +117,7 @@ func step(tick_number: int, delta: float, warrior: Object) -> void:
 
 
 func _tick_effects(delta: float) -> void:
+	cc.tick(delta)
 	if interrupted_timer > 0.0:
 		interrupted_timer = maxf(0.0, interrupted_timer - delta)
 	if stun_timer > 0.0:
@@ -240,7 +242,7 @@ func apply_effects(effects: Dictionary) -> void:
 	if bool(effects.get("interrupt", false)):
 		interrupt()
 
-	var stun := float(effects.get("stun", 0.0))
+	var stun := cc.apply("stun", float(effects.get("stun", 0.0))) if effects.has("stun") else 0.0
 	if stun > 0.0:
 		stun_timer = maxf(stun_timer, stun)
 		interrupt()
@@ -269,6 +271,7 @@ func revive() -> void:
 	vulnerable_timer = 0.0
 	interrupted_timer = 0.0
 	stun_timer = 0.0
+	cc.reset()
 	health_changed.emit(health, max_health)
 	revived.emit()
 
