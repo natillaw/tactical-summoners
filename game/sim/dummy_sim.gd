@@ -67,6 +67,7 @@ var vulnerable_timer: float = 0.0
 var interrupted_timer: float = 0.0
 var stun_timer: float = 0.0
 var cc := CCDiminish.new()
+var dots := DotTracker.new()
 ## Resistencias por tipo de daño (DamageSystem.Type → fracción).
 var resist: Dictionary = {}
 
@@ -118,6 +119,8 @@ func step(tick_number: int, delta: float, warrior: Object) -> void:
 
 func _tick_effects(delta: float) -> void:
 	cc.tick(delta)
+	for hit: Dictionary in dots.tick(delta):
+		take_damage(float(hit["amount"]), position, {DamageSystem.KEY: int(hit["type"]), "tick": true})
 	if interrupted_timer > 0.0:
 		interrupted_timer = maxf(0.0, interrupted_timer - delta)
 	if stun_timer > 0.0:
@@ -242,6 +245,10 @@ func apply_effects(effects: Dictionary) -> void:
 	if bool(effects.get("interrupt", false)):
 		interrupt()
 
+	var dot: Dictionary = effects.get("dot", {})
+	if not dot.is_empty():
+		dots.add(int(dot.get(DamageSystem.KEY, DamageSystem.Type.POISON)), float(dot.get("dps", 5.0)), float(dot.get("duration", 5.0)))
+
 	var stun := cc.apply("stun", float(effects.get("stun", 0.0))) if effects.has("stun") else 0.0
 	if stun > 0.0:
 		stun_timer = maxf(stun_timer, stun)
@@ -272,6 +279,7 @@ func revive() -> void:
 	interrupted_timer = 0.0
 	stun_timer = 0.0
 	cc.reset()
+	dots.clear()
 	health_changed.emit(health, max_health)
 	revived.emit()
 

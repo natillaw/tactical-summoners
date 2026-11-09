@@ -95,7 +95,12 @@ var last_stand_active: bool = false
 var last_stand_timer: float = 0.0
 var last_stand_cooldown: float = 0.0
 
-var loadout: Dictionary = WarriorKit.default_loadout()
+var kit: GDScript = ClassRegistry.kit(&"warrior")
+var loadout: Dictionary = kit.default_loadout()
+var dots := DotTracker.new()
+## Punto del suelo bajo la mira y destino de la skill de suelo en curso.
+var aim_point: Vector2 = Vector2.ZERO
+var _cast_point: Vector2 = Vector2.ZERO
 
 var tick: int = 0
 var last_combat_tick: int = 0
@@ -112,7 +117,7 @@ var _rng: RandomNumberGenerator
 
 func _init(p_world: Object = null) -> void:
 	world = p_world
-	resource = WarriorKit.create_rage_resource()
+	resource = kit.create_rage_resource()
 	_rng = RandomNumberGenerator.new()
 	if world != null and world.get("rng") != null:
 		_rng.seed = int(world.rng.seed)
@@ -194,6 +199,7 @@ func step(tick_number: int, delta: float, input: Variant) -> void:
 		return
 
 	cc.tick(delta)
+	_tick_dots(delta)
 	if stun_timer > 0.0:
 		stun_timer = maxf(0.0, stun_timer - delta)
 		velocity = Vector2.ZERO
@@ -216,10 +222,13 @@ func _read_input(input: Variant) -> void:
 	var aim := _to_vec(_read_prop(input, "aim_dir", Vector2.RIGHT))
 	if aim.length_squared() > 0.0001:
 		aim_dir = aim.normalized()
+	var point: Variant = _read_prop(input, "aim_point", null)
+	# Sin punto apuntado (tests, IA) la skill de suelo cae sobre el propio jugador.
+	aim_point = _to_vec(point) if point != null else position
 
 	var actions: Dictionary = _read_prop(input, "actions", {})
-	for slot: String in WarriorKit.SELECTABLE_SLOTS:
-		var key := String(WarriorKit.ACTION_KEYS[slot])
+	for slot: String in kit.SELECTABLE_SLOTS:
+		var key := String(kit.ACTION_KEYS[slot])
 		var pressed := bool(actions.get(key, false))
 		var was := bool(_prev_actions.get(key, false))
 		if pressed and not was:
@@ -349,7 +358,7 @@ func _can_afford(ability: Dictionary) -> bool:
 	if rage() + 0.001 < cost:
 		return false
 	if String(ability.get("kind", "")) == "ultimate":
-		return ultimate_charge + 0.001 >= float(ability.get("charge", WarriorKit.ULTIMATE_COST))
+		return ultimate_charge + 0.001 >= float(ability.get("charge", kit.ULTIMATE_COST))
 	return true
 
 
@@ -362,7 +371,7 @@ func _start_ability(slot: String) -> bool:
 
 	if String(ability.get("kind", "")) == "ultimate":
 		ultimate_charge = maxf(0.0, ultimate_charge - float(ability.get("charge", 100.0)))
-		ultimate_changed.emit(ultimate_charge, WarriorKit.ULTIMATE_COST)
+		ultimate_changed.emit(ultimate_charge, kit.ULTIMATE_COST)
 	_spend_rage(float(ability.get("cost", 0.0)))
 
 	current_skill = ability
@@ -377,6 +386,7 @@ func _start_ability(slot: String) -> bool:
 	parry_active = false
 	parry_window_end = 0.0
 	_spin_tick = 0.0
+	_cast_point = clamp_ground_point(aim_point, ability) if is_ground(ability) else position
 
 	if slot == "M1":
 		if combo_timer > 0.0 and combo_index < 2:
@@ -418,9 +428,9 @@ func _enter_active() -> void:
 					1.0
 				)
 			else:
-				cast_event.emit("slam", current_skill, position, attack_aim)
+				cast_event.emit("slam", current_skill, _cast_point, attack_aim)
 				_damage_area(
-					position,
+					_cast_point,
 					float(current_skill.get("radius", 100.0)),
 					_current_multiplier(),
 					_effects(),
@@ -523,7 +533,7 @@ func _current_multiplier() -> float:
 	else:
 		mult = float(raw)
 	if last_stand_active:
-		mult *= float(WarriorKit.PASSIVE.get("damage_bonus", 1.5))
+		mult *= float(kit.PASSIVE.get("damage_bonus", 1.5))
 	return mult
 
 
@@ -618,7 +628,7 @@ func _resolve_parry_counter() -> void:
 		return
 	var mult := float(current_skill.get("counter_mult", 1.8))
 	if last_stand_active:
-		mult *= float(WarriorKit.PASSIVE.get("damage_bonus", 1.5))
+		mult *= float(kit.PASSIVE.get("damage_bonus", 1.5))
 	var effects: Dictionary = current_skill.get("counter_effects", {})
 	var radius := float(current_skill.get("counter_radius", 0.0))
 	if radius > 0.0:
@@ -655,7 +665,7 @@ func _update_movement(delta: float) -> void:
 		if state == AttackState.ACTIVE:
 			factor *= 0.5
 	if last_stand_active:
-		factor *= float(WarriorKit.PASSIVE.get("speed_bonus", 1.25))
+		factor *= float(kit.PASSIVE.get("speed_bonus", 1.25))
 
 	var desired := move_input * MOVE_SPEED * factor
 	var rate := ACCELERATION if move_input.length_squared() > 0.0001 else FRICTION
@@ -692,9 +702,9 @@ func _gain_ultimate(amount: float) -> void:
 	if amount <= 0.0:
 		return
 	var before := ultimate_charge
-	ultimate_charge = minf(WarriorKit.ULTIMATE_COST, ultimate_charge + amount)
+	ultimate_charge = minf(kit.ULTIMATE_COST, ultimate_charge + amount)
 	if not is_equal_approx(before, ultimate_charge):
-		ultimate_changed.emit(ultimate_charge, WarriorKit.ULTIMATE_COST)
+		ultimate_changed.emit(ultimate_charge, kit.ULTIMATE_COST)
 
 
 # --- Pasiva -----------------------------------------------------------------
@@ -706,10 +716,10 @@ func _update_last_stand() -> void:
 	if last_stand_active or last_stand_cooldown > 0.0:
 		return
 	var ratio := health / maxf(max_health, 1.0)
-	if ratio <= float(WarriorKit.PASSIVE.get("threshold", 0.3)):
+	if ratio <= float(kit.PASSIVE.get("threshold", 0.3)):
 		last_stand_active = true
-		last_stand_timer = float(WarriorKit.PASSIVE.get("duration", 5.0))
-		last_stand_cooldown = float(WarriorKit.PASSIVE.get("cooldown", 10.0))
+		last_stand_timer = float(kit.PASSIVE.get("duration", 5.0))
+		last_stand_cooldown = float(kit.PASSIVE.get("cooldown", 10.0))
 		last_stand_changed.emit(true, last_stand_timer)
 
 
@@ -747,6 +757,7 @@ func take_damage(amount: float, source_position: Vector2 = Vector2.ZERO, effects
 	health_changed.emit(health, max_health)
 	damage_taken.emit(dealt, source_position, false)
 
+	_apply_dot_effect(effects)
 	var stun := cc.apply("stun", float(effects.get("stun", 0.0))) if effects.has("stun") else 0.0
 	if stun > 0.0 and health > 0.0:
 		_apply_stun(stun)
@@ -783,6 +794,34 @@ func _apply_stun(seconds: float) -> void:
 
 func is_stunned() -> bool:
 	return stun_timer > 0.0
+
+
+## Efectos en el tiempo: effects.dot = {damage_type, dps, duration}.
+func _apply_dot_effect(effects: Dictionary) -> void:
+	var dot: Dictionary = effects.get("dot", {})
+	if not dot.is_empty():
+		dots.add(int(dot.get(DamageSystem.KEY, DamageSystem.Type.POISON)), float(dot.get("dps", 5.0)), float(dot.get("duration", 5.0)))
+
+
+func _tick_dots(delta: float) -> void:
+	if not alive:
+		return
+	for hit: Dictionary in dots.tick(delta):
+		var dealt := minf(DamageSystem.mitigate(float(hit["amount"]), int(hit["type"]), resist), health)
+		health -= dealt
+		health_changed.emit(health, max_health)
+		damage_taken.emit(dealt, position, true)
+		if health <= 0.0:
+			health = 0.0
+			alive = false
+			state = AttackState.IDLE
+			current_skill = {}
+			current_slot = ""
+			parry_active = false
+			velocity = Vector2.ZERO
+			dots.clear()
+			died.emit()
+			return
 
 
 func _is_evading() -> bool:
@@ -823,13 +862,13 @@ func parry_trigger(success: bool) -> void:
 
 func ability_for_slot(slot: String) -> Dictionary:
 	if slot == "M1":
-		return WarriorKit.M1.duplicate(true)
+		return kit.M1.duplicate(true)
 	if slot == "M2":
-		return WarriorKit.M2.duplicate(true)
+		return kit.M2.duplicate(true)
 	var id := StringName(String(loadout.get(slot, "")))
 	if id == &"":
 		return {}
-	return WarriorKit.ability_by_id(id)
+	return kit.ability_by_id(id)
 
 
 func ability_name_for_slot(slot: String) -> String:
@@ -843,7 +882,7 @@ func ability_short_for_slot(slot: String) -> String:
 
 
 func set_loadout(new_loadout: Dictionary) -> void:
-	loadout = WarriorKit.sanitize_loadout(new_loadout)
+	loadout = kit.sanitize_loadout(new_loadout)
 	buffered_slot = ""
 	buffer_timer = 0.0
 	loadout_changed.emit(loadout_to_strings())
@@ -851,16 +890,39 @@ func set_loadout(new_loadout: Dictionary) -> void:
 
 func assign_slot(slot: StringName, ability_id: StringName) -> void:
 	var slot_name := String(slot)
-	if not WarriorKit.SELECTABLE_SLOTS.has(slot_name):
+	if not kit.SELECTABLE_SLOTS.has(slot_name):
 		return
-	if not WarriorKit.pool_ids().has(ability_id):
+	if not kit.pool_ids().has(ability_id):
 		return
 	loadout[slot_name] = ability_id
 	loadout_changed.emit(loadout_to_strings())
 
 
 func loadout_to_strings() -> Dictionary:
-	return WarriorKit.loadout_to_strings(loadout)
+	return kit.loadout_to_strings(loadout)
+
+
+# --- Skills de suelo (apuntado manual, tipo Smite) ----------------------------
+
+
+func is_ground(ability: Dictionary) -> bool:
+	return String(ability.get("target", "")) == "ground"
+
+
+## Limita el punto apuntado al alcance de la skill.
+func clamp_ground_point(point: Vector2, ability: Dictionary) -> Vector2:
+	var reach := float(ability.get("range", 200.0))
+	return position + (point - position).limit_length(reach)
+
+
+## Slot de skill de suelo listo para lanzar (para mostrar el marcador), o "".
+func ground_slot_ready() -> String:
+	if state != AttackState.IDLE or not alive or stun_timer > 0.0:
+		return ""
+	for slot: String in kit.SELECTABLE_SLOTS:
+		if is_ground(ability_for_slot(slot)) and _can_start(slot):
+			return slot
+	return ""
 
 
 # --- Consultas --------------------------------------------------------------
@@ -897,22 +959,22 @@ func ultimate() -> float:
 
 
 func ultimate_is_full() -> bool:
-	return ultimate_charge >= WarriorKit.ULTIMATE_COST
+	return ultimate_charge >= kit.ULTIMATE_COST
 
 
 func current_move_speed_multiplier() -> float:
 	var mult := 1.0
 	if last_stand_active:
-		mult *= float(WarriorKit.PASSIVE.get("speed_bonus", 1.25))
+		mult *= float(kit.PASSIVE.get("speed_bonus", 1.25))
 	return mult
 
 
 func debug_refill() -> void:
-	resource.current_amount = WarriorKit.MAX_RAGE
-	ultimate_charge = WarriorKit.ULTIMATE_COST
+	resource.current_amount = kit.MAX_RAGE
+	ultimate_charge = kit.ULTIMATE_COST
 	cooldowns.clear()
 	rage_changed.emit(resource.get_current(), resource.max_amount)
-	ultimate_changed.emit(ultimate_charge, WarriorKit.ULTIMATE_COST)
+	ultimate_changed.emit(ultimate_charge, kit.ULTIMATE_COST)
 
 
 # --- Reset / snapshot -------------------------------------------------------
@@ -930,6 +992,7 @@ func reset(spawn: Vector2 = Vector2(480, 380)) -> void:
 	vertical_velocity = 0.0
 	stun_timer = 0.0
 	cc.reset()
+	dots.clear()
 	state = AttackState.IDLE
 	state_time = 0.0
 	current_skill = {}
@@ -958,7 +1021,7 @@ func reset(spawn: Vector2 = Vector2(480, 380)) -> void:
 
 	health_changed.emit(health, max_health)
 	rage_changed.emit(resource.get_current(), resource.max_amount)
-	ultimate_changed.emit(ultimate_charge, WarriorKit.ULTIMATE_COST)
+	ultimate_changed.emit(ultimate_charge, kit.ULTIMATE_COST)
 	attack_state_changed.emit(state)
 	loadout_changed.emit(loadout_to_strings())
 
@@ -986,7 +1049,7 @@ func snapshot() -> Dictionary:
 		"rage": resource.get_current(),
 		"max_rage": resource.max_amount,
 		"ultimate": ultimate_charge,
-		"ultimate_max": WarriorKit.ULTIMATE_COST,
+		"ultimate_max": kit.ULTIMATE_COST,
 		"state": state,
 		"attack_state": state,
 		"alive": alive,

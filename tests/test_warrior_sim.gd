@@ -51,6 +51,7 @@ func _run() -> void:
 	_test_enemy_warrior_kit()
 	_test_damage_types()
 	_test_cc_diminishing()
+	_test_dots_registry_ground()
 
 	print("== %d checks, %d failed ==" % [_checks, _failures])
 	print("RESULT: %s" % ("PASS" if _failures == 0 else "FAIL"))
@@ -452,6 +453,8 @@ func _duplicate_input(message: InputMessage) -> InputMessage:
 	copy.peer_id = message.peer_id
 	copy.move_dir = message.move_dir
 	copy.aim_dir = message.aim_dir
+	copy.aim_point = message.aim_point
+	copy.has_aim_point = message.has_aim_point
 	copy.actions = message.actions.duplicate()
 	return copy
 
@@ -651,3 +654,35 @@ func _test_cc_diminishing() -> void:
 	_check(is_equal_approx(a, 1.0) and is_equal_approx(b, 0.5) and is_equal_approx(c, 0.25) and d == 0.0, "El stun encadenado decrece 100/50/25 % y luego es inmune")
 	cc.tick(16.0)
 	_check(is_equal_approx(cc.apply("stun", 1.0), 1.0), "El rendimiento del CC se reinicia tras 15 s")
+
+
+func _test_dots_registry_ground() -> void:
+	var world := _make_world(false, 41)
+	var d: DummySim = world.dummies[0]
+	d.take_damage(1.0, Vector2.ZERO, {"dot": {DamageSystem.KEY: DamageSystem.Type.POISON, "dps": 20.0, "duration": 3.0}})
+	var hp: float = d.health
+	_step(world, 120, null)  # 2 s
+	_check(hp - d.health >= 29.0 and hp - d.health < 45.0, "Veneno: ~20 dps durante su duración (%d)" % int(hp - d.health))
+	_step(world, 180, null)
+	var settled: float = d.health
+	_step(world, 60, null)
+	_check(is_equal_approx(d.health, settled), "El DoT termina al acabar su duración")
+	var w = world.warrior
+	var wh: float = w.health
+	w.take_damage(1.0, Vector2.ZERO, {"dot": {DamageSystem.KEY: DamageSystem.Type.FIRE, "dps": 10.0, "duration": 2.0}})
+	_step(world, 60, null)
+	_check(wh - w.health > 4.0, "El jugador también recibe DoT")
+	_check(ClassRegistry.missing(&"warrior").is_empty(), "El kit del Warrior cumple el contrato de ClassRegistry")
+	var w2 := _make_world(false, 42)
+	var ward = w2.warrior
+	var far: Vector2 = ward.position + Vector2(0, -600)
+	var target: DummySim = w2.dummies[0]
+	target.position = ward.position + Vector2(0, -200)
+	var msg = _input(Vector2(0, -1), false, false, Vector2.ZERO, false, false, false, true)
+	msg.aim_point = far
+	msg.has_aim_point = true
+	ward.debug_refill()
+	var hp2: float = target.health
+	_step(w2, 60, msg)
+	_check(target.health < hp2, "Seismic cae en el punto apuntado (lejos del jugador)")
+	_check(ward.clamp_ground_point(far, ward.ability_for_slot("R")).distance_to(ward.position) <= 260.01, "El punto de suelo se limita al alcance")

@@ -5,7 +5,7 @@ Juego 3D en tercera persona, combate desafiante tipo Dark Souls. Enemigos con sk
 ## Estado actual
 Hecho: Warrior jugable, daño por arma + nivel 1–60, rarezas de items, DamageSystem (tipos y resistencias), Soldado con el kit del Warrior, salto/roll/parry/stun, actores como escenas.
 
-## Fase 1 — Fundamentos de combate (siguiente)
+## Fase 1 — Fundamentos de combate (en curso; hechos: CC con DR, DoTs, ClassRegistry, skills de suelo)
 - Feel del Warrior: pulir estocada y cancel de animaciones.
 - **Sin lock-on ni poise.** Apuntado manual con la mira central; skills de suelo/objetivo tipo Smite (marcador en el suelo + confirmar).
 - **CC estilo WoW:** stuns, slows, roots, silencios, interrupciones, con rendimientos decrecientes (DR) para que no haya stun-lock eterno.
