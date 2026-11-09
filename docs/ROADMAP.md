@@ -6,11 +6,13 @@ Juego 3D en tercera persona, combate desafiante tipo Dark Souls. Enemigos con sk
 Hecho: Warrior jugable, daño por arma + nivel 1–60, rarezas de items, DamageSystem (tipos y resistencias), Soldado con el kit del Warrior, salto/roll/parry/stun, actores como escenas.
 
 ## Fase 1 — Fundamentos de combate (siguiente)
-- Feel del Warrior: pulir estocada, cancel de animaciones, stagger/poise (rompe-guardia), lock-on de cámara.
-- Stamina para rodar/atacar/parry (base del estilo Souls) y ventanas de castigo.
+- Feel del Warrior: pulir estocada y cancel de animaciones.
+- **Sin lock-on ni poise.** Apuntado manual con la mira central; skills de suelo/objetivo tipo Smite (marcador en el suelo + confirmar).
+- **CC estilo WoW:** stuns, slows, roots, silencios, interrupciones, con rendimientos decrecientes (DR) para que no haya stun-lock eterno.
+- Stamina o recursos para rodar/atacar y ventanas de castigo (decidir si se mantiene).
 - DamageSystem completo: efectos en el tiempo (veneno, quemadura), daño base por tipo (poder mágico), mitigación por armadura.
 - Migrar skills a un formato común para todas las clases (`ClassKit` genérico: WarriorKit pasa a ser datos).
-- Sistema de estados/efectos (stun, slow, bleed, buffs) compartido por jugador y enemigos.
+- Sistema de estados/efectos (stun, slow, root, silence, bleed, buffs) compartido por jugador y enemigos.
 
 ## Fase 2 — Las 5 clases
 - Rogue, Mago, Cleric y Archer con kit propio (M1, M2, 5 skills, pasiva, recurso propio).
@@ -48,3 +50,6 @@ Hecho: Warrior jugable, daño por arma + nivel 1–60, rarezas de items, DamageS
 
 ## Cosas que quizá no has contado
 Tutorial/primer piso guiado, guardado/carga, menús y opciones (controles, gráficos), muerte y penalización, dificultad/modos, localización (ES/EN), herramientas de editor para misiones y enemigos, y una pipeline de arte consistente (modelos de enemigos, armas, entornos).
+
+## Assets (arte coherente, low poly)
+Fuentes CC0 compatibles con el estilo actual (Quaternius): Quaternius (personajes, props, entornos), Kenney.nl (props, UI, partículas), Poly Pizza (modelos low poly CC0 agregados) y OpenGameArt. VFX: preferir los procedurales del proyecto (`game/vfx3d/fx_shape`) para que combinen con el estilo.
