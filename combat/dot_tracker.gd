@@ -32,6 +32,17 @@ func tick(delta: float) -> Array:
 	return out
 
 
+## Tipo de daño del DoT más fuerte activo (para el aura visual), o -1.
+func dominant_type() -> int:
+	var best := -1
+	var best_dps := -1.0
+	for dot: Dictionary in _dots:
+		if float(dot["dps"]) > best_dps:
+			best_dps = float(dot["dps"])
+			best = int(dot["type"])
+	return best
+
+
 func is_active() -> bool:
 	return not _dots.is_empty()
 

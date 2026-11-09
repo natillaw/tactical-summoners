@@ -43,13 +43,13 @@ const SLOT_LABELS := {
 	"F": "F",
 }
 
-## M1: tajo rápido con una daga (alterna de mano). Cuesta Energy: 2 golpes seguidos y luego toca esperar.
+## M1: tajo rápido con una daga (alterna de mano). Básico spameable, sin coste.
 const M1: Dictionary = {
 	"id": &"twin_fang", "name": "Twin Fang", "short": "FANG", "slot": "M1",
-	"kind": "basic", "role": "Daño rápido", "description": "Tajo rápido con una daga. Cuesta Energy.",
+	"kind": "basic", "role": "Daño rápido", "description": "Tajo rápido con una daga. Sin coste: se puede spamear.",
 	"implemented": true, "selectable": false, "cast": "melee", "anim": "slash",
 	"melee_clips": [0, 1],
-	"windup": 0.09, "active": 0.08, "recovery": 0.14, "cooldown": 0.0, "cost": 50.0,
+	"windup": 0.09, "active": 0.08, "recovery": 0.14, "cooldown": 0.0, "cost": 0.0,
 	"range": 70.0, "arc": 100.0, "damage_mult": 1.0, "rage_gain": 0.0, "move_factor": 0.5,
 	"combo_reset_window": 0.85,
 }
@@ -66,7 +66,8 @@ const M2: Dictionary = {
 
 const SHADOWSTEP: Dictionary = {
 	"id": &"shadowstep", "name": "Shadowstep", "short": "STEP", "slot": "SHIFT",
-	"kind": "mobility", "role": "Movilidad", "description": "Desapareces entre las sombras y apareces donde apuntes (mantén para apuntar, suelta para lanzar).",
+	"kind": "mobility", "role": "Movilidad", "description": "Teletransporte al punto apuntado. Si apuntas a un enemigo, apareces a su espalda y lo apuñalas (mantén para apuntar, suelta para lanzar).",
+	"backstab_mult": 2.2, "backstab_range": 60.0,
 	"implemented": true, "selectable": true, "cast": "teleport", "anim": "slash", "target": "ground",
 	"damage_type": 6,  # DamageSystem.Type.SHADOW
 	"windup": 0.06, "active": 0.03, "recovery": 0.10, "cooldown": 5.0, "cost": 25.0,
@@ -87,20 +88,23 @@ const POISONED_BLADES: Dictionary = {
 
 const FAN_OF_KNIVES: Dictionary = {
 	"id": &"fan_of_knives", "name": "Fan of Knives", "short": "FAN", "slot": "E",
-	"kind": "control", "role": "Daño en área", "description": "Dagas en abanico a tu alrededor.",
+	"kind": "control", "role": "Daño en área", "description": "Como en WotLK: lanzas cuchillos en todas direcciones; golpean a todos los cercanos y los envenenan.",
 	"implemented": true, "selectable": true, "cast": "aoe", "anim": "slash",
 	"full_clip": {"clip": "ual2/Sword_Regular_C", "from": 0.0, "to": 0.62, "contact": 0.34},
-	"windup": 0.15, "active": 0.08, "recovery": 0.25, "cooldown": 8.0, "cost": 45.0,
-	"radius": 100.0, "damage_mult": 1.3, "rage_gain": 0.0, "move_factor": 0.3,
+	"windup": 0.10, "active": 0.06, "recovery": 0.22, "cooldown": 5.0, "cost": 35.0,
+	"radius": 120.0, "damage_mult": 1.0, "rage_gain": 0.0, "move_factor": 0.4,
+	"effects": {"dot": {"damage_type": 4, "dps_mult": 0.5, "duration": 5.0}},
+	"knives": 14,
 }
 
 const BACKSTAB: Dictionary = {
 	"id": &"backstab", "name": "Backstab", "short": "STAB", "slot": "R",
-	"kind": "burst", "role": "Burst", "description": "Puñalada potenciada de gran daño.",
+	"kind": "burst", "role": "Burst", "description": "Puñalada potenciada de gran daño que aturde 1 s.",
 	"implemented": true, "selectable": true, "cast": "melee", "anim": "slash",
 	"melee_clips": [2],
 	"windup": 0.18, "active": 0.08, "recovery": 0.30, "cooldown": 6.0, "cost": 55.0,
 	"range": 70.0, "arc": 90.0, "damage_mult": 3.4, "rage_gain": 0.0, "move_factor": 0.3,
+	"effects": {"stun": 1.0},
 }
 
 const DEATH_SENTENCE: Dictionary = {

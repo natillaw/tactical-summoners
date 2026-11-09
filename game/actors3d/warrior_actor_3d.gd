@@ -399,6 +399,8 @@ func _on_cast_event(event: String, skill: Dictionary, at: Vector2, direction: Ve
 			if DamageSystem.type_of(skill) == DamageSystem.Type.ARCANE:
 				_arcane_slam(at, radius, skill)
 				return
+			if _class_slam(at, radius, skill):
+				return
 			arena.spawn_shockwave(at, radius, COLOR_EARTH, 0.5, 0.7)
 			arena.spawn_shockwave(at, radius * 0.55, Color(1.0, 0.85, 0.6, 0.45), 0.3, 0.75)
 			arena.spawn_ground_flash(at, radius, Color(1.0, 0.45, 0.15, 0.5), 0.4)
@@ -421,9 +423,15 @@ func _on_cast_event(event: String, skill: Dictionary, at: Vector2, direction: Ve
 			arena.shake(2.6, 0.14)
 			rig.hitstop(0.1)
 		"projectile":
-			arena.play_sfx(SFX_MAGIC, -9.0, randf_range(0.95, 1.1))
+			if DamageSystem.type_of(skill) == DamageSystem.Type.ARCANE:
+				arena.play_sfx(SFX_MAGIC, -9.0, randf_range(0.95, 1.1))
+			else:
+				arena.play_sfx(SFX_SLASH, -9.0, randf_range(1.2, 1.4))
+				ArcaneFx.muzzle(arena, View3D.to3(at + direction * 22.0, 1.3), View3D.dir3(direction), ArcaneFx.GOLD)
 			ArcaneFx.burst(arena, View3D.to3(at + direction * 18.0, 1.2), DamageSystem.color_of(DamageSystem.type_of(skill)), 14, 1.5, 0.1)
 		"projectile_hit":
+			if DamageSystem.type_of(skill) != DamageSystem.Type.ARCANE:
+				return  # las flechas ya generan chispas en _on_attack_hit
 			var hit_color := DamageSystem.color_of(DamageSystem.type_of(skill))
 			ArcaneFx.burst(arena, View3D.to3(at, 1.1), hit_color, 36, 4.0, 0.13)
 			arena.spawn_shockwave(at, 34.0, hit_color, 0.3, 0.7)
@@ -463,6 +471,34 @@ func _on_cast_event(event: String, skill: Dictionary, at: Vector2, direction: Ve
 
 
 ## Impacto de un hechizo de suelo arcano: anillos, columna de chispas y destello.
+## Efectos propios de las skills de área de Rogue y Ranger. Devuelve true si los manejó.
+func _class_slam(at: Vector2, radius: float, skill: Dictionary) -> bool:
+	var meters_r := View3D.meters(radius)
+	var ground := View3D.to3(at)
+	match String(skill.get("id", "")):
+		"fan_of_knives":
+			ArcaneFx.knife_fan(arena, ground, meters_r, int(skill.get("knives", 14)))
+			arena.spawn_shockwave(at, radius, ArcaneFx.POISON, 0.35, 0.8)
+			ArcaneFx.poison_cloud(arena, ground, meters_r * 0.6, 1.6)
+			arena.play_sfx(SFX_SLASH, -4.0, 1.3)
+			arena.shake(2.0, 0.12)
+		"volley", "rain_of_arrows":
+			ArcaneFx.arrow_rain(arena, ground, meters_r, 26 if String(skill["id"]) == "volley" else 48)
+			arena.spawn_shockwave(at, radius, Color(1.0, 0.85, 0.5, 0.8), 0.5, 0.85)
+			arena.play_sfx(SFX_HIT, -5.0, 0.9)
+		"frost_trap":
+			ArcaneFx.ice_shards(arena, ground, meters_r)
+			arena.spawn_shockwave(at, radius, ArcaneFx.FROST, 0.6, 0.7)
+			arena.spawn_ground_flash(at, radius, Color(0.5, 0.8, 1.0, 0.45), 0.5)
+			arena.play_sfx(SFX_MAGIC, -6.0, 1.4)
+		"seismic_break":
+			ArcaneFx.debris(arena, ground, meters_r)
+			return false  # el resto del efecto de Seismic Break sigue su curso
+		_:
+			return false
+	return true
+
+
 func _arcane_slam(at: Vector2, radius: float, skill: Dictionary) -> void:
 	var color := DamageSystem.color_of(DamageSystem.Type.ARCANE)
 	arena.spawn_shockwave(at, radius, color, 0.6, 0.7)
@@ -485,6 +521,7 @@ func _stop_spin() -> void:
 
 func _on_attack_hit(skill: Dictionary, target: Object, damage: float, critical: bool, hit_position: Vector2) -> void:
 	var heavy := _is_heavy(skill) or critical
+	_spawn_hit_fx(skill, hit_position, heavy)
 	arena.spawn_damage_number(hit_position, damage, critical)
 	var color := Color(1.0, 0.86, 0.42) if critical else Color(1.0, 0.72, 0.35)
 	arena.spawn_impact(hit_position, color, heavy)
@@ -496,6 +533,19 @@ func _on_attack_hit(skill: Dictionary, target: Object, damage: float, critical: 
 	var dummy := arena.dummy_actor_for(target)
 	if dummy != null:
 		dummy.on_struck(sim.position, stop, heavy)
+
+
+## Chispas de impacto según clase/skill: acero y oro; verde si deja veneno.
+func _spawn_hit_fx(skill: Dictionary, hit_position: Vector2, heavy: bool) -> void:
+	var type := DamageSystem.type_of(skill)
+	if type == DamageSystem.Type.ARCANE:
+		return
+	var color := ArcaneFx.GOLD if sim.class_id != &"rogue" else ArcaneFx.STEEL
+	var dot: Dictionary = (skill.get("effects", {}) as Dictionary).get("dot", {})
+	if not dot.is_empty() and int(dot.get("damage_type", -1)) == DamageSystem.Type.POISON:
+		color = ArcaneFx.POISON
+		ArcaneFx.burst(arena, View3D.to3(hit_position, 1.0), ArcaneFx.POISON, 30, 2.5, 0.12)
+	ArcaneFx.hit_sparks(arena, View3D.to3(hit_position, 1.1), color, View3D.dir3(sim.attack_aim), 18, heavy)
 
 
 func _on_attack_finished(_skill: Dictionary) -> void:

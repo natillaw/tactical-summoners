@@ -464,9 +464,7 @@ func _enter_active() -> void:
 		"projectile":
 			_spawn_projectile()
 		"teleport":
-			cast_event.emit("blink_out", current_skill, position, attack_aim)
-			position = world.resolve_position(_cast_point, RADIUS) if world != null else _cast_point
-			cast_event.emit("blink_in", current_skill, position, attack_aim)
+			_do_teleport()
 		"line":
 			_damage_line(
 				float(current_skill.get("range", 100.0)),
@@ -984,6 +982,30 @@ func _update_projectiles(delta: float) -> void:
 		if not consumed and float(p["left"]) > 0.0:
 			alive_list.append(p)
 	projectiles = alive_list
+
+
+## Teletransporte. Con `backstab_mult` y un enemigo bajo la mira, aparece a su espalda y lo apuñala.
+func _do_teleport() -> void:
+	cast_event.emit("blink_out", current_skill, position, attack_aim)
+	var destination := _cast_point
+	var victim: Object = null
+	var backstab := float(current_skill.get("backstab_mult", 0.0))
+	if backstab > 0.0:
+		var reach := float(current_skill.get("range", 200.0))
+		var slack := float(current_skill.get("backstab_range", 60.0))
+		for target: Object in _living_targets():
+			if target.position.distance_to(aim_point) <= slack + float(target.radius) and position.distance_to(target.position) <= reach + float(target.radius):
+				victim = target
+				break
+		if victim != null:
+			destination = victim.position - (victim.facing as Vector2) * (float(victim.radius) + RADIUS + 6.0)
+	position = world.resolve_position(destination, RADIUS) if world != null else destination
+	if victim != null:
+		attack_aim = (victim.position - position).normalized()
+	cast_event.emit("blink_in", current_skill, position, attack_aim)
+	if victim != null:
+		_hit_targets.clear()
+		_hit_target(victim, backstab, {}, current_skill)
 
 
 ## Cambia de clase (kit, recurso, loadout) y reinicia el estado de combate.
