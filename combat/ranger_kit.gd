@@ -86,30 +86,33 @@ const MULTISHOT: Dictionary = {
 
 const KICK: Dictionary = {
 	"id": &"kick", "name": "Kick", "short": "KICK", "slot": "E",
-	"kind": "control", "role": "Control / empuje", "description": "Patada que daña y empuja al enemigo lejos de ti.",
-	"implemented": true, "selectable": true, "cast": "melee", "anim": "slash",
+	"kind": "control", "role": "Control / empuje", "description": "Patada en línea recta que daña y empuja al enemigo lejos de ti.",
+	"implemented": true, "selectable": true, "cast": "line", "anim": "slash",
 	"full_clip": {"clip": "class/standing_melee_kick", "from": 0.21, "to": 0.55, "contact": 0.35},
 	"windup": 0.15, "active": 0.08, "recovery": 0.30, "cooldown": 7.0, "cost": 15.0,
-	"range": 75.0, "arc": 110.0, "damage_mult": 0.8, "effects": {"knockback": 160.0},
+	"range": 90.0, "width": 46.0, "damage_mult": 0.8, "effects": {"knockback": 160.0},
 	"rage_gain": 0.0, "move_factor": 0.2,
 }
 
-const VOLLEY: Dictionary = {
-	"id": &"volley", "name": "Volley", "short": "VOLLEY", "slot": "R",
-	"kind": "control", "role": "Daño en área", "description": "Apunta al suelo: lluvia de flechas.",
-	"implemented": true, "selectable": true, "cast": "aoe", "anim": "cast", "target": "ground",
-	"clip": {"anim": "class/standing_draw_arrow", "start": 0.1, "contact": 0.33, "end": 0.7},
-	"windup": 0.50, "active": 0.10, "recovery": 0.25, "cooldown": 12.0, "cost": 40.0,
-	"range": 320.0, "radius": 120.0, "damage_mult": 3.0, "rage_gain": 0.0, "move_factor": 0.3,
+const EXPLOSIVE_ARROW: Dictionary = {
+	"id": &"explosive_arrow", "name": "Explosive Arrow", "short": "BOOM", "slot": "R",
+	"kind": "control", "role": "Daño en área", "description": "Flecha que explota al impactar (o al final de su alcance) dañando a todos alrededor.",
+	"implemented": true, "selectable": true, "cast": "projectile", "anim": "cast",
+	"clip": {"anim": "class/standing_aim_recoil", "start": 0.0, "contact": 0.2, "end": 0.65},
+	"windup": 0.35, "active": 0.05, "recovery": 0.30, "cooldown": 9.0, "cost": 35.0,
+	"speed": 520.0, "range": 600.0, "hit_radius": 10.0, "damage_mult": 1.0,
+	"explode_radius": 100.0, "explode_mult": 2.2,
+	"rage_gain": 0.0, "move_factor": 0.3, "color": [1.0, 0.6, 0.2],
 }
 
 const RAIN_OF_ARROWS: Dictionary = {
 	"id": &"rain_of_arrows", "name": "Rain of Arrows", "short": "RAIN", "slot": "F",
-	"kind": "ultimate", "role": "Ultimate", "description": "Ultimate: lluvia de flechas sobre un área enorme.",
+	"kind": "ultimate", "role": "Ultimate", "description": "Ultimate: marca una zona y una lluvia de flechas cae durante 2 s, golpeando una y otra vez.",
 	"implemented": true, "selectable": true, "cast": "aoe", "anim": "cast", "target": "ground",
 	"clip": {"anim": "class/standing_draw_arrow", "start": 0.1, "contact": 0.33, "end": 0.7},
-	"windup": 0.80, "active": 0.10, "recovery": 0.35, "cooldown": 1.0, "cost": 0.0, "charge": 100.0,
-	"range": 340.0, "radius": 170.0, "damage_mult": 5.5, "rage_gain": 0.0, "move_factor": 0.2,
+	"windup": 0.80, "active": 2.1, "recovery": 0.35, "cooldown": 1.0, "cost": 0.0, "charge": 100.0,
+	"range": 340.0, "radius": 170.0, "damage_mult": 1.2, "damage_interval": 0.35, "tick_mult": 0.8,
+	"rage_gain": 0.0, "move_factor": 0.2,
 }
 
 ## Pasiva: a vida baja, más daño y velocidad.
@@ -124,11 +127,11 @@ const SPECIAL: Dictionary = MULTISHOT
 const ULTIMATE: Dictionary = RAIN_OF_ARROWS
 
 const DEFAULT_LOADOUT: Dictionary = {
-	"SHIFT": &"evasive_leap", "Q": &"multishot", "E": &"kick", "R": &"volley", "F": &"rain_of_arrows",
+	"SHIFT": &"evasive_leap", "Q": &"multishot", "E": &"kick", "R": &"explosive_arrow", "F": &"rain_of_arrows",
 }
 
-const ALL_ABILITIES: Array = [M1, M2, EVASIVE_LEAP, MULTISHOT, KICK, VOLLEY, RAIN_OF_ARROWS]
-const POOL_ABILITIES: Array = [EVASIVE_LEAP, MULTISHOT, KICK, VOLLEY, RAIN_OF_ARROWS]
+const ALL_ABILITIES: Array = [M1, M2, EVASIVE_LEAP, MULTISHOT, KICK, EXPLOSIVE_ARROW, RAIN_OF_ARROWS]
+const POOL_ABILITIES: Array = [EVASIVE_LEAP, MULTISHOT, KICK, EXPLOSIVE_ARROW, RAIN_OF_ARROWS]
 
 
 static func create_rage_resource() -> Rage:

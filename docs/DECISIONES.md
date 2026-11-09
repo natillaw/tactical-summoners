@@ -212,3 +212,8 @@ piezas del Medieval Village / Fantasy Props MegaKit; animación propia de estoca
 - `leap_slam` generalizado: `lunge` (salto hacia delante que se frena delante del primer enemigo) + golpe en cono o área al aterrizar. Lo usan Cross Cut (M2 del Rogue, con el clip Mutant Jump Attack sincronizado) y Death Sentence (F, aturde 2 s).
 - Rogue: E Backstab, R Fan of Knives (vuelta de 360° con cuchillos que salen escalonados, poco daño, veneno), F Death Sentence (gap closer + stun melee). Estrellas de stun sobre cualquier enemigo aturdido.
 - Ranger: la postura de apuntado (strafe/aim idle, mirar a la cámara) solo dura 2.5 s tras disparar; fuera de eso usa idle y carrera normales. Arco rotado 90° para que quede vertical.
+
+## 2026-11-08 — Rogue E = Cheap Shot (stun), M1 con ambas manos, Ranger sin postura, Kick en línea, R/F distintos
+- Rogue: **E Cheap Shot** (puñetazo, 40 Energy, aturde 1.5 s) reemplaza a Backstab. M1 alterna Sword_Regular_A (mano derecha) y `ual1/Punch_Jab` (mano izquierda, medido por velocidad de manos); el jab no alinea el cuerpo (`no_align`).
+- Ranger: quitada la postura de apuntado; tras disparar vuelve a idle/carrera normal. Arco girado -90° sobre el eje del puño (medido: vertical en 3 poses). Kick es `cast: line` con impacto seco (polvo + sonido de golpe, sin estela de espada).
+- Ranger R = **Explosive Arrow** (proyectil que explota en área, `explode_radius`); F = **Rain of Arrows** en oleadas durante 2.1 s (`damage_interval`/`tick_mult` en aoe de suelo). Antes R (Volley) y F eran la misma lluvia.

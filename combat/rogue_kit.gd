@@ -46,9 +46,9 @@ const SLOT_LABELS := {
 ## M1: tajo rápido con una daga (alterna de mano). Básico spameable, sin coste.
 const M1: Dictionary = {
 	"id": &"twin_fang", "name": "Twin Fang", "short": "FANG", "slot": "M1",
-	"kind": "basic", "role": "Daño rápido", "description": "Tajo rápido con una daga. Sin coste: se puede spamear.",
+	"kind": "basic", "role": "Daño rápido", "description": "Tajos rápidos alternando daga derecha e izquierda. Sin coste: se puede spamear.",
 	"implemented": true, "selectable": false, "cast": "melee", "anim": "slash",
-	"melee_clips": [0, 1],
+	"melee_clips": [0, 3],  # 0 = mano derecha, 3 = jab de la mano izquierda
 	"windup": 0.09, "active": 0.08, "recovery": 0.14, "cooldown": 0.0, "cost": 0.0,
 	"range": 70.0, "arc": 100.0, "damage_mult": 1.0, "rage_gain": 0.0, "move_factor": 0.5,
 	"combo_reset_window": 0.85,
@@ -96,13 +96,14 @@ const FAN_OF_KNIVES: Dictionary = {
 	"knives": 14,
 }
 
-const BACKSTAB: Dictionary = {
-	"id": &"backstab", "name": "Backstab", "short": "STAB", "slot": "E",
-	"kind": "burst", "role": "Burst", "description": "Puñalada potenciada de gran daño.",
+const CHEAP_SHOT: Dictionary = {
+	"id": &"cheap_shot", "name": "Cheap Shot", "short": "STUN", "slot": "E",
+	"kind": "control", "role": "Control / stun", "description": "Golpe sucio a la cara: poco daño, aturde 1.5 s.",
 	"implemented": true, "selectable": true, "cast": "melee", "anim": "slash",
-	"melee_clips": [2],
-	"windup": 0.18, "active": 0.08, "recovery": 0.30, "cooldown": 6.0, "cost": 55.0,
-	"range": 70.0, "arc": 90.0, "damage_mult": 3.4, "rage_gain": 0.0, "move_factor": 0.3,
+	"full_clip": {"clip": "ual1/Punch_Cross", "from": 0.0, "to": 0.55, "contact": 0.2},
+	"windup": 0.12, "active": 0.08, "recovery": 0.25, "cooldown": 9.0, "cost": 40.0,
+	"range": 65.0, "arc": 80.0, "damage_mult": 0.6, "effects": {"stun": 1.5},
+	"rage_gain": 0.0, "move_factor": 0.3,
 }
 
 const DEATH_SENTENCE: Dictionary = {
@@ -128,11 +129,11 @@ const SPECIAL: Dictionary = SHADOWSTEP
 const ULTIMATE: Dictionary = DEATH_SENTENCE
 
 const DEFAULT_LOADOUT: Dictionary = {
-	"SHIFT": &"shadowstep", "Q": &"vanish", "E": &"backstab", "R": &"fan_of_knives", "F": &"death_sentence",
+	"SHIFT": &"shadowstep", "Q": &"vanish", "E": &"cheap_shot", "R": &"fan_of_knives", "F": &"death_sentence",
 }
 
-const ALL_ABILITIES: Array = [M1, M2, SHADOWSTEP, VANISH, BACKSTAB, FAN_OF_KNIVES, DEATH_SENTENCE]
-const POOL_ABILITIES: Array = [SHADOWSTEP, VANISH, BACKSTAB, FAN_OF_KNIVES, DEATH_SENTENCE]
+const ALL_ABILITIES: Array = [M1, M2, SHADOWSTEP, VANISH, CHEAP_SHOT, FAN_OF_KNIVES, DEATH_SENTENCE]
+const POOL_ABILITIES: Array = [SHADOWSTEP, VANISH, CHEAP_SHOT, FAN_OF_KNIVES, DEATH_SENTENCE]
 
 
 static func create_rage_resource() -> Rage:

@@ -523,6 +523,14 @@ func _update_active(delta: float) -> void:
 		height = float(current_skill.get("leap_height", 70.0)) * 4.0 * u * (1.0 - u)
 	elif cast == "dash":
 		_update_dash(delta)
+	elif cast == "aoe" and current_skill.has("damage_interval"):
+		_spin_tick += delta
+		var wave := maxf(float(current_skill["damage_interval"]), 0.05)
+		while _spin_tick >= wave:
+			_spin_tick -= wave
+			_hit_targets.clear()
+			_damage_area(_cast_point, float(current_skill.get("radius", 100.0)), float(current_skill.get("tick_mult", 0.5)), _effects(), 1.0)
+			cast_event.emit("aoe_tick", current_skill, _cast_point, attack_aim)
 	elif String(current_skill.get("id", "")) == "bladestorm":
 		_spin_tick += delta
 		var interval := maxf(float(current_skill.get("damage_interval", 0.2)), 0.05)
@@ -664,7 +672,7 @@ func _damage_line(range_value: float, width: float, mult: float, effects: Dictio
 	return count
 
 
-func _damage_area(center: Vector2, radius: float, mult: float, effects: Dictionary, falloff: float = 1.0, max_targets: int = 0) -> int:
+func _damage_area(center: Vector2, radius: float, mult: float, effects: Dictionary, falloff: float = 1.0, max_targets: int = 0, skill: Dictionary = {}) -> int:
 	if radius <= 0.0:
 		return 0
 	var count := 0
@@ -677,7 +685,7 @@ func _damage_area(center: Vector2, radius: float, mult: float, effects: Dictiona
 		if max_targets > 0 and count >= max_targets:
 			break
 		var ratio := clampf(distance / maxf(radius, 0.001), 0.0, 1.0)
-		_hit_target(target, mult * lerpf(1.0, falloff, ratio), effects)
+		_hit_target(target, mult * lerpf(1.0, falloff, ratio), effects, skill)
 		count += 1
 	return count
 
@@ -1033,6 +1041,11 @@ func _update_projectiles(delta: float) -> void:
 		if world != null and not consumed:
 			var inside: Vector2 = world.clamp_to_arena(p["pos"], 1.0)
 			consumed = inside.distance_to(p["pos"]) > 2.0
+		if (consumed or float(p["left"]) <= 0.0) and float((p["skill"] as Dictionary).get("explode_radius", 0.0)) > 0.0:
+			var boom: Dictionary = p["skill"]
+			_hit_targets.clear()
+			_damage_area(p["pos"], float(boom["explode_radius"]), float(boom.get("explode_mult", 1.0)), p["effects"], 1.0, 0, boom)
+			cast_event.emit("explosion", boom, p["pos"], p["dir"])
 		if not consumed and float(p["left"]) > 0.0:
 			alive_list.append(p)
 	projectiles = alive_list

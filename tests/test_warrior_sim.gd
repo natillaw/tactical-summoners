@@ -58,6 +58,7 @@ func _run() -> void:
 	_test_shadowstep_backstab()
 	_test_anim_skills()
 	_test_rogue_rework()
+	_test_ranger_rework()
 
 	print("== %d checks, %d failed ==" % [_checks, _failures])
 	print("RESULT: %s" % ("PASS" if _failures == 0 else "FAIL"))
@@ -910,3 +911,46 @@ func _test_rogue_rework() -> void:
 	_step(world, 10, null)
 	_check(e.facing.is_equal_approx(facing_before), "El enemigo no gira hacia un jugador invisible")
 	w.set_class(&"warrior")
+
+
+func _test_ranger_rework() -> void:
+	var world := _make_world(false, 111)
+	var r = world.warrior
+	r.set_class(&"ranger")
+	r.reset(r.position)
+	var a: DummySim = world.dummies[0]
+	a.position = r.position + Vector2(0, -200)
+	var b: DummySim = world.add_dummy(a.position + Vector2(70, 0), false)
+	r.debug_refill()
+	var hp_b: float = b.health
+	r.buffered_slot = "R"
+	r.buffer_timer = 1.0
+	_step(world, 60, _input(Vector2(0, -1), false, false))
+	_check(b.health < hp_b, "Explosive Arrow explota y daña a los cercanos al impacto")
+	# Rain of Arrows: golpea varias veces en la zona.
+	var world2 := _make_world(false, 112)
+	var r2 = world2.warrior
+	r2.set_class(&"ranger")
+	r2.reset(r2.position)
+	var t: DummySim = world2.dummies[0]
+	t.position = r2.position + Vector2(0, -150)
+	r2.debug_refill()
+	r2.ultimate_charge = 100.0
+	var msg = _input(Vector2(0, -1), false, false, Vector2.ZERO, false, false, false, false, true)
+	msg.aim_point = t.position
+	msg.has_aim_point = true
+	_step(world2, 3, msg)
+	msg.actions["f"] = false
+	var hits := [0]
+	t.hit.connect(func(_a: float, _p: Vector2) -> void: hits[0] += 1)
+	for i in 240:
+		world2.submit_input(_duplicate_input(msg))
+		world2.step(DT)
+	_check(hits[0] >= 5, "Rain of Arrows golpea en oleadas durante su duración (%d golpes)" % hits[0])
+	# Kick: en línea y empuja.
+	var world3 := _make_world(false, 113)
+	var k = world3.warrior
+	k.set_class(&"ranger")
+	k.reset(k.position)
+	_check(String(k.kit.KICK["cast"]) == "line", "Kick es una patada en línea")
+	k.set_class(&"warrior")
