@@ -140,7 +140,7 @@ func _draw_status(warrior: WarriorSim) -> void:
 		Vector2(16, 52), 7, TEXT, HORIZONTAL_ALIGNMENT_CENTER, 234
 	)
 
-	var ultimate_ratio: float = _sim_ultimate(warrior) / maxf(WarriorKit.ULTIMATE_COST, 1.0)
+	var ultimate_ratio: float = _sim_ultimate(warrior) / maxf(ClassRegistry.active_kit().ULTIMATE_COST, 1.0)
 	_bar(Rect2(16, 58, 234, 7), ultimate_ratio, ULTIMATE)
 	_draw_text(
 		"ULTIMATE  %d%%" % floori(ultimate_ratio * 100.0),
@@ -199,7 +199,7 @@ func _draw_ability_slot(rect: Rect2, warrior: WarriorSim, slot: String) -> void:
 		var rage_cost := float(ability.get("cost", 0.0))
 		var has_rage := _sim_rage(warrior) + 0.001 >= rage_cost
 		if is_ultimate:
-			affordable = has_rage and _sim_ultimate(warrior) + 0.001 >= float(ability.get("charge", WarriorKit.ULTIMATE_COST))
+			affordable = has_rage and _sim_ultimate(warrior) + 0.001 >= float(ability.get("charge", ClassRegistry.active_kit().ULTIMATE_COST))
 		else:
 			affordable = has_rage
 
@@ -215,7 +215,7 @@ func _draw_ability_slot(rect: Rect2, warrior: WarriorSim, slot: String) -> void:
 	draw_rect(rect, PANEL)
 	draw_rect(rect, edge, false, 1.0)
 
-	_draw_text(WarriorKit.slot_label(slot), rect.position + Vector2(4, 9), 7, MUTED)
+	_draw_text(ClassRegistry.active_kit().slot_label(slot), rect.position + Vector2(4, 9), 7, MUTED)
 	if slot == "M1" or slot == "M2":
 		_draw_text(slot, Vector2(rect.position.x, rect.position.y + 9), 7, MUTED, HORIZONTAL_ALIGNMENT_RIGHT, rect.size.x - 4)
 
@@ -230,7 +230,7 @@ func _draw_ability_slot(rect: Rect2, warrior: WarriorSim, slot: String) -> void:
 
 	_draw_text(short, Vector2(rect.position.x, rect.position.y + rect.size.y - 2), 7, TEXT, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x)
 
-	var cost_label := WarriorKit.cost_label(ability)
+	var cost_label: String = ClassRegistry.active_kit().cost_label(ability)
 	if not cost_label.is_empty():
 		_draw_text(cost_label, Vector2(rect.position.x, rect.position.y + 20), 7, MUTED if affordable else RED, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x)
 
@@ -245,7 +245,7 @@ func _draw_ability_slot(rect: Rect2, warrior: WarriorSim, slot: String) -> void:
 		_draw_text("!", rect.position + Vector2(rect.size.x - 12, 9), 7, ORANGE)
 
 	if is_ultimate:
-		var charge_ratio: float = clampf(_sim_ultimate(warrior) / maxf(WarriorKit.ULTIMATE_COST, 1.0), 0.0, 1.0)
+		var charge_ratio: float = clampf(_sim_ultimate(warrior) / maxf(ClassRegistry.active_kit().ULTIMATE_COST, 1.0), 0.0, 1.0)
 		draw_rect(Rect2(rect.position.x + 2, rect.end.y - 2, (rect.size.x - 4) * charge_ratio, 2), ULTIMATE)
 
 

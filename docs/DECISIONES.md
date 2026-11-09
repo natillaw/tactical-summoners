@@ -163,3 +163,9 @@ piezas del Medieval Village / Fantasy Props MegaKit; animación propia de estoca
 - **Apuntado manual tipo Smite:** `InputMessage.aim_point` (punto del suelo bajo la mira). Una skill con `"target": "ground"` + `range` cae donde apuntas (limitada al alcance); un anillo en el suelo muestra el destino mientras la skill está lista. Seismic Break (R) es la primera (alcance 260). Sin punto apuntado cae sobre el jugador.
 - **DoTs:** `combat/dot_tracker.gd`; `effects.dot = {damage_type, dps, duration}` en cualquier skill. Tick cada 0.5 s, respeta resistencias, mismo tipo refresca. Jugador y enemigos.
 - **`combat/class_registry.gd`:** `WarriorSim` ya no importa `WarriorKit` directo, usa `ClassRegistry.kit(id)`. Contrato mínimo de un kit en `REQUIRED` (testeado). Añadir clase = su kit + una línea en KITS. (La sim aún se llama WarriorSim: falta generalizarla a `PlayerSim` al llegar la 2ª clase.)
+
+## 2026-11-08 — Primer Mago (clase 2)
+- `combat/mage_kit.gd` (mismo contrato que WarriorKit, maná con regeneración): Arcane Bolt (M1, proyectil sin cooldown), Fireball (M2, quemadura), Blink, Frost Nova (slow), Poison Cloud (suelo, veneno), Meteor (suelo), Arcane Surge (ultimate, suelo).
+- Nuevo cast `projectile` en la sim (`projectiles`, colisión con enemigos y paredes); DoT con `dps_mult` (escala con el daño del jugador).
+- `WarriorSim.set_class(id)` cambia kit/recurso/loadout; **F8** alterna Guerrero↔Mago en pruebas. HUD y loadout leen `ClassRegistry.active_kit()`.
+- Pendiente del Mago: modelo/túnica propios (hoy es el modelo del Warrior sin espada), VFX propios (orbes con FxShape), balance, y que el loadout elija entre más cartas.

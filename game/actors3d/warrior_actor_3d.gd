@@ -93,6 +93,7 @@ var _spin_disc: FxShape
 var _clip_info: Dictionary = {}
 var _align_yaw: float = 0.0
 var _swing_dir: float = 1.0
+var _orbs: Dictionary = {}
 
 
 func setup(p_sim: WarriorSim, p_arena: Arena3D) -> void:
@@ -191,6 +192,8 @@ func _process(delta: float) -> void:
 	if _dead_visual:
 		_restore_visual()
 
+	sword.visible = sim.class_id == &"warrior"
+	_update_orbs()
 	_update_facing(delta)
 	_update_locomotion()
 	_update_dash_fx(delta)
@@ -268,7 +271,8 @@ func _on_attack_started(skill: Dictionary, direction: Vector2) -> void:
 		"bladestorm":
 			_play_clip(M1_CLIPS[2], windup, 0.2)
 		_:
-			pass
+			if String(skill.get("anim", "")) == "cast":
+				_play_clip({"clip": "ual1/Spell_Simple_Shoot", "from": 0.0, "to": 1.0, "contact": 0.4}, windup, post)
 	_yaw = View3D.yaw_for(direction) - _align_yaw
 	rig.rotation.y = _yaw
 
@@ -369,6 +373,11 @@ func _on_cast_event(event: String, skill: Dictionary, at: Vector2, direction: Ve
 			arena.play_sfx(SFX_PARRY, -2.0, 1.15)
 			arena.shake(2.6, 0.14)
 			rig.hitstop(0.1)
+		"projectile":
+			arena.play_sfx(SFX_MAGIC, -9.0, randf_range(0.95, 1.1))
+		"projectile_hit":
+			arena.spawn_impact(at, DamageSystem.color_of(DamageSystem.type_of(skill)), true)
+			arena.play_sfx(SFX_HIT, -6.0, 1.1)
 		"spin_start":
 			_spinning = true
 			_spin_yaw = 0.0
@@ -464,6 +473,26 @@ func _on_last_stand_changed(active: bool, _seconds_left: float) -> void:
 		return
 	arena.play_sfx(SFX_BUFF, -9.0, 0.85)
 	arena.spawn_shockwave(sim.position, 70.0, COLOR_RAGE, 0.5, 0.6)
+
+
+# --- Proyectiles (orbes) --------------------------------------------------------------
+
+
+func _update_orbs() -> void:
+	var seen: Dictionary = {}
+	for p: Dictionary in sim.projectiles:
+		var id: int = int(p["id"])
+		seen[id] = true
+		if not _orbs.has(id):
+			var rgb: Array = (p["skill"] as Dictionary).get("color", [1.0, 0.8, 0.4])
+			var orb := FxShape.new().setup(FxShape.Mode.DISC, 0.28, Color(rgb[0], rgb[1], rgb[2], 0.95))
+			arena.add_child(orb)
+			_orbs[id] = orb
+		(_orbs[id] as FxShape).position = View3D.to3(p["pos"], 1.15)
+	for id: int in _orbs.keys():
+		if not seen.has(id):
+			(_orbs[id] as FxShape).queue_free()
+			_orbs.erase(id)
 
 
 # --- Utilidades -----------------------------------------------------------------

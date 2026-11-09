@@ -100,11 +100,11 @@ func toggle() -> void:
 
 
 func _selected_slot() -> String:
-	return String(WarriorKit.SELECTABLE_SLOTS[selected_slot_index])
+	return String(ClassRegistry.active_kit().SELECTABLE_SLOTS[selected_slot_index])
 
 
 func _selected_card() -> Dictionary:
-	var pool: Array = WarriorKit.get_pool()
+	var pool: Array = ClassRegistry.active_kit().get_pool()
 	if pool.is_empty():
 		return {}
 	var index := clampi(selected_card_index, 0, pool.size() - 1)
@@ -125,16 +125,16 @@ func _input(event: InputEvent) -> void:
 				close()
 				get_viewport().set_input_as_handled()
 			KEY_UP:
-				selected_slot_index = posmod(selected_slot_index - 1, WarriorKit.SELECTABLE_SLOTS.size())
+				selected_slot_index = posmod(selected_slot_index - 1, ClassRegistry.active_kit().SELECTABLE_SLOTS.size())
 				queue_redraw()
 			KEY_DOWN:
-				selected_slot_index = posmod(selected_slot_index + 1, WarriorKit.SELECTABLE_SLOTS.size())
+				selected_slot_index = posmod(selected_slot_index + 1, ClassRegistry.active_kit().SELECTABLE_SLOTS.size())
 				queue_redraw()
 			KEY_LEFT:
-				selected_card_index = posmod(selected_card_index - 1, WarriorKit.get_pool().size())
+				selected_card_index = posmod(selected_card_index - 1, ClassRegistry.active_kit().get_pool().size())
 				queue_redraw()
 			KEY_RIGHT:
-				selected_card_index = posmod(selected_card_index + 1, WarriorKit.get_pool().size())
+				selected_card_index = posmod(selected_card_index + 1, ClassRegistry.active_kit().get_pool().size())
 				queue_redraw()
 			KEY_ENTER, KEY_KP_ENTER:
 				_assign_selected()
@@ -156,14 +156,14 @@ func _gui_input(event: InputEvent) -> void:
 		return
 
 	var point := mouse.position
-	for i: int in range(WarriorKit.SELECTABLE_SLOTS.size()):
+	for i: int in range(ClassRegistry.active_kit().SELECTABLE_SLOTS.size()):
 		if _slot_rect(i).has_point(point):
 			selected_slot_index = i
 			queue_redraw()
 			accept_event()
 			return
 
-	var pool_size := WarriorKit.get_pool().size()
+	var pool_size: int = ClassRegistry.active_kit().get_pool().size()
 	for i: int in range(pool_size):
 		if _card_rect(i).has_point(point):
 			selected_card_index = i
@@ -201,7 +201,7 @@ func _assign_selected() -> void:
 func _reset_loadout() -> void:
 	if world == null or world.warrior == null:
 		return
-	world.warrior.set_loadout(WarriorKit.default_loadout())
+	world.warrior.set_loadout(ClassRegistry.active_kit().default_loadout())
 	_status("DEFAULT LOADOUT RESTORED", GOLD, 1.8)
 	queue_redraw()
 
@@ -233,7 +233,7 @@ func _load_from_disk(announce: bool) -> void:
 		return
 	var data: Dictionary = parsed
 	var raw: Dictionary = data.get("loadout", {})
-	var clean := WarriorKit.sanitize_loadout(raw)
+	var clean: Dictionary = ClassRegistry.active_kit().sanitize_loadout(raw)
 	if world != null and world.warrior != null:
 		world.warrior.set_loadout(clean)
 	if announce:
@@ -287,17 +287,17 @@ func _draw_slots() -> void:
 	if world != null and world.warrior != null:
 		loadout = world.warrior.loadout
 
-	for i: int in range(WarriorKit.SELECTABLE_SLOTS.size()):
-		var slot := String(WarriorKit.SELECTABLE_SLOTS[i])
+	for i: int in range(ClassRegistry.active_kit().SELECTABLE_SLOTS.size()):
+		var slot := String(ClassRegistry.active_kit().SELECTABLE_SLOTS[i])
 		var rect := _slot_rect(i)
 		var selected := i == selected_slot_index
 		fill_rect(rect, PANEL_SOFT if not selected else Color(0.13, 0.11, 0.07, 0.98))
 		draw_rect(rect, GOLD if selected else EDGE_SOFT, false, 1.0)
 
 		var id := StringName(String(loadout.get(slot, "")))
-		var ability := WarriorKit.ability_by_id(id)
+		var ability: Dictionary = ClassRegistry.active_kit().ability_by_id(id)
 		var name := String(ability.get("name", "EMPTY"))
-		_draw_text(WarriorKit.slot_label(slot), rect.position + Vector2(6, 12), 7, GOLD)
+		_draw_text(ClassRegistry.active_kit().slot_label(slot), rect.position + Vector2(6, 12), 7, GOLD)
 		_draw_text(name.to_upper(), rect.position + Vector2(6, 26), 7, TEXT if not ability.is_empty() else MUTED)
 		if not ability.is_empty():
 			_draw_text(_cost_label(ability), Vector2(rect.end.x - 6, rect.position.y + 12), 7, MUTED, HORIZONTAL_ALIGNMENT_RIGHT, 60)
@@ -307,7 +307,7 @@ func _draw_slots() -> void:
 
 func _draw_pool() -> void:
 	_draw_text("POOL  ·  5 SELECTABLE ABILITIES", Vector2(GRID_X, GRID_Y - 8), 7, MUTED)
-	var pool: Array = WarriorKit.get_pool()
+	var pool: Array = ClassRegistry.active_kit().get_pool()
 	var used := _slot_badges()
 
 	for i: int in range(pool.size()):
@@ -361,14 +361,14 @@ func _slot_badges() -> Dictionary:
 	if world == null or world.warrior == null:
 		return used
 	var loadout: Dictionary = world.warrior.loadout
-	for slot: String in WarriorKit.SELECTABLE_SLOTS:
+	for slot: String in ClassRegistry.active_kit().SELECTABLE_SLOTS:
 		var id := String(loadout.get(slot, ""))
 		if id.is_empty():
 			continue
 		if not used.has(id):
 			used[id] = []
 		var badges: Array = used[id]
-		badges.append(WarriorKit.slot_label(slot))
+		badges.append(ClassRegistry.active_kit().slot_label(slot))
 	return used
 
 

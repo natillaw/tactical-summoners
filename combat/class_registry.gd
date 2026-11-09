@@ -8,7 +8,15 @@ extends RefCounted
 
 const KITS := {
 	&"warrior": preload("res://combat/warrior_kit.gd"),
+	&"mage": preload("res://combat/mage_kit.gd"),
 }
+
+## Clase del jugador activo (la UI lee de aquí su kit).
+static var active: StringName = &"warrior"
+
+
+static func active_kit() -> GDScript:
+	return KITS[active]
 
 ## Contrato mínimo de un kit.
 const REQUIRED := [

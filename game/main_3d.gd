@@ -55,6 +55,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				world.warrior.equip_weapon(item)
 				print(item.describe())
 			KEY_F7: world.warrior.progression.set_level(Progression.MAX_LEVEL)
+			KEY_F8:  # cambiar de clase (prueba): Guerrero <-> Mago
+				world.warrior.set_class(&"mage" if world.warrior.class_id == &"warrior" else &"warrior")
 	if loadout_panel.visible:
 		return
 	if event is InputEventMouseMotion:
