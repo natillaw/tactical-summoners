@@ -206,3 +206,9 @@ piezas del Medieval Village / Fantasy Props MegaKit; animación propia de estoca
 - **Rogue:** idle con Knife Idle; Cross Cut (M2, 60 Energy) usa Mutant Jump Attack; **Vanish** (Q) reemplaza a Poisoned Blades: invisible 5 s, enemigos no te ven ni te dañan, atacar rompe la invisibilidad, personaje semitransparente.
 - **Ranger:** apunta siempre (strafe con Aim Walk F/B/L/R, Aim Idle); Quick Shot = Aim Recoil, Charged Shot = Overdraw, Volley/Rain = Draw Arrow; **Evasive Leap** con arco de salto y Fall A Loop; **Kick** reemplaza a Frost Trap (empuja al enemigo, `effects.knockback`).
 - Disponibles sin usar: Fall B Loop, Standing Dive Forward.
+
+## 2026-11-08 — Rogue rehecho (R = Fan of Knives con vuelta 360°, F = Death Sentence con stun), M2 con salto real
+- Los enemigos ya no siguen con la mirada a un jugador invisible (`DummySim.facing` solo se actualiza si lo ven).
+- `leap_slam` generalizado: `lunge` (salto hacia delante que se frena delante del primer enemigo) + golpe en cono o área al aterrizar. Lo usan Cross Cut (M2 del Rogue, con el clip Mutant Jump Attack sincronizado) y Death Sentence (F, aturde 2 s).
+- Rogue: E Backstab, R Fan of Knives (vuelta de 360° con cuchillos que salen escalonados, poco daño, veneno), F Death Sentence (gap closer + stun melee). Estrellas de stun sobre cualquier enemigo aturdido.
+- Ranger: la postura de apuntado (strafe/aim idle, mirar a la cámara) solo dura 2.5 s tras disparar; fuera de eso usa idle y carrera normales. Arco rotado 90° para que quede vertical.

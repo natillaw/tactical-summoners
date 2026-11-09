@@ -97,7 +97,7 @@ func step(tick_number: int, delta: float, warrior: Object) -> void:
 		knock_timer -= delta
 		position = world.resolve_position(position + knock_vel * delta, radius, self)
 
-	if warrior != null and warrior.alive:
+	if warrior != null and warrior.alive and not warrior.is_invisible():
 		facing = (warrior.position - position).normalized()
 
 	cooldown = maxf(0.0, cooldown - delta)

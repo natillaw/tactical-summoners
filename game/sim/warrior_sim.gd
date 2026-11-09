@@ -482,7 +482,18 @@ func _enter_active() -> void:
 			_do_teleport()
 		"leap_slam":
 			_leap_from = position
-			_leap_to = world.resolve_position(_cast_point, RADIUS) if world != null else _cast_point
+			var leap_target := _cast_point
+			if float(current_skill.get("lunge", 0.0)) > 0.0:
+				var lunge := float(current_skill["lunge"])
+				# Se frena justo delante del primer enemigo que haya en el camino.
+				for target: Object in _living_targets():
+					var to_target: Vector2 = target.position - position
+					var ahead := to_target.dot(attack_aim)
+					var side := absf(to_target.cross(attack_aim))
+					if ahead > 0.0 and side < float(target.radius) + RADIUS + 10.0:
+						lunge = minf(lunge, maxf(ahead - (float(target.radius) + RADIUS + 6.0), 0.0))
+				leap_target = position + attack_aim * lunge
+			_leap_to = world.resolve_position(leap_target, RADIUS) if world != null else leap_target
 			cast_event.emit("leap_start", current_skill, position, attack_aim)
 		"buff":
 			invisible_timer = float(current_skill.get("invisible", 5.0))
@@ -534,7 +545,10 @@ func _enter_recovery() -> void:
 		position = _leap_to
 		cast_event.emit("slam", current_skill, position, attack_aim)
 		_hit_targets.clear()
-		_damage_area(position, float(current_skill.get("radius", 100.0)), _current_multiplier(), _effects(), 1.0)
+		if float(current_skill.get("radius", 0.0)) > 0.0:
+			_damage_area(position, float(current_skill["radius"]), _current_multiplier(), _effects(), 1.0)
+		else:
+			_damage_melee(float(current_skill.get("range", 80.0)), float(current_skill.get("arc", 120.0)), _current_multiplier(), _effects())
 	state = AttackState.RECOVERY
 	state_time -= float(current_skill.get("active", 0.1))
 	parry_active = false

@@ -277,7 +277,7 @@ static func _knife() -> MeshInstance3D:
 
 
 ## Fan of Knives: cuchillos que salen disparados en abanico en todas direcciones.
-static func knife_fan(parent: Node, at: Vector3, radius_m: float, count: int = 14, tint: Color = POISON) -> void:
+static func knife_fan(parent: Node, at: Vector3, radius_m: float, count: int = 14, tint: Color = POISON, stagger: float = 0.0) -> void:
 	for i in range(count):
 		var angle := TAU * float(i) / float(count)
 		var dir := Vector3(sin(angle), 0.0, cos(angle))
@@ -287,7 +287,10 @@ static func knife_fan(parent: Node, at: Vector3, radius_m: float, count: int = 1
 		knife.rotation.y = angle
 		var trail := sparks(tint, 14, 0.3, 0.3, 0.06, false)
 		knife.add_child(trail)
+		knife.visible = false
 		var tween := knife.create_tween()
+		tween.tween_interval(stagger * float(i) / float(count))
+		tween.tween_callback(func() -> void: knife.visible = true)
 		tween.set_parallel(true)
 		tween.tween_property(knife, "global_position", at + Vector3(0, 0.9, 0) + dir * radius_m, 0.28).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 		tween.tween_property(knife, "scale", Vector3.ONE * 0.2, 0.28).set_delay(0.12)
