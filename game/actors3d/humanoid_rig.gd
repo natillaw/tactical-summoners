@@ -17,6 +17,7 @@ const UAL1 := "res://assets/models/anims/UAL1_Standard.glb"
 const UAL2 := "res://assets/models/anims/UAL2_Standard.glb"
 
 const SPELLS := "res://assets/models/anims/spells.res"
+const CLASS_ANIMS := "res://assets/models/anims/class_anims.res"
 
 static var _libraries: Dictionary = {}
 static var _warned: Dictionary = {}
@@ -87,6 +88,17 @@ func setup_model(p_model: Node3D) -> void:
 		model.add_child(overlay)  # después de `player`: procesa más tarde y gana en el tren superior
 		overlay.root_node = player.root_node
 		overlay.add_animation_library("spell", spells)
+
+	# Animaciones por clase (Mixamo retargeteado): arquero, rogue, patada, saltos, bloqueo...
+	if ResourceLoader.exists(CLASS_ANIMS):
+		var class_lib := load(CLASS_ANIMS) as AnimationLibrary
+		for clip_name: StringName in class_lib.get_animation_list():
+			var key := String(clip_name)
+			if "walk" in key or "idle" in key or "fall" in key:
+				class_lib.get_animation(clip_name).loop_mode = Animation.LOOP_LINEAR
+		player.add_animation_library("class", class_lib)
+		if overlay != null:
+			overlay.add_animation_library("class", class_lib)
 
 	_flash_material = StandardMaterial3D.new()
 	_flash_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED

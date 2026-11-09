@@ -59,7 +59,7 @@ const M2: Dictionary = {
 	"id": &"cross_cut", "name": "Cross Cut", "short": "CUT", "slot": "M2",
 	"kind": "basic", "role": "Daño", "description": "Cruza ambas dagas: más daño que Twin Fang.",
 	"implemented": true, "selectable": false, "cast": "melee", "anim": "slash",
-	"melee_clips": [2],
+	"full_clip": {"clip": "class/mutant_jump_attack", "from": 0.395, "to": 0.58, "contact": 0.44},
 	"windup": 0.12, "active": 0.08, "recovery": 0.20, "cooldown": 0.0, "cost": 60.0,
 	"range": 75.0, "arc": 140.0, "damage_mult": 1.7, "rage_gain": 0.0, "move_factor": 0.45,
 }
@@ -75,15 +75,14 @@ const SHADOWSTEP: Dictionary = {
 	"color": [0.45, 0.3, 0.7],
 }
 
-const POISONED_BLADES: Dictionary = {
-	"id": &"poisoned_blades", "name": "Poisoned Blades", "short": "POISON", "slot": "Q",
-	"kind": "control", "role": "Daño en el tiempo", "description": "Corte envenenado: daña y deja veneno.",
-	"implemented": true, "selectable": true, "cast": "melee", "anim": "slash",
-	"melee_clips": [1],
-	"windup": 0.10, "active": 0.08, "recovery": 0.20, "cooldown": 6.0, "cost": 35.0,
-	"range": 70.0, "arc": 100.0, "damage_mult": 0.9,
-	"effects": {"dot": {"damage_type": 4, "dps_mult": 0.5, "duration": 5.0}},
-	"rage_gain": 0.0, "move_factor": 0.4,
+const VANISH: Dictionary = {
+	"id": &"vanish", "name": "Vanish", "short": "VANISH", "slot": "Q",
+	"kind": "stealth", "role": "Sigilo / escape", "description": "Te vuelves invisible 5 s: los enemigos no te ven, salvo que ataques.",
+	"implemented": true, "selectable": true, "cast": "buff", "anim": "slash",
+	"damage_type": 6,  # DamageSystem.Type.SHADOW
+	"windup": 0.12, "active": 0.05, "recovery": 0.20, "cooldown": 14.0, "cost": 30.0,
+	"damage_mult": 0.0, "invisible": 5.0, "move_factor": 0.8,
+	"color": [0.45, 0.3, 0.7],
 }
 
 const FAN_OF_KNIVES: Dictionary = {
@@ -128,11 +127,11 @@ const SPECIAL: Dictionary = SHADOWSTEP
 const ULTIMATE: Dictionary = DEATH_SENTENCE
 
 const DEFAULT_LOADOUT: Dictionary = {
-	"SHIFT": &"shadowstep", "Q": &"poisoned_blades", "E": &"fan_of_knives", "R": &"backstab", "F": &"death_sentence",
+	"SHIFT": &"shadowstep", "Q": &"vanish", "E": &"fan_of_knives", "R": &"backstab", "F": &"death_sentence",
 }
 
-const ALL_ABILITIES: Array = [M1, M2, SHADOWSTEP, POISONED_BLADES, FAN_OF_KNIVES, BACKSTAB, DEATH_SENTENCE]
-const POOL_ABILITIES: Array = [SHADOWSTEP, POISONED_BLADES, FAN_OF_KNIVES, BACKSTAB, DEATH_SENTENCE]
+const ALL_ABILITIES: Array = [M1, M2, SHADOWSTEP, VANISH, FAN_OF_KNIVES, BACKSTAB, DEATH_SENTENCE]
+const POOL_ABILITIES: Array = [SHADOWSTEP, VANISH, FAN_OF_KNIVES, BACKSTAB, DEATH_SENTENCE]
 
 
 static func create_rage_resource() -> Rage:

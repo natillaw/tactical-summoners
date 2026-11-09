@@ -199,3 +199,10 @@ piezas del Medieval Village / Fantasy Props MegaKit; animación propia de estoca
 - **Fan of Knives** al estilo WotLK: estallido instantáneo de cuchillos en todas direcciones que golpea a todos los cercanos y aplica veneno (VFX: 14 cuchillos disparados + nube verde). **Backstab** aturda 1 s (con DR).
 - **Veneno verde**: ráfagas verdes al golpear y aura de burbujas verdes sobre el enemigo mientras dure el DoT (`DotTracker.dominant_type()` -> color del tipo).
 - VFX para Warrior/Rogue/Ranger en `arcane_fx.gd`: chispas de impacto (acero/oro), escombros (Seismic), lluvia de flechas, cristales de hielo, boca de arma; partículas con textura radial suave (antes eran cuadrados).
+
+## 2026-11-08 — Animaciones Mixamo por clase, patada, invisibilidad, saltos
+- Nuevos FBX de Mixamo (`assets/models/anims/class/`) retargeteados con `tools/bake_spells.gd` -> `class_anims.res` (librería "class").
+- **Warrior:** Seismic Break es ahora un salto hasta el punto apuntado (`cast: leap_slam`, anim Run Jump Attack, golpe al aterrizar). Parry: al desviar un golpe reproduce Block React Large.
+- **Rogue:** idle con Knife Idle; Cross Cut (M2, 60 Energy) usa Mutant Jump Attack; **Vanish** (Q) reemplaza a Poisoned Blades: invisible 5 s, enemigos no te ven ni te dañan, atacar rompe la invisibilidad, personaje semitransparente.
+- **Ranger:** apunta siempre (strafe con Aim Walk F/B/L/R, Aim Idle); Quick Shot = Aim Recoil, Charged Shot = Overdraw, Volley/Rain = Draw Arrow; **Evasive Leap** con arco de salto y Fall A Loop; **Kick** reemplaza a Frost Trap (empuja al enemigo, `effects.knockback`).
+- Disponibles sin usar: Fall B Loop, Standing Dive Forward.

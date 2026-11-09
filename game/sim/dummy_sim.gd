@@ -67,6 +67,8 @@ var vulnerable_timer: float = 0.0
 var interrupted_timer: float = 0.0
 var stun_timer: float = 0.0
 var cc := CCDiminish.new()
+var knock_vel: Vector2 = Vector2.ZERO
+var knock_timer: float = 0.0
 var dots := DotTracker.new()
 ## Resistencias por tipo de daño (DamageSystem.Type → fracción).
 var resist: Dictionary = {}
@@ -90,6 +92,10 @@ func step(tick_number: int, delta: float, warrior: Object) -> void:
 
 	if hit_flash_ticks > 0:
 		hit_flash_ticks -= 1
+
+	if knock_timer > 0.0:
+		knock_timer -= delta
+		position = world.resolve_position(position + knock_vel * delta, radius, self)
 
 	if warrior != null and warrior.alive:
 		facing = (warrior.position - position).normalized()
@@ -137,7 +143,7 @@ func _tick_effects(delta: float) -> void:
 
 ## Qué hace el muñeco en reposo (EnemySim lo sustituye por su IA).
 func _idle_decision(warrior: Object) -> void:
-	if warrior != null and warrior.alive and cooldown <= 0.0:
+	if warrior != null and warrior.alive and not warrior.is_invisible() and cooldown <= 0.0:
 		if position.distance_to(warrior.position) <= ATTACK_RANGE:
 			_start_telegraph()
 
@@ -168,7 +174,7 @@ func _resolve_attack(warrior: Object) -> void:
 ## Golpe en volumen: alcance horizontal + arco (360 = círculo) + altura. Devuelve
 ## true si hizo daño. Gestiona el parry del jugador y la voltereta (en take_damage).
 func _strike(warrior: Object, direction: Vector2, reach: float, arc: float, damage: float, effects: Dictionary = {}) -> bool:
-	if warrior == null or not warrior.alive:
+	if warrior == null or not warrior.alive or warrior.is_invisible():
 		attack_missed.emit()
 		return false
 
@@ -218,7 +224,7 @@ func take_damage(amount: float, source_position: Vector2 = Vector2.ZERO, effects
 	hit.emit(dealt, position)
 
 	if not effects.is_empty():
-		apply_effects(effects)
+		apply_effects(effects, source_position)
 
 	if health <= 0.0:
 		health = 0.0
@@ -229,7 +235,12 @@ func take_damage(amount: float, source_position: Vector2 = Vector2.ZERO, effects
 	return dealt
 
 
-func apply_effects(effects: Dictionary) -> void:
+func apply_effects(effects: Dictionary, source: Vector2 = Vector2.ZERO) -> void:
+	var knockback := float(effects.get("knockback", 0.0))
+	if knockback > 0.0 and source != Vector2.ZERO:
+		knock_vel = (position - source).normalized() * (knockback / 0.18)
+		knock_timer = 0.18
+		interrupt()
 	var slow: Dictionary = effects.get("slow", {})
 	if not slow.is_empty():
 		slow_factor = clampf(float(slow.get("factor", 0.6)), 0.1, 1.0)
@@ -278,6 +289,7 @@ func revive() -> void:
 	vulnerable_timer = 0.0
 	interrupted_timer = 0.0
 	stun_timer = 0.0
+	knock_timer = 0.0
 	cc.reset()
 	dots.clear()
 	health_changed.emit(health, max_health)
