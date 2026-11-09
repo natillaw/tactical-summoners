@@ -318,8 +318,8 @@ func _update_facing(delta: float) -> void:
 		rate = TURN_SPEED_ATTACK
 	elif sim.velocity.length_squared() > 64.0:
 		var offset := wrapf(View3D.yaw_for(sim.velocity) - cam_yaw, -PI, PI)
-		if absf(offset) <= deg_to_rad(100.0):
-			target_yaw = cam_yaw + clampf(offset, deg_to_rad(-60.0), deg_to_rad(60.0))
+		if absf(offset) <= deg_to_rad(45.0):
+			target_yaw = cam_yaw + offset  # diagonal hacia delante: el cuerpo se inclina; en lateral/atrás mira a la cámara
 	_yaw = lerp_angle(_yaw, target_yaw, 1.0 - exp(-rate * delta))
 
 	if _spinning:
@@ -347,7 +347,10 @@ func _update_locomotion() -> void:
 		rig.play(ANIM_JUMP, 0.1)
 		return
 	var speed_m := View3D.meters(sim.velocity.length())
-	if speed_m > 0.4 and _aiming_stance():
+	if speed_m > 0.4 and _is_lateral():
+		# Paso lateral con las animaciones de strafe (el cuerpo mira hacia la cámara)
+		rig.play("class/right_strafe" if _move_angle() > 0.0 else "class/left_strafe", 0.1, clampf(speed_m / 3.0, 0.7, 1.6))
+	elif speed_m > 0.4 and _aiming_stance():
 		rig.play(_strafe_anim(), 0.1, clampf(speed_m / 2.0, 0.6, 2.2))
 	elif speed_m > 0.4 and _moving_back():
 		rig.play(ANIM_RUN, 0.12, -clampf(speed_m / RUN_ANIM_SPEED, 0.6, 1.6))
@@ -361,10 +364,19 @@ func _update_locomotion() -> void:
 
 ## Idle por clase: el rogue con la daga en guardia, el ranger apuntando.
 ## ¿Se mueve de espaldas respecto a donde mira la cámara? (animación de carrera al revés)
-func _moving_back() -> bool:
+## Ángulo (grados) entre hacia dónde mira el personaje/cámara y su movimiento: 0 = adelante, + = derecha.
+func _move_angle() -> float:
 	var reference: Vector2 = sim.aim_dir if enemy_mode else arena.cam_forward_sim()
-	var offset := wrapf(View3D.yaw_for(sim.velocity) - View3D.yaw_for(reference), -PI, PI)
-	return absf(offset) > deg_to_rad(100.0)
+	return rad_to_deg(reference.angle_to(sim.velocity))
+
+
+func _is_lateral() -> bool:
+	var a := absf(_move_angle())
+	return a > 45.0 and a <= 135.0
+
+
+func _moving_back() -> bool:
+	return absf(_move_angle()) > 135.0
 
 
 func _idle_anim() -> String:
