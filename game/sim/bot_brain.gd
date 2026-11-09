@@ -67,7 +67,7 @@ func think(sim: WarriorSim, world: Object, delta: float) -> Dictionary:
 	# --- Skills ---
 	_think_timer -= delta
 	var chosen := ""
-	if _think_timer <= 0.0 and sim.state == WarriorSim.AttackState.IDLE:
+	if _think_timer <= 0.0 and sim.cast_progress() < 0.0:
 		_think_timer = rng.randf_range(0.08, 0.22)
 		chosen = _choose_skill(sim, target, dir, distance, ranged, out)
 

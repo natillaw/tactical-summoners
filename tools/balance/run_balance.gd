@@ -5,6 +5,7 @@
 ## godot --headless --path . -s res://tools/balance/run_balance.gd -- mode=2v2 class=warrior,mage vs=rogue,ranger runs=10
 ## godot --headless --path . -s res://tools/balance/run_balance.gd -- mode=1v2 class=mage vs=warrior,rogue
 ## godot --headless --path . -s res://tools/balance/run_balance.gd -- mode=matrix runs=10 level=5
+## Cambios de balance temporales: cmod.rogue.damage_mult=0.85  skill.death_sentence.damage_mult=3.5
 ## Extras: level=N  seconds=N  runs=N  mod.damage_mult=1.2 (para el equipo A)  vsmod.health_mult=1.5 (equipo B)
 extends SceneTree
 
@@ -15,6 +16,12 @@ func _init() -> void:
 		var parts := String(raw).split("=", true, 1)
 		if parts.size() == 2:
 			args[parts[0]] = parts[1]
+	for key: String in args:
+		var bits := key.split(".")
+		if bits.size() == 3 and bits[0] == "cmod":
+			BalanceData.set_class_mod(StringName(bits[1]), bits[2], float(args[key]))
+		elif bits.size() == 3 and bits[0] == "skill":
+			BalanceData.set_skill_value(bits[1], bits[2], float(args[key]))
 	var mode := String(args.get("mode", "dps"))
 	var level := int(args.get("level", 1))
 	var runs := int(args.get("runs", 10))

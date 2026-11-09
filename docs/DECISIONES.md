@@ -229,3 +229,8 @@ piezas del Medieval Village / Fantasy Props MegaKit; animación propia de estoca
 - Todos los combatientes son objetivos entre sí (`targets_for`, equipos, `radius`/`facing`, slow/knockback/interrupt recibidos, colisión entre ellos).
 - **Balance data:** `res://data/balance.json` (`BalanceData`): multiplicadores por clase (daño, vida, velocidad, crítico, cooldowns, regeneración) y sobrescritura de cualquier número de cualquier skill. Se lee en vivo, también en el juego.
 - **Laboratorio de Balance:** `godot --path . res://tools/balance/balance_lab.tscn` — DPS en muñeco (desglose por skill, tramos de 10 s), duelos 1v1/2v2/1v2 con N repeticiones, matriz de clases, edición de stats y skills, guardar/recargar. Mismo motor por consola: `tools/balance/run_balance.gd` (headless, ver cabecera del archivo).
+
+## 2026-11-08 — Strafe lateral y primer informe de balance
+- Animaciones de strafe de Mixamo (`left_strafe`, `right_strafe`; también `great_sword_strafe` y `sword_and_shield_strafe` sin usar): movimiento lateral (45°–135° respecto a la cámara) reproduce el clip lateral con el cuerpo mirando a la cámara; hacia delante en diagonal se inclina; hacia atrás corre al revés.
+- BotBrain decide skills aunque esté a mitad de otra acción (el buffer las encola): antes el Guerrero casi no usaba skills con M1 mantenido.
+- CLI del simulador acepta `cmod.<clase>.<clave>=` y `skill.<id>.<clave>=` para probar cambios sin guardar.
