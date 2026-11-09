@@ -100,7 +100,7 @@ func _test_ability_schema() -> void:
 				_check(float(entry["range"]) > 0.0 and float(entry["arc"]) > 0.0, "%s tiene rango y arco" % id)
 			"line":
 				_check(float(entry["range"]) > 0.0 and float(entry["width"]) > 0.0, "%s tiene largo y ancho" % id)
-			"aoe":
+			"aoe", "leap_slam":
 				_check(float(entry["radius"]) > 0.0, "%s tiene radio de área" % id)
 			"dash":
 				_check(float(entry["distance"]) > 0.0, "%s tiene distancia de dash" % id)
