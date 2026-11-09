@@ -27,6 +27,7 @@ signal evaded(amount: float)
 signal last_stand_changed(active: bool, seconds_left: float)
 signal loadout_changed(loadout: Dictionary)
 signal stunned(seconds: float)
+signal class_changed(class_id: StringName)
 
 enum AttackState { IDLE, WINDUP, ACTIVE, RECOVERY }
 
@@ -95,7 +96,11 @@ var last_stand_active: bool = false
 var last_stand_timer: float = 0.0
 var last_stand_cooldown: float = 0.0
 
+var class_id: StringName = &"warrior"
 var kit: GDScript = ClassRegistry.kit(&"warrior")
+var projectiles: Array = []
+var _next_projectile_id: int = 1
+var _regen: float = 0.0
 var loadout: Dictionary = kit.default_loadout()
 var dots := DotTracker.new()
 ## Punto del suelo bajo la mira y destino de la skill de suelo en curso.
@@ -210,6 +215,7 @@ func step(tick_number: int, delta: float, input: Variant) -> void:
 	_update_movement(delta)
 	_update_jump(delta)
 	_update_last_stand()
+	_update_projectiles(delta)
 
 
 func _read_input(input: Variant) -> void:
@@ -278,6 +284,8 @@ func _to_vec(value: Variant) -> Vector2:
 
 
 func _tick_timers(delta: float) -> void:
+	if _regen > 0.0 and alive:
+		_gain_rage(_regen * delta)
 	var keys: Array = cooldowns.keys().duplicate()
 	for key: Variant in keys:
 		var left := float(cooldowns[key]) - delta
@@ -436,6 +444,8 @@ func _enter_active() -> void:
 					_effects(),
 					1.0
 				)
+		"projectile":
+			_spawn_projectile()
 		"line":
 			_damage_line(
 				float(current_skill.get("range", 100.0)),
@@ -602,25 +612,31 @@ func _damage_area(center: Vector2, radius: float, mult: float, effects: Dictiona
 	return count
 
 
-func _hit_target(target: Object, mult: float, effects: Dictionary) -> void:
+func _hit_target(target: Object, mult: float, effects: Dictionary, skill: Dictionary = {}) -> void:
 	_hit_targets[target] = true
+	var sk: Dictionary = skill if not skill.is_empty() else current_skill
 
-	var type := DamageSystem.type_of(current_skill)
+	var type := DamageSystem.type_of(sk)
 	var result := DamageSystem.roll(roll_hit(), mult, stats.get_crit_chance(), type, _rng)
 	var damage: float = result["amount"]
 	var critical: bool = result["critical"]
 	var fx := effects.duplicate()
 	fx[DamageSystem.KEY] = type
+	if fx.has("dot"):
+		var dot: Dictionary = (fx["dot"] as Dictionary).duplicate()
+		if dot.has("dps_mult"):
+			dot["dps"] = average_hit() * float(dot["dps_mult"])
+		fx["dot"] = dot
 
 	var dealt: float = target.take_damage(damage, position, fx)
 	if dealt <= 0.0:
 		return
 
-	_gain_rage(float(current_skill.get("rage_gain", 0.0)))
+	_gain_rage(float(sk.get("rage_gain", 0.0)))
 	_gain_ultimate(ULTIMATE_ON_HIT)
-	combo_timer = float(current_skill.get("combo_reset_window", 0.85))
+	combo_timer = float(sk.get("combo_reset_window", 0.85))
 	last_combat_tick = tick
-	attack_hit.emit(current_skill, target, dealt, critical, target.position)
+	attack_hit.emit(sk, target, dealt, critical, target.position)
 
 
 func _resolve_parry_counter() -> void:
@@ -900,6 +916,65 @@ func assign_slot(slot: StringName, ability_id: StringName) -> void:
 
 func loadout_to_strings() -> Dictionary:
 	return kit.loadout_to_strings(loadout)
+
+
+# --- Proyectiles -----------------------------------------------------------------
+
+
+func _spawn_projectile() -> void:
+	var skill := current_skill
+	projectiles.append({
+		"id": _next_projectile_id, "pos": position + attack_aim * 16.0, "dir": attack_aim,
+		"speed": float(skill.get("speed", 450.0)), "left": float(skill.get("range", 400.0)),
+		"radius": float(skill.get("hit_radius", 10.0)), "skill": skill,
+		"mult": _current_multiplier(), "effects": _effects(),
+	})
+	_next_projectile_id += 1
+	cast_event.emit("projectile", skill, position, attack_aim)
+
+
+func _update_projectiles(delta: float) -> void:
+	var alive_list: Array = []
+	for p: Dictionary in projectiles:
+		var step: float = float(p["speed"]) * delta
+		p["pos"] = (p["pos"] as Vector2) + (p["dir"] as Vector2) * step
+		p["left"] = float(p["left"]) - step
+		var consumed := false
+		for target: Object in _living_targets():
+			if (p["pos"] as Vector2).distance_to(target.position) <= float(p["radius"]) + float(target.radius):
+				_hit_target(target, float(p["mult"]), p["effects"], p["skill"])
+				cast_event.emit("projectile_hit", p["skill"], p["pos"], p["dir"])
+				consumed = true
+				break
+		if world != null and not consumed:
+			var inside: Vector2 = world.clamp_to_arena(p["pos"], 1.0)
+			consumed = inside.distance_to(p["pos"]) > 2.0
+		if not consumed and float(p["left"]) > 0.0:
+			alive_list.append(p)
+	projectiles = alive_list
+
+
+## Cambia de clase (kit, recurso, loadout) y reinicia el estado de combate.
+func set_class(id: StringName) -> void:
+	class_id = id
+	ClassRegistry.active = id
+	kit = ClassRegistry.kit(id)
+	_regen = float(kit.get_script_constant_map().get("RESOURCE_REGEN", 0.0))
+	resource = kit.create_rage_resource()
+	loadout = kit.default_loadout()
+	projectiles.clear()
+	cooldowns.clear()
+	ultimate_charge = 0.0
+	state = AttackState.IDLE
+	current_skill = {}
+	current_slot = ""
+	combo_index = 0
+	if _regen > 0.0:
+		resource.current_amount = resource.max_amount
+	rage_changed.emit(resource.get_current(), resource.max_amount)
+	ultimate_changed.emit(ultimate_charge, kit.ULTIMATE_COST)
+	loadout_changed.emit(loadout_to_strings())
+	class_changed.emit(id)
 
 
 # --- Skills de suelo (apuntado manual, tipo Smite) ----------------------------

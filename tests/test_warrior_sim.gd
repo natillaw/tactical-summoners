@@ -52,6 +52,7 @@ func _run() -> void:
 	_test_damage_types()
 	_test_cc_diminishing()
 	_test_dots_registry_ground()
+	_test_mage()
 
 	print("== %d checks, %d failed ==" % [_checks, _failures])
 	print("RESULT: %s" % ("PASS" if _failures == 0 else "FAIL"))
@@ -686,3 +687,30 @@ func _test_dots_registry_ground() -> void:
 	_step(w2, 60, msg)
 	_check(target.health < hp2, "Seismic cae en el punto apuntado (lejos del jugador)")
 	_check(ward.clamp_ground_point(far, ward.ability_for_slot("R")).distance_to(ward.position) <= 260.01, "El punto de suelo se limita al alcance")
+
+
+func _test_mage() -> void:
+	_check(ClassRegistry.missing(&"mage").is_empty(), "MageKit cumple el contrato de ClassRegistry")
+	var world := _make_world(false, 51)
+	var w = world.warrior
+	w.set_class(&"mage")
+	var target: DummySim = world.dummies[0]
+	target.position = w.position + Vector2(0, -150)
+	var hp: float = target.health
+	_step(world, 60, _input(Vector2(0, -1), true, false))
+	_check(target.health < hp, "Arcane Bolt (proyectil) alcanza y daña al objetivo")
+	var w2 := _make_world(false, 52)
+	w2.warrior.set_class(&"mage")
+	var t2: DummySim = w2.dummies[0]
+	t2.position = w2.warrior.position + Vector2(0, -150)
+	_step(w2, 50, _input(Vector2(0, -1), false, true))
+	var after_hit: float = t2.health
+	_step(w2, 90, null)
+	_check(t2.health < after_hit, "Fireball quema al objetivo después del impacto")
+	var w3 := _make_world(false, 53)
+	w3.warrior.set_class(&"mage")
+	w3.warrior._spend_rage(50.0)
+	var low: float = w3.warrior.rage()
+	_step(w3, 60, null)
+	_check(w3.warrior.rage() > low, "El maná se regenera")
+	w3.warrior.set_class(&"warrior")
