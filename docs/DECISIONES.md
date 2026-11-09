@@ -177,3 +177,5 @@ piezas del Medieval Village / Fantasy Props MegaKit; animación propia de estoca
 - Quitado F8 (cambio de clase en vivo, se cerraba el juego); la clase se elige ahora en el creador.
 
 - Fix creador: el cuerpo base se recorta a cabeza/cuello/manos cuando hay ropa (la piel asomaba por la tela); cejas propias del cuerpo eliminadas (salían blancas) y se usan las del pack de pelo; pose de vista previa = Idle normal; eliminadas las armaduras generadas por script (solo ropa Quaternius).
+
+- Fix creador: el recorte del cuerpo comparaba el hueso 'Head' con minúsculas y borraba la cara (ahora case-insensitive). La vista previa se renderizaba a 640x360 (stretch canvas_items 2x) y se veía pixelada; ahora renderiza a 900x1100 en una textura. UI del creador compacta para que quepan todos los botones.

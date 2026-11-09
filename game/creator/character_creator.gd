@@ -29,6 +29,9 @@ var _rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	_rng.randomize()
+	var ui_theme := Theme.new()
+	ui_theme.default_font_size = 12  # el UI se escala 2x (640x360): que quepan todas las filas
+	theme = ui_theme
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var bg := ColorRect.new()
@@ -39,19 +42,19 @@ func _ready() -> void:
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	for side in ["left", "top", "right", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 28)
+		margin.add_theme_constant_override("margin_" + side, 14)
 	add_child(margin)
 	var split := HBoxContainer.new()
 	split.add_theme_constant_override("separation", 16)
 	margin.add_child(split)
 
 	var panel := VBoxContainer.new()
-	panel.custom_minimum_size = Vector2(420, 0)
-	panel.add_theme_constant_override("separation", 6)
+	panel.custom_minimum_size = Vector2(340, 0)
+	panel.add_theme_constant_override("separation", 3)
 	split.add_child(panel)
 	var title := Label.new()
 	title.text = "CREA TU PERSONAJE"
-	title.add_theme_font_size_override("font_size", 26)
+	title.add_theme_font_size_override("font_size", 18)
 	panel.add_child(title)
 
 	_name_edit = LineEdit.new()
@@ -79,15 +82,23 @@ func _ready() -> void:
 	buttons.add_child(_play)
 	panel.add_child(buttons)
 
-	var container := SubViewportContainer.new()
-	container.stretch = true
-	container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	container.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	split.add_child(container)
+	# Vista previa a resolución real: la UI se escala 2x (canvas_items 640x360), así que un
+	# SubViewportContainer renderizaría a 640x360 y se vería pixelado. Se renderiza en
+	# una textura grande y se muestra en un TextureRect.
 	var viewport := SubViewport.new()
 	viewport.own_world_3d = true
 	viewport.msaa_3d = Viewport.MSAA_4X
-	container.add_child(viewport)
+	viewport.size = Vector2i(900, 1100)
+	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	add_child(viewport)
+	var view := TextureRect.new()
+	view.texture = viewport.get_texture()
+	view.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	view.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	view.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	split.add_child(view)
 	_build_stage(viewport)
 	_rebuild_preview()
 	_refresh()
@@ -108,7 +119,7 @@ func _build_stage(viewport: SubViewport) -> void:
 	sun.light_energy = 1.2
 	viewport.add_child(sun)
 	var cam := Camera3D.new()
-	cam.position = Vector3(0.0, 1.0, 4.6)
+	cam.position = Vector3(0.0, 1.0, 3.3)
 	cam.fov = 38.0
 	viewport.add_child(cam)
 	cam.look_at(Vector3(0.0, 0.85, 0.0))
@@ -125,14 +136,14 @@ func _add_row(parent: Control, key: String, label: String, value_fn: Callable, s
 	var row := HBoxContainer.new()
 	var name_label := Label.new()
 	name_label.text = label
-	name_label.custom_minimum_size = Vector2(130, 0)
+	name_label.custom_minimum_size = Vector2(95, 0)
 	row.add_child(name_label)
 	var prev := Button.new()
 	prev.text = "◀"
 	prev.pressed.connect(func() -> void: step_fn.call(-1))
 	row.add_child(prev)
 	var value := Label.new()
-	value.custom_minimum_size = Vector2(190, 0)
+	value.custom_minimum_size = Vector2(140, 0)
 	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	row.add_child(value)
 	var next := Button.new()

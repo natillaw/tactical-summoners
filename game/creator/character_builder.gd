@@ -181,6 +181,6 @@ static func _crop_to_head_and_hands(mi: MeshInstance3D, skeleton: Skeleton3D) ->
 
 static func _keeps_bone(bone_name: String) -> bool:
 	for prefix: String in ["head", "neck", "hand", "thumb", "index", "middle", "ring", "pinky"]:
-		if bone_name.begins_with(prefix):
+		if bone_name.to_lower().begins_with(prefix):
 			return true
 	return false
