@@ -96,6 +96,9 @@ var _align_yaw: float = 0.0
 var _swing_dir: float = 1.0
 var _orbs: Dictionary = {}
 var _cast_index: int = 0
+var _aim_stance: float = 0.0
+var _spin_rate: float = 15.0
+var _spin_limit: float = 1e9
 
 
 func setup(p_sim: WarriorSim, p_arena: Arena3D) -> void:
@@ -115,6 +118,8 @@ func setup(p_sim: WarriorSim, p_arena: Arena3D) -> void:
 	var weapon_scale: float = {"dagger": 0.4, "bow": 0.5}.get(String(weapon_paths[1]), 1.0)
 	rig.attach_to_hand(sword, "r" if weapon_paths[1] != "bow" else "l")
 	sword.scale = Vector3.ONE * weapon_scale
+	if String(weapon_paths[1]) == "bow":
+		sword.rotate_object_local(Vector3.RIGHT, deg_to_rad(90.0))  # el arco venía horizontal: eje largo -> vertical
 	if weapon_paths.size() > 2:
 		var offhand := (load(weapon_paths[2]) as PackedScene).instantiate() as Node3D
 		rig.attach_to_hand(offhand, "l")
@@ -231,8 +236,8 @@ func _process(delta: float) -> void:
 func _update_facing(delta: float) -> void:
 	var target_yaw := _yaw
 	var rate := TURN_SPEED
-	if sim.class_id == &"ranger" and not sim.is_attacking():
-		target_yaw = View3D.yaw_for(sim.aim_dir)  # el arquero apunta siempre hacia donde mira
+	if _aiming_stance() and not sim.is_attacking():
+		target_yaw = View3D.yaw_for(sim.aim_dir)  # tras disparar, mantiene la postura de apuntado un rato
 	if sim.is_attacking():
 		target_yaw = View3D.yaw_for(sim.attack_aim) - _align_yaw
 		rate = TURN_SPEED_ATTACK
@@ -242,13 +247,20 @@ func _update_facing(delta: float) -> void:
 	_yaw = lerp_angle(_yaw, target_yaw, 1.0 - exp(-rate * delta))
 
 	if _spinning:
-		_spin_yaw += SPIN_SPEED * delta
+		_spin_yaw += _spin_rate * delta
 		rig.rotation.y = _yaw + _spin_yaw
+		if _spin_yaw >= _spin_limit:
+			_stop_spin()
 	else:
 		rig.rotation.y = _yaw
 
 
+func _aiming_stance() -> bool:
+	return sim.class_id == &"ranger" and _aim_stance > 0.0
+
+
 func _update_locomotion() -> void:
+	_aim_stance = maxf(0.0, _aim_stance - get_process_delta_time())
 	if sim.is_attacking() and String(_current_skill.get("anim", "")) != "cast":
 		_hurt_time = 0.0
 		return
@@ -259,7 +271,7 @@ func _update_locomotion() -> void:
 		rig.play(ANIM_JUMP, 0.1)
 		return
 	var speed_m := View3D.meters(sim.velocity.length())
-	if speed_m > 0.4 and sim.class_id == &"ranger":
+	if speed_m > 0.4 and _aiming_stance():
 		rig.play(_strafe_anim(), 0.1, clampf(speed_m / 2.0, 0.6, 2.2))
 	elif speed_m > 0.4:
 		var anim := ANIM_SPRINT if sim.current_move_speed_multiplier() > 1.15 else ANIM_RUN
@@ -275,7 +287,7 @@ func _idle_anim() -> String:
 		&"rogue":
 			return "class/knife_idle"
 		&"ranger":
-			return "class/standing_aim_idle_01"
+			return "class/standing_aim_idle_01" if _aim_stance > 0.0 else ANIM_IDLE
 		_:
 			return ANIM_IDLE
 
@@ -304,6 +316,18 @@ func _update_dash_fx(delta: float) -> void:
 
 func _on_attack_started(skill: Dictionary, direction: Vector2) -> void:
 	_current_skill = skill
+	if sim.class_id == &"ranger":
+		_aim_stance = 2.5
+	if bool(skill.get("spin", false)):
+		# Vuelta de 360° durante la preparación, con la pose del brazo extendido.
+		var turn_time := maxf(float(skill.get("windup", 0.3)), 0.1)
+		_spinning = true
+		_spin_yaw = 0.0
+		_spin_rate = TAU / turn_time
+		_spin_limit = TAU
+		rig.play_clip(String(M1_CLIPS[0]["clip"]), 0.45, 0.6, 0.6, 0.06, 0.01)
+		if String(skill.get("id", "")) == "fan_of_knives":
+			ArcaneFx.knife_fan(arena, View3D.to3(sim.position), View3D.meters(float(skill.get("radius", 120.0))), int(skill.get("knives", 14)), ArcaneFx.POISON, turn_time)
 	_align_yaw = 0.0
 	_swing_dir = 1.0
 	var windup := float(skill.get("windup", 0.1))
@@ -319,7 +343,9 @@ func _on_attack_started(skill: Dictionary, direction: Vector2) -> void:
 		"bladestorm":
 			_play_clip(M1_CLIPS[2], windup, 0.2)
 		_:
-			if String(skill.get("anim", "")) == "cast":
+			if bool(skill.get("spin", false)):
+				pass
+			elif String(skill.get("anim", "")) == "cast":
 				_play_cast_overlay(skill, windup)
 			elif skill.has("melee_clips"):
 				var list: Array = skill["melee_clips"]
@@ -516,11 +542,22 @@ func _class_slam(at: Vector2, radius: float, skill: Dictionary) -> bool:
 	var ground := View3D.to3(at)
 	match String(skill.get("id", "")):
 		"fan_of_knives":
-			ArcaneFx.knife_fan(arena, ground, meters_r, int(skill.get("knives", 14)))
 			arena.spawn_shockwave(at, radius, ArcaneFx.POISON, 0.35, 0.8)
 			ArcaneFx.poison_cloud(arena, ground, meters_r * 0.6, 1.6)
 			arena.play_sfx(SFX_SLASH, -4.0, 1.3)
 			arena.shake(2.0, 0.12)
+		"cross_cut":
+			ArcaneFx.hit_sparks(arena, ground + Vector3(0, 0.3, 0), ArcaneFx.STEEL, View3D.dir3(sim.attack_aim), 22, true)
+			arena.spawn_dust(at, 8, 0.5)
+			arena.shake(2.4, 0.14)
+		"death_sentence":
+			var dark := Color(0.85, 0.15, 0.2)
+			ArcaneFx.hit_sparks(arena, ground + Vector3(0, 1.0, 0) + View3D.dir3(sim.attack_aim) * 0.8, dark, View3D.dir3(sim.attack_aim), 40, true)
+			ArcaneFx.burst(arena, ground + Vector3(0, 0.8, 0), dark, 50, 4.0, 0.14)
+			arena.spawn_shockwave(at, 90.0, dark, 0.45, 0.7)
+			arena.play_sfx(SFX_HIT_HEAVY, -2.0, 0.85)
+			arena.shake(5.0, 0.25)
+			rig.hitstop(0.1)
 		"volley", "rain_of_arrows":
 			ArcaneFx.arrow_rain(arena, ground, meters_r, 26 if String(skill["id"]) == "volley" else 48)
 			arena.spawn_shockwave(at, radius, Color(1.0, 0.85, 0.5, 0.8), 0.5, 0.85)
@@ -550,6 +587,8 @@ func _arcane_slam(at: Vector2, radius: float, skill: Dictionary) -> void:
 
 
 func _stop_spin() -> void:
+	_spin_rate = SPIN_SPEED
+	_spin_limit = 1e9
 	if _spinning:
 		_yaw = rig.rotation.y
 	_spinning = false

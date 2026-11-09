@@ -57,6 +57,7 @@ func _run() -> void:
 	_test_rogue_ranger()
 	_test_shadowstep_backstab()
 	_test_anim_skills()
+	_test_rogue_rework()
 
 	print("== %d checks, %d failed ==" % [_checks, _failures])
 	print("RESULT: %s" % ("PASS" if _failures == 0 else "FAIL"))
@@ -866,3 +867,46 @@ func _test_anim_skills() -> void:
 		world3.step(DT)
 		air_peak = maxf(air_peak, ward.height)
 	_check(ward.position.distance_to(start + Vector2(0, -200)) < 25.0 and air_peak > 40.0, "Seismic Break: salto hasta el punto apuntado (pico %d px)" % int(air_peak))
+
+
+func _test_rogue_rework() -> void:
+	var world := _make_world(false, 101)
+	var w = world.warrior
+	w.set_class(&"rogue")
+	w.reset(w.position)
+	var e: DummySim = world.dummies[0]
+	e.position = w.position + Vector2(0, -90)
+	e.facing = Vector2(0, 1)
+	w.debug_refill()
+	var start: Vector2 = w.position
+	var hp: float = e.health
+	w.aim_dir = Vector2(0, -1)
+	w.buffered_slot = "M2"
+	w.buffer_timer = 1.0
+	_step(world, 45, _input(Vector2(0, -1), false, false))
+	_check(w.position.distance_to(start) > 35.0 and e.health < hp, "Cross Cut salta hacia delante y golpea al aterrizar")
+	# Death Sentence: gap closer que aturde 2 s.
+	w.debug_refill()
+	w.ultimate_charge = 100.0
+	e.position = w.position + Vector2(0, -100)
+	w.buffered_slot = "F"
+	w.buffer_timer = 1.0
+	_step(world, 40, _input(Vector2(0, -1), false, false))
+	_check(e.stun_timer > 0.0, "Death Sentence aturde al objetivo")
+	# Fan of Knives (R): AoE de poco daño con veneno.
+	_step(world, 40, _input(Vector2(0, -1), false, false))  # termina la recuperación anterior
+	w.debug_refill()
+	e.position = w.position + Vector2(60, 0)
+	var hp2: float = e.health
+	w.buffered_slot = "R"
+	w.buffer_timer = 1.0
+	_step(world, 3, _input(Vector2(0, -1), false, false, Vector2.ZERO, false, false, false, true))
+	_step(world, 40, _input(Vector2(0, -1), false, false))
+	_check(e.health < hp2 and e.dots.is_active(), "Fan of Knives (R) daña en área y envenena")
+	# Un enemigo no sigue con la mirada a un jugador invisible.
+	var facing_before: Vector2 = e.facing
+	w.invisible_timer = 5.0
+	w.position += Vector2(0, 120)
+	_step(world, 10, null)
+	_check(e.facing.is_equal_approx(facing_before), "El enemigo no gira hacia un jugador invisible")
+	w.set_class(&"warrior")

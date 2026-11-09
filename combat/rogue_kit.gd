@@ -57,11 +57,12 @@ const M1: Dictionary = {
 ## M2: cruce de dagas, más daño.
 const M2: Dictionary = {
 	"id": &"cross_cut", "name": "Cross Cut", "short": "CUT", "slot": "M2",
-	"kind": "basic", "role": "Daño", "description": "Cruza ambas dagas: más daño que Twin Fang.",
-	"implemented": true, "selectable": false, "cast": "melee", "anim": "slash",
-	"full_clip": {"clip": "class/mutant_jump_attack", "from": 0.395, "to": 0.58, "contact": 0.44},
-	"windup": 0.12, "active": 0.08, "recovery": 0.20, "cooldown": 0.0, "cost": 60.0,
-	"range": 75.0, "arc": 140.0, "damage_mult": 1.7, "rage_gain": 0.0, "move_factor": 0.45,
+	"kind": "basic", "role": "Daño", "description": "Saltas hacia delante y cruzas ambas dagas al aterrizar.",
+	"implemented": true, "selectable": false, "cast": "leap_slam", "anim": "slash",
+	"full_clip": {"clip": "class/mutant_jump_attack", "from": 0.32, "to": 0.58, "contact": 0.44, "late": true},
+	"lunge": 110.0, "leap_height": 45.0,
+	"windup": 0.15, "active": 0.30, "recovery": 0.25, "cooldown": 0.0, "cost": 60.0,
+	"range": 85.0, "arc": 140.0, "damage_mult": 1.7, "rage_gain": 0.0, "move_factor": 0.2,
 }
 
 const SHADOWSTEP: Dictionary = {
@@ -86,33 +87,33 @@ const VANISH: Dictionary = {
 }
 
 const FAN_OF_KNIVES: Dictionary = {
-	"id": &"fan_of_knives", "name": "Fan of Knives", "short": "FAN", "slot": "E",
-	"kind": "control", "role": "Daño en área", "description": "Como en WotLK: lanzas cuchillos en todas direcciones; golpean a todos los cercanos y los envenenan.",
-	"implemented": true, "selectable": true, "cast": "aoe", "anim": "slash",
-	"full_clip": {"clip": "ual2/Sword_Regular_C", "from": 0.0, "to": 0.62, "contact": 0.34},
-	"windup": 0.10, "active": 0.06, "recovery": 0.22, "cooldown": 5.0, "cost": 35.0,
-	"radius": 120.0, "damage_mult": 1.0, "rage_gain": 0.0, "move_factor": 0.4,
+	"id": &"fan_of_knives", "name": "Fan of Knives", "short": "FAN", "slot": "R",
+	"kind": "control", "role": "Daño en área", "description": "Como en WotLK: das una vuelta de 360° lanzando cuchillos; golpean a todos los cercanos (poco daño) y los envenenan.",
+	"implemented": true, "selectable": true, "cast": "aoe", "anim": "slash", "spin": true,
+	"windup": 0.28, "active": 0.06, "recovery": 0.22, "cooldown": 5.0, "cost": 35.0,
+	"radius": 120.0, "damage_mult": 0.7, "rage_gain": 0.0, "move_factor": 0.3,
 	"effects": {"dot": {"damage_type": 4, "dps_mult": 0.5, "duration": 5.0}},
 	"knives": 14,
 }
 
 const BACKSTAB: Dictionary = {
-	"id": &"backstab", "name": "Backstab", "short": "STAB", "slot": "R",
-	"kind": "burst", "role": "Burst", "description": "Puñalada potenciada de gran daño que aturde 1 s.",
+	"id": &"backstab", "name": "Backstab", "short": "STAB", "slot": "E",
+	"kind": "burst", "role": "Burst", "description": "Puñalada potenciada de gran daño.",
 	"implemented": true, "selectable": true, "cast": "melee", "anim": "slash",
 	"melee_clips": [2],
 	"windup": 0.18, "active": 0.08, "recovery": 0.30, "cooldown": 6.0, "cost": 55.0,
 	"range": 70.0, "arc": 90.0, "damage_mult": 3.4, "rage_gain": 0.0, "move_factor": 0.3,
-	"effects": {"stun": 1.0},
 }
 
 const DEATH_SENTENCE: Dictionary = {
 	"id": &"death_sentence", "name": "Death Sentence", "short": "DEATH", "slot": "F",
-	"kind": "ultimate", "role": "Ultimate", "description": "Ultimate: tormenta de cortes a tu alrededor.",
-	"implemented": true, "selectable": true, "cast": "aoe", "anim": "slash",
-	"full_clip": {"clip": "ual2/Sword_Heavy_Combo", "from": 0.52, "to": 0.80, "contact": 0.63},
-	"windup": 0.30, "active": 0.10, "recovery": 0.40, "cooldown": 1.0, "cost": 0.0, "charge": 100.0,
-	"radius": 115.0, "damage_mult": 6.0, "rage_gain": 0.0, "move_factor": 0.2,
+	"kind": "ultimate", "role": "Ultimate / stun", "description": "Ultimate: te lanzas sobre el objetivo y lo ejecutas con un golpe brutal que aturde 2 s.",
+	"implemented": true, "selectable": true, "cast": "leap_slam", "anim": "slash",
+	"full_clip": {"clip": "ual2/Sword_Heavy_Combo", "from": 0.52, "to": 0.80, "contact": 0.63, "late": true},
+	"lunge": 130.0, "leap_height": 20.0,
+	"windup": 0.20, "active": 0.25, "recovery": 0.40, "cooldown": 1.0, "cost": 0.0, "charge": 100.0,
+	"range": 95.0, "arc": 110.0, "damage_mult": 5.0, "effects": {"stun": 2.0},
+	"rage_gain": 0.0, "move_factor": 0.2,
 }
 
 ## Pasiva: a vida baja, más daño y velocidad.
@@ -127,11 +128,11 @@ const SPECIAL: Dictionary = SHADOWSTEP
 const ULTIMATE: Dictionary = DEATH_SENTENCE
 
 const DEFAULT_LOADOUT: Dictionary = {
-	"SHIFT": &"shadowstep", "Q": &"vanish", "E": &"fan_of_knives", "R": &"backstab", "F": &"death_sentence",
+	"SHIFT": &"shadowstep", "Q": &"vanish", "E": &"backstab", "R": &"fan_of_knives", "F": &"death_sentence",
 }
 
-const ALL_ABILITIES: Array = [M1, M2, SHADOWSTEP, VANISH, FAN_OF_KNIVES, BACKSTAB, DEATH_SENTENCE]
-const POOL_ABILITIES: Array = [SHADOWSTEP, VANISH, FAN_OF_KNIVES, BACKSTAB, DEATH_SENTENCE]
+const ALL_ABILITIES: Array = [M1, M2, SHADOWSTEP, VANISH, BACKSTAB, FAN_OF_KNIVES, DEATH_SENTENCE]
+const POOL_ABILITIES: Array = [SHADOWSTEP, VANISH, BACKSTAB, FAN_OF_KNIVES, DEATH_SENTENCE]
 
 
 static func create_rage_resource() -> Rage:

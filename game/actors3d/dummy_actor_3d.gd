@@ -27,6 +27,7 @@ var _yaw: float = 0.0
 var _was_alive: bool = true
 var _telegraph: FxShape
 var _dot_aura: CPUParticles3D
+var _stun_fx: CPUParticles3D
 var _dot_aura_type: int = -2
 var _bar_root: Node3D
 var _bar_fill: MeshInstance3D
@@ -155,6 +156,7 @@ func _process(delta: float) -> void:
 		_telegraph.set_param("intensity", 0.6 + 0.6 * progress)
 
 	_update_dot_aura()
+	_update_stun_fx()
 	_bar_root.visible = sim.alive
 	if sim.alive:
 		var ratio := clampf(sim.health / maxf(sim.max_health, 1.0), 0.0, 1.0)
@@ -169,6 +171,18 @@ func _process(delta: float) -> void:
 
 	if sim.hit_flash_ticks > 0 and sim.alive:
 		rig.flash(Color(1.0, 0.95, 0.85), 0.08)
+
+
+## Chispas amarillas girando sobre la cabeza mientras está aturdido.
+func _update_stun_fx() -> void:
+	if _stun_fx == null:
+		_stun_fx = ArcaneFx.sparks(Color(1.0, 0.9, 0.3), 12, 0.7, 0.4, 0.12, false)
+		_stun_fx.position = Vector3(0, 2.05, 0)
+		_stun_fx.emission_sphere_radius = 0.3
+		_stun_fx.gravity = Vector3.ZERO
+		_stun_fx.emitting = false
+		add_child(_stun_fx)
+	_stun_fx.emitting = sim.alive and sim.stun_timer > 0.0
 
 
 ## Burbujas del color del daño en el tiempo (verde = veneno) mientras dure el DoT.
