@@ -108,6 +108,7 @@ var _telegraph: FxShape
 var _overhead: Node3D
 var _bar_fill: MeshInstance3D
 var _name_label: Label3D
+var _mark_icon: MeshInstance3D
 var _aim_stance: float = 0.0
 var _spin_rate: float = 15.0
 var _spin_limit: float = 1e9
@@ -294,9 +295,43 @@ func _build_overhead() -> void:
 	_overhead.add_child(_name_label)
 
 
+## Icono flotante giratorio sobre los objetivos marcados (Mark for Death / Hunter's Mark).
+func _update_mark_icon() -> void:
+	if sim.mark_timer <= 0.0 or not sim.alive:
+		if _mark_icon != null:
+			_mark_icon.visible = false
+		return
+	if _mark_icon == null:
+		_mark_icon = MeshInstance3D.new()
+		var ring := TorusMesh.new()
+		ring.inner_radius = 0.2
+		ring.outer_radius = 0.3
+		_mark_icon.mesh = ring
+		var mat := StandardMaterial3D.new()
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mat.albedo_color = Color(1.0, 0.5, 0.12)
+		mat.no_depth_test = true
+		_mark_icon.material_override = mat
+		var diamond := MeshInstance3D.new()
+		var prism := PrismMesh.new()
+		prism.size = Vector3(0.18, 0.22, 0.05)
+		diamond.mesh = prism
+		diamond.material_override = mat
+		diamond.rotation.x = PI * 0.5
+		_mark_icon.add_child(diamond)
+		_mark_icon.position.y = 2.7
+		add_child(_mark_icon)
+	_mark_icon.visible = true
+	var t := Time.get_ticks_msec() * 0.001
+	_mark_icon.rotation = Vector3(PI * 0.5, 0.0, t * 3.0)
+	_mark_icon.position.y = 2.7 + 0.08 * sin(t * 4.0)
+	_mark_icon.scale = Vector3.ONE * (1.0 + 0.1 * sin(t * 8.0))
+
+
 func _update_overhead() -> void:
 	_overhead.visible = sim.alive
 	_overhead.scale = Vector3.ONE * (1.5 if arena.topdown else 1.0)  # barras más grandes desde arriba
+	_update_mark_icon()
 	var tag := ""
 	if sim.silence_timer > 0.0:
 		tag += "[SILENCIADO] "
@@ -512,6 +547,11 @@ func _update_dash_fx(delta: float) -> void:
 
 func _on_attack_started(skill: Dictionary, direction: Vector2) -> void:
 	_current_skill = skill
+	if String(skill.get("kind", "")) == "ultimate":  # el ultimate se nota: anillo, columna y temblor
+		var tint := ArcaneFx.ARCANE if sim.class_id == &"mage" else (ArcaneFx.POISON if sim.class_id == &"rogue" else ArcaneFx.GOLD)
+		arena.spawn_shockwave(sim.position, 150.0, Color(tint, 0.9), 0.7, 0.6)
+		ArcaneFx.column(arena, View3D.to3(sim.position), tint, 3.5)
+		_shake(4.0, 0.3)
 	if bool(skill.get("spin", false)):
 		# Vuelta de 360° durante la preparación, con la pose del brazo extendido.
 		var turn_time := maxf(float(skill.get("windup", 0.3)), 0.1)
