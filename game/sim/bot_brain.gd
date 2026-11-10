@@ -35,6 +35,8 @@ var _shield_clock: float = 0.0
 var aggro_range: float = 0.0
 var group: int = -1
 var alerted: bool = false
+## Reacción escalonada al alertarse por un compañero: se queda quieto este tiempo antes de atacar.
+var wake: float = 0.0
 
 
 func _init(seed_value: int = 1) -> void:
@@ -50,6 +52,9 @@ func configure(data: Dictionary) -> void:
 func think(sim: WarriorSim, world: Object, delta: float) -> Dictionary:
 	var out := {"move_dir": Vector2.ZERO, "aim_dir": sim.aim_dir, "aim_point": sim.position, "actions": {}}
 	if not sim.alive:
+		return out
+	if wake > 0.0:
+		wake -= delta
 		return out
 	var target := _pick_target(sim, world)
 	if target == null:
