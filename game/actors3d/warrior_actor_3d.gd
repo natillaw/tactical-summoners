@@ -742,6 +742,14 @@ func _on_cast_event(event: String, skill: Dictionary, at: Vector2, direction: Ve
 				rig.hitstop(0.09)
 			else:
 				_shake(1.2, 0.06)
+		"team_buff":
+			var buff_color := DamageSystem.color_of(DamageSystem.Type.ARCANE) if DamageSystem.type_of(skill) == DamageSystem.Type.ARCANE else Color(1.0, 0.8, 0.3)
+			arena.spawn_shockwave(at, float(skill.get("radius", 200.0)), buff_color, 0.55, 0.8)
+			arena.spawn_ground_flash(at, float(skill.get("radius", 200.0)) * 0.6, Color(buff_color.r, buff_color.g, buff_color.b, 0.45), 0.4)
+			ArcaneFx.column(arena, View3D.to3(at), buff_color, 2.8)
+			ArcaneFx.burst(arena, View3D.to3(at, 1.0), buff_color, 40, 3.0, 0.13)
+			arena.play_sfx(SFX_MAGIC, -5.0, 0.9)
+			_shake(1.6, 0.12)
 		"blink_out":
 			var blink_color := DamageSystem.color_of(DamageSystem.type_of(skill))
 			ArcaneFx.column(arena, View3D.to3(at), blink_color, 2.2)
@@ -1014,8 +1022,10 @@ func _on_perfect_evade() -> void:
 
 ## Escudo de maná pulsando y efecto fantasma durante los iframes (voltereta / paso evasivo).
 func _update_defense_fx() -> void:
+	if sim.absorb_amount > 0.0:
+		_ensure_shield()
 	if _shield_fx != null:
-		_shield_fx.visible = sim.guarding and sim.guard_kind == "mana_shield"
+		_shield_fx.visible = (sim.guarding and sim.guard_kind == "mana_shield") or sim.absorb_amount > 0.0
 		if _shield_fx.visible:
 			var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.012)
 			(_shield_fx.mesh.material as StandardMaterial3D).albedo_color.a = 0.16 + 0.12 * pulse

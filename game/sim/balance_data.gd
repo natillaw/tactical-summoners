@@ -10,7 +10,7 @@ extends RefCounted
 const PATH := "res://data/balance.json"
 const CLASS_DEFAULTS := {
 	"damage_mult": 1.0, "health_mult": 1.0, "speed_mult": 1.0,
-	"crit_bonus": 0.0, "cooldown_mult": 1.0, "regen_mult": 1.0, "armor_mult": 1.0,
+	"crit_bonus": 0.0, "cooldown_mult": 1.0, "regen_mult": 1.0, "armor_mult": 1.0, "cc_scale": 1.0,
 }
 
 static var data: Dictionary = {"classes": {}, "skills": {}}

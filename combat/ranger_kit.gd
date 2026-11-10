@@ -71,7 +71,7 @@ const M2: Dictionary = {
 
 ## M2: disparo cargado, más potente, más alcance y atraviesa. La carga frena el movimiento.
 const CONCENTRATED_SHOT: Dictionary = {
-	"id": &"charged_shot", "name": "Concentrated Shot", "short": "FOCUS", "slot": "S2",
+	"id": &"charged_shot", "name": "Concentrated Shot", "short": "FOCUS", "slot": "R",
 	"kind": "basic", "role": "Daño / penetración", "description": "Disparo concentrado: barra de cast de 1.4 s. Solo sale con la barra llena; si te mueves o te golpean, se cancela. Atraviesa enemigos.",
 	"implemented": true, "selectable": true, "cast": "projectile", "anim": "cast", "cast_bar": true,
 	"clip": {"anim": "class/standing_aim_overdraw", "start": 0.3, "contact": 1.33, "end": 1.8},
@@ -95,7 +95,7 @@ const MULTISHOT: Dictionary = {
 	"implemented": true, "selectable": true, "cast": "projectile", "anim": "cast",
 	"clip": {"anim": "class/standing_aim_recoil", "start": 0.0, "contact": 0.2, "end": 0.65},
 	"windup": 0.30, "active": 0.05, "recovery": 0.25, "cooldown": 5.0, "cost": 25.0,
-	"speed": 560.0, "range": 420.0, "hit_radius": 8.0, "damage_mult": 0.8, "count": 3, "spread": 14.0,
+	"speed": 560.0, "range": 420.0, "hit_radius": 8.0, "damage_mult": 0.8, "bonus_vs": {"marked": 1.2}, "count": 3, "spread": 14.0,
 	"rage_gain": 0.0, "move_factor": 0.4, "color": [1.0, 0.92, 0.65],
 }
 
@@ -110,7 +110,7 @@ const KICK: Dictionary = {
 }
 
 const EXPLOSIVE_ARROW: Dictionary = {
-	"id": &"explosive_arrow", "name": "Explosive Arrow", "short": "BOOM", "slot": "R",
+	"id": &"explosive_arrow", "name": "Explosive Arrow", "short": "BOOM", "slot": "Q",
 	"kind": "control", "role": "Daño en área", "description": "Flecha que explota al impactar (o al final de su alcance) dañando a todos alrededor.",
 	"implemented": true, "selectable": true, "cast": "projectile", "anim": "cast",
 	"clip": {"anim": "class/standing_aim_recoil", "start": 0.0, "contact": 0.2, "end": 0.65},
@@ -140,6 +140,16 @@ const BEAR_TRAP: Dictionary = {
 	"rage_gain": 0.0, "move_factor": 0.4,
 }
 
+const HUNTERS_MARK: Dictionary = {
+	"id": &"hunters_mark", "name": "Hunter's Mark", "short": "MARK", "slot": "S2",
+	"kind": "support", "role": "Apoyo / preparación", "description": "Flecha de largo alcance que MARCA al objetivo 8 s: recibe +25% de daño de todo el grupo. Concentrated Shot y Multishot pegan más a un marcado.",
+	"implemented": true, "selectable": true, "cast": "projectile", "anim": "cast",
+	"clip": {"anim": "class/standing_aim_recoil", "start": 0.0, "contact": 0.2, "end": 0.65},
+	"windup": 0.22, "active": 0.05, "recovery": 0.20, "cooldown": 10.0, "cost": 10.0,
+	"speed": 820.0, "range": 620.0, "hit_radius": 9.0, "damage_mult": 0.3, "effects": {"mark": 8.0},
+	"poise": 0.0, "rage_gain": 0.0, "move_factor": 0.5, "color": [1.0, 0.45, 0.2],
+}
+
 ## Pasiva: a vida baja, más daño y velocidad.
 const PASSIVE: Dictionary = {
 	"id": &"predators_instinct", "name": "Predator's Instinct", "slot": "PASSIVE", "kind": "passive",
@@ -155,13 +165,13 @@ const DEFAULT_LOADOUT: Dictionary = {
 	"SHIFT": &"evasive_leap",
 	"Q": &"multishot",
 	"E": &"bear_trap",
-	"R": &"explosive_arrow",
-	"S2": &"charged_shot",
+	"R": &"charged_shot",
+	"S2": &"hunters_mark",
 	"F": &"rain_of_arrows",
 }
 
-const ALL_ABILITIES: Array = [M1, M2, EVASIVE_LEAP, MULTISHOT, KICK, BEAR_TRAP, EXPLOSIVE_ARROW, CONCENTRATED_SHOT, RAIN_OF_ARROWS]
-const POOL_ABILITIES: Array = [EVASIVE_LEAP, MULTISHOT, KICK, BEAR_TRAP, EXPLOSIVE_ARROW, CONCENTRATED_SHOT, RAIN_OF_ARROWS]
+const ALL_ABILITIES: Array = [M1, M2, EVASIVE_LEAP, MULTISHOT, EXPLOSIVE_ARROW, BEAR_TRAP, KICK, CONCENTRATED_SHOT, HUNTERS_MARK, RAIN_OF_ARROWS]
+const POOL_ABILITIES: Array = [EVASIVE_LEAP, MULTISHOT, EXPLOSIVE_ARROW, BEAR_TRAP, KICK, CONCENTRATED_SHOT, HUNTERS_MARK, RAIN_OF_ARROWS]
 
 
 static func create_rage_resource() -> Rage:
@@ -258,7 +268,7 @@ static func sanitize_loadout(raw: Dictionary) -> Dictionary:
 	var out: Dictionary = {}
 	for slot: String in SELECTABLE_SLOTS:
 		var id := StringName(String(raw.get(slot, String(DEFAULT_LOADOUT[slot]))))
-		if not POOL_ABILITIES.any(func(entry: Dictionary) -> bool: return entry["id"] == id):
+		if not POOL_ABILITIES.any(func(entry: Dictionary) -> bool: return entry["id"] == id and String(entry.get("slot", slot)) == slot):
 			id = DEFAULT_LOADOUT[slot]
 		out[slot] = id
 	return out

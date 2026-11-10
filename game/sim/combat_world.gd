@@ -137,6 +137,15 @@ func add_archetype(archetype_id: String, team: int, spawn: Vector2, base_level: 
 	return fighter
 
 
+## Grupo de enemigos del mismo arquetipo repartidos en círculo (enjambre).
+func add_swarm(archetype_id: String, count: int, center: Vector2, base_level: int = 1, team: int = 1) -> Array:
+	var group: Array = []
+	for i in range(count):
+		var angle := TAU * float(i) / float(maxi(count, 1))
+		group.append(add_archetype(archetype_id, team, center + Vector2(cos(angle), sin(angle)) * 90.0, base_level))
+	return group
+
+
 func get_living_dummies() -> Array:
 	var living: Array = []
 	for dummy: DummySim in dummies:

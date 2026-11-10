@@ -368,6 +368,12 @@ func spawn_class_enemy(class_id: StringName, at: Vector2, level: int = 1) -> War
 	return fighter
 
 
+func spawn_swarm(archetype_id: String, count: int, center: Vector2, level: int = 1) -> void:
+	for i in range(count):
+		var angle := TAU * float(i) / float(maxi(count, 1))
+		spawn_class_enemy(StringName(archetype_id), center + Vector2(cos(angle), sin(angle)) * 90.0, level)
+
+
 func _spawn_actors() -> void:
 	warrior_actor = PLAYER_SCENE.instantiate() as WarriorActor3D
 	warrior_actor.name = "Player"

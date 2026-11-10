@@ -268,3 +268,11 @@ piezas del Medieval Village / Fantasy Props MegaKit; animación propia de estoca
 - **Rogue:** Fan of Knives (veneno x3) -> Cheap Shot (stun, más largo por la espalda) -> **Eviscerate** (+60 % vs envenenado, +40 % vs aturdido); Cross Cut pasa al pool.
 - **Mago:** Arcane Bind / Time Rift / Pulse preparan a Starfall (+60 % vs atado, +30 % vs ralentizado) y Arcane Orb (+40 % vs atado).
 - **Ranger:** **Bear Trap** (E, ata 2 s) -> Concentrated Shot (+50 % vs atado, +25 % vs ralentizado, +30 % vs marcado); Kick pasa al pool.
+
+## 2026-11-09 — Poda y roles: 5 slots con opciones + skills de grupo + enemigos que obligan a elegir
+- **Slots por rol (estilo Albion):** cada slot solo ofrece las skills de su rol (`ability.slot`); `assign_slot`, `sanitize_loadout` y el panel de loadout lo respetan. Warrior: Shift Charge · Q Thrust · E Sunder|Hamstring · 1 Seismic · 2 Rally Cry · R Bladestorm. Rogue: Shift Shadowstep|Cross Cut · Q Vanish · E Cheap Shot · 1 Eviscerate|Fan of Knives · 2 Mark for Death · R Death Sentence. Mago: Shift Blink · Q Bind|Time Rift · E Pulse|Silence · 1 Starfall|Orb · 2 Arcane Barrier · R Surge. Ranger: Shift Evasive Leap · Q Multishot|Explosive Arrow · E Bear Trap|Kick · 1 Concentrated Shot · 2 Hunter's Mark · R Rain.
+- **Skills de grupo (slot 2):** `cast: team_buff` aplica a ti y a aliados en radio: Rally Cry (+20 % daño 6 s y poise), Arcane Barrier (absorbe 70 daño), Mark for Death / Hunter's Mark (marca +25 % para todo el equipo).
+- **Mago:** Arcane Bolt ya no cuesta maná (M1 libre, como en el diseño de clases): DPS sostenido de 7 a ~31. Ultimate: carga por golpe 8 -> 4 (antes se lanzaba cada ~6 s).
+- **Enemigos que obligan a elegir:** Esbirro (enjambre de 4, F10), Guardián (escudo permanente: de frente bloquea el 80 % del físico; hay que rodearlo, aturdirlo o usar magia) y Coloso (jefe: x6 vida, x3 poise, `cc_scale` 0.35 = el control dura un tercio).
+- **Bots con combos:** puntúan las skills (remates esperan su preparación, preparan el estado que falta, ultimates con apertura).
+- **Balance guardado en `data/balance.json`:** Rogue daño x0.85, Mago daño x1.2 (matriz nivel 5: el Rogue baja de ~95 % a ~81 % contra Warrior y Mago; el Mago deja de ser el último).

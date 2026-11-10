@@ -47,7 +47,7 @@ func _test_design_documents() -> void:
 
 func _test_skill_book_shape() -> void:
 	var book := WarriorKit.get_skill_book()
-	_check(book.size() == 8, "exactamente 8 habilidades del kit de Combat Tower")
+	_check(book.size() == 9, "exactamente 9 habilidades del kit de Combat Tower")
 
 	var ids: Dictionary = {}
 	for entry: Dictionary in book:
@@ -62,7 +62,7 @@ func _test_skill_book_shape() -> void:
 		_check(float(entry["cooldown"]) >= 0.0, "%s tiene cooldown" % id)
 		_check(bool(entry["implemented"]), "%s está implementado" % id)
 
-	_check(WarriorKit.all_ids().size() == 8, "all_ids devuelve los 8 ids")
+	_check(WarriorKit.all_ids().size() == 9, "all_ids devuelve los 9 ids")
 
 
 func _test_ability_schema() -> void:
@@ -106,6 +106,8 @@ func _test_ability_schema() -> void:
 				_check(float(entry["distance"]) > 0.0, "%s tiene distancia de dash" % id)
 			"counter":
 				_check(float(entry["counter_mult"]) > 0.0, "%s tiene multiplicador de contra" % id)
+			"team_buff":
+				_check(entry.has("effects"), "%s define efectos de grupo" % id)
 			"buff":
 				_check(entry.has("buff") or entry.has("guard"), "%s aplica buff o guarda" % id)
 			_:
@@ -114,7 +116,7 @@ func _test_ability_schema() -> void:
 
 func _test_pool_and_loadout() -> void:
 	var pool := WarriorKit.get_pool()
-	_check(pool.size() == 6, "el pool son las 6 habilidades seleccionables")
+	_check(pool.size() == 7, "el pool son las 7 habilidades seleccionables")
 
 	var seen: Dictionary = {}
 	for entry: Dictionary in pool:
@@ -123,7 +125,7 @@ func _test_pool_and_loadout() -> void:
 		seen[id] = true
 		_check(bool(entry["implemented"]), "%s implementado" % id)
 
-	_check(WarriorKit.pool_ids().size() == 6, "pool_ids devuelve los 6 ids")
+	_check(WarriorKit.pool_ids().size() == 7, "pool_ids devuelve los 7 ids")
 	_check(WarriorKit.SELECTABLE_SLOTS.size() == 6, "hay seis slots seleccionables")
 	_check(WarriorKit.SLOT_ORDER.size() == 8, "el orden del HUD es M1, M2 y los seis slots")
 
@@ -140,11 +142,11 @@ func _test_pool_and_loadout() -> void:
 	_check(StringName(String(default["R"])) == &"seismic_break", "R por defecto es Seismic Break")
 	_check(StringName(String(default["F"])) == &"bladestorm", "F por defecto es Bladestorm")
 
-	var dirty := {"SHIFT": &"does_not_exist", "Q": &"seismic_break"}
+	var dirty := {"SHIFT": &"does_not_exist", "E": &"hamstring"}
 	var clean := WarriorKit.sanitize_loadout(dirty)
 	_check(clean.size() == 6, "sanitize_loadout rellena todos los slots")
 	_check(clean["SHIFT"] == WarriorKit.DEFAULT_LOADOUT["SHIFT"], "ids inválidas caen al default")
-	_check(clean["Q"] == &"seismic_break", "ids válidas se preservan")
+	_check(clean["E"] == &"hamstring", "ids válidas se preservan")
 	_check(clean["F"] == WarriorKit.DEFAULT_LOADOUT["F"], "slots faltantes caen al default")
 
 	var strings := WarriorKit.loadout_to_strings(default)
@@ -163,7 +165,7 @@ func _test_no_variants() -> void:
 	var implemented: int = 0
 	for entry: Dictionary in entries:
 		implemented += 1 if bool(entry["implemented"]) else 0
-	_check(implemented == 6, "las 6 habilidades del pool están implementadas")
+	_check(implemented == 7, "las 7 habilidades del pool están implementadas")
 	_check(bool(WarriorKit.PASSIVE["implemented"]), "Last Stand está implementado")
 	_check(bool(WarriorKit.SPECIAL["implemented"]), "la Special es jugable")
 	_check(bool(WarriorKit.ULTIMATE["implemented"]), "el Ultimate es jugable")

@@ -66,6 +66,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				world.warrior.equip_weapon(item)
 				print(item.describe())
 			KEY_F7: world.warrior.progression.set_level(Progression.MAX_LEVEL)
+			KEY_F10:  # enjambre: 4 esbirros alrededor
+				arena.spawn_swarm("esbirro", 4, world.warrior.position + Vector2(280.0, 0.0), world.warrior.progression.level)
 			KEY_F9:  # enemigo de clase al azar delante del jugador (con su nivel)
 				var pool: Array = EnemyArchetypes.ids()
 				arena.spawn_class_enemy(StringName(String(pool[randi() % pool.size()])), world.warrior.position + Vector2(260.0, randf_range(-90.0, 90.0)), world.warrior.progression.level)

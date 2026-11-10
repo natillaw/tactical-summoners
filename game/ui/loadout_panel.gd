@@ -47,6 +47,16 @@ const BUTTON_H := 22.0
 var world: CombatWorld = null
 var selected_slot_index: int = 0
 var selected_card_index: int = 0
+
+
+## Opciones del slot seleccionado (cada slot ofrece solo las skills de su rol).
+func _pool() -> Array:
+	var slot := String(ClassRegistry.active_kit().SELECTABLE_SLOTS[selected_slot_index])
+	var options: Array = []
+	for entry: Dictionary in ClassRegistry.active_kit().get_pool():
+		if String(entry.get("slot", slot)) == slot:
+			options.append(entry)
+	return options
 var status_text: String = ""
 var status_color: Color = MUTED
 var _status_timer: float = 0.0
@@ -104,7 +114,7 @@ func _selected_slot() -> String:
 
 
 func _selected_card() -> Dictionary:
-	var pool: Array = ClassRegistry.active_kit().get_pool()
+	var pool: Array = _pool()
 	if pool.is_empty():
 		return {}
 	var index := clampi(selected_card_index, 0, pool.size() - 1)
@@ -131,10 +141,10 @@ func _input(event: InputEvent) -> void:
 				selected_slot_index = posmod(selected_slot_index + 1, ClassRegistry.active_kit().SELECTABLE_SLOTS.size())
 				queue_redraw()
 			KEY_LEFT:
-				selected_card_index = posmod(selected_card_index - 1, ClassRegistry.active_kit().get_pool().size())
+				selected_card_index = posmod(selected_card_index - 1, _pool().size())
 				queue_redraw()
 			KEY_RIGHT:
-				selected_card_index = posmod(selected_card_index + 1, ClassRegistry.active_kit().get_pool().size())
+				selected_card_index = posmod(selected_card_index + 1, _pool().size())
 				queue_redraw()
 			KEY_ENTER, KEY_KP_ENTER:
 				_assign_selected()
@@ -163,7 +173,7 @@ func _gui_input(event: InputEvent) -> void:
 			accept_event()
 			return
 
-	var pool_size: int = ClassRegistry.active_kit().get_pool().size()
+	var pool_size: int = _pool().size()
 	for i: int in range(pool_size):
 		if _card_rect(i).has_point(point):
 			selected_card_index = i
@@ -307,7 +317,7 @@ func _draw_slots() -> void:
 
 func _draw_pool() -> void:
 	_draw_text("POOL  ·  5 SELECTABLE ABILITIES", Vector2(GRID_X, GRID_Y - 8), 7, MUTED)
-	var pool: Array = ClassRegistry.active_kit().get_pool()
+	var pool: Array = _pool()
 	var used := _slot_badges()
 
 	for i: int in range(pool.size()):
