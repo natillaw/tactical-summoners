@@ -113,12 +113,11 @@ const FAN_OF_KNIVES: Dictionary = {
 
 const CHEAP_SHOT: Dictionary = {
 	"id": &"cheap_shot", "name": "Cheap Shot", "short": "STUN", "slot": "E",
-	"kind": "control", "role": "Control / stun", "description": "Puñalada traicionera: solo se puede lanzar por la ESPALDA del enemigo. Poco daño, aturde 1.5 s.",
+	"kind": "control", "role": "Control / stun", "description": "Puñalada traicionera: poco daño y stun. De frente aturde 1 s; por la ESPALDA aturde 2 s.",
 	"implemented": true, "selectable": true, "cast": "melee", "anim": "slash",
-	"requires_behind": true,
 	"full_clip": {"clip": "class/stabbing", "from": 0.18, "to": 0.5, "contact": 0.27},
 	"windup": 0.12, "active": 0.08, "recovery": 0.25, "cooldown": 9.0, "cost": 40.0,
-	"range": 65.0, "arc": 80.0, "damage_mult": 0.8, "effects": {"stun": 1.5},
+	"range": 65.0, "arc": 80.0, "damage_mult": 0.8, "effects": {"stun": 1.0}, "behind_stun": 2.0,
 	"rage_gain": 0.0, "move_factor": 0.3,
 }
 
