@@ -108,4 +108,38 @@ solo la mitad derecha de abajo arriba. Así el borde sale limpio siempre. Dibuja
   rehacer la hoja con `plate()` conservando guarda y mango.
 - `mazo_piedra`: las losas turquesa colgantes no leen como runas; cambiarlas por una runa incrustada en la cabeza.
 - Cabezas de lanzas y bastones: funcionan pero son pequeñas respecto al asta; agrandarlas ~1.4×.
-- Las armaduras (`tools/outfits/`) no se han auditado con este método: falta una hoja de contacto equivalente.
+
+## 8. Armaduras y trajes (20 sets)
+
+**Cómo mirarlos** (la hoja de contacto de los trajes ya existe; la columna de la derecha es el traje original
+de Quaternius y sirve de referencia de estilo):
+
+```
+CAPTURE_DIR=<carpeta> ARMOR=1  godot --path . --position 9000,9000 --resolution 1600x900 res://tools/outfit_preview.tscn
+```
+
+Cambia `ARMOR=1` por `ROGUE=1`, `MAGE=1` o `ARCHER=1`. Salen `outfits_front.png`, `outfits_back.png` y tres
+zooms. Mira **frente y espalda** de los 5 sets en hombre y mujer, siempre al lado de la referencia.
+
+**La regla que explica qué sets funcionan y cuáles no:** los sets de pícaro, mago y arquero parten de las
+piezas del pack (recolor del atlas + piezas añadidas encima) y se ven del mismo juego que la referencia. Los 5
+de guerrero se generaron como superficies lofteadas alrededor del cuerpo con texturas neutras tileables, y
+por eso se ven de otro juego: torsos lisos sin costuras, hebillas ni remaches, y proporciones de maniquí.
+**Conclusión: recolorea y añade sobre el pack; no sustituyas el torso ni las piernas por geometría generada.**
+
+Estado tras la revisión del 2026-11-10:
+
+| Grupo | Veredicto | Qué se hizo / qué falta |
+|---|---|---|
+| Pícaro (5) | En estilo | Falta: las correas de muslo salen como una barra horizontal más ancha que las piernas (sets Ladrón y Batidor). Están en `make_rogue_extras.py::thigh_straps` (anillos con `M.limb(..., "thigh", ...)`); hay que comprobar por qué el anillo abarca las dos piernas y reducirlo a una. |
+| Arquero (5) | En estilo | Mismo fallo de correas de muslo en Explorador y Guardabosques (usan la misma función). |
+| Mago (5) | Corregido | Las faldas y túnicas eran azul/rojo/violeta casi puros. Se pasó `tools/outfits/mute_textures.py -- mg 0.50 0.90` (saturación máxima 0.50, valor ×0.90). Si se regeneran con `make_mage_textures.py`, hay que volver a pasarlo o bajar la saturación en el propio recolor. |
+| Guerrero (5) | **Fuera de estilo** | Sin tocar. Rehacer así: base = torso y piernas del traje Ranger recoloreados (acero/cuero por set), y encima solo piezas rígidas añadidas (peto, hombreras, gorjal, tabardo, yelmo), cada una con bisel y 2-3 remaches o una costura. Los yelmos y tabardos actuales sí sirven. |
+
+Lista de revisión para un traje:
+
+- [ ] Al lado de la referencia, ¿parece del mismo juego? (cantidad de detalle, tono de los colores)
+- [ ] ¿Algo atraviesa el cuerpo o flota? Mira axilas, cuello, muslos y la espalda.
+- [ ] ¿La tela teñida está apagada? Saturación ≤ 0.50; el cuero y el metal no se tocan.
+- [ ] ¿La versión de mujer conserva las piezas del set (no solo el color)?
+- [ ] ¿Se distingue cada set por la silueta de la cabeza y los hombros? Desde la cámara del juego es lo único que se ve.
