@@ -350,3 +350,55 @@ static func ice_shards(parent: Node, at: Vector3, radius_m: float, count: int = 
 ## Destello en la boca del arma (disparo).
 static func muzzle(parent: Node, at: Vector3, dir: Vector3, color: Color) -> void:
 	hit_sparks(parent, at, color, dir, 8, false)
+
+
+## Rayo/cadena entre dos puntos (Arcane Pull): barra brillante que se desvanece y chispas a lo largo.
+static func beam(parent: Node, from: Vector3, to: Vector3, color: Color, seconds: float = 0.3) -> void:
+	var length := from.distance_to(to)
+	if length < 0.05:
+		return
+	var holder := Node3D.new()
+	parent.add_child(holder)
+	holder.global_position = (from + to) * 0.5
+	holder.look_at(to, Vector3.UP)
+	var bar := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(0.09, 0.09, length)
+	var mat := _additive(color.lightened(0.4))
+	mat.billboard_mode = BaseMaterial3D.BILLBOARD_DISABLED
+	mesh.material = mat
+	bar.mesh = mesh
+	holder.add_child(bar)
+	for i in range(6):
+		var spark := sparks(color, 8, 0.4, 0.4, 0.1, true)
+		spark.position = Vector3(0, 0, lerpf(-length * 0.5, length * 0.5, float(i) / 5.0))
+		holder.add_child(spark)
+	var tween := holder.create_tween()
+	tween.tween_property(mat, "albedo_color:a", 0.0, seconds)
+	tween.tween_callback(holder.queue_free)
+
+
+## Zona persistente (Time Rift): anillo que gira, remolino de partículas y se apaga tras `seconds`.
+static func swirl_zone(parent: Node, at: Vector3, radius_m: float, color: Color, seconds: float) -> void:
+	var holder := Node3D.new()
+	parent.add_child(holder)
+	holder.global_position = at + Vector3(0, 0.05, 0)
+	var ring := FxShape.new().setup(FxShape.Mode.RING, radius_m, color)
+	ring.set_param("inner", 0.88)
+	ring.set_param("fill", 0.14)
+	ring.set_param("pulse", 1.0)
+	holder.add_child(ring)
+	var swirl := rising_puffs(color, 40, radius_m * 0.8, 0.28, 0.5)
+	holder.add_child(swirl)
+	var light := OmniLight3D.new()
+	light.light_color = color
+	light.light_energy = 0.8
+	light.omni_range = radius_m * 2.0
+	light.position.y = 0.6
+	holder.add_child(light)
+	var tween := holder.create_tween()
+	tween.tween_property(holder, "rotation:y", TAU, seconds)
+	tween.parallel().tween_property(light, "light_energy", 0.0, seconds)
+	tween.tween_callback(func() -> void: swirl.emitting = false)
+	tween.tween_interval(1.2)
+	tween.tween_callback(holder.queue_free)

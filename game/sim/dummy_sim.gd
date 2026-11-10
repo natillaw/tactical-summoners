@@ -71,6 +71,7 @@ var stun_timer: float = 0.0
 var cc := CCDiminish.new()
 var knock_vel: Vector2 = Vector2.ZERO
 var knock_timer: float = 0.0
+var silence_timer: float = 0.0
 var poise: float = 60.0
 var max_poise: float = 60.0
 var stagger_immunity: float = 0.0
@@ -130,6 +131,7 @@ func step(tick_number: int, delta: float, warrior: Object) -> void:
 
 
 func _tick_effects(delta: float) -> void:
+	silence_timer = maxf(0.0, silence_timer - delta)
 	stagger_immunity = maxf(0.0, stagger_immunity - delta)
 	_since_poise_hit += delta
 	if _since_poise_hit > 3.0 and poise < max_poise:
@@ -254,6 +256,17 @@ func take_damage(amount: float, source_position: Vector2 = Vector2.ZERO, effects
 
 
 func apply_effects(effects: Dictionary, source: Vector2 = Vector2.ZERO) -> void:
+	var silence := float(effects.get("silence", 0.0))
+	if silence > 0.0:
+		silence_timer = maxf(silence_timer, silence)
+		effect_applied.emit("silence", silence)
+	var pull := float(effects.get("pull", 0.0))
+	if pull > 0.0 and source != Vector2.ZERO:
+		var to_source := source - position
+		var travel := minf(pull, maxf(to_source.length() - 70.0, 0.0))
+		knock_vel = to_source.normalized() * (travel / 0.18)
+		knock_timer = 0.18
+		interrupt()
 	var knockback := float(effects.get("knockback", 0.0))
 	if knockback > 0.0 and source != Vector2.ZERO:
 		knock_vel = (position - source).normalized() * (knockback / 0.18)

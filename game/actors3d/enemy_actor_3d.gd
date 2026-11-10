@@ -123,7 +123,7 @@ func _process(delta: float) -> void:
 	if enemy == null:
 		return
 	_label.visible = enemy.alive
-	_label.text = ("¡ATURDIDO!  " if enemy.stun_timer > 0.0 else "") + enemy_name + "  Nv.%d" % enemy.level
+	_label.text = ("¡ATURDIDO!  " if enemy.stun_timer > 0.0 else "") + ("[SILENCIADO] " if enemy.silence_timer > 0.0 else "") + enemy_name + "  Nv.%d" % enemy.level
 	if not enemy.alive:
 		return
 	if enemy.stun_timer > 0.0:

@@ -353,7 +353,7 @@ func _read_spawns() -> Array:
 
 ## Enemigo que juega una clase (mismos skills que un jugador) con IA y nivel.
 func spawn_class_enemy(class_id: StringName, at: Vector2, level: int = 1) -> WarriorSim:
-	var fighter := world.add_fighter(class_id, 1, at, level)
+	var fighter := world.add_archetype(String(class_id), 1, at, level)  # acepta arquetipo o clase
 	var actor := PLAYER_SCENE.instantiate() as WarriorActor3D
 	actor.enemy_mode = true
 	actor.name = "Enemy_" + fighter.display_name
