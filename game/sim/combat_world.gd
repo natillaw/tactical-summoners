@@ -71,6 +71,7 @@ func step(delta: float, tick_number: int = -1) -> void:
 	if warrior_bot != null:
 		player_input = warrior_bot.think(warrior, self, delta)
 	warrior.step(tick, delta, player_input)
+	_propagate_alerts()
 	for fighter: WarriorSim in fighters:
 		fighter.step(tick, delta, fighter.brain.think(fighter, self, delta) if fighter.brain != null else {})
 	for dummy: DummySim in dummies:
@@ -119,6 +120,9 @@ func add_fighter(class_id: StringName, team: int, spawn: Vector2, level: int = 1
 	fighter.reset(spawn)
 	fighter.progression.set_level(level)
 	fighter.brain = BotBrain.new(rng.randi())
+	var ult: Dictionary = fighter.ability_for_slot("F")
+	if not ult.is_empty():
+		fighter.cooldowns[String(ult["id"])] = 25.0  # los bots no abren con su ultimate
 	fighters.append(fighter)
 	return fighter
 
@@ -211,6 +215,21 @@ func resolve_position(desired: Vector2, radius: float, ignore: Object = null) ->
 			pos = fighter.position + gap.normalized() * min_gap
 
 	return pos
+
+
+## Un enemigo alertado (te vio o lo golpearon) alerta a todo su campamento.
+func _propagate_alerts() -> void:
+	var hot := {}
+	for fighter: WarriorSim in fighters:
+		var b: BotBrain = fighter.brain
+		if b != null and b.group >= 0 and (b.alerted or fighter.health < fighter.max_health):
+			hot[b.group] = true
+	if hot.is_empty():
+		return
+	for fighter: WarriorSim in fighters:
+		var b: BotBrain = fighter.brain
+		if b != null and hot.has(b.group):
+			b.alerted = true
 
 
 func reset() -> void:

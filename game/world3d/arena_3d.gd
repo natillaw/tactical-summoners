@@ -89,6 +89,35 @@ func build(p_world: CombatWorld) -> void:
 	_spawn_actors()
 
 
+## Piso de la torre (ver MeadowFloor): sin Level del editor, enemigos por campamento.
+func build_floor(p_world: CombatWorld, data: Dictionary) -> void:
+	world = p_world
+	_rng.seed = int(data["seed"])
+	var level := get_node_or_null("Level")
+	if level != null:
+		remove_child(level)
+		level.free()
+	world.setup_arena(data["bounds"], data["obstacles"])
+	world.warrior.position = data["spawn"]
+	world.warrior.reset(data["spawn"])
+	_static_parent = self
+	MeadowFloor.build(self, data)
+	_build_sfx_pool()
+	fx = Node3D.new()
+	fx.name = "Fx"
+	add_child(fx)
+	_build_camera()
+	warrior_actor = PLAYER_SCENE.instantiate() as WarriorActor3D
+	warrior_actor.name = "Player"
+	add_child(warrior_actor)
+	warrior_actor.setup(world.warrior, self)
+	var group := 0
+	for camp: Dictionary in data["camps"]:
+		for e: Dictionary in camp["enemies"]:
+			spawn_class_enemy(StringName(String(e["arch"])), e["pos"], int(e["level"]), group, 330.0)
+		group += 1
+
+
 ## Genera el escenario estático (luces, suelo, muros, pilares, antorchas) bajo `parent`.
 func build_static(parent: Node3D) -> void:
 	_static_parent = parent
@@ -357,8 +386,10 @@ func _read_spawns() -> Array:
 
 
 ## Enemigo que juega una clase (mismos skills que un jugador) con IA y nivel.
-func spawn_class_enemy(class_id: StringName, at: Vector2, level: int = 1) -> WarriorSim:
+func spawn_class_enemy(class_id: StringName, at: Vector2, level: int = 1, group: int = -1, aggro: float = 0.0) -> WarriorSim:
 	var fighter := world.add_archetype(String(class_id), 1, at, level)  # acepta arquetipo o clase
+	fighter.brain.group = group
+	fighter.brain.aggro_range = aggro
 	var actor := PLAYER_SCENE.instantiate() as WarriorActor3D
 	actor.enemy_mode = true
 	actor.name = "Enemy_" + fighter.display_name

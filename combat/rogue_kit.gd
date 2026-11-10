@@ -130,7 +130,7 @@ const DEATH_SENTENCE: Dictionary = {
 	"full_clip": {"clip": "ual2/Sword_Dash", "from": 0.06, "to": 0.55, "contact": 0.28, "late": true},
 	"flurry_clips": [4, 3, 4, 3, 4],
 	"lunge": 140.0, "leap_height": 18.0,
-	"windup": 0.20, "active": 0.25, "recovery": 0.95, "cooldown": 1.0, "cost": 0.0, "charge": 100.0,
+	"windup": 0.20, "active": 0.25, "recovery": 0.95, "cooldown": 180.0, "cost": 0.0, "charge": 0.0,
 	"range": 95.0, "arc": 110.0, "damage_mult": 1.3, "effects": {"stun": 2.0},
 	"followups": {"count": 4, "interval": 0.15, "mult": 0.9, "final_mult": 2.6},
 	"rage_gain": 0.0, "move_factor": 0.0,

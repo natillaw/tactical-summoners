@@ -93,7 +93,7 @@ func _test_special_and_ultimate() -> void:
 	_check(float(WarriorKit.M2["perfect_window"]) > 0.0 and float(WarriorKit.M2["cost"]) == 0.0, "Block has a perfect-parry window and costs no Rage")
 	_check(bool(WarriorKit.SPECIAL["selectable"]), "Parry can join the loadout")
 	_check(String(WarriorKit.ULTIMATE["id"]) == "bladestorm", "Ultimate is Bladestorm")
-	_check(is_equal_approx(float(WarriorKit.ULTIMATE["charge"]), 100.0), "Ultimate charges to 100")
+	_check(float(WarriorKit.ULTIMATE["cooldown"]) >= 180.0, "Ultimate has a 3 minute cooldown")
 	_check(is_equal_approx(float(WarriorKit.ULTIMATE["cost"]), 40.0), "Bladestorm costs 40 Rage")
 	_check(bool(WarriorKit.ULTIMATE["implemented"]), "Ultimate is playable")
 	_check(bool(WarriorKit.ULTIMATE["selectable"]), "Ultimate can join the loadout")
