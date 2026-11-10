@@ -35,7 +35,7 @@ const TYPES := {
 	"esbirro": {
 		"tier": "minion", "skills": ["SHIFT"],
 		"name": "Esbirro", "class": &"warrior", "difficulty": 0.3, "aggression": 0.9,
-		"level_bonus": 0, "traits": ["dumb"], "mods": {"health_mult": 0.45, "damage_mult": 0.6, "armor_mult": 0.5},
+		"level_bonus": 0, "traits": ["dumb"], "mods": {"health_mult": 0.45, "damage_mult": 0.3, "armor_mult": 0.5},
 		"description": "Débil pero aparece en grupo de 4: obliga a usar skills de área y a no quedarse quieto.",
 	},
 	"guardian": {
@@ -52,12 +52,12 @@ const TYPES := {
 	},
 	"esbirro_arquero": {
 		"name": "Esbirro Arquero", "class": &"ranger", "difficulty": 0.25, "aggression": 0.7, "tier": "minion", "skills": [],
-		"level_bonus": 0, "traits": ["dumb"], "mods": {"health_mult": 0.4, "damage_mult": 0.6, "armor_mult": 0.4},
+		"level_bonus": 0, "traits": ["dumb"], "mods": {"health_mult": 0.4, "damage_mult": 0.3, "armor_mult": 0.4},
 		"description": "Solo dispara flechas sueltas; no esquiva ni se reposiciona.",
 	},
 	"esbirro_mago": {
 		"name": "Esbirro Aprendiz", "class": &"mage", "difficulty": 0.25, "aggression": 0.6, "tier": "minion", "skills": ["Q"],
-		"level_bonus": 0, "traits": ["dumb"], "mods": {"health_mult": 0.4, "damage_mult": 0.6, "armor_mult": 0.4},
+		"level_bonus": 0, "traits": ["dumb"], "mods": {"health_mult": 0.4, "damage_mult": 0.3, "armor_mult": 0.4},
 		"description": "Lanza un proyectil arcano y poco más; no se protege.",
 	},
 	"cazador": {

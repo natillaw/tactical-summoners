@@ -44,6 +44,7 @@ var fx: Node3D
 var warrior_actor: WarriorActor3D
 var dummy_actors: Array[DummyActor3D] = []
 var enemy_actors: Array[WarriorActor3D] = []
+var gather_nodes: Array = []
 
 var _sfx_pool: Array[AudioStreamPlayer] = []
 var _sfx_index: int = 0
@@ -102,6 +103,7 @@ func build_floor(p_world: CombatWorld, data: Dictionary) -> void:
 	world.warrior.reset(data["spawn"])
 	_static_parent = self
 	MeadowFloor.build(self, data)
+	gather_nodes = MeadowFloor.build_gather(self, data)
 	_build_sfx_pool()
 	fx = Node3D.new()
 	fx.name = "Fx"
@@ -388,6 +390,7 @@ func _read_spawns() -> Array:
 ## Enemigo que juega una clase (mismos skills que un jugador) con IA y nivel.
 func spawn_class_enemy(class_id: StringName, at: Vector2, level: int = 1, group: int = -1, aggro: float = 0.0) -> WarriorSim:
 	var fighter := world.add_archetype(String(class_id), 1, at, level)  # acepta arquetipo o clase
+	fighter.archetype_id = String(class_id)
 	fighter.brain.group = group
 	fighter.brain.aggro_range = aggro
 	var actor := PLAYER_SCENE.instantiate() as WarriorActor3D

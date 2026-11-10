@@ -22,6 +22,12 @@ var _quick_cast_enabled: bool = true  # X alterna; solo aplica en top-down
 var _floor: Dictionary = {}
 var _quest_label: Label
 var _quest_done: bool = false
+var _mats_label: Label
+var _hint_label: Label
+var _toast_label: Label
+var _toast_time: float = 0.0
+var _drop_rng := RandomNumberGenerator.new()
+const GATHER_RANGE := 75.0
 
 
 func _ready() -> void:
@@ -31,8 +37,13 @@ func _ready() -> void:
 	_loot_rng.seed = 4242
 	if CharacterProfile.tower_mode:
 		_floor = MeadowFloor.generate(CharacterProfile.floor_seed)
+		world.warrior.progression.set_level(3)  # el piso 1 está calibrado para un héroe nivel 3
 		arena.build_floor(world, _floor)
 		_build_quest_ui()
+		_drop_rng.seed = CharacterProfile.floor_seed * 7919
+		for fighter: WarriorSim in world.fighters:
+			var f := fighter
+			f.died.connect(func() -> void: _on_enemy_died(f))
 	else:
 		arena.build(world)
 	hud.bind(world)
@@ -50,6 +61,81 @@ func _build_quest_ui() -> void:
 	_quest_label.add_theme_color_override("font_outline_color", Color.BLACK)
 	_quest_label.add_theme_constant_override("outline_size", 6)
 	$HudLayer.add_child(_quest_label)
+	_mats_label = _label(Vector2(8.0, 125.0), 14, Color(0.9, 0.95, 1.0))
+	_hint_label = _label(Vector2(300.0, 230.0), 18, Color(1.0, 1.0, 0.7))
+	_toast_label = _label(Vector2(300.0, 200.0), 18, Color(0.7, 1.0, 0.75))
+
+
+func _label(pos: Vector2, size: int, color: Color) -> Label:
+	var label := Label.new()
+	label.position = pos
+	label.add_theme_font_size_override("font_size", size)
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_color_override("font_outline_color", Color.BLACK)
+	label.add_theme_constant_override("outline_size", 5)
+	$HudLayer.add_child(label)
+	return label
+
+
+func _toast(text: String) -> void:
+	_toast_label.text = text
+	_toast_time = 2.5
+
+
+func _on_enemy_died(fighter: WarriorSim) -> void:
+	var drops := Materials.drops_for(fighter.archetype_id, _drop_rng)
+	var parts: Array = []
+	for id: String in drops:
+		Materials.add(id, int(drops[id]))
+		parts.append("+%d %s" % [drops[id], Materials.display(id)])
+	if not parts.is_empty():
+		_toast(", ".join(parts))
+
+
+## F: recoge el nodo de recolección más cercano (mineral, hierba, madera...).
+func _nearest_gather() -> Dictionary:
+	var best: Dictionary = {}
+	var best_d := GATHER_RANGE
+	for entry: Dictionary in arena.gather_nodes:
+		if not entry["left"]:
+			continue
+		var d := world.warrior.position.distance_to(entry["data"]["pos"])
+		if d < best_d:
+			best_d = d
+			best = entry
+	return best
+
+
+func _gather(entry: Dictionary) -> void:
+	entry["left"] = false
+	(entry["node"] as Node3D).visible = false
+	var mat := String(entry["data"]["mat"])
+	var amount := int(entry["amount"])
+	Materials.add(mat, amount)
+	var at := View3D.to3(entry["data"]["pos"], 0.6)
+	ArcaneFx.burst(arena, at, Materials.DEFS[mat]["color"], 22, 2.2, 0.12)
+	var text := "+%d %s" % [amount, Materials.display(mat)]
+	if mat == "hierba_curativa":
+		var w := world.warrior
+		w.health = minf(w.max_health, w.health + Materials.HERB_HEAL * amount)
+		text += "  (+%d vida)" % int(Materials.HERB_HEAL * amount)
+	_toast(text)
+
+
+func _update_gather_ui(delta: float) -> void:
+	if _hint_label == null:
+		return
+	var near := _nearest_gather()
+	_hint_label.text = "" if near.is_empty() else "[F] Recoger: %s" % Materials.NODES[near["data"]["kind"]]["label"]
+	_toast_time = maxf(0.0, _toast_time - delta)
+	_toast_label.modulate.a = clampf(_toast_time, 0.0, 1.0)
+	var lines: Array = []
+	for id: String in Materials.DEFS:
+		if int(Materials.inventory.get(id, 0)) > 0:
+			lines.append("%s x%d" % [Materials.display(id), Materials.inventory[id]])
+	_mats_label.text = "Materiales
+" + "
+".join(lines) if not lines.is_empty() else ""
 
 
 func _update_quest() -> void:
@@ -99,6 +185,17 @@ func _unhandled_input(event: InputEvent) -> void:
 		arena.tilt_topdown(-0.1)
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.physical_keycode:
+			KEY_F:
+				var near := _nearest_gather()
+				if not near.is_empty() and world.warrior.alive:
+					_gather(near)
+			KEY_F3:
+				CharacterProfile.tower_mode = not CharacterProfile.tower_mode
+				get_tree().reload_current_scene()
+			KEY_ENTER, KEY_KP_ENTER:
+				if _quest_done:
+					CharacterProfile.floor_seed += 1
+					get_tree().reload_current_scene()
 			KEY_F5: world.warrior.progression.set_level(world.warrior.progression.level + 5)
 			KEY_F6:
 				var item := ItemFactory.roll_weapon(_loot_rng, world.warrior.progression.level)
@@ -129,6 +226,7 @@ func _process(_delta: float) -> void:
 	crosshair.visible = not loadout_panel.visible and not arena.topdown
 	_update_ground_marker()
 	_update_quest()
+	_update_gather_ui(_delta)
 
 
 func _exit_tree() -> void:
