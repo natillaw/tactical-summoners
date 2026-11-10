@@ -125,7 +125,7 @@ const RAIN_OF_ARROWS: Dictionary = {
 	"kind": "ultimate", "role": "Ultimate", "description": "Ultimate: marca una zona y una lluvia de flechas cae durante 2 s, golpeando una y otra vez.",
 	"implemented": true, "selectable": true, "cast": "aoe", "anim": "cast", "target": "ground",
 	"clip": {"anim": "class/standing_draw_arrow", "start": 0.1, "contact": 0.33, "end": 0.7},
-	"windup": 0.80, "active": 2.1, "recovery": 0.35, "cooldown": 1.0, "cost": 0.0, "charge": 100.0,
+	"windup": 0.80, "active": 2.1, "recovery": 0.35, "cooldown": 180.0, "cost": 0.0, "charge": 0.0,
 	"range": 340.0, "radius": 170.0, "damage_mult": 1.2, "damage_interval": 0.35, "tick_mult": 0.8,
 	"rage_gain": 0.0, "move_factor": 0.2,
 }

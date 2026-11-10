@@ -22,6 +22,7 @@ fi
 SUITES=(
     "core/tests/test_tick.gd"
     "net/tests/test_net.gd"
+    "tests/test_meadow_floor.gd"
     "net/tests/test_reconciliation.gd"
     "combat/tests/test_stats.gd"
     "combat/tests/test_skill.gd"

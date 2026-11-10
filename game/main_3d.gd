@@ -19,6 +19,9 @@ extends Node3D
 var world: CombatWorld
 var _loot_rng := RandomNumberGenerator.new()
 var _quick_cast_enabled: bool = true  # X alterna; solo aplica en top-down
+var _floor: Dictionary = {}
+var _quest_label: Label
+var _quest_done: bool = false
 
 
 func _ready() -> void:
@@ -26,13 +29,49 @@ func _ready() -> void:
 	if CharacterProfile.chosen:
 		world.warrior.set_class(CharacterProfile.class_id)
 	_loot_rng.seed = 4242
-	arena.build(world)
+	if CharacterProfile.tower_mode:
+		_floor = MeadowFloor.generate(CharacterProfile.floor_seed)
+		arena.build_floor(world, _floor)
+		_build_quest_ui()
+	else:
+		arena.build(world)
 	hud.bind(world)
 	loadout_panel.set_world(world)
 	world.warrior.progression.leveled_up.connect(func(_l: int) -> void: _refresh_status())
 	world.warrior.weapon_changed.connect(func(_i: Item) -> void: _refresh_status())
 	_refresh_status()
 	TickManager.register(world)
+
+
+func _build_quest_ui() -> void:
+	_quest_label = Label.new()
+	_quest_label.position = Vector2(260.0, 6.0)
+	_quest_label.add_theme_font_size_override("font_size", 20)
+	_quest_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	_quest_label.add_theme_constant_override("outline_size", 6)
+	$HudLayer.add_child(_quest_label)
+
+
+func _update_quest() -> void:
+	if _quest_label == null:
+		return
+	var quest: Dictionary = _floor["quest"]
+	var kills := 0
+	for fighter: WarriorSim in world.fighters:
+		if fighter.team == 1 and not fighter.alive:
+			kills += 1
+	var goal := int(quest["kill"])
+	if kills >= goal:
+		_quest_done = true
+	if _quest_done:
+		_quest_label.text = "PISO %d · %s
+¡Misión cumplida! (%d/%d)
+Enter: otro mapa  ·  F3: entrenamiento" % [_floor["floor"], _floor["name"], kills, goal]
+		_quest_label.add_theme_color_override("font_color", Color(0.6, 1.0, 0.5))
+	else:
+		_quest_label.text = "PISO %d · %s
+Misión: %s (%d/%d)" % [_floor["floor"], _floor["name"], quest["title"], kills, goal]
+		_quest_label.add_theme_color_override("font_color", Color(1.0, 0.92, 0.6))
 
 
 func _refresh_status() -> void:
@@ -89,6 +128,7 @@ func _process(_delta: float) -> void:
 		Input.mouse_mode = want
 	crosshair.visible = not loadout_panel.visible and not arena.topdown
 	_update_ground_marker()
+	_update_quest()
 
 
 func _exit_tree() -> void:

@@ -1104,16 +1104,8 @@ func _spend_rage(amount: float) -> void:
 		rage_changed.emit(resource.get_current(), resource.max_amount)
 
 
-func _gain_ultimate(amount: float) -> void:
-	if amount <= 0.0:
-		return
-	var before := ultimate_charge
-	ultimate_charge = minf(kit.ULTIMATE_COST, ultimate_charge + amount)
-	if not is_equal_approx(before, ultimate_charge):
-		ultimate_changed.emit(ultimate_charge, kit.ULTIMATE_COST)
-
-
-# --- Pasiva -----------------------------------------------------------------
+func _gain_ultimate(_amount: float) -> void:
+	pass  # los ultimates usan cooldown largo (180 s), no carga
 
 
 func _update_last_stand() -> void:

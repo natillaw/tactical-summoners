@@ -31,6 +31,10 @@ var _bait_timer: float = 0.0
 var _last_seen: Vector2 = Vector2.ZERO
 var _has_seen: bool = false
 var _shield_clock: float = 0.0
+## Piso de la torre: solo ataca dentro de `aggro_range` (0 = siempre); `group` alerta a todo el campamento.
+var aggro_range: float = 0.0
+var group: int = -1
+var alerted: bool = false
 
 
 func _init(seed_value: int = 1) -> void:
@@ -155,6 +159,11 @@ func _pick_target(sim: WarriorSim, world: Object) -> Object:
 		if score < best_score:
 			best_score = score
 			best = target
+	if best != null and aggro_range > 0.0 and not alerted:
+		if sim.health < sim.max_health or sim.position.distance_to(best.position) <= aggro_range:
+			alerted = true
+		else:
+			return null
 	return best
 
 

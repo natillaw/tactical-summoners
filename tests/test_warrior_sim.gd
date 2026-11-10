@@ -227,7 +227,7 @@ func _test_bladestorm_ultimate() -> void:
 	_check(world.warrior.ultimate_is_full(), "Ultimate empieza llena tras el refill")
 
 	_step(world, 5, _input(Vector2(0, -1), false, false, Vector2.ZERO, false, false, false, false, true))
-	_check(world.warrior.ultimate() <= 0.01, "Bladestorm gasta la carga de Ultimate al iniciar")
+	_check(world.warrior.cooldown_left("F") > 100.0, "Bladestorm queda en cooldown largo al lanzarse")
 	_check(world.warrior.rage() <= 60.01, "Bladestorm consume 40 Rage al iniciar")
 	_step(world, 115, _input(Vector2(0, -1), false, false, Vector2.ZERO))
 
@@ -252,17 +252,10 @@ func _test_bladestorm_requires_rage() -> void:
 
 
 func _test_ultimate_requires_charge() -> void:
+	# Ultimate por cooldown (180 s): disponible al inicio y, tras lanzarla, bloqueada ~3 min.
 	var world := _make_world(false, 5)
-	var starts: Array = [0]
-	world.warrior.attack_started.connect(func(_skill: Dictionary, _dir: Vector2) -> void:
-		starts[0] += 1
-	)
-	_check(is_zero_approx(world.warrior.ultimate()), "la Ultimate empieza vacía")
-
-	_step(world, 30, _input(Vector2(0, -1), false, false, Vector2.ZERO, false, false, false, false, true))
-
-	_check(starts[0] == 0, "Bladestorm no se puede lanzar sin carga")
-	_check(world.warrior.state == WarriorSim.AttackState.IDLE, "el intento fallido no deja al Warrior casteando")
+	_check(world.warrior.cooldown_total("F") >= 180.0, "la Ultimate tiene cooldown de 3 minutos")
+	_check(is_zero_approx(world.warrior.cooldown_left("F")), "la Ultimate empieza lista")
 
 
 func _test_last_stand() -> void:

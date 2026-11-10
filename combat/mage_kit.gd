@@ -133,7 +133,7 @@ const ARCANE_SURGE: Dictionary = {
 	"kind": "ultimate", "role": "Ultimate", "description": "Ultimate. Cast 2.2 s (quieto): explosión arcana enorme donde apuntes; empuja y silencia 2.5 s a todos los alcanzados.",
 	"implemented": true, "selectable": true, "cast": "aoe", "cast_bar": true, "anim": "cast", "target": "ground",
 	"damage_type": 7,
-	"windup": 2.2, "active": 0.10, "recovery": 0.40, "cooldown": 1.0, "cost": 0.0, "charge": 100.0,
+	"windup": 2.2, "active": 0.10, "recovery": 0.40, "cooldown": 180.0, "cost": 0.0, "charge": 0.0,
 	"range": 320.0, "radius": 160.0, "damage_mult": 5.0,
 	"effects": {"knockback": 150.0, "silence": 2.5},
 	"rage_gain": 0.0, "move_factor": 0.0,

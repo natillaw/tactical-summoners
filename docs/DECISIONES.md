@@ -276,3 +276,9 @@ piezas del Medieval Village / Fantasy Props MegaKit; animación propia de estoca
 - **Enemigos que obligan a elegir:** Esbirro (enjambre de 4, F10), Guardián (escudo permanente: de frente bloquea el 80 % del físico; hay que rodearlo, aturdirlo o usar magia) y Coloso (jefe: x6 vida, x3 poise, `cc_scale` 0.35 = el control dura un tercio).
 - **Bots con combos:** puntúan las skills (remates esperan su preparación, preparan el estado que falta, ultimates con apertura).
 - **Balance guardado en `data/balance.json`:** Rogue daño x0.85, Mago daño x1.2 (matriz nivel 5: el Rogue baja de ~95 % a ~81 % contra Warrior y Mago; el Mago deja de ser el último).
+
+## 2026-11-09 — Piso 1 (Praderas) y ultimates por cooldown
+- Ultimates: sin carga, cooldown 180 s (los bots empiezan con 25 s de cooldown para no abrir con ella).
+- `MeadowFloor` (game/world3d/meadow_floor.gd): generador por semilla (camino sinuoso, 3 campamentos = 10 enemigos, bosque que encierra, props de campamento) + builder visual. `Arena3D.build_floor`. Misión "mata 10" en main_3d (Enter = otro mapa, F3 = alterna entrenamiento).
+- IA: `BotBrain.aggro_range/group/alerted` — el campamento entero se alerta cuando uno te ve o es golpeado.
+- Assets del kit (escala x0.4–0.6 para esta cámara). Hojas de CommonTree/TwistedTree/Bush salen rojas en Godot (causa sin resolver): por ahora solo pinos.
