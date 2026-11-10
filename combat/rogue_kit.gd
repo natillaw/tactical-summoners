@@ -52,7 +52,7 @@ const M1: Dictionary = {
 	"id": &"twin_fang", "name": "Twin Fang", "short": "FANG", "slot": "M1",
 	"kind": "basic", "role": "Daño rápido", "description": "Tajos rápidos alternando daga derecha e izquierda. Sin coste. -20% de daño si atacas de frente.",
 	"implemented": true, "selectable": false, "cast": "melee", "anim": "slash",
-	"melee_clips": [0, 3],  # 0 = mano derecha, 3 = jab de la mano izquierda
+	"melee_clips": [4, 3],  # 4 = puñalada (derecha, Stabbing), 3 = jab de la izquierda
 	"flank": true,
 	"windup": 0.09, "active": 0.08, "recovery": 0.14, "cooldown": 0.0, "cost": 0.0,
 	"range": 70.0, "arc": 100.0, "damage_mult": 1.0, "rage_gain": 0.0, "move_factor": 0.5,
@@ -84,6 +84,7 @@ const SHADOWSTEP: Dictionary = {
 	"id": &"shadowstep", "name": "Shadowstep", "short": "STEP", "slot": "SHIFT",
 	"kind": "mobility", "role": "Movilidad", "description": "Teletransporte al punto apuntado. Si apuntas a un enemigo, apareces a su espalda y lo apuñalas (mantén para apuntar, suelta para lanzar).",
 	"backstab_mult": 2.2, "backstab_range": 60.0,
+	"arrive_clip": {"clip": "class/standing_dive_forward", "from": 0.25, "to": 0.7, "contact": 0.45},
 	"implemented": true, "selectable": true, "cast": "teleport", "anim": "slash", "target": "ground",
 	"damage_type": 6,  # DamageSystem.Type.SHADOW
 	"windup": 0.06, "active": 0.03, "recovery": 0.10, "cooldown": 5.0, "cost": 25.0,
@@ -93,8 +94,9 @@ const SHADOWSTEP: Dictionary = {
 
 const VANISH: Dictionary = {
 	"id": &"vanish", "name": "Vanish", "short": "VANISH", "slot": "Q",
-	"kind": "stealth", "role": "Sigilo / escape", "description": "Te vuelves invisible 5 s: los enemigos no te ven, salvo que ataques.",
+	"kind": "stealth", "role": "Sigilo / escape", "description": "Lanzas una bomba de humo y te vuelves invisible 5 s: los enemigos no te ven. Tu primer ataque desde el sigilo hace +60% de daño (Ambush) y rompe la invisibilidad.",
 	"implemented": true, "selectable": true, "cast": "buff", "anim": "slash",
+	"full_clip": {"clip": "ual2/OverhandThrow", "from": 0.12, "to": 0.6, "contact": 0.28},
 	"damage_type": 6,  # DamageSystem.Type.SHADOW
 	"windup": 0.12, "active": 0.05, "recovery": 0.20, "cooldown": 14.0, "cost": 30.0,
 	"damage_mult": 0.0, "invisible": 5.0, "move_factor": 0.8,
@@ -115,7 +117,7 @@ const CHEAP_SHOT: Dictionary = {
 	"id": &"cheap_shot", "name": "Cheap Shot", "short": "STUN", "slot": "E",
 	"kind": "control", "role": "Control / stun", "description": "Puñalada traicionera: poco daño y stun. De frente aturde 1 s; por la ESPALDA aturde 2 s.",
 	"implemented": true, "selectable": true, "cast": "melee", "anim": "slash",
-	"full_clip": {"clip": "class/stabbing", "from": 0.18, "to": 0.5, "contact": 0.27},
+	"full_clip": {"clip": "ual1/Punch_Cross", "from": 0.0, "to": 0.55, "contact": 0.2},
 	"windup": 0.12, "active": 0.08, "recovery": 0.25, "cooldown": 9.0, "cost": 40.0,
 	"range": 65.0, "arc": 80.0, "damage_mult": 0.8, "effects": {"stun": 1.0}, "behind_stun": 2.0,
 	"rage_gain": 0.0, "move_factor": 0.3,
@@ -123,13 +125,15 @@ const CHEAP_SHOT: Dictionary = {
 
 const DEATH_SENTENCE: Dictionary = {
 	"id": &"death_sentence", "name": "Death Sentence", "short": "DEATH", "slot": "F",
-	"kind": "ultimate", "role": "Ultimate / stun", "description": "Ultimate: te lanzas sobre el objetivo y lo ejecutas con un golpe brutal que aturde 2 s.",
+	"kind": "ultimate", "role": "Ultimate / ejecución", "description": "Ultimate: te lanzas sobre el objetivo, lo aturdes 2 s y lo ejecutas con una ráfaga de 4 cortes y un golpe final devastador.",
 	"implemented": true, "selectable": true, "cast": "leap_slam", "anim": "slash",
-	"full_clip": {"clip": "ual2/Sword_Heavy_Combo", "from": 0.52, "to": 0.80, "contact": 0.63, "late": true},
-	"lunge": 130.0, "leap_height": 20.0,
-	"windup": 0.20, "active": 0.25, "recovery": 0.40, "cooldown": 1.0, "cost": 0.0, "charge": 100.0,
-	"range": 95.0, "arc": 110.0, "damage_mult": 5.0, "effects": {"stun": 2.0},
-	"rage_gain": 0.0, "move_factor": 0.2,
+	"full_clip": {"clip": "ual2/Sword_Dash", "from": 0.06, "to": 0.55, "contact": 0.28, "late": true},
+	"flurry_clips": [4, 3, 4, 3, 4],
+	"lunge": 140.0, "leap_height": 18.0,
+	"windup": 0.20, "active": 0.25, "recovery": 0.95, "cooldown": 1.0, "cost": 0.0, "charge": 100.0,
+	"range": 95.0, "arc": 110.0, "damage_mult": 1.3, "effects": {"stun": 2.0},
+	"followups": {"count": 4, "interval": 0.15, "mult": 0.9, "final_mult": 2.6},
+	"rage_gain": 0.0, "move_factor": 0.0,
 }
 
 ## Pasiva: a vida baja, más daño y velocidad.

@@ -226,7 +226,7 @@ func _num(obj: Object, prop: String) -> float:
 
 func _is_control(ability: Dictionary) -> bool:
 	var effects: Dictionary = ability.get("effects", {})
-	return effects.has("stun") or effects.has("knockback") or effects.has("pull") or effects.has("silence")
+	return effects.has("stun") or effects.has("knockback") or effects.has("pull") or effects.has("silence") or effects.has("root")
 
 
 ## Elige una skill útil ahora. Devuelve el slot o "".

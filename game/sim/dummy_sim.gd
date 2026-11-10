@@ -72,6 +72,7 @@ var cc := CCDiminish.new()
 var knock_vel: Vector2 = Vector2.ZERO
 var knock_timer: float = 0.0
 var silence_timer: float = 0.0
+var root_timer: float = 0.0
 var poise: float = 60.0
 var max_poise: float = 60.0
 var stagger_immunity: float = 0.0
@@ -131,6 +132,7 @@ func step(tick_number: int, delta: float, warrior: Object) -> void:
 
 
 func _tick_effects(delta: float) -> void:
+	root_timer = maxf(0.0, root_timer - delta)
 	silence_timer = maxf(0.0, silence_timer - delta)
 	stagger_immunity = maxf(0.0, stagger_immunity - delta)
 	_since_poise_hit += delta
@@ -256,6 +258,12 @@ func take_damage(amount: float, source_position: Vector2 = Vector2.ZERO, effects
 
 
 func apply_effects(effects: Dictionary, source: Vector2 = Vector2.ZERO) -> void:
+	var root := float(effects.get("root", 0.0))
+	if root > 0.0:
+		var applied := cc.apply("root", root)
+		if applied > 0.0:
+			root_timer = maxf(root_timer, applied)
+			effect_applied.emit("root", applied)
 	var silence := float(effects.get("silence", 0.0))
 	if silence > 0.0:
 		silence_timer = maxf(silence_timer, silence)

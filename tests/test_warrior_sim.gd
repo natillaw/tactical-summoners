@@ -1144,7 +1144,33 @@ func _test_mage_redesign_and_ai() -> void:
 	foe.take_damage(1.0, w.position, {"pull": 170.0})
 	_step(world, 20, null)
 	_check(foe.position.distance_to(w.position) < start_gap - 100.0, "Arcane Pull arrastra al objetivo hacia el mago (%d px)" % int(start_gap - foe.position.distance_to(w.position)))
-	_check(w.kit.DEFAULT_LOADOUT["Q"] == &"arcane_pull" and w.kit.DEFAULT_LOADOUT["R"] == &"arcane_silence", "El mago lleva Pull y Silence en su barra")
+	_check(w.kit.DEFAULT_LOADOUT["Q"] == &"arcane_bind" and w.kit.DEFAULT_LOADOUT["R"] == &"arcane_silence", "El mago lleva Bind y Silence en su barra")
+	# Arcane Bind: el objetivo atado no se mueve (pero sí puede atacar).
+	var rooted := world.add_fighter(&"warrior", 1, w.position + Vector2(200, 0), 1)
+	rooted.take_damage(1.0, w.position, {"root": 2.5})
+	var before := rooted.position
+	_step(world, 60, null)
+	_check(rooted.root_timer > 0.0 and rooted.position.distance_to(before) < 5.0, "Arcane Bind ata al objetivo al suelo")
+	# Death Sentence: lance y ráfaga de cortes con aturdimiento.
+	var world_r := _make_world(false, 154)
+	var rg = world_r.warrior
+	rg.set_class(&"rogue")
+	rg.reset(rg.position)
+	var victim: DummySim = world_r.dummies[0]
+	victim.position = rg.position + Vector2(0, -110)
+	rg.debug_refill()
+	rg.ultimate_charge = 100.0
+	rg.aim_dir = Vector2(0, -1)
+	var hits := [0]
+	victim.hit.connect(func(_a: float, _p: Vector2) -> void: hits[0] += 1)
+	rg.buffered_slot = "F"
+	rg.buffer_timer = 1.0
+	_step(world_r, 90, _input(Vector2(0, -1), false, false))
+	_check(hits[0] >= 5 and victim.stun_timer > 0.0, "Death Sentence: lance + ráfaga de cortes y stun (%d golpes)" % hits[0])
+	# Ambush: el primer golpe desde el sigilo pega más.
+	var plain := _first_ambush_damage(false)
+	var sneaky := _first_ambush_damage(true)
+	_check(sneaky > plain * 1.3, "Ambush: golpear desde el sigilo hace más daño (%.0f vs %.0f)" % [sneaky, plain])
 	# Arquetipos: el Campeón bloquea con timing y tiene más poise que el Soldado.
 	var world2 := _make_world(false, 152)
 	var soldier := world2.add_archetype("soldado", 1, world2.warrior.position + Vector2(0, -200), 3)
@@ -1157,3 +1183,21 @@ func _test_mage_redesign_and_ai() -> void:
 	var start_pos: Vector2 = caster.position
 	_step(world3, 120, null)
 	_check(caster.position.distance_to(start_pos) > 30.0, "El hechicero se reposiciona en vez de quedarse parado")
+
+
+func _first_ambush_damage(invisible: bool) -> float:
+	var world := _make_world(false, 155)
+	var r = world.warrior
+	r.set_class(&"rogue")
+	r.reset(r.position)
+	var dummy: DummySim = world.dummies[0]
+	dummy.position = r.position + Vector2(0, -50)
+	dummy.facing = Vector2(0, -1)
+	r.aim_dir = Vector2(0, -1)
+	if invisible:
+		r.invisible_timer = 5.0
+	r._rng.seed = 9
+	r.current_skill = r.kit.M1.duplicate(true)
+	var before: float = dummy.health
+	r._hit_target(dummy, 1.0, {})
+	return before - dummy.health

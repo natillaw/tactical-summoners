@@ -319,7 +319,7 @@ static func arrow_rain(parent: Node, at: Vector3, radius_m: float, count: int = 
 
 
 ## Cristales de hielo que brotan del suelo (Frost Trap).
-static func ice_shards(parent: Node, at: Vector3, radius_m: float, count: int = 16) -> void:
+static func ice_shards(parent: Node, at: Vector3, radius_m: float, count: int = 16, tint: Color = FROST) -> void:
 	for i in range(count):
 		var offset := Vector3(randf_range(-1.0, 1.0), 0.0, randf_range(-1.0, 1.0))
 		if offset.length() > 1.0:
@@ -328,10 +328,10 @@ static func ice_shards(parent: Node, at: Vector3, radius_m: float, count: int = 
 		var mesh := PrismMesh.new()
 		mesh.size = Vector3(0.18, randf_range(0.5, 1.1), 0.18)
 		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Color(FROST.r, FROST.g, FROST.b, 0.85)
+		mat.albedo_color = Color(tint.r, tint.g, tint.b, 0.85)
 		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		mat.emission_enabled = true
-		mat.emission = FROST
+		mat.emission = tint
 		mat.emission_energy_multiplier = 1.2
 		mesh.material = mat
 		shard.mesh = mesh
@@ -344,7 +344,7 @@ static func ice_shards(parent: Node, at: Vector3, radius_m: float, count: int = 
 		tween.tween_interval(1.4)
 		tween.tween_property(shard, "scale", Vector3(1, 0.02, 1), 0.3)
 		tween.tween_callback(shard.queue_free)
-	burst(parent, at + Vector3(0, 0.3, 0), FROST, 36, 3.0, 0.1)
+	burst(parent, at + Vector3(0, 0.3, 0), tint, 36, 3.0, 0.1)
 
 
 ## Destello en la boca del arma (disparo).
@@ -402,3 +402,16 @@ static func swirl_zone(parent: Node, at: Vector3, radius_m: float, color: Color,
 	tween.tween_callback(func() -> void: swirl.emitting = false)
 	tween.tween_interval(1.2)
 	tween.tween_callback(holder.queue_free)
+
+
+## Anillo de atadura bajo los pies mientras dura el root (se destruye al terminar).
+static func bind_ring(color: Color = Color(0.8, 0.5, 1.0)) -> Node3D:
+	var holder := Node3D.new()
+	var ring := FxShape.new().setup(FxShape.Mode.RING, 0.9, color)
+	ring.set_param("inner", 0.78)
+	ring.set_param("fill", 0.2)
+	ring.set_param("pulse", 1.0)
+	ring.position.y = 0.04
+	holder.add_child(ring)
+	holder.add_child(rising_puffs(color, 14, 0.5, 0.12, 0.4))
+	return holder

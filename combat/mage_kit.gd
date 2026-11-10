@@ -139,16 +139,16 @@ const ARCANE_SURGE: Dictionary = {
 	"rage_gain": 0.0, "move_factor": 0.0,
 }
 
-const ARCANE_PULL: Dictionary = {
-	"id": &"arcane_pull",
+const ARCANE_BIND: Dictionary = {
+	"id": &"arcane_bind",
 	"clip": {"name": "standing_2h_magic_attack_02", "start": 1.0, "contact": 1.3, "end": 1.9},
-	"name": "Arcane Pull", "short": "PULL", "slot": "Q",
-	"kind": "control", "role": "Control / atraer", "description": "Proyectil rápido que ENGANCHA al objetivo y lo arrastra hasta ti (y lo ralentiza 1.2 s). Ideal contra quien huye o para sacarlo de su grupo.",
+	"name": "Arcane Bind", "short": "BIND", "slot": "Q",
+	"kind": "control", "role": "Control / inmovilizar", "description": "Proyectil que ATA al objetivo al suelo con cadenas arcanas: 2.5 s sin poder moverse ni usar dashes (puede atacar y castear). Ideal para fijarlo antes de un cast largo.",
 	"implemented": true, "selectable": true, "cast": "projectile", "anim": "cast",
 	"damage_type": 7,
-	"windup": 0.25, "active": 0.05, "recovery": 0.25, "cooldown": 10.0, "cost": 25.0,
+	"windup": 0.25, "active": 0.05, "recovery": 0.25, "cooldown": 11.0, "cost": 25.0,
 	"speed": 760.0, "range": 440.0, "hit_radius": 12.0, "damage_mult": 0.6,
-	"effects": {"pull": 170.0, "slow": {"factor": 0.6, "duration": 1.2}},
+	"effects": {"root": 2.5},
 	"poise": 0.0, "rage_gain": 0.0, "move_factor": 0.4, "color": [0.85, 0.55, 1.0],
 }
 
@@ -191,15 +191,15 @@ const ULTIMATE: Dictionary = ARCANE_SURGE
 
 const DEFAULT_LOADOUT: Dictionary = {
 	"SHIFT": &"blink",
-	"Q": &"arcane_pull",
+	"Q": &"arcane_bind",
 	"E": &"arcane_pulse",
 	"R": &"arcane_silence",
 	"S2": &"starfall",
 	"F": &"arcane_surge",
 }
 
-const ALL_ABILITIES: Array = [M1, M2, BLINK, ARCANE_ORB, ARCANE_PULL, ARCANE_PULSE, ARCANE_SILENCE, TIME_RIFT, STARFALL, ARCANE_SURGE]
-const POOL_ABILITIES: Array = [BLINK, ARCANE_ORB, ARCANE_PULL, ARCANE_PULSE, ARCANE_SILENCE, TIME_RIFT, STARFALL, ARCANE_SURGE]
+const ALL_ABILITIES: Array = [M1, M2, BLINK, ARCANE_ORB, ARCANE_BIND, ARCANE_PULSE, ARCANE_SILENCE, TIME_RIFT, STARFALL, ARCANE_SURGE]
+const POOL_ABILITIES: Array = [BLINK, ARCANE_ORB, ARCANE_BIND, ARCANE_PULSE, ARCANE_SILENCE, TIME_RIFT, STARFALL, ARCANE_SURGE]
 
 
 static func create_rage_resource() -> Rage:
