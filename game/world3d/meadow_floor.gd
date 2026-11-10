@@ -288,7 +288,8 @@ static func _place_gather(rng: RandomNumberGenerator, ctx: Dictionary, gather: A
 	for kind: String in plan:
 		var placed := 0
 		var tries := 0
-		while placed < int(plan[kind]) and tries < 600:
+		var quota := maxi(int(plan[kind]) + rng.randi_range(-3, 4), 3)  # la abundancia cambia con la semilla
+		while placed < quota and tries < 600:
 			tries += 1
 			var point := Vector2(rng.randf_range(80.0, SIZE.x - 80.0), rng.randf_range(80.0, SIZE.y - 80.0))
 			var gap := _clearing_gap(point, ctx["clearings"])
@@ -334,8 +335,12 @@ static func build(parent: Node3D, data: Dictionary) -> void:
 	var holder := Node3D.new()
 	holder.name = "FloorDecor"
 	parent.add_child(holder)
+	build_decor(holder, data["decor"])
+
+
+static func build_decor(holder: Node3D, decor: Array) -> void:
 	var groups: Dictionary = {}  # "ruta|cx|cy" -> Array de transforms
-	for item: Dictionary in data["decor"]:
+	for item: Dictionary in decor:
 		var pos: Vector2 = item["pos"]
 		var key := "%s|%d|%d" % [item["scene"], floori(pos.x / CELL), floori(pos.y / CELL)]
 		var xf := Transform3D(Basis(Vector3.UP, float(item["yaw"])).scaled(Vector3.ONE * float(item["scale"])), View3D.to3(pos))
@@ -479,6 +484,14 @@ static func _build_environment(parent: Node3D) -> void:
 
 
 static func _build_ground(parent: Node3D, data: Dictionary) -> void:
+	_build_ground_plane(parent, SIZE)
+	var dirt := StandardMaterial3D.new()
+	dirt.albedo_color = Color(0.50, 0.38, 0.25)
+	dirt.roughness = 1.0
+	_build_trails(parent, data, dirt)
+
+
+static func _build_ground_plane(parent: Node3D, size: Vector2) -> void:
 	var noise := FastNoiseLite.new()
 	noise.frequency = 0.012
 	noise.noise_type = FastNoiseLite.TYPE_PERLIN
@@ -494,18 +507,17 @@ static func _build_ground(parent: Node3D, data: Dictionary) -> void:
 	var ground_mat := StandardMaterial3D.new()
 	ground_mat.albedo_texture = texture
 	ground_mat.roughness = 1.0
-	ground_mat.uv1_scale = Vector3((SIZE.x / 40.0 + 80.0) / 10.0, (SIZE.y / 40.0 + 80.0) / 10.0, 1.0)
+	ground_mat.uv1_scale = Vector3((size.x / 40.0 + 80.0) / 10.0, (size.y / 40.0 + 80.0) / 10.0, 1.0)
 	var ground := MeshInstance3D.new()
 	var plane := PlaneMesh.new()
-	plane.size = SIZE / 40.0 + Vector2(80.0, 80.0)
+	plane.size = size / 40.0 + Vector2(80.0, 80.0)
 	ground.mesh = plane
 	ground.material_override = ground_mat
-	ground.position = Vector3(SIZE.x / 80.0, 0.0, SIZE.y / 80.0)
+	ground.position = Vector3(size.x / 80.0, 0.0, size.y / 80.0)
 	parent.add_child(ground)
-	# Camino de tierra: un tramo plano por segmento de la ruta.
-	var dirt := StandardMaterial3D.new()
-	dirt.albedo_color = Color(0.50, 0.38, 0.25)
-	dirt.roughness = 1.0
+
+
+static func _build_trails(parent: Node3D, data: Dictionary, dirt: Material) -> void:
 	for trail: Array in data["trails"]:
 		for i in range(trail.size() - 1):
 			var a: Vector2 = trail[i]

@@ -45,6 +45,7 @@ var warrior_actor: WarriorActor3D
 var dummy_actors: Array[DummyActor3D] = []
 var enemy_actors: Array[WarriorActor3D] = []
 var gather_nodes: Array = []
+var town_buildings: Array = []
 
 var _sfx_pool: Array[AudioStreamPlayer] = []
 var _sfx_index: int = 0
@@ -88,6 +89,30 @@ func build(p_world: CombatWorld) -> void:
 
 	_build_camera()
 	_spawn_actors()
+
+
+## Pueblo (ver Town): sin Level del editor, sin enemigos; NPCs y estaciones dentro de los edificios.
+func build_town(p_world: CombatWorld, data: Dictionary) -> void:
+	world = p_world
+	_rng.seed = int(data["seed"])
+	var level := get_node_or_null("Level")
+	if level != null:
+		remove_child(level)
+		level.free()
+	world.setup_arena(data["bounds"], data["obstacles"])
+	world.warrior.position = data["spawn"]
+	world.warrior.reset(data["spawn"])
+	_static_parent = self
+	town_buildings = Town.build(self, data)
+	_build_sfx_pool()
+	fx = Node3D.new()
+	fx.name = "Fx"
+	add_child(fx)
+	_build_camera()
+	warrior_actor = PLAYER_SCENE.instantiate() as WarriorActor3D
+	warrior_actor.name = "Player"
+	add_child(warrior_actor)
+	warrior_actor.setup(world.warrior, self)
 
 
 ## Piso de la torre (ver MeadowFloor): sin Level del editor, enemigos por campamento.
@@ -439,6 +464,8 @@ func _process(delta: float) -> void:
 	if world == null or camera == null:
 		return
 
+	if not town_buildings.is_empty():
+		Town.update_interiors(town_buildings, world.warrior.position)
 	var target := View3D.to3(world.warrior.position)
 	_cam_focus = _cam_focus.lerp(target, 1.0 - exp(-8.0 * delta))
 

@@ -20,6 +20,9 @@ var world: CombatWorld
 var _loot_rng := RandomNumberGenerator.new()
 var _quick_cast_enabled: bool = true  # X alterna; solo aplica en top-down
 var _floor: Dictionary = {}
+var _town: Dictionary = {}
+var npc_panel: NpcPanel
+var _elixir_time: float = 0.0
 var _quest_label: Label
 var _quest_done: bool = false
 var _mats_label: Label
@@ -35,17 +38,34 @@ func _ready() -> void:
 	if CharacterProfile.chosen:
 		world.warrior.set_class(CharacterProfile.class_id)
 	_loot_rng.seed = 4242
-	if CharacterProfile.tower_mode:
-		_floor = MeadowFloor.generate(CharacterProfile.floor_seed)
-		world.warrior.progression.set_level(3)  # el piso 1 está calibrado para un héroe nivel 3
-		arena.build_floor(world, _floor)
-		_build_quest_ui()
-		_drop_rng.seed = CharacterProfile.floor_seed * 7919
-		for fighter: WarriorSim in world.fighters:
-			var f := fighter
-			f.died.connect(func() -> void: _on_enemy_died(f))
-	else:
-		arena.build(world)
+	var w := world.warrior
+	if CharacterProfile.level > 1:
+		w.progression.set_level(CharacterProfile.level)
+		w.progression.xp = CharacterProfile.xp
+	if CharacterProfile.weapon != null:
+		w.equip_weapon(CharacterProfile.weapon)
+	for piece: Item in CharacterProfile.armor.values():
+		w.equip_armor(piece)
+	if not CharacterProfile.started:  # kit inicial: dos pociones de vida
+		CharacterProfile.started = true
+		Materials.add("pocion_vida", 2)
+	match CharacterProfile.mode:
+		"floor":
+			_floor = MeadowFloor.generate(CharacterProfile.floor_seed)
+			arena.build_floor(world, _floor)
+			_build_quest_ui()
+			_drop_rng.seed = CharacterProfile.floor_seed * 7919
+			for fighter: WarriorSim in world.fighters:
+				var f := fighter
+				f.died.connect(func() -> void: _on_enemy_died(f))
+		"town":
+			_town = Town.generate(7)
+			arena.build_town(world, _town)
+			_build_quest_ui()
+			npc_panel = NpcPanel.new()
+			$HudLayer.add_child(npc_panel)
+		_:
+			arena.build(world)
 	hud.bind(world)
 	loadout_panel.set_world(world)
 	world.warrior.progression.leveled_up.connect(func(_l: int) -> void: _refresh_status())
@@ -54,10 +74,25 @@ func _ready() -> void:
 	TickManager.register(world)
 
 
+func _save_progress() -> void:
+	if world != null:
+		CharacterProfile.level = world.warrior.progression.level
+		CharacterProfile.xp = world.warrior.progression.xp
+
+
+## Cambia de modo (town / floor / training) recargando la escena; guarda nivel y XP.
+func _goto(mode: String) -> void:
+	_save_progress()
+	CharacterProfile.mode = mode
+	if mode == "floor":
+		CharacterProfile.floor_seed = randi() % 1000000 + 1  # cada entrada a la Torre es un mapa nuevo
+	get_tree().reload_current_scene()
+
+
 func _build_quest_ui() -> void:
 	_quest_label = Label.new()
 	_quest_label.position = Vector2(260.0, 6.0)
-	_quest_label.add_theme_font_size_override("font_size", 20)
+	_quest_label.add_theme_font_size_override("font_size", 14)
 	_quest_label.add_theme_color_override("font_outline_color", Color.BLACK)
 	_quest_label.add_theme_constant_override("outline_size", 6)
 	$HudLayer.add_child(_quest_label)
@@ -93,6 +128,54 @@ func _on_enemy_died(fighter: WarriorSim) -> void:
 
 
 ## F: recoge el nodo de recolección más cercano (mineral, hierba, madera...).
+func _nearest_station() -> Dictionary:
+	var best: Dictionary = {}
+	var best_d := INF
+	for st: Dictionary in _town.get("stations", []):
+		var d := world.warrior.position.distance_to(st["pos"])
+		if d < float(st["radius"]) and d < best_d:
+			best_d = d
+			best = st
+	return best
+
+
+func _interact() -> void:
+	if not world.warrior.alive or (npc_panel != null and npc_panel.visible):
+		return
+	var st := _nearest_station()
+	if not st.is_empty():
+		if st["id"] == "portal":
+			_goto("floor")
+		else:
+			npc_panel.open_for(st, world.warrior)
+		return
+	var near := _nearest_gather()
+	if not near.is_empty():
+		_gather(near)
+
+
+func _use_potion(id: String) -> void:
+	if int(Materials.inventory.get(id, 0)) <= 0 or not world.warrior.alive:
+		return
+	var w := world.warrior
+	match id:
+		"pocion_vida":
+			if w.health >= w.max_health:
+				return
+			w.health = minf(w.max_health, w.health + w.max_health * 0.4)
+			_toast("Poción de Vida: +40% de vida")
+		"elixir_fuerza":
+			if _elixir_time > 0.0:
+				return
+			w.mods["damage_mult"] = float(w.mods.get("damage_mult", 1.0)) * 1.25
+			_elixir_time = 60.0
+			_toast("Elixir de Fuerza: +25% de daño (60 s)")
+		"pocion_arcana":
+			w.resource.current_amount = minf(w.resource.max_amount, w.resource.current_amount + w.resource.max_amount * 0.6)
+			_toast("Poción Arcana: recurso restaurado")
+	Materials.inventory[id] = int(Materials.inventory[id]) - 1
+
+
 func _nearest_gather() -> Dictionary:
 	var best: Dictionary = {}
 	var best_d := GATHER_RANGE
@@ -126,7 +209,17 @@ func _update_gather_ui(delta: float) -> void:
 	if _hint_label == null:
 		return
 	var near := _nearest_gather()
-	_hint_label.text = "" if near.is_empty() else "[F] Recoger: %s" % Materials.NODES[near["data"]["kind"]]["label"]
+	var station := _nearest_station()
+	if npc_panel != null and npc_panel.visible:
+		_hint_label.text = ""
+	elif not station.is_empty():
+		_hint_label.text = "[F] Entrar a la Torre" if station["id"] == "portal" else "[F] Hablar con %s" % station["npc"]
+	else:
+		_hint_label.text = "" if near.is_empty() else "[F] Recoger: %s" % Materials.NODES[near["data"]["kind"]]["label"]
+	if _elixir_time > 0.0:
+		_elixir_time -= delta
+		if _elixir_time <= 0.0:
+			world.warrior.mods["damage_mult"] = float(world.warrior.mods.get("damage_mult", 1.0)) / 1.25
 	_toast_time = maxf(0.0, _toast_time - delta)
 	_toast_label.modulate.a = clampf(_toast_time, 0.0, 1.0)
 	var lines: Array = []
@@ -141,6 +234,10 @@ func _update_gather_ui(delta: float) -> void:
 func _update_quest() -> void:
 	if _quest_label == null:
 		return
+	if CharacterProfile.mode == "town":
+		_quest_label.text = "PUEBLO · Portal al norte"
+		_quest_label.add_theme_color_override("font_color", Color(0.85, 0.95, 1.0))
+		return
 	var quest: Dictionary = _floor["quest"]
 	var kills := 0
 	for fighter: WarriorSim in world.fighters:
@@ -152,7 +249,7 @@ func _update_quest() -> void:
 	if _quest_done:
 		_quest_label.text = "PISO %d · %s
 ¡Misión cumplida! (%d/%d)
-Enter: otro mapa  ·  F3: entrenamiento" % [_floor["floor"], _floor["name"], kills, goal]
+Enter: volver al pueblo  ·  F3: cambiar modo" % [_floor["floor"], _floor["name"], kills, goal]
 		_quest_label.add_theme_color_override("font_color", Color(0.6, 1.0, 0.5))
 	else:
 		_quest_label.text = "PISO %d · %s
@@ -185,17 +282,16 @@ func _unhandled_input(event: InputEvent) -> void:
 		arena.tilt_topdown(-0.1)
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.physical_keycode:
-			KEY_F:
-				var near := _nearest_gather()
-				if not near.is_empty() and world.warrior.alive:
-					_gather(near)
+			KEY_F: _interact()
+			KEY_H: _use_potion("pocion_vida")
+			KEY_J: _use_potion("elixir_fuerza")
+			KEY_K: _use_potion("pocion_arcana")
 			KEY_F3:
-				CharacterProfile.tower_mode = not CharacterProfile.tower_mode
-				get_tree().reload_current_scene()
+				var order := ["town", "floor", "training"]
+				_goto(order[(order.find(CharacterProfile.mode) + 1) % order.size()])
 			KEY_ENTER, KEY_KP_ENTER:
 				if _quest_done:
-					CharacterProfile.floor_seed += 1
-					get_tree().reload_current_scene()
+					_goto("town")
 			KEY_F5: world.warrior.progression.set_level(world.warrior.progression.level + 5)
 			KEY_F6:
 				var item := ItemFactory.roll_weapon(_loot_rng, world.warrior.progression.level)
@@ -230,6 +326,7 @@ func _process(_delta: float) -> void:
 
 
 func _exit_tree() -> void:
+	_save_progress()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	if TickManager.is_paused():
 		TickManager.set_paused(false)
@@ -244,7 +341,7 @@ func _physics_process(_delta: float) -> void:
 	if Input.is_action_just_pressed("toggle_loadout"):
 		loadout_panel.toggle()
 
-	if loadout_panel.visible:
+	if loadout_panel.visible or (npc_panel != null and npc_panel.visible):
 		return
 
 	if Input.is_action_just_pressed("restart_training"):
