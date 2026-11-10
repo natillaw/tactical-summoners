@@ -57,6 +57,32 @@ const RECIPES := [
 	{"id": "dark_grebas", "station": "blacksmith", "name": "Grebas Ennegrecidas", "cost": {"mena_cobre": 4, "hueso": 1}, "armor": "legs", "set": "dark", "stats": {"armor": 4.0, "stamina": 2.7}},
 	{"id": "dark_guantes", "station": "blacksmith", "name": "Guanteletes de Púas", "cost": {"mena_cobre": 2, "hueso": 1}, "armor": "hands", "set": "dark", "stats": {"armor": 2.4, "stamina": 0.9, "attack_power_bonus": 1.0}},
 	{"id": "dark_botas", "station": "blacksmith", "name": "Botas de Hierro Negro", "cost": {"mena_cobre": 2, "cuero_basto": 2}, "armor": "boots", "set": "dark", "stats": {"armor": 2.4, "stamina": 1.8}},
+	# Sets de pícaro (aspecto: piezas Quaternius recoloreadas, ver CharacterBuilder.QSETS)
+	{"id": "ladron_capucha", "station": "tailor", "name": "Capucha de Ladrón", "cost": {"fibra": 3, "cuero_basto": 1}, "armor": "head", "set": "ladron", "stats": {"armor": 3.6, "stamina": 2.6}},
+	{"id": "ladron_jubon", "station": "leatherworker", "name": "Jubón de Ladrón", "cost": {"cuero_basto": 4, "fibra": 2, "hueso": 1}, "armor": "chest", "set": "ladron", "stats": {"armor": 7.2, "stamina": 4.3, "attack_power_bonus": 2.0}},
+	{"id": "ladron_calzas", "station": "tailor", "name": "Calzas de Ladrón", "cost": {"fibra": 3, "cuero_basto": 1}, "armor": "legs", "set": "ladron", "stats": {"armor": 3.0, "stamina": 2.6}},
+	{"id": "ladron_munequeras", "station": "leatherworker", "name": "Muñequeras de Ladrón", "cost": {"cuero_basto": 2, "fibra": 1}, "armor": "hands", "set": "ladron", "stats": {"armor": 1.8, "stamina": 0.9}},
+	{"id": "ladron_botas", "station": "leatherworker", "name": "Botas Silenciosas de Ladrón", "cost": {"cuero_basto": 2, "fibra": 2}, "armor": "boots", "set": "ladron", "stats": {"armor": 1.8, "stamina": 1.7, "crit_chance": 0.01}},
+	{"id": "cuervo_capucha", "station": "tailor", "name": "Capucha Picuda de Cuervo", "cost": {"fibra": 3, "hueso": 1, "cuero_basto": 1}, "armor": "head", "set": "cuervo", "stats": {"armor": 3.3, "stamina": 2.4, "crit_chance": 0.01}},
+	{"id": "cuervo_jubon", "station": "leatherworker", "name": "Jubón de Sombras", "cost": {"cuero_basto": 4, "fibra": 2, "hueso": 2}, "armor": "chest", "set": "cuervo", "stats": {"armor": 6.6, "stamina": 4.0, "attack_power_bonus": 3.0}},
+	{"id": "cuervo_calzas", "station": "tailor", "name": "Calzas de Sombras", "cost": {"fibra": 3, "cuero_basto": 1}, "armor": "legs", "set": "cuervo", "stats": {"armor": 2.8, "stamina": 2.4}},
+	{"id": "cuervo_munequeras", "station": "leatherworker", "name": "Brazales de Sombras", "cost": {"cuero_basto": 2, "hueso": 1}, "armor": "hands", "set": "cuervo", "stats": {"armor": 1.7, "stamina": 0.8, "attack_power_bonus": 1.0}},
+	{"id": "cuervo_botas", "station": "leatherworker", "name": "Botas de Cuervo", "cost": {"cuero_basto": 2, "fibra": 1, "hueso": 1}, "armor": "boots", "set": "cuervo", "stats": {"armor": 1.7, "stamina": 1.6}},
+	{"id": "desierto_capucha", "station": "tailor", "name": "Cofia Corta del Desierto", "cost": {"fibra": 3}, "armor": "head", "set": "desierto", "stats": {"armor": 3.0, "stamina": 3.0}},
+	{"id": "desierto_jubon", "station": "leatherworker", "name": "Túnica del Desierto", "cost": {"fibra": 5, "cuero_basto": 1}, "armor": "chest", "set": "desierto", "stats": {"armor": 6.0, "stamina": 5.0}},
+	{"id": "desierto_calzas", "station": "tailor", "name": "Pantalones Anchos del Desierto", "cost": {"fibra": 4}, "armor": "legs", "set": "desierto", "stats": {"armor": 2.5, "stamina": 4.0}},
+	{"id": "desierto_munequeras", "station": "leatherworker", "name": "Brazales de Tela del Desierto", "cost": {"fibra": 2, "cuero_basto": 1}, "armor": "hands", "set": "desierto", "stats": {"armor": 1.5, "stamina": 1.0}},
+	{"id": "desierto_botas", "station": "leatherworker", "name": "Botas del Desierto", "cost": {"cuero_basto": 2, "fibra": 2}, "armor": "boots", "set": "desierto", "stats": {"armor": 1.5, "stamina": 2.0, "crit_chance": 0.01}},
+	{"id": "bosque_capucha", "station": "tailor", "name": "Capucha de Batidor", "cost": {"fibra": 3, "cuero_basto": 1}, "armor": "head", "set": "bosque", "stats": {"armor": 3.9, "stamina": 2.7}},
+	{"id": "bosque_jubon", "station": "leatherworker", "name": "Coleto de Batidor", "cost": {"cuero_basto": 5, "fibra": 2, "hueso": 1}, "armor": "chest", "set": "bosque", "stats": {"armor": 7.8, "stamina": 4.5, "attack_power_bonus": 2.0}},
+	{"id": "bosque_calzas", "station": "tailor", "name": "Calzas de Batidor", "cost": {"cuero_basto": 2, "fibra": 3}, "armor": "legs", "set": "bosque", "stats": {"armor": 3.3, "stamina": 2.7, "crit_chance": 0.01}},
+	{"id": "bosque_munequeras", "station": "leatherworker", "name": "Brazales de Batidor", "cost": {"cuero_basto": 2, "fibra": 1}, "armor": "hands", "set": "bosque", "stats": {"armor": 2.0, "stamina": 0.9}},
+	{"id": "bosque_botas", "station": "leatherworker", "name": "Botas de Batidor", "cost": {"cuero_basto": 2, "fibra": 2}, "armor": "boots", "set": "bosque", "stats": {"armor": 2.0, "stamina": 1.8}},
+	{"id": "carmesi_capucha", "station": "tailor", "name": "Cofia Carmesí", "cost": {"fibra": 3, "cuero_basto": 1}, "armor": "head", "set": "carmesi", "stats": {"armor": 3.0, "stamina": 2.3, "crit_chance": 0.01}},
+	{"id": "carmesi_jubon", "station": "leatherworker", "name": "Casaca Carmesí", "cost": {"fibra": 4, "cuero_basto": 3, "hueso": 1}, "armor": "chest", "set": "carmesi", "stats": {"armor": 6.0, "stamina": 3.8, "attack_power_bonus": 3.0}},
+	{"id": "carmesi_calzas", "station": "tailor", "name": "Calzas Carmesí", "cost": {"fibra": 3, "cuero_basto": 1}, "armor": "legs", "set": "carmesi", "stats": {"armor": 2.5, "stamina": 2.3}},
+	{"id": "carmesi_munequeras", "station": "leatherworker", "name": "Guantes Carmesí", "cost": {"cuero_basto": 2, "hueso": 1}, "armor": "hands", "set": "carmesi", "stats": {"armor": 1.5, "stamina": 0.8, "attack_power_bonus": 2.0}},
+	{"id": "carmesi_botas", "station": "leatherworker", "name": "Botas de Duelista", "cost": {"cuero_basto": 3, "fibra": 1}, "armor": "boots", "set": "carmesi", "stats": {"armor": 1.5, "stamina": 1.5}},
 	# Alquimia
 	{"id": "pocion_vida", "station": "alchemy", "name": "Poción de Vida", "cost": {"hierba_curativa": 2, "flor_silvestre": 1}, "gives": "pocion_vida", "amount": 1},
 	{"id": "elixir_fuerza", "station": "alchemy", "name": "Elixir de Fuerza", "cost": {"hongo": 2, "hierba_curativa": 1}, "gives": "elixir_fuerza", "amount": 1},
@@ -133,7 +159,8 @@ static func craft(recipe: Dictionary, warrior: WarriorSim, rng: RandomNumberGene
 			var stat: String = ItemFactory.AFFIX_STATS[rng.randi() % ItemFactory.AFFIX_STATS.size()]
 			item.stats[stat] = float(item.stats.get(stat, 0.0)) + (0.01 if stat == "crit_chance" else float(1 + rng.randi() % 3))
 	var equipped := Gear.give(item, warrior)
-	return "Forjaste %s [%s]%s" % [item.item_name, ItemRarity.display(item.rarity), " y lo equipaste" if equipped else " (va a tu mochila)"]
+	var where := " y lo equipaste" if equipped else (" (va a tu mochila)" if Gear.can_use(item, warrior.class_id) else " (tu clase no puede empuñarlo: va a la mochila)")
+	return "Forjaste %s [%s]%s" % [item.item_name, ItemRarity.display(item.rarity), where]
 
 
 static func category_of(recipe: Dictionary) -> String:
@@ -144,7 +171,13 @@ static func category_of(recipe: Dictionary) -> String:
 	return "Pociones"
 
 
-static func describe_result(recipe: Dictionary) -> String:
+static func describe_result(recipe: Dictionary, class_id: StringName = &"") -> String:
+	if recipe.has("weapon") and class_id != &"" and not (String(recipe["weapon"]) in Gear.CLASS_WEAPONS.get(class_id, [])):
+		return _describe_base(recipe) + "\n[color=#ff6666]Tu clase no puede empuñar este tipo de arma.[/color]"
+	return _describe_base(recipe)
+
+
+static func _describe_base(recipe: Dictionary) -> String:
 	if recipe.has("weapon"):
 		var base: Dictionary = ItemFactory.WEAPON_TYPES[recipe["weapon"]]
 		var dps := (2.0 + 0.7 * ITEM_LEVEL)

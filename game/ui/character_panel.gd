@@ -156,6 +156,9 @@ func refresh() -> void:
 		_bag.add_child(hint)
 	for item: Item in CharacterProfile.bag:
 		var b := _item_button(item)
+		if not Gear.can_use(item, warrior.class_id):
+			b.disabled = true
+			b.tooltip_text = item.describe() + "\n(Tu clase no puede empuñarlo)"
 		b.pressed.connect(func() -> void:
 			Gear.equip(item, warrior)
 			if sfx.is_valid():

@@ -2,7 +2,17 @@ extends Node3D
 ## Captures every outfit (male + female) side by side: front and back. CAPTURE_DIR must be set.
 ## godot --path . --resolution 1900x700 res://tools/outfit_preview.tscn
 
-var OUTFITS: Array = ["armor_footman", "armor_knight", "armor_hoplite", "armor_norse", "armor_dark", "warrior"] if OS.get_environment("ARMOR") != "" else ["peasant", "ranger", "warrior", "archer", "rogue", "mage"]
+var OUTFITS: Array = _cases()
+
+
+func _cases() -> Array:
+	if OS.get_environment("MIX") != "":  # piezas sueltas, 1 a 1 (crafteo pieza a pieza), con pelo
+		return [{"legs": "knight"}, {"boots": "hoplite"}, {"head": "norse"}, {"chest": "dark"}, {"hands": "footman", "legs": "footman"}, {"head": "hoplite", "chest": "knight", "legs": "norse", "boots": "dark", "hands": "footman"}]
+	if OS.get_environment("ROGUE") != "":
+		return ["armor_ladron", "armor_cuervo", "armor_desierto", "armor_bosque", "armor_carmesi", "warrior"]
+	if OS.get_environment("ARMOR") != "":
+		return ["armor_footman", "armor_knight", "armor_hoplite", "armor_norse", "armor_dark", "warrior"]
+	return ["peasant", "ranger", "warrior", "archer", "rogue", "mage"]
 
 func _ready() -> void:
 	var env := WorldEnvironment.new()
@@ -20,7 +30,12 @@ func _ready() -> void:
 	add_child(holder)
 	for sex_i in 2:
 		for i in n:
-			var opts := {"sex": ["male", "female"][sex_i], "outfit": OUTFITS[i], "hair": "buzzed" if sex_i == 0 else "long", "skin": "claro"}
+			var hair_id := OS.get_environment("HAIR") if OS.get_environment("HAIR") != "" else ("parted" if sex_i == 0 else "long")
+			var opts := {"sex": ["male", "female"][sex_i], "outfit": "peasant", "hair": hair_id, "skin": "claro"}
+			if OUTFITS[i] is Dictionary:
+				opts["gear"] = OUTFITS[i]
+			else:
+				opts["outfit"] = OUTFITS[i]
 			var c := CharacterBuilder.build(opts)
 			c.position = Vector3((i - (n - 1) * 0.5) * 1.0, 0, -sex_i * 0.0)
 			c.position.y = -sex_i * 2.0
@@ -46,7 +61,7 @@ func _ready() -> void:
 	cam.size = float(OS.get_environment("ZS")) if OS.get_environment("ZS") != "" else 2.0
 	cam.position = Vector3((zi - (n - 1) * 0.5) * 1.0, float(OS.get_environment("ZY")) if OS.get_environment("ZY") != "" else 1.0, 8.0)
 	holder.rotation_degrees.y = 0
-	for v: float in [25.0, 155.0]:
+	for v: float in [25.0, 155.0, 90.0]:
 		holder.rotation_degrees.y = v
 		cam.position.y = float(OS.get_environment("ZY")) if OS.get_environment("ZY") != "" else 1.0
 		cam.position.x = (zi - (n - 1) * 0.5) * cos(deg_to_rad(v)) * 1.0

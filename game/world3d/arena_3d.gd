@@ -45,6 +45,7 @@ var warrior_actor: WarriorActor3D
 var dummy_actors: Array[DummyActor3D] = []
 var enemy_actors: Array[WarriorActor3D] = []
 var gather_nodes: Array = []
+var exit_portal: Node3D
 var enemy_index: Dictionary = {}  # WarriorSim -> índice en el piso (para guardar el progreso)
 var town_buildings: Array = []
 var _inside_building: String = ""
@@ -119,6 +120,7 @@ func build_town(p_world: CombatWorld, data: Dictionary) -> void:
 	warrior_actor.name = "Player"
 	add_child(warrior_actor)
 	warrior_actor.setup(world.warrior, self)
+	warrior_actor.set_peaceful(true)
 
 
 ## Piso de la torre (ver MeadowFloor): sin Level del editor, enemigos por campamento.
@@ -134,6 +136,8 @@ func build_floor(p_world: CombatWorld, data: Dictionary, save: Dictionary = {}) 
 	world.warrior.reset(data["spawn"])
 	_static_parent = self
 	MeadowFloor.build(self, data)
+	exit_portal = Town.make_portal(self, data["exit"], Color(0.35, 1.0, 0.55), 0.6)
+	exit_portal.visible = false  # se abre al cumplir la misión del piso
 	start_ambient()
 	gather_nodes = MeadowFloor.build_gather(self, data)
 	var taken_before: Array = save.get("gathered", [])

@@ -210,8 +210,7 @@ func _update_dot_aura() -> void:
 		_dot_aura.queue_free()
 		_dot_aura = null
 	if type >= 0:
-		var color: Color = ArcaneFx.POISON if type == DamageSystem.Type.POISON else DamageSystem.color_of(type)
-		_dot_aura = ArcaneFx.dot_aura(color)
+		_dot_aura = ArcaneFx.dot_aura_for(type)
 		add_child(_dot_aura)
 
 

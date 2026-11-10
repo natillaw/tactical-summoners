@@ -245,6 +245,41 @@ static func rising_puffs(color: Color, amount: int = 24, radius: float = 0.4, si
 
 
 ## Aura de efecto en el tiempo sobre un enemigo (burbujas del color del DoT).
+## Efecto de daño en el tiempo según el tipo: sangrado = gotas rojas que caen; veneno = burbujas verdes; resto = burbujas del color del daño.
+static func dot_aura_for(type: int) -> CPUParticles3D:
+	if type == DamageSystem.Type.PHYSICAL:
+		var drops := sparks(Color(0.8, 0.04, 0.05), 14, 0.7, 0.5, 0.1, false, "circle_05")
+		drops.position.y = 1.3
+		drops.emission_sphere_radius = 0.25
+		drops.direction = Vector3.DOWN
+		drops.spread = 25.0
+		drops.gravity = Vector3(0, -4.0, 0)
+		drops.damping_min = 0.0
+		drops.damping_max = 0.0
+		return drops
+	return dot_aura(POISON if type == DamageSystem.Type.POISON else DamageSystem.color_of(type))
+
+
+## Cuchillo giratorio (Mark for Death): hoja que gira sobre su eje de avance, con halo rojo y estela.
+static func make_spinning_knife(color: Color) -> Node3D:
+	var holder := Node3D.new()
+	var spinner := Node3D.new()
+	spinner.name = "Spinner"
+	holder.add_child(spinner)
+	var knife := _knife()
+	knife.scale = Vector3(1.6, 1.0, 1.6)
+	spinner.add_child(knife)
+	var halo := MeshInstance3D.new()
+	var quad := QuadMesh.new()
+	quad.size = Vector2(0.7, 0.7)
+	quad.material = _additive(color, 0.9, "star_04")
+	halo.mesh = quad
+	holder.add_child(halo)
+	var trail := sparks(color, 18, 0.35, 0.4, 0.14, false, "spark_05")
+	holder.add_child(trail)
+	return holder
+
+
 static func dot_aura(color: Color) -> CPUParticles3D:
 	var p := rising_puffs(color, 18, 0.35, 0.13, 0.9)
 	p.position.y = 0.2

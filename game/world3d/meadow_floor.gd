@@ -13,8 +13,9 @@ const SIZE := Vector2(3200.0, 2200.0)
 const NATURE := "res://assets/models/nature/"
 const PROPS := "res://assets/models/props_fantasy/"
 
-## Solo pinos: las hojas de CommonTree/TwistedTree/Bush se ven rojas en Godot (pendiente de investigar).
-const TREES := ["Pine_1", "Pine_2", "Pine_3"]
+## Pinos y árboles comunes (verdes). Los árboles rojos (TwistedTree, Bush_Common) y los secos grises (DeadTree) quedan reservados para el tier +10; no se usan en los pisos 1-10.
+const TREES := ["Pine_1", "Pine_2", "Pine_3", "CommonTree_1", "CommonTree_2", "CommonTree_3", "CommonTree_4"]
+const AUTUMN_TREES := ["TwistedTree_1", "TwistedTree_2"]
 const ROCKS := ["Rock_Medium_1", "Rock_Medium_2", "Rock_Medium_3"]
 const GRASS := ["Grass_Common_Tall", "Grass_Common_Short", "Grass_Wispy_Tall", "Clover_1", "Fern_1"]
 const FLOWERS := ["Flower_3_Group", "Flower_4_Group", "Petal_1", "Plant_1_Big"]
@@ -37,6 +38,30 @@ const CAMPS := [
 	]},
 ]
 const KILL_GOAL := 10
+const CAMP_NAMES := ["La Avanzada", "El Claro del Bosque", "La Cumbre", "El Vado", "La Hondonada"]
+const MAX_FLOOR := 10  # pisos 1-10: praderas; los siguientes cambiarán de temática
+
+
+## Composición de un campamento. Piso 1: las listas de CAMPS (10 enemigos en total). Pisos 2+: más esbirros,
+## élites desde el segundo campamento, campeones desde el 5 y un coloso en el último campamento cada 5 pisos.
+static func _roster(rng: RandomNumberGenerator, floor_number: int, camp_index: int, camp_total: int) -> Array:
+	if floor_number <= 1:
+		var options: Array = CAMPS[mini(camp_index, CAMPS.size() - 1)]["options"]
+		return options[rng.randi() % options.size()]
+	var minion_pool := ["esbirro", "esbirro", "esbirro_arquero", "esbirro_mago"]
+	var elite_pool := ["soldado", "guardian", "duelista", "hechicero", "cazador"]
+	if floor_number >= 5:
+		elite_pool.append("campeon")
+	var roster: Array = []
+	var minions := 3 + floor_number / 2 - (1 if camp_index > 0 else 0)
+	var elites := 0 if camp_index == 0 else 1 + floor_number / 4 + (1 if camp_index == camp_total - 1 and floor_number >= 6 else 0)
+	for i in range(mini(minions, 7)):
+		roster.append(minion_pool[rng.randi() % minion_pool.size()])
+	for i in range(mini(elites, 4)):
+		roster.append(elite_pool[rng.randi() % elite_pool.size()])
+	if floor_number % 5 == 0 and camp_index == camp_total - 1:
+		roster.append("coloso")
+	return roster
 
 
 ## Mundo abierto: claros ("salas") cercados de árboles repartidos por un bosque con manchas de densidad,
@@ -49,7 +74,8 @@ static func generate(seed_value: int, floor_number: int = 1) -> Dictionary:
 	var spawn := Vector2(rng.randf_range(260.0, 420.0), rng.randf_range(600.0, 1600.0))
 	clearings.append({"center": spawn, "radius": 200.0})
 	var tries := 0
-	while clearings.size() < 7 and tries < 400:
+	var clearing_goal := 7 + floor_number / 3
+	while clearings.size() < clearing_goal and tries < 600:
 		tries += 1
 		var radius := rng.randf_range(220.0, 300.0)
 		var center := Vector2(rng.randf_range(520.0, SIZE.x - 300.0), rng.randf_range(320.0, SIZE.y - 320.0))
@@ -64,19 +90,29 @@ static func generate(seed_value: int, floor_number: int = 1) -> Dictionary:
 	order.sort_custom(func(x: Dictionary, y: Dictionary) -> bool: return spawn.distance_to(x["center"]) < spawn.distance_to(y["center"]))
 	var camp_clearings: Array = []
 	var n := order.size()
-	for k in [0, n / 2, n - 1]:
-		if not camp_clearings.has(order[k]):
-			camp_clearings.append(order[k])
+	var camp_count := mini(3 + floor_number / 4, n)
+	for k in range(camp_count):
+		var pick: Variant = order[int(round(float(k) * float(n - 1) / float(maxi(camp_count - 1, 1))))]
+		if not camp_clearings.has(pick):
+			camp_clearings.append(pick)
 	var camps: Array = []
 	for i in range(camp_clearings.size()):
 		var center: Vector2 = camp_clearings[i]["center"]
-		var options: Array = CAMPS[i]["options"]
-		var roster: Array = options[rng.randi() % options.size()]
+		var roster: Array = _roster(rng, floor_number, i, camp_clearings.size())
 		var enemies: Array = []
 		for k in range(roster.size()):
 			var angle := TAU * (float(k) + rng.randf_range(-0.2, 0.2)) / float(roster.size())
-			enemies.append({"arch": roster[k], "pos": center + Vector2(cos(angle), sin(angle)) * rng.randf_range(65.0, 115.0), "level": 1})
-		camps.append({"name": CAMPS[i]["name"], "center": center, "enemies": enemies})
+			enemies.append({"arch": roster[k], "pos": center + Vector2(cos(angle), sin(angle)) * rng.randf_range(65.0, 115.0), "level": floor_number})
+		camps.append({"name": CAMP_NAMES[i % CAMP_NAMES.size()], "center": center, "enemies": enemies})
+	# Salida al piso siguiente: en la sala más lejana sin campamento (o la más lejana de todas).
+	var exit_pos := Vector2.ZERO
+	var exit_dist := -1.0
+	for c: Dictionary in order:
+		var has_camp := camp_clearings.has(c)
+		var d := spawn.distance_to(c["center"]) - (600.0 if has_camp else 0.0)
+		if d > exit_dist:
+			exit_dist = d
+			exit_pos = (c["center"] as Vector2) + Vector2(0.0, -95.0)
 	# Senderos: cada sala se une con la más cercana ya conectada (árbol de expansión), con curvas.
 	var trails: Array = []
 	var linked: Array = [clearings[0]]
@@ -107,6 +143,7 @@ static func generate(seed_value: int, floor_number: int = 1) -> Dictionary:
 	_place_trail_stones(rng, trails, decor)
 	var gather: Array = []
 	_place_gather(rng, ctx, gather, taken)
+	_place_chests(rng, clearings, camps, spawn, gather)
 
 	var enemy_total := 0
 	for camp: Dictionary in camps:
@@ -114,7 +151,7 @@ static func generate(seed_value: int, floor_number: int = 1) -> Dictionary:
 	return {
 		"seed": seed_value, "floor": floor_number, "name": "Praderas", "bounds": Rect2(Vector2.ZERO, SIZE),
 		"spawn": spawn, "clearings": clearings, "trails": trails, "camps": camps, "decor": decor, "obstacles": obstacles, "gather": gather,
-		"quest": {"title": "Limpia las praderas", "kill": KILL_GOAL, "enemies": enemy_total},
+		"exit": exit_pos, "quest": {"title": "Limpia las praderas", "kill": enemy_total, "enemies": enemy_total},
 	}
 
 
@@ -199,8 +236,7 @@ static func _place_rooms(rng: RandomNumberGenerator, clearings: Array, camps: Ar
 				is_camp = true
 		if is_camp or center == spawn:
 			continue
-		_add(decor, PROPS, "Chest_Wood", center, rng.randf() * TAU, 1.0)
-		obstacles.append({"position": center, "radius": 16.0})
+		obstacles.append({"position": center, "radius": 16.0})  # el cofre (nodo de recolección) se coloca en _place_chests
 		taken.append([center, 40.0])
 		for prop in ["Bench", "Banner_1", "Barrel", "Stool"]:
 			var angle := rng.randf() * TAU
@@ -226,7 +262,7 @@ static func _place_trees(rng: RandomNumberGenerator, ctx: Dictionary, decor: Arr
 	var noise := FastNoiseLite.new()
 	noise.seed = rng.randi()
 	noise.frequency = 0.0022
-	for attempt in range(1300):
+	for attempt in range(950):
 		var point := Vector2(rng.randf_range(30.0, SIZE.x - 30.0), rng.randf_range(30.0, SIZE.y - 30.0))
 		var edge := minf(minf(point.x, SIZE.x - point.x), minf(point.y, SIZE.y - point.y))
 		var patch := clampf(noise.get_noise_2dv(point) * 1.6 + 0.35, 0.0, 1.0)
@@ -264,14 +300,16 @@ static func _place_scatter(rng: RandomNumberGenerator, ctx: Dictionary, decor: A
 			_add(decor, NATURE, ROCKS[rng.randi() % ROCKS.size()], point, rng.randf() * TAU, scale)
 			obstacles.append({"position": point, "radius": 24.0 * scale})
 			taken.append([point, 38.0 * scale])
-	for attempt in range(520):  # hierba y flores: densas en claros y senderos, ralas en el bosque
+	for attempt in range(420):  # hierba y flores: densas en claros y senderos, ralas en el bosque
 		var point := Vector2(rng.randf_range(0.0, SIZE.x), rng.randf_range(0.0, SIZE.y))
 		var gap := _clearing_gap(point, ctx["clearings"])
 		if _trail_distance(point, trails) < 35.0:
 			continue
 		if gap > 120.0 and rng.randf() < 0.45:
 			continue
-		if rng.randf() < 0.22:
+		if rng.randf() < 0.05:
+			_add(decor, NATURE, "Bush_Common_Flowers", point, rng.randf() * TAU, rng.randf_range(0.8, 1.3))
+		elif rng.randf() < 0.22:
 			_add(decor, NATURE, FLOWERS[rng.randi() % FLOWERS.size()], point, rng.randf() * TAU, rng.randf_range(0.8, 1.3))
 		else:
 			_add(decor, NATURE, GRASS[rng.randi() % GRASS.size()], point, rng.randf() * TAU, rng.randf_range(0.8, 1.5))
@@ -311,6 +349,18 @@ static func _place_gather(rng: RandomNumberGenerator, ctx: Dictionary, gather: A
 			gather.append({"kind": kind, "mat": spec["mat"], "pos": point, "amount": rng.randi_range(int(amount[0]), int(amount[1])), "yaw": rng.randf() * TAU})
 			taken.append([point, 34.0])
 			placed += 1
+
+
+## Cofres: uno en el centro de cada sala sin campamento (el botín sale del azar de la semilla al abrirlo).
+static func _place_chests(rng: RandomNumberGenerator, clearings: Array, camps: Array, spawn: Vector2, gather: Array) -> void:
+	for c: Dictionary in clearings:
+		var center: Vector2 = c["center"]
+		var occupied := center == spawn
+		for camp: Dictionary in camps:
+			if camp["center"] == center:
+				occupied = true
+		if not occupied:
+			gather.append({"kind": "chest", "mat": "", "pos": center, "amount": 1, "yaw": rng.randf() * TAU})
 
 
 static func _place_trail_stones(rng: RandomNumberGenerator, trails: Array, decor: Array) -> void:
@@ -377,7 +427,7 @@ static func build_decor(holder: Node3D, decor: Array) -> void:
 					shadowless = true
 			node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if shadowless else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 			# Distancia de dibujo por tipo (el chunk se mide desde su centro): calidad cerca, ahorro lejos.
-			var reach := 55.0
+			var reach := 42.0
 			if path.contains("Grass") or path.contains("Fern") or path.contains("Clover") or path.contains("Flower") or path.contains("Petal") or path.contains("Plant") or path.contains("Mushroom"):
 				reach = 30.0
 			elif path.contains("RockPath"):
@@ -415,7 +465,7 @@ static func build_gather(parent: Node3D, data: Dictionary) -> Array:
 	parent.add_child(holder)
 	for entry: Dictionary in data["gather"]:
 		var spec: Dictionary = Materials.NODES[entry["kind"]]
-		var path := NATURE + String(spec["model"]) + ".gltf"
+		var path := (PROPS if entry["kind"] == "chest" else NATURE) + String(spec["model"]) + ".gltf"
 		var scene := load(path) as PackedScene
 		var root := Node3D.new()
 		root.position = View3D.to3(entry["pos"])
@@ -426,7 +476,7 @@ static func build_gather(parent: Node3D, data: Dictionary) -> Array:
 			model.rotation.y = float(entry["yaw"])
 			model.scale = Vector3.ONE * float(spec["scale"])
 			root.add_child(model)
-		var color: Color = Materials.DEFS[entry["mat"]]["color"]
+		var color: Color = Color(1.0, 0.85, 0.35) if entry["kind"] == "chest" else Materials.DEFS[entry["mat"]]["color"]
 		var glint := ArcaneFx.sparks(color, 7, 1.8, 0.35, 0.12, false)
 		glint.position.y = 0.5
 		root.add_child(glint)

@@ -22,6 +22,8 @@ var _quick_cast_enabled: bool = true  # X alterna; solo aplica en top-down
 var _floor: Dictionary = {}
 var _town: Dictionary = {}
 var _floor_save: Dictionary = {}
+var _exit_open: bool = false
+var _quality_step: int = 0
 var npc_panel: NpcPanel
 var char_panel: CharacterPanel
 var unit_bars: UnitBars
@@ -61,6 +63,7 @@ func _ready() -> void:
 			_floor_save = CharacterProfile.floor_saves[fl]
 			_floor = MeadowFloor.generate(int(_floor_save["seed"]), fl)
 			_quest_done = bool(_floor_save["done"])
+			_exit_open = _quest_done
 			arena.build_floor(world, _floor, _floor_save)
 			_build_quest_ui()
 			_drop_rng.seed = int(_floor_save["seed"]) * 7919
@@ -93,6 +96,8 @@ func _ready() -> void:
 	world.warrior.weapon_changed.connect(func(_i: Item) -> void: _refresh_status())
 	_refresh_status()
 	TickManager.register(world)
+	if CharacterProfile.chosen:
+		SaveGame.save()
 
 
 func _ui_sfx(category: StringName, volume_db: float = -8.0) -> void:
@@ -104,6 +109,12 @@ func _modal_open() -> bool:
 
 
 func _save_progress() -> void:
+	_save_progress_state()
+	if CharacterProfile.chosen:  # solo partidas reales (no escenas de prueba)
+		SaveGame.save()
+
+
+func _save_progress_state() -> void:
 	if world != null and CharacterProfile.mode == "floor" and not _floor_save.is_empty():
 		var dead: Array = (_floor_save["dead"] as Array).duplicate()
 		for fighter: WarriorSim in arena.enemy_index:
@@ -179,8 +190,17 @@ func _nearest_station() -> Dictionary:
 	return best
 
 
+func _nearest_exit() -> bool:
+	return CharacterProfile.mode == "floor" and _quest_done and int(_floor["floor"]) < MeadowFloor.MAX_FLOOR and world.warrior.position.distance_to(_floor["exit"]) < 150.0
+
+
 func _interact() -> void:
 	if not world.warrior.alive or _modal_open():
+		return
+	if _nearest_exit():
+		arena.play_sfx(&"portal", -4.0)
+		CharacterProfile.current_floor = int(_floor["floor"]) + 1
+		_goto("floor")
 		return
 	var st := _nearest_station()
 	if not st.is_empty():
@@ -238,7 +258,26 @@ func _nearest_gather() -> Dictionary:
 	return best
 
 
+func _open_chest(entry: Dictionary) -> void:
+	entry["left"] = false
+	(entry["node"] as Node3D).visible = false
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(_floor_save["seed"]) * 31 + int((entry["data"]["pos"] as Vector2).x)  # el botín depende de la semilla del piso
+	var loot := Materials.roll_chest(rng, int(_floor["floor"]))
+	var parts: Array = []
+	for id: String in loot:
+		Materials.add(id, int(loot[id]))
+		parts.append("+%d %s" % [loot[id], Materials.display(id)])
+	arena.play_sfx(&"coin", -5.0)
+	arena.play_sfx(&"gather_wood", -9.0)
+	ArcaneFx.burst(arena, View3D.to3(entry["data"]["pos"], 0.8), Color(1.0, 0.85, 0.35), 30, 2.6, 0.13)
+	_toast("Cofre: " + ", ".join(parts))
+
+
 func _gather(entry: Dictionary) -> void:
+	if String(entry["data"]["kind"]) == "chest":
+		_open_chest(entry)
+		return
 	entry["left"] = false
 	(entry["node"] as Node3D).visible = false
 	var mat := String(entry["data"]["mat"])
@@ -269,9 +308,9 @@ func _update_gather_ui(delta: float) -> void:
 	if npc_panel != null and npc_panel.visible:
 		_hint_label.text = ""
 	elif not station.is_empty():
-		_hint_label.text = "[F] Entrar a la Torre" if station["id"] == "portal" else "[F] Hablar con %s" % station["npc"]
+		_hint_label.text = ("[F] Entrar a la Torre: piso %d   (←/→ cambiar · máx %d)" % [CharacterProfile.current_floor, CharacterProfile.max_floor]) if station["id"] == "portal" else "[F] Hablar con %s" % station["npc"]
 	else:
-		_hint_label.text = "" if near.is_empty() else "[F] Recoger: %s" % Materials.NODES[near["data"]["kind"]]["label"]
+		_hint_label.text = "[F] Subir al piso %d" % (int(_floor["floor"]) + 1) if _nearest_exit() else "" if near.is_empty() else "[F] Recoger: %s" % Materials.NODES[near["data"]["kind"]]["label"]
 	if _elixir_time > 0.0:
 		_elixir_time -= delta
 		if _elixir_time <= 0.0:
@@ -303,11 +342,14 @@ func _update_quest() -> void:
 	if kills >= goal:
 		if not _quest_done:
 			arena.play_sfx(&"quest_done", -4.0)
+			CharacterProfile.max_floor = maxi(CharacterProfile.max_floor, mini(int(_floor["floor"]) + 1, MeadowFloor.MAX_FLOOR))
 		_quest_done = true
+		if arena.exit_portal != null:
+			arena.exit_portal.visible = int(_floor["floor"]) < MeadowFloor.MAX_FLOOR
 	if _quest_done:
 		_quest_label.text = "PISO %d · %s
 ¡Misión cumplida! (%d/%d)
-Enter: volver al pueblo  ·  F3: cambiar modo" % [_floor["floor"], _floor["name"], kills, goal]
+%s" % [_floor["floor"], _floor["name"], kills, goal, ("Portal verde abierto: [F] sube al piso %d  ·  Enter: pueblo" % (int(_floor["floor"]) + 1)) if int(_floor["floor"]) < MeadowFloor.MAX_FLOOR else "¡Praderas completadas!  ·  Enter: pueblo"]
 		_quest_label.add_theme_color_override("font_color", Color(0.6, 1.0, 0.5))
 	else:
 		_quest_label.text = "PISO %d · %s
@@ -341,6 +383,16 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.physical_keycode:
 			KEY_F: _interact()
+			KEY_F11:  # calidad gráfica: 100% -> 77% -> 59% de resolución interna con reescalado FSR
+				_quality_step = (_quality_step + 1) % 3
+				var scale: float = [1.0, 0.77, 0.59][_quality_step]
+				get_viewport().scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR if scale >= 1.0 else Viewport.SCALING_3D_MODE_FSR
+				get_viewport().scaling_3d_scale = scale
+				_toast("Calidad gráfica: %d%%" % int(scale * 100.0))
+			KEY_LEFT, KEY_RIGHT:  # junto al portal del pueblo: elegir piso entre los desbloqueados
+				var here := _nearest_station()
+				if CharacterProfile.mode == "town" and not here.is_empty() and here["id"] == "portal":
+					CharacterProfile.current_floor = clampi(CharacterProfile.current_floor + (1 if event.physical_keycode == KEY_RIGHT else -1), 1, CharacterProfile.max_floor)
 			KEY_I:
 				if not (npc_panel != null and npc_panel.visible):
 					char_panel.toggle()
@@ -376,7 +428,14 @@ func _unhandled_input(event: InputEvent) -> void:
 			arena.tp_zoom_by(0.1)
 
 
+var _autosave_clock: float = 0.0
+
+
 func _process(_delta: float) -> void:
+	_autosave_clock += _delta
+	if _autosave_clock > 45.0 and CharacterProfile.chosen:  # autoguardado cada 45 s
+		_autosave_clock = 0.0
+		_save_progress()
 	var want := Input.MOUSE_MODE_CAPTURED if not (loadout_panel.visible or arena.topdown) else Input.MOUSE_MODE_VISIBLE
 	if Input.mouse_mode != want:
 		Input.mouse_mode = want
@@ -384,6 +443,11 @@ func _process(_delta: float) -> void:
 	_update_ground_marker()
 	_update_quest()
 	_update_gather_ui(_delta)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		_save_progress()
 
 
 func _exit_tree() -> void:
@@ -433,15 +497,18 @@ func _read_input() -> InputMessage:
 		message.aim_point = mouse
 		message.has_aim_point = true
 
+	var in_town := CharacterProfile.mode == "town"
+	if in_town:  # en el pueblo se camina, no se corre ni se pelea
+		message.move_dir *= 0.5
 	message.actions = {
-		"m1": Input.is_action_pressed("attack_m1"),
-		"m2": Input.is_action_pressed("attack_m2"),
-		"shift": Input.is_action_pressed("slot_shift"),
-		"q": Input.is_action_pressed("slot_q"),
-		"e": Input.is_action_pressed("slot_e"),
-		"s1": Input.is_action_pressed("slot_1"),
-		"s2": Input.is_action_pressed("slot_2"),
-		"r": Input.is_action_pressed("slot_r"),  # ultimate
+		"m1": not in_town and Input.is_action_pressed("attack_m1"),
+		"m2": not in_town and Input.is_action_pressed("attack_m2"),
+		"shift": not in_town and Input.is_action_pressed("slot_shift"),
+		"q": not in_town and Input.is_action_pressed("slot_q"),
+		"e": not in_town and Input.is_action_pressed("slot_e"),
+		"s1": not in_town and Input.is_action_pressed("slot_1"),
+		"s2": not in_town and Input.is_action_pressed("slot_2"),
+		"r": not in_town and Input.is_action_pressed("slot_r"),  # ultimate
 		"interact": Input.is_action_just_pressed("interact"),
 	}
 	return message
