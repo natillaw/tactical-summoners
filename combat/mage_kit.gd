@@ -22,11 +22,13 @@ const RESOURCE_REGEN_DELAY: float = 2.0
 const RESOURCE_OOC_MULT: float = 4.0
 const ULTIMATE_COST: float = 100.0
 const SPECIAL_COST: float = 30.0
+## Armadura = Poise: cuánto daño de poise aguanta antes de entrar en stagger.
+const ARMOR: float = 25.0
 
 const SLOT_M1 := "M1"
 const SLOT_M2 := "M2"
-const SELECTABLE_SLOTS: Array = ["SHIFT", "Q", "E", "R", "F"]
-const SLOT_ORDER: Array = ["M1", "M2", "SHIFT", "Q", "E", "R", "F"]
+const SELECTABLE_SLOTS: Array = ["SHIFT", "Q", "E", "R", "S2", "F"]
+const SLOT_ORDER: Array = ["M1", "M2", "SHIFT", "Q", "E", "R", "S2", "F"]
 
 const ACTION_KEYS := {
 	"M1": "m1",
@@ -34,8 +36,9 @@ const ACTION_KEYS := {
 	"SHIFT": "shift",
 	"Q": "q",
 	"E": "e",
-	"R": "r",
-	"F": "f",
+	"R": "s1",
+	"S2": "s2",
+	"F": "r",
 }
 
 const SLOT_LABELS := {
@@ -44,8 +47,9 @@ const SLOT_LABELS := {
 	"SHIFT": "SHIFT",
 	"Q": "Q",
 	"E": "E",
-	"R": "R",
-	"F": "F",
+	"R": "1",
+	"S2": "2",
+	"F": "R",
 }
 
 ## M1: proyectil arcano sin cooldown.
@@ -64,12 +68,23 @@ const M1: Dictionary = {
 	"rage_gain": 0.0, "move_factor": 0.6, "color": [0.7, 0.5, 1.0],
 }
 
-## M2: bola de fuego con quemadura.
+## M2: Mana Shield. Mantén para absorber daño gastando 1 maná por punto absorbido; al empezar, Arcane Deflection.
 const M2: Dictionary = {
+	"id": &"mana_shield", "name": "Mana Shield", "short": "SHIELD", "slot": "M2",
+	"kind": "defense", "role": "Defensa", "implemented": true, "selectable": false,
+	"description": "Mantén M2: escudo de maná en todas direcciones que absorbe daño gastando 1 maná por punto. Si se acaba el maná se rompe. En los primeros 0.2 s es Arcane Deflection: anula el golpe, lo devuelve al atacante y, si era físico, rompe su poise.",
+	"cast": "mana_shield", "anim": "cast", "damage_type": 7, "perfect_window": 0.2, "mana_per_damage": 1.0,
+	"clip": {"name": "standing_2h_cast_spell_01", "start": 0.3, "contact": 0.63, "end": 1.2},
+	"windup": 0.0, "active": 0.0, "recovery": 0.0, "cooldown": 0.0, "cost": 0.0, "move_factor": 0.6,
+	"color": [0.7, 0.5, 1.0],
+}
+
+## M2: bola de fuego con quemadura.
+const ARCANE_ORB: Dictionary = {
 	"id": &"arcane_orb",
-	"clip": {"name": "standing_2h_magic_attack_01", "start": 0.4, "contact": 1.13, "end": 1.7}, "name": "Arcane Orb", "short": "ORB", "slot": "M2",
+	"clip": {"name": "standing_2h_magic_attack_01", "start": 0.4, "contact": 1.13, "end": 1.7}, "name": "Arcane Orb", "short": "ORB", "slot": "Q",
 	"kind": "basic", "role": "Daño / quemadura", "description": "Cast 0.9 s (quieto): orbe arcano lento que corroe al objetivo.",
-	"implemented": true, "selectable": false, "cast": "projectile", "cast_bar": true, "anim": "cast",
+	"implemented": true, "selectable": true, "cast": "projectile", "cast_bar": true, "anim": "cast",
 	"damage_type": 7,  # DamageSystem.Type.ARCANE
 	"windup": 0.9, "active": 0.05, "recovery": 0.25, "cooldown": 2.5, "cost": 10.0,
 	"speed": 420.0, "range": 520.0, "hit_radius": 14.0, "damage_mult": 1.8,
@@ -91,7 +106,7 @@ const BLINK: Dictionary = {
 
 const ARCANE_PULSE: Dictionary = {
 	"id": &"arcane_pulse",
-	"clip": {"name": "standing_2h_magic_area_attack_01", "start": 0.95, "contact": 1.27, "end": 1.8}, "name": "Arcane Pulse", "short": "PULSE", "slot": "Q",
+	"clip": {"name": "standing_2h_magic_area_attack_01", "start": 0.95, "contact": 1.27, "end": 1.8}, "name": "Arcane Pulse", "short": "PULSE", "slot": "E",
 	"kind": "control", "role": "Control", "description": "Pulso arcano a tu alrededor: daña y ralentiza.",
 	"implemented": true, "selectable": true, "cast": "aoe", "anim": "cast",
 	"damage_type": 7,  # DamageSystem.Type.ARCANE
@@ -102,7 +117,7 @@ const ARCANE_PULSE: Dictionary = {
 
 const ARCANE_RIFT: Dictionary = {
 	"id": &"arcane_rift",
-	"clip": {"name": "standing_2h_cast_spell_01", "start": 0.33, "contact": 0.63, "end": 1.3}, "name": "Arcane Rift", "short": "RIFT", "slot": "E",
+	"clip": {"name": "standing_2h_cast_spell_01", "start": 0.33, "contact": 0.63, "end": 1.3}, "name": "Arcane Rift", "short": "RIFT", "slot": "R",
 	"kind": "control", "role": "Daño en el tiempo", "description": "Apunta al suelo: grieta arcana que corroe a quienes la pisan.",
 	"implemented": true, "selectable": true, "cast": "aoe", "anim": "cast", "target": "ground",
 	"damage_type": 7,  # DamageSystem.Type.ARCANE
@@ -114,7 +129,7 @@ const ARCANE_RIFT: Dictionary = {
 
 const STARFALL: Dictionary = {
 	"id": &"starfall",
-	"clip": {"name": "standing_2h_magic_area_attack_02", "start": 0.5, "contact": 1.8, "end": 2.4}, "name": "Starfall", "short": "STARFALL", "slot": "R",
+	"clip": {"name": "standing_2h_magic_area_attack_02", "start": 0.5, "contact": 1.8, "end": 2.4}, "name": "Starfall", "short": "STARFALL", "slot": "S2",
 	"kind": "control", "role": "Daño en área", "description": "Apunta al suelo: un starfallo cae con gran daño de fuego.",
 	"implemented": true, "selectable": true, "cast": "aoe", "cast_bar": true, "anim": "cast", "target": "ground",
 	"damage_type": 7,
@@ -146,11 +161,16 @@ const SPECIAL: Dictionary = ARCANE_PULSE
 const ULTIMATE: Dictionary = ARCANE_SURGE
 
 const DEFAULT_LOADOUT: Dictionary = {
-	"SHIFT": &"blink", "Q": &"arcane_pulse", "E": &"arcane_rift", "R": &"starfall", "F": &"arcane_surge",
+	"SHIFT": &"blink",
+	"Q": &"arcane_orb",
+	"E": &"arcane_pulse",
+	"R": &"arcane_rift",
+	"S2": &"starfall",
+	"F": &"arcane_surge",
 }
 
-const ALL_ABILITIES: Array = [M1, M2, BLINK, ARCANE_PULSE, ARCANE_RIFT, STARFALL, ARCANE_SURGE]
-const POOL_ABILITIES: Array = [BLINK, ARCANE_PULSE, ARCANE_RIFT, STARFALL, ARCANE_SURGE]
+const ALL_ABILITIES: Array = [M1, M2, BLINK, ARCANE_ORB, ARCANE_PULSE, ARCANE_RIFT, STARFALL, ARCANE_SURGE]
+const POOL_ABILITIES: Array = [BLINK, ARCANE_ORB, ARCANE_PULSE, ARCANE_RIFT, STARFALL, ARCANE_SURGE]
 
 
 static func create_rage_resource() -> Rage:

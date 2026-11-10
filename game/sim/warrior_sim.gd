@@ -31,6 +31,10 @@ signal class_changed(class_id: StringName)
 signal visibility_changed(invisible: bool)
 signal cast_cancelled(skill: Dictionary)
 signal dot_damage(amount: float, meta: Dictionary)
+signal staggered(seconds: float)
+signal guard_changed(active: bool, kind: String)
+signal guard_result(kind: String, source: Vector2, physical: bool)
+signal perfect_evade()
 
 enum AttackState { IDLE, WINDUP, ACTIVE, RECOVERY }
 
@@ -79,6 +83,17 @@ var slow_timer: float = 0.0
 var slow_factor: float = 1.0
 var knock_vel: Vector2 = Vector2.ZERO
 var knock_timer: float = 0.0
+## Poise (= armadura): al llegar a 0 hay stagger. Defensa M2 mantenida (Block / Mana Shield).
+var poise: float = 100.0
+var max_poise: float = 100.0
+var stagger_immunity: float = 0.0
+var _since_poise_hit: float = 99.0
+var guarding: bool = false
+var guard_time: float = 0.0
+var guard_kind: String = ""
+var _m2_hold: bool = false
+var _dash_dir: Vector2 = Vector2.RIGHT
+var empowered_timer: float = 0.0
 var cc := CCDiminish.new()
 ## Resistencias por tipo de daño (DamageSystem.Type → fracción).
 var resist: Dictionary = {}
@@ -175,6 +190,9 @@ func recompute_stats(heal: bool) -> void:
 	max_health = (Progression.health_for(progression.level) + float(gear.get("stamina", 0.0)) * 10.0) * float(mods.get("health_mult", 1.0))
 	health = max_health if heal else clampf(ratio, 0.0, 1.0) * max_health
 	health_changed.emit(health, max_health)
+	var armor := float(kit.get_script_constant_map().get("ARMOR", 50.0)) + 0.6 * float(progression.level)
+	max_poise = armor * float(mods.get("armor_mult", 1.0))
+	poise = max_poise if heal else minf(poise, max_poise)
 
 
 ## Daño base de un golpe: tirada del arma normalizada + AP/14 · velocidad normalizada.
@@ -300,9 +318,13 @@ func _read_input(input: Variant) -> void:
 
 	var m2_pressed := bool(actions.get("m2", false))
 	var m2_was := bool(_prev_actions.get("m2", false))
-	if m2_pressed and not m2_was:
-		buffered_slot = "M2"
-		buffer_timer = BUFFER_SECONDS
+	if String(ability_for_slot("M2").get("cast", "")) in ["guard", "mana_shield"]:
+		_m2_hold = m2_pressed  # defensa mantenida
+	else:
+		_m2_hold = false
+		if m2_pressed and not m2_was:
+			buffered_slot = "M2"
+			buffer_timer = BUFFER_SECONDS
 	_prev_actions["m2"] = m2_pressed
 
 
@@ -325,6 +347,11 @@ func _to_vec(value: Variant) -> Vector2:
 
 
 func _tick_timers(delta: float) -> void:
+	stagger_immunity = maxf(0.0, stagger_immunity - delta)
+	empowered_timer = maxf(0.0, empowered_timer - delta)
+	_since_poise_hit += delta
+	if _since_poise_hit > 3.0 and poise < max_poise:
+		poise = minf(max_poise, poise + 25.0 * delta)
 	if slow_timer > 0.0:
 		slow_timer = maxf(0.0, slow_timer - delta)
 	if knock_timer > 0.0:
@@ -368,7 +395,96 @@ func _tick_timers(delta: float) -> void:
 # --- Ataques ----------------------------------------------------------------
 
 
+## Defensa mantenida: Block (Warrior) o Mana Shield (Mago).
+func _update_guard(delta: float) -> void:
+	var kind := String(ability_for_slot("M2").get("cast", ""))
+	var want := _m2_hold and alive and stun_timer <= 0.0 and state == AttackState.IDLE and kind in ["guard", "mana_shield"]
+	if kind == "mana_shield" and rage() < 1.0:
+		want = false
+	if want and not guarding:
+		guarding = true
+		guard_time = 0.0
+		guard_kind = "block" if kind == "guard" else "mana_shield"
+		guard_changed.emit(true, guard_kind)
+	elif want:
+		guard_time += delta
+	elif guarding:
+		guarding = false
+		guard_changed.emit(false, guard_kind)
+
+
+## Resuelve un golpe contra la defensa. Devuelve -1 si lo anula del todo, o el daño que pasa.
+func _guard_hit(amount: float, source: Vector2, effects: Dictionary) -> float:
+	var m2 := ability_for_slot("M2")
+	var type := DamageSystem.type_of(effects)
+	var physical := type == DamageSystem.Type.PHYSICAL
+	var attacker: Object = effects.get("attacker", null)
+	var perfect := guard_time <= float(m2.get("perfect_window", 0.2))
+	if guard_kind == "block":
+		if absf(rad_to_deg(aim_dir.angle_to(source - position))) > 100.0:
+			return amount  # de espaldas no hay bloqueo
+		if perfect:
+			# Perfect Parry: anula el golpe; si es físico lo contraataca y rompe el poise del atacante.
+			if physical and attacker != null and attacker.has_method("take_damage"):
+				attacker.take_damage(average_hit() * 1.5, position, {DamageSystem.KEY: type, "poise": 0.0})
+				if attacker.has_method("break_poise"):
+					attacker.break_poise()
+			guard_result.emit("perfect", source, physical)
+			return -1.0
+		_lose_poise(float(effects.get("poise", 0.0)) * 0.6)  # bloquear gasta poise
+		guard_result.emit("block", source, physical)
+		return amount * (1.0 - float(m2.get("block_reduction", 0.8) if physical else m2.get("spell_reduction", 0.4)))
+	# Mana Shield
+	if perfect:
+		# Arcane Deflection: devuelve el golpe; si era físico, rompe el poise del atacante.
+		if attacker != null and attacker.has_method("take_damage"):
+			attacker.take_damage(amount, position, {DamageSystem.KEY: DamageSystem.Type.ARCANE, "poise": 0.0})
+			if physical and attacker.has_method("break_poise"):
+				attacker.break_poise()
+		guard_result.emit("deflect", source, physical)
+		return -1.0
+	var per_damage := float(m2.get("mana_per_damage", 1.0))
+	var cost := amount * per_damage
+	var mana := rage()
+	if mana >= cost:
+		_spend_rage(cost)
+		guard_result.emit("absorb", source, physical)
+		return -1.0
+	_spend_rage(mana)
+	guarding = false
+	guard_changed.emit(false, guard_kind)
+	guard_result.emit("shield_break", source, physical)
+	return maxf(amount - mana / maxf(per_damage, 0.01), 0.0)
+
+
+func _lose_poise(amount: float) -> void:
+	if amount <= 0.0 or stagger_immunity > 0.0 or not alive:
+		return
+	poise -= amount
+	_since_poise_hit = 0.0
+	if poise <= 0.0:
+		_stagger(0.9)
+
+
+func _stagger(seconds: float) -> void:
+	poise = max_poise
+	stagger_immunity = seconds + 3.0  # sin cadenas infinitas de stagger
+	_apply_stun(seconds)
+	staggered.emit(seconds)
+
+
+## Un Perfect Parry/Deflection rompe el poise (ignora la inmunidad temporal).
+func break_poise() -> void:
+	if alive:
+		_stagger(1.3)
+
+
+func is_evading() -> bool:
+	return _is_evading()
+
+
 func _update_attack(delta: float) -> void:
+	_update_guard(delta)
 	if state == AttackState.IDLE:
 		_try_start_attack()
 		return
@@ -428,7 +544,7 @@ func _try_start_attack() -> void:
 		if buffer_timer <= 0.0:
 			buffered_slot = ""
 
-	if _m1_held and _can_start("M1"):
+	if _m1_held and not guarding and _can_start("M1"):
 		_start_ability("M1")
 
 
@@ -489,6 +605,9 @@ func _start_ability(slot: String) -> bool:
 	current_slot = slot
 	_cast_hit = false
 	attack_aim = aim_dir
+	_dash_dir = attack_aim * float(ability.get("dir", 1.0))
+	if String(ability.get("dash_dir", "")) == "move":
+		_dash_dir = move_input.normalized() if move_input.length() > 0.1 else -attack_aim
 	state = AttackState.WINDUP
 	state_time = 0.0
 	_hit_targets.clear()
@@ -524,7 +643,7 @@ func _enter_active() -> void:
 	var cast := String(current_skill.get("cast", "melee"))
 	match cast:
 		"dash":
-			cast_event.emit("dash_start", current_skill, position, attack_aim)
+			cast_event.emit("dash_start", current_skill, position, _dash_dir)
 		"counter":
 			parry_active = true
 			parry_window_end = float(current_skill.get("active", 0.45))
@@ -665,7 +784,7 @@ func _update_dash(delta: float) -> void:
 	var step := minf(distance / active_time * delta, _dash_remaining)
 	if step <= 0.0:
 		return
-	var desired := position + attack_aim * float(current_skill.get("dir", 1.0)) * step
+	var desired := position + _dash_dir * step
 	position = world.resolve_position(desired, RADIUS, self) if world != null else desired
 	_dash_remaining = maxf(0.0, _dash_remaining - step)
 	var hop := float(current_skill.get("hop", 0.0))
@@ -772,9 +891,14 @@ func _hit_target(target: Object, mult: float, effects: Dictionary, skill: Dictio
 	if bool(sk.get("flank", false)) and not _is_behind(target):
 		damage *= 0.8  # el Rogue pierde 20 % de daño si ataca de frente
 	damage *= float(mods.get("damage_mult", 1.0))
+	if empowered_timer > 0.0:
+		damage *= 1.4
 	var critical: bool = result["critical"]
 	var fx := effects.duplicate()
 	fx[DamageSystem.KEY] = type
+	fx["attacker"] = self
+	if type == DamageSystem.Type.PHYSICAL:
+		fx["poise"] = float(sk.get("poise", clampf(6.0 + 10.0 * mult, 6.0, 60.0)))
 	if fx.has("dot"):
 		var dot: Dictionary = (fx["dot"] as Dictionary).duplicate()
 		if dot.has("dps_mult"):
@@ -838,6 +962,8 @@ func _update_movement(delta: float) -> void:
 		factor = float(current_skill.get("move_factor", 0.25))
 		if state == AttackState.ACTIVE:
 			factor *= 0.5
+	elif guarding:
+		factor = float(ability_for_slot("M2").get("move_factor", 0.45))
 	if last_stand_active:
 		factor *= float(kit.PASSIVE.get("speed_bonus", 1.25))
 
@@ -913,6 +1039,12 @@ func take_damage(amount: float, source_position: Vector2 = Vector2.ZERO, effects
 	if not alive or amount <= 0.0:
 		return 0.0
 
+	if guarding and not bool(effects.get("tick", false)):
+		var guarded := _guard_hit(amount, source_position, effects)
+		if guarded < 0.0:
+			return 0.0
+		amount = guarded
+
 	if parry_active and not _parry_countered and _is_frontal(source_position):
 		_resolve_pending_parry()
 		parry_success.emit(current_skill, source_position)
@@ -920,6 +1052,9 @@ func take_damage(amount: float, source_position: Vector2 = Vector2.ZERO, effects
 
 	if _is_evading():
 		evaded.emit(amount)
+		if String(current_skill.get("reward", "")) == "empower":
+			empowered_timer = 1.5  # esquiva perfecta: siguiente ráfaga de disparos potenciada
+			perfect_evade.emit()
 		return 0.0
 
 	amount = DamageSystem.mitigate(amount, DamageSystem.type_of(effects), resist)
@@ -934,6 +1069,9 @@ func take_damage(amount: float, source_position: Vector2 = Vector2.ZERO, effects
 
 	_apply_dot_effect(effects)
 	_apply_status_effects(effects, source_position)
+	var poise_hit := float(effects.get("poise", 0.0))
+	if poise_hit > 0.0 and DamageSystem.type_of(effects) == DamageSystem.Type.PHYSICAL and health > 0.0:
+		_lose_poise(poise_hit)
 	var stun := cc.apply("stun", float(effects.get("stun", 0.0))) if effects.has("stun") else 0.0
 	if stun > 0.0 and health > 0.0:
 		_apply_stun(stun)
@@ -1020,6 +1158,9 @@ func _is_evading() -> bool:
 		return false
 	if not String(current_skill.get("cast", "")) in ["dash", "teleport"]:
 		return false
+	if current_skill.has("iframes"):
+		var window: Array = current_skill["iframes"]
+		return state_time >= float(window[0]) and state_time <= float(window[1])
 	return bool(current_skill.get("evade", false))
 
 
@@ -1297,6 +1438,10 @@ func reset(spawn: Vector2 = Vector2(480, 380)) -> void:
 	vertical_velocity = 0.0
 	stun_timer = 0.0
 	invisible_timer = 0.0
+	poise = max_poise
+	stagger_immunity = 0.0
+	guarding = false
+	empowered_timer = 0.0
 	cc.reset()
 	dots.clear()
 	state = AttackState.IDLE

@@ -131,8 +131,10 @@ func _read_input() -> InputMessage:
 		"jump": Input.is_action_pressed("jump"),
 		"q": Input.is_action_pressed("slot_q"),
 		"e": Input.is_action_pressed("slot_e"),
-		"r": Input.is_action_pressed("slot_r"),
-		"f": Input.is_action_pressed("slot_f"),
+		"s1": Input.is_action_pressed("slot_1"),
+		"s2": Input.is_action_pressed("slot_2"),
+		"r": Input.is_action_pressed("slot_r"),  # ultimate
+		"interact": Input.is_action_just_pressed("interact"),
 	}
 	return message
 

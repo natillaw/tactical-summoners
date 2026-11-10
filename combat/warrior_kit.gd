@@ -26,11 +26,13 @@ const RESOURCE_NAME: String = "Rage"
 const MAX_RAGE: float = 100.0
 const ULTIMATE_COST: float = 100.0
 const SPECIAL_COST: float = 30.0
+## Armadura = Poise: cuánto daño de poise aguanta antes de entrar en stagger.
+const ARMOR: float = 100.0
 
 const SLOT_M1 := "M1"
 const SLOT_M2 := "M2"
-const SELECTABLE_SLOTS: Array = ["SHIFT", "Q", "E", "R", "F"]
-const SLOT_ORDER: Array = ["M1", "M2", "SHIFT", "Q", "E", "R", "F"]
+const SELECTABLE_SLOTS: Array = ["SHIFT", "Q", "E", "R", "S2", "F"]
+const SLOT_ORDER: Array = ["M1", "M2", "SHIFT", "Q", "E", "R", "S2", "F"]
 
 const ACTION_KEYS := {
 	"M1": "m1",
@@ -38,8 +40,9 @@ const ACTION_KEYS := {
 	"SHIFT": "shift",
 	"Q": "q",
 	"E": "e",
-	"R": "r",
-	"F": "f",
+	"R": "s1",
+	"S2": "s2",
+	"F": "r",
 }
 
 const SLOT_LABELS := {
@@ -48,8 +51,9 @@ const SLOT_LABELS := {
 	"SHIFT": "SHIFT",
 	"Q": "Q",
 	"E": "E",
-	"R": "R",
-	"F": "F",
+	"R": "1",
+	"S2": "2",
+	"F": "R",
 }
 
 ## M1: combo de tres golpes. El multiplicador se indexa con combo_index.
@@ -88,17 +92,26 @@ const M1: Dictionary = {
 	"sfx": "slash",
 }
 
-## M2: estocada lineal, más alcance y daño que M1.
+## M2: Block. Mantén para bloquear con la espada; en los primeros 0.2 s es Perfect Parry.
 const M2: Dictionary = {
+	"id": &"block", "name": "Block", "short": "BLOCK", "slot": "M2",
+	"kind": "defense", "role": "Defensa", "implemented": true, "selectable": false,
+	"description": "Mantén M2 para bloquear (-80% daño físico, -40% hechizos, gasta poise). Justo al empezar es Perfect Parry: anula el golpe, lo contraataca y rompe el poise del enemigo (solo ataques físicos; a un hechizo solo le anula el daño). No gasta Rage.",
+	"cast": "guard", "anim": "slash", "perfect_window": 0.2, "block_reduction": 0.8, "spell_reduction": 0.4,
+	"windup": 0.0, "active": 0.0, "recovery": 0.0, "cooldown": 0.0, "cost": 0.0, "move_factor": 0.45,
+}
+
+## M2: estocada lineal, más alcance y daño que M1.
+const PIERCING_THRUST: Dictionary = {
 	"id": &"piercing_thrust",
 	"name": "Piercing Thrust",
 	"short": "THRUST",
-	"slot": "M2",
+	"slot": "Q",
 	"kind": "basic",
 	"role": "Daño / alcance",
 	"description": "Estocada estrecha y precisa que atraviesa a los enemigos en línea.",
 	"implemented": true,
-	"selectable": false,
+	"selectable": true,
 	"cast": "line",
 	"anim": "thrust",
 	"windup": 0.18,
@@ -201,7 +214,7 @@ const CHARGE: Dictionary = {
 	"id": &"charge",
 	"name": "Charge",
 	"short": "CHARGE",
-	"slot": "E",
+	"slot": "SHIFT",
 	"kind": "mobility",
 	"role": "Movilidad / iniciación",
 	"description": "Carga hacia delante; el primer enemigo alcanzado recibe daño y queda aturdido 1 s.",
@@ -328,19 +341,20 @@ const PASSIVE: Dictionary = {
 
 ## Alias de compatibilidad: la Special del kit actual es Parry y la Ultimate
 ## es Bladestorm. El loadout sólo expone las cinco habilidades seleccionables.
-const SPECIAL: Dictionary = PARRY
+const SPECIAL: Dictionary = BLADESTORM
 const ULTIMATE: Dictionary = BLADESTORM
 
 const DEFAULT_LOADOUT: Dictionary = {
-	"SHIFT": &"combat_roll",
-	"Q": &"parry",
-	"E": &"charge",
+	"SHIFT": &"charge",
+	"Q": &"piercing_thrust",
+	"E": &"",
 	"R": &"seismic_break",
+	"S2": &"",
 	"F": &"bladestorm",
 }
 
-const ALL_ABILITIES: Array = [M1, M2, COMBAT_ROLL, PARRY, CHARGE, SEISMIC_BREAK, BLADESTORM]
-const POOL_ABILITIES: Array = [COMBAT_ROLL, PARRY, CHARGE, SEISMIC_BREAK, BLADESTORM]
+const ALL_ABILITIES: Array = [M1, M2, CHARGE, PIERCING_THRUST, SEISMIC_BREAK, BLADESTORM]
+const POOL_ABILITIES: Array = [CHARGE, PIERCING_THRUST, SEISMIC_BREAK, BLADESTORM]
 
 
 static func create_rage_resource() -> Rage:

@@ -97,6 +97,8 @@ var _align_yaw: float = 0.0
 var _swing_dir: float = 1.0
 var _orbs: Dictionary = {}
 var _cast_index: int = 0
+var _shield_fx: MeshInstance3D
+var _was_evading: bool = false
 ## Enemigo de clase: misma presentación que el jugador pero con IA, nombre y barra de vida.
 var enemy_mode: bool = false
 var _overhead: Node3D
@@ -270,6 +272,10 @@ func _connect_signals() -> void:
 	sim.attack_finished.connect(_on_attack_finished)
 	sim.damage_taken.connect(_on_damage_taken)
 	sim.stunned.connect(_on_stunned)
+	sim.guard_changed.connect(_on_guard_changed)
+	sim.guard_result.connect(_on_guard_result)
+	sim.staggered.connect(_on_staggered)
+	sim.perfect_evade.connect(_on_perfect_evade)
 	sim.visibility_changed.connect(_set_invisible)
 	sim.cast_cancelled.connect(func(_skill: Dictionary) -> void: rig.stop_overlay())
 	sim.died.connect(_on_died)
@@ -298,6 +304,7 @@ func _process(delta: float) -> void:
 
 	sword.visible = sim.class_id in [&"warrior", &"rogue", &"ranger"]
 	_update_orbs()
+	_update_defense_fx()
 	_update_facing(delta)
 	_update_locomotion()
 	_update_dash_fx(delta)
@@ -315,6 +322,8 @@ func _update_facing(delta: float) -> void:
 	var rate := TURN_SPEED
 	if sim.is_attacking():
 		target_yaw = View3D.yaw_for(sim.attack_aim) - _align_yaw
+		if String(sim.current_skill.get("dash_dir", "")) == "move":
+			target_yaw = View3D.yaw_for(sim._dash_dir)
 		rate = TURN_SPEED_ATTACK
 	elif sim.velocity.length_squared() > 64.0:
 		var offset := wrapf(View3D.yaw_for(sim.velocity) - cam_yaw, -PI, PI)
@@ -337,6 +346,8 @@ func _aiming_stance() -> bool:
 
 func _update_locomotion() -> void:
 	_aim_stance = maxf(0.0, _aim_stance - get_process_delta_time())
+	if sim.guarding and sim.guard_kind == "block":
+		return  # mantiene la pose de guardia
 	if sim.is_attacking() and String(_current_skill.get("anim", "")) != "cast":
 		_hurt_time = 0.0
 		return
@@ -535,7 +546,10 @@ func _on_cast_event(event: String, skill: Dictionary, at: Vector2, direction: Ve
 		"dash_start":
 			_align_yaw = 0.0
 			_yaw = View3D.yaw_for(direction)
-			if skill.has("fall_clip"):
+			if skill.has("dash_clip"):
+				_play_clip({"clip": String(skill["dash_clip"]), "from": 0.0, "to": 0.62, "contact": 0.3}, active * 0.5, active * 0.5 + recovery)
+				arena.play_sfx(SFX_ROLL, -9.0, 1.2)
+			elif skill.has("fall_clip"):
 				# Evasive Leap: salto hacia atrás con la animación de caída en pleno vuelo
 				rig.play(String(skill["fall_clip"]), 0.05, 1.0, true)
 			elif String(skill.get("id", "")) == "combat_roll":
@@ -767,6 +781,111 @@ func _set_invisible(on: bool) -> void:
 		(mi as MeshInstance3D).transparency = 0.65 if on else 0.0
 	if not on:
 		ArcaneFx.burst(arena, View3D.to3(sim.position, 1.0), Color(0.45, 0.35, 0.6), 30, 2.0, 0.2)
+
+
+## Defensa mantenida: pose de guardia (Warrior) o escudo de maná (Mago).
+func _on_guard_changed(active: bool, kind: String) -> void:
+	if kind == "block":
+		if active:
+			_play_clip(CLIP_PARRY, 0.08, 0.4, "")  # se queda en la pose de bloqueo
+			arena.play_sfx(SFX_PARRY, -14.0, 0.7)
+		return
+	_ensure_shield()
+	_shield_fx.visible = active
+	if active:
+		var m2 := sim.ability_for_slot("M2")
+		_play_cast_overlay(m2, 0.2)
+		ArcaneFx.burst(arena, View3D.to3(sim.position, 1.0), DamageSystem.color_of(DamageSystem.Type.ARCANE), 26, 2.2, 0.1)
+		arena.play_sfx(SFX_MAGIC, -10.0, 1.3)
+
+
+func _ensure_shield() -> void:
+	if _shield_fx != null:
+		return
+	_shield_fx = MeshInstance3D.new()
+	var mesh := SphereMesh.new()
+	mesh.radius = 1.15
+	mesh.height = 2.3
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	mat.albedo_color = Color(0.7, 0.5, 1.0, 0.22)
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mesh.material = mat
+	_shield_fx.mesh = mesh
+	_shield_fx.position.y = 1.0
+	_shield_fx.visible = false
+	add_child(_shield_fx)
+
+
+## Resultado de un golpe contra la defensa: perfect parry / block / deflection / absorción.
+func _on_guard_result(kind: String, _source: Vector2, _physical: bool) -> void:
+	var front := sim.position + sim.aim_dir * 34.0
+	var arcane := DamageSystem.color_of(DamageSystem.Type.ARCANE)
+	match kind:
+		"perfect":
+			var flash := Color(0.75, 0.9, 1.0)
+			ArcaneFx.hit_sparks(arena, View3D.to3(front, 1.2), flash, View3D.dir3(sim.aim_dir), 40, true)
+			ArcaneFx.burst(arena, View3D.to3(front, 1.2), Color(1.0, 1.0, 1.0), 30, 4.0, 0.12)
+			arena.spawn_shockwave(front, 70.0, flash, 0.35, 0.7)
+			_play_clip(CLIP_BLOCK_REACT, 0.08, 0.35)
+			arena.play_sfx(SFX_PARRY, -1.0, 1.25)
+			_shake(3.0, 0.16)
+			rig.hitstop(0.1)
+		"block":
+			ArcaneFx.hit_sparks(arena, View3D.to3(front, 1.2), ArcaneFx.GOLD, View3D.dir3(sim.aim_dir), 14, false)
+			arena.play_sfx(SFX_HIT, -4.0, 0.7)
+			_shake(1.6, 0.1)
+		"deflect":
+			ArcaneFx.burst(arena, View3D.to3(sim.position, 1.1), arcane.lightened(0.3), 50, 4.5, 0.14)
+			arena.spawn_shockwave(sim.position, 100.0, arcane, 0.45, 0.7)
+			arena.spawn_ground_flash(sim.position, 80.0, Color(arcane.r, arcane.g, arcane.b, 0.5), 0.3)
+			arena.play_sfx(SFX_MAGIC, -2.0, 1.5)
+			_shake(2.6, 0.15)
+			rig.hitstop(0.08)
+		"absorb":
+			ArcaneFx.burst(arena, View3D.to3(sim.position, 1.1), arcane, 16, 2.0, 0.09)
+			arena.play_sfx(SFX_HIT, -9.0, 1.6)
+			if _shield_fx != null:
+				_shield_fx.scale = Vector3.ONE * 1.12
+				create_tween().tween_property(_shield_fx, "scale", Vector3.ONE, 0.18)
+		"shield_break":
+			ArcaneFx.burst(arena, View3D.to3(sim.position, 1.1), arcane, 60, 5.0, 0.16)
+			arena.spawn_shockwave(sim.position, 80.0, arcane, 0.4, 0.6)
+			arena.play_sfx(SFX_SLAM, -6.0, 1.4)
+			if _shield_fx != null:
+				_shield_fx.visible = false
+
+
+## Poise roto: destello y sacudida (la animación de golpe la pone _on_stunned).
+func _on_staggered(_seconds: float) -> void:
+	ArcaneFx.burst(arena, View3D.to3(sim.position, 1.9), Color(1.0, 0.95, 0.7), 36, 3.0, 0.13)
+	arena.spawn_shockwave(sim.position, 60.0, Color(1.0, 0.9, 0.5, 0.9), 0.3, 0.75)
+	_shake(2.4, 0.14)
+
+
+## Esquiva perfecta del Ranger: destello dorado y siguiente ráfaga potenciada.
+func _on_perfect_evade() -> void:
+	ArcaneFx.burst(arena, View3D.to3(sim.position, 1.0), Color(1.0, 0.9, 0.4), 40, 3.5, 0.12)
+	arena.spawn_shockwave(sim.position, 70.0, Color(1.0, 0.85, 0.3, 0.9), 0.35, 0.7)
+	arena.play_sfx(SFX_PARRY, -4.0, 1.5)
+	rig.hitstop(0.06)
+
+
+## Escudo de maná pulsando y efecto fantasma durante los iframes (voltereta / paso evasivo).
+func _update_defense_fx() -> void:
+	if _shield_fx != null:
+		_shield_fx.visible = sim.guarding and sim.guard_kind == "mana_shield"
+		if _shield_fx.visible:
+			var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.012)
+			(_shield_fx.mesh.material as StandardMaterial3D).albedo_color.a = 0.16 + 0.12 * pulse
+	var evading := sim.is_evading()
+	if evading != _was_evading:
+		_was_evading = evading
+		if not sim.is_invisible():
+			for mi: Node in rig.model.find_children("*", "MeshInstance3D", true, false):
+				(mi as MeshInstance3D).transparency = 0.55 if evading else 0.0
 
 
 func _on_stunned(seconds: float) -> void:
