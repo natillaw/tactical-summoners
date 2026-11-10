@@ -13,8 +13,32 @@ const COLORS := [
 const POWER := [1.0, 1.1, 1.25, 1.45, 1.6, 1.8]
 ## Afijos (stats extra) por rareza.
 const AFFIXES := [0, 1, 2, 3, 3, 4]
-## Probabilidad relativa al soltar un objeto.
+## Probabilidad relativa genérica (sin piso; solo depuración). Los drops usan `weights_for_floor`.
 const WEIGHTS := [50.0, 28.0, 13.0, 6.0, 2.0, 1.0]
+
+
+## Pesos de rareza por piso (suman 100). Lo raro aparece a medida que subes la Torre:
+##   Poco común = 15 + 3·piso (tope 36) · Raro = 2.5·(piso − 2) (tope 25) · Épico = piso − 5 (tope 12)
+##   Único = 0.4·(piso − 8) (tope 5) · Legendario = 0.15·(piso − 19) (tope 2) · Normal = el resto.
+## Piso 1: 82 / 18 / 0 / 0 / 0 / 0.  Piso 5: 62.5 / 30 / 7.5.  Piso 10: 38.2 / 36 / 20 / 5 / 0.8 / 0.
+static func weights_for_floor(floor_number: int) -> Array:
+	var f := float(maxi(floor_number, 1))
+	var uncommon := clampf(15.0 + 3.0 * f, 0.0, 36.0)
+	var rare := clampf(2.5 * (f - 2.0), 0.0, 25.0)
+	var epic := clampf(f - 5.0, 0.0, 12.0)
+	var unique := clampf(0.4 * (f - 8.0), 0.0, 5.0)
+	var legendary := clampf(0.15 * (f - 19.0), 0.0, 2.0)
+	return [100.0 - uncommon - rare - epic - unique - legendary, uncommon, rare, epic, unique, legendary]
+
+
+static func roll_for_floor(rng: RandomNumberGenerator, floor_number: int) -> int:
+	var weights := weights_for_floor(floor_number)
+	var r := rng.randf() * 100.0
+	for i in weights.size():
+		r -= float(weights[i])
+		if r <= 0.0:
+			return i
+	return 0
 
 
 static func display(tier: int) -> String:

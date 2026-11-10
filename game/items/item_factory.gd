@@ -31,6 +31,36 @@ static func starter_sword() -> Item:
 	return item
 
 
+## Armadura genérica (drop): stats por nivel de objeto y ranura, × poder de la rareza, + afijos.
+##   aguante = (1.2 + 0.45·nivel) × ranura · armadura = (2 + 0.9·nivel) × ranura
+const ARMOR_SLOT_WEIGHT := {"chest": 1.0, "legs": 0.75, "head": 0.6, "hands": 0.4, "boots": 0.4}
+const ARMOR_SLOT_NAMES := {"chest": "Peto", "legs": "Grebas", "head": "Casco", "hands": "Guantes", "boots": "Botas"}
+const ARMOR_SUFFIXES := ["del Eco", "del Pliegue", "de la Costura", "del Recuerdo", "del Umbral", "de la Torre"]
+
+
+static func roll_armor(rng: RandomNumberGenerator, level: int, rarity: int = -1, slot: String = "") -> Item:
+	if rarity < 0:
+		rarity = ItemRarity.roll(rng)
+	if not ARMOR_SLOT_WEIGHT.has(slot):
+		var slots := ARMOR_SLOT_WEIGHT.keys()
+		slot = slots[rng.randi() % slots.size()]
+	var item := Item.new()
+	item.slot = slot
+	item.rarity = rarity
+	item.item_level = clampi(level, 1, Progression.MAX_LEVEL)
+	var weight := float(ARMOR_SLOT_WEIGHT[slot])
+	var power := float(ItemRarity.POWER[rarity])
+	item.stats["stamina"] = roundf((1.2 + 0.45 * item.item_level) * weight * power * 10.0) / 10.0
+	item.stats["armor"] = roundf((2.0 + 0.9 * item.item_level) * weight * power * 10.0) / 10.0
+	for i in int(ItemRarity.AFFIXES[rarity]):
+		var stat: String = AFFIX_STATS[rng.randi() % AFFIX_STATS.size()]
+		var amount := 0.01 if stat == "crit_chance" else roundf(1.0 + item.item_level * rng.randf_range(0.2, 0.4) * weight)
+		item.stats[stat] = float(item.stats.get(stat, 0.0)) + amount
+	item.item_name = "%s %s" % [ARMOR_SLOT_NAMES[slot], ARMOR_SUFFIXES[rng.randi() % ARMOR_SUFFIXES.size()]]
+	item.id = "drop_%s_%d_%d" % [slot, item.item_level, rng.randi() % 100000]
+	return item
+
+
 static func roll_weapon(rng: RandomNumberGenerator, level: int, rarity: int = -1, type: String = "") -> Item:
 	if rarity < 0:
 		rarity = ItemRarity.roll(rng)

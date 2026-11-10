@@ -157,10 +157,12 @@ func _finish() -> void:
 	var kills := 0
 	for i in runtime.dead:
 		kills += 1
-	var result := FloorRewards.compute(floor_number, world.warrior.progression.level, runtime, kills, int(data["mission"]["total"]), _rng)
+	var result := FloorRewards.compute(floor_number, world.warrior.progression.level, runtime, kills, int(data["mission"]["total"]), _rng, world.warrior.class_id)
 	world.warrior.gain_xp(int(result["xp"]))
 	for id: String in result["loot"]:
 		Materials.add(id, int(result["loot"][id]))
+	if result.get("item") != null:
+		result["item_text"] = Loot.give(result["item"], world.warrior)
 	CharacterProfile.max_floor = maxi(CharacterProfile.max_floor, mini(floor_number + 1, MeadowFloor.MAX_FLOOR))
 	_open_exit()
 	arena.play_sfx(&"quest_done", -4.0)
