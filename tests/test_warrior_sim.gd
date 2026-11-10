@@ -59,7 +59,7 @@ func _run() -> void:
 	_test_ranger_rework()
 	_test_flank_stacks_castbar()
 	_test_class_enemies_and_balance_sim()
-	_test_defense_and_poise()
+	_test_defense_and_armor()
 	_test_mage_redesign_and_ai()
 	_test_quick_cast()
 	_test_combos()
@@ -227,7 +227,7 @@ func _test_bladestorm_ultimate() -> void:
 	_check(world.warrior.ultimate_is_full(), "Ultimate empieza llena tras el refill")
 
 	_step(world, 5, _input(Vector2(0, -1), false, false, Vector2.ZERO, false, false, false, false, true))
-	_check(world.warrior.cooldown_left("F") > 100.0, "Bladestorm queda en cooldown largo al lanzarse")
+	_check(world.warrior.cooldown_left("F") > 50.0, "Bladestorm queda en cooldown largo al lanzarse")
 	_check(world.warrior.rage() <= 60.01, "Bladestorm consume 40 Rage al iniciar")
 	_step(world, 115, _input(Vector2(0, -1), false, false, Vector2.ZERO))
 
@@ -252,9 +252,9 @@ func _test_bladestorm_requires_rage() -> void:
 
 
 func _test_ultimate_requires_charge() -> void:
-	# Ultimate por cooldown (180 s): disponible al inicio y, tras lanzarla, bloqueada ~3 min.
+	# Ultimate por cooldown (60 s): disponible al inicio y, tras lanzarla, bloqueada un minuto.
 	var world := _make_world(false, 5)
-	_check(world.warrior.cooldown_total("F") >= 180.0, "la Ultimate tiene cooldown de 3 minutos")
+	_check(world.warrior.cooldown_total("F") >= 60.0, "la Ultimate tiene cooldown de 1 minuto")
 	_check(is_zero_approx(world.warrior.cooldown_left("F")), "la Ultimate empieza lista")
 
 
@@ -1049,7 +1049,34 @@ func _test_class_enemies_and_balance_sim() -> void:
 	_check((team["fighters"] as Array).size() == 3, "Los combates por equipos (2v1) funcionan")
 
 
-func _test_defense_and_poise() -> void:
+## Cancelaciones: el escape corta el windup del básico y la recuperación; otra skill corta la recuperación tardía.
+func _test_cancels() -> void:
+	var world := _make_world(false, 145)
+	var w = world.warrior
+	w.reset(w.position)
+	w.debug_refill()
+	_step(world, 1, _input(Vector2.RIGHT, true, false))
+	_check(w.state == WarriorSim.AttackState.WINDUP and w.current_slot == "M1", "M1 entra en windup")
+	var esc = _input(Vector2.RIGHT, false, false, Vector2.ZERO, true)
+	_step(world, 2, esc)
+	_check(w.current_slot == "SHIFT", "La movilidad cancela el windup del ataque básico (slot %s)" % w.current_slot)
+	w.reset(w.position)
+	w.debug_refill()
+	var q = _input(Vector2.RIGHT, false, false, Vector2.ZERO, false, true)
+	_step(world, 1, q)
+	var skill_q: Dictionary = w.current_skill
+	var to_recovery := int(ceil((float(skill_q["windup"]) + float(skill_q["active"])) * 60.0)) + 1
+	_step(world, to_recovery, null)
+	_check(w.state == WarriorSim.AttackState.RECOVERY, "Q llega a recuperación")
+	_step(world, 1, _input(Vector2.RIGHT, true, false))  # M1 pulsado al principio de la recuperación: queda en buffer
+	_check(w.current_slot == "Q" and w.buffered_slot == "M1", "Al inicio de la recuperación la acción queda en buffer")
+	var early := int(ceil(float(skill_q["recovery"]) * WarriorSim.RECOVERY_CANCEL * 60.0)) + 1
+	_step(world, early, _input(Vector2.RIGHT, true, false))
+	_check(w.current_slot == "M1", "Pasado el %d%% de la recuperación, la acción en buffer la corta" % int(WarriorSim.RECOVERY_CANCEL * 100.0))
+	_check(WarriorSim.BUFFER_SECONDS >= 0.3, "Buffer de input generoso (%.2f s)" % WarriorSim.BUFFER_SECONDS)
+
+
+func _test_defense_and_armor() -> void:
 	# --- Warrior: Block y Perfect Parry ---
 	var world := _make_world(false, 141)
 	var w = world.warrior
@@ -1061,30 +1088,32 @@ func _test_defense_and_poise() -> void:
 	_step(world, 3, hold)
 	_check(w.guarding, "Mantener M2 activa el Block")
 	var hp: float = w.health
-	var dealt: float = w.take_damage(50.0, foe.position, {"attacker": foe, "poise": 20.0})
-	_check(is_zero_approx(dealt) and is_equal_approx(w.health, hp) and foe.stun_timer > 0.0, "Perfect Parry anula el golpe físico y rompe el poise del atacante")
-	foe.stun_timer = 0.0
-	foe.stagger_immunity = 0.0
+	var foe_hp: float = foe.health
+	var dealt: float = w.take_damage(50.0, foe.position, {"attacker": foe})
+	_check(is_zero_approx(dealt) and is_equal_approx(w.health, hp) and foe.health < foe_hp and is_zero_approx(foe.stun_timer), "Perfect Parry anula el golpe físico y contraataca (sin stagger)")
+	foe_hp = foe.health
 	var spell: float = w.take_damage(50.0, foe.position, {"attacker": foe, DamageSystem.KEY: DamageSystem.Type.FIRE})
-	_check(is_zero_approx(spell) and is_zero_approx(foe.stun_timer), "Un hechizo parado perfectamente solo se anula (sin romper poise)")
+	_check(is_zero_approx(spell) and is_equal_approx(foe.health, foe_hp), "Un hechizo parado perfectamente solo se anula (sin contraataque)")
 	_step(world, 30, hold)
-	var reduced: float = w.take_damage(100.0, foe.position, {"attacker": foe, "poise": 5.0})
+	var reduced: float = w.take_damage(100.0, foe.position, {"attacker": foe})
 	_check(reduced > 0.0 and reduced <= 25.0, "Block normal reduce ~80%% el daño físico (%.0f de 100)" % reduced)
-	var behind: float = w.take_damage(100.0, w.position + Vector2(0, 80), {"attacker": foe, "poise": 5.0})
-	_check(behind > 90.0, "Por la espalda no hay bloqueo")
-	# --- Poise: stagger, inmunidad temporal y hechizos ---
+	var behind: float = w.take_damage(100.0, w.position + Vector2(0, 80), {"attacker": foe})
+	_check(behind > reduced * 3.0, "Por la espalda no hay bloqueo (%.0f)" % behind)
+	# --- Armadura: reduce el daño físico, no el mágico; no existe poise ni stagger ---
 	var world2 := _make_world(false, 142)
 	var t: DummySim = world2.dummies[0]
-	for i in 8:
-		t.take_damage(5.0, Vector2(1, 1), {"poise": 12.0})
-	_check(t.stun_timer > 0.0, "Acumular daño de poise provoca stagger")
-	t.stun_timer = 0.0
-	t.take_damage(5.0, Vector2(1, 1), {"poise": 100.0})
-	_check(is_zero_approx(t.stun_timer), "Tras un stagger hay inmunidad temporal (sin cadenas infinitas)")
-	var t2: DummySim = world2.add_dummy(Vector2(300, 300), false)
-	t2.take_damage(5.0, Vector2(1, 1), {"poise": 500.0, DamageSystem.KEY: DamageSystem.Type.FIRE})
-	_check(is_zero_approx(t2.stun_timer), "Los hechizos no rompen poise")
-	_check(w.max_poise > 90.0, "La armadura del Warrior es su poise (%d)" % int(w.max_poise))
+	for i in 12:
+		t.take_damage(5.0, Vector2(1, 1), {})
+	_check(is_zero_approx(t.stun_timer), "Encadenar golpes físicos ya no aturde (sin stagger)")
+	_check(w.get("poise") == null and t.get("poise") == null and not w.has_signal("staggered"), "No queda rastro de poise/stagger en la simulación")
+	var tank = _make_world(false, 144).warrior
+	tank.reset(tank.position)
+	var phys: float = tank.take_damage(100.0, tank.position + Vector2(50, 0), {})
+	var magic: float = tank.take_damage(100.0, tank.position + Vector2(50, 0), {DamageSystem.KEY: DamageSystem.Type.FIRE})
+	_check(phys < magic and is_equal_approx(magic, 100.0) and is_equal_approx(phys, 100.0 * (1.0 - tank.physical_reduction())), "La armadura del Warrior reduce el daño físico (%.0f) y no el mágico (%.0f)" % [phys, magic])
+	_check(tank.physical_reduction() > 0.2 and tank.physical_reduction() <= WarriorSim.ARMOR_CAP, "Reducción física del Warrior nivel 1: %d%%" % int(tank.physical_reduction() * 100.0))
+	# --- Cancelaciones y buffer ---
+	_test_cancels()
 	# --- Mago: Mana Shield y Arcane Deflection ---
 	var world3 := _make_world(false, 143)
 	var m = world3.warrior
@@ -1095,12 +1124,12 @@ func _test_defense_and_poise() -> void:
 	var shield = _input(Vector2(0, -1), false, true)
 	_step(world3, 3, shield)
 	var hp_attacker: float = attacker.health
-	var deflected: float = m.take_damage(30.0, attacker.position, {"attacker": attacker, "poise": 20.0})
-	_check(is_zero_approx(deflected) and attacker.health < hp_attacker and attacker.stun_timer > 0.0, "Arcane Deflection devuelve el golpe y rompe el poise (físico)")
+	var deflected: float = m.take_damage(30.0, attacker.position, {"attacker": attacker})
+	_check(is_zero_approx(deflected) and attacker.health < hp_attacker and is_zero_approx(attacker.stun_timer), "Arcane Deflection devuelve el golpe al atacante (sin stagger)")
 	_step(world3, 30, shield)
 	var mana_before: float = m.rage()
 	var hp_m: float = m.health
-	var absorbed: float = m.take_damage(20.0, attacker.position, {"attacker": attacker, "poise": 5.0})
+	var absorbed: float = m.take_damage(20.0, attacker.position, {"attacker": attacker})
 	_check(is_zero_approx(absorbed) and is_equal_approx(m.health, hp_m) and m.rage() < mana_before - 15.0, "Mana Shield absorbe el daño gastando maná (%.0f)" % (mana_before - m.rage()))
 	m.set_class(&"warrior")
 	# --- Rogue: Dodge Roll con ventana de invulnerabilidad ---
@@ -1163,12 +1192,12 @@ func _test_mage_redesign_and_ai() -> void:
 	var plain := _first_ambush_damage(false)
 	var sneaky := _first_ambush_damage(true)
 	_check(sneaky > plain * 1.3, "Ambush: golpear desde el sigilo hace más daño (%.0f vs %.0f)" % [sneaky, plain])
-	# Arquetipos: el Campeón bloquea con timing y tiene más poise que el Soldado.
+	# Arquetipos: el Campeón bloquea con timing y tiene más armadura que el Soldado.
 	var world2 := _make_world(false, 152)
 	var soldier := world2.add_archetype("soldado", 1, world2.warrior.position + Vector2(0, -200), 3)
 	var champion := world2.add_archetype("campeon", 1, world2.warrior.position + Vector2(80, -200), 3)
-	_check(champion.max_poise > soldier.max_poise * 1.4 and champion.brain.difficulty > soldier.brain.difficulty, "El Campeón tiene más poise y más nivel de IA que el Soldado")
-	_check(champion.progression.level == 5, "El arquetipo suma niveles (nivel base + bonus)")
+	_check(champion.armor > soldier.armor * 1.4 and champion.brain.difficulty > soldier.brain.difficulty, "El Campeón tiene más armadura y más nivel de IA que el Soldado")
+	_check(champion.progression.level == 4, "El arquetipo suma niveles (nivel base + bonus)")
 	# La IA reacciona al ataque del rival: el hechicero se aparta / usa su escudo y no se queda quieto.
 	var world3 := _make_world(false, 153)
 	var caster := world3.add_archetype("hechicero", 1, world3.warrior.position + Vector2(0, -90), 2)

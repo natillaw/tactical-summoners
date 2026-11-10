@@ -25,17 +25,16 @@ const STEPS := ["RockPath_Round_Small_1", "RockPath_Round_Small_2", "RockPath_Ro
 ## Campamentos: cada uno elige sus enemigos entre varias composiciones (10 enemigos en total).
 const CAMPS := [
 	{"name": "La Avanzada", "options": [
-		["esbirro", "esbirro", "esbirro", "esbirro", "esbirro_arquero"],
-		["esbirro", "esbirro", "esbirro", "esbirro_arquero", "esbirro_arquero"],
+		["esbirro", "esbirro", "esbirro"],
+		["esbirro", "esbirro", "esbirro_arquero"],
 	]},
 	{"name": "El Claro del Bosque", "options": [
-		["guardian", "esbirro_mago"],
-		["duelista", "esbirro_mago"],
+		["esbirro", "esbirro", "esbirro_arquero"],
+		["esbirro", "esbirro", "esbirro_mago"],
 	]},
 	{"name": "La Cumbre", "options": [
-		["cazador", "esbirro", "esbirro"],
-		["hechicero", "esbirro", "esbirro_arquero"],
-		["soldado", "esbirro", "esbirro_mago"],
+		["esbirro", "esbirro", "esbirro", "esbirro_mago"],
+		["esbirro", "esbirro", "esbirro_arquero", "esbirro_mago"],
 	]},
 ]
 const KILL_GOAL := 10
@@ -43,24 +42,36 @@ const CAMP_NAMES := ["La Avanzada", "El Claro del Bosque", "La Cumbre", "El Vado
 const MAX_FLOOR := 10  # pisos 1-10: praderas; los siguientes cambiarán de temática
 
 
-## Composición de un campamento. Piso 1: las listas de CAMPS (10 enemigos en total). Pisos 2+: más esbirros,
-## élites desde el segundo campamento, campeones desde el 5 y un coloso en el último campamento cada 5 pisos.
+## Composición de un campamento.
+##  Piso 1 (tutorial): solo esbirros, las listas de CAMPS (10 en total, 3-4 por campamento).
+##  Pisos 2-3: esbirros + 1 élite solo en el último campamento.
+##  Pisos 4-7: 1 élite en cada campamento menos el primero. Pisos 8+: 2 en el último.
+##  Campeones desde el piso 6. Coloso (jefe con fases) en el último campamento de los pisos 5 y 10.
 static func _roster(rng: RandomNumberGenerator, floor_number: int, camp_index: int, camp_total: int) -> Array:
 	if floor_number <= 1:
 		var options: Array = CAMPS[mini(camp_index, CAMPS.size() - 1)]["options"]
 		return options[rng.randi() % options.size()]
 	var minion_pool := ["esbirro", "esbirro", "esbirro_arquero", "esbirro_mago"]
 	var elite_pool := ["soldado", "guardian", "duelista", "hechicero", "cazador"]
-	if floor_number >= 5:
+	if floor_number >= 6:
 		elite_pool.append("campeon")
+	var last := camp_index == camp_total - 1
+	var boss_here := floor_number % 5 == 0 and last
 	var roster: Array = []
-	var minions := 3 + floor_number / 2 - (1 if camp_index > 0 else 0)
-	var elites := 0 if camp_index == 0 else 1 + floor_number / 4 + (1 if camp_index == camp_total - 1 and floor_number >= 6 else 0)
-	for i in range(mini(minions, 7)):
+	var minions := mini(3 + floor_number / 3, 6) - (1 if camp_index > 0 and floor_number >= 4 else 0)
+	var elites := 0
+	if floor_number <= 3:
+		elites = 1 if last else 0
+	elif camp_index > 0:
+		elites = 2 if last and floor_number >= 8 else 1
+	if boss_here:
+		elites = 0  # el jefe ya trae sus esbirros; sin élites al lado
+		minions = 2
+	for i in range(minions):
 		roster.append(minion_pool[rng.randi() % minion_pool.size()])
-	for i in range(mini(elites, 4)):
+	for i in range(elites):
 		roster.append(elite_pool[rng.randi() % elite_pool.size()])
-	if floor_number % 5 == 0 and camp_index == camp_total - 1:
+	if boss_here:
 		roster.append("coloso")
 	return roster
 

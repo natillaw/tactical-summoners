@@ -51,6 +51,7 @@ var interacts: Dictionary = {}
 var ally_actors: Array = []
 ## Se emite al aparecer un combatiente en mitad del piso (oleadas, emboscadas, aliados).
 signal fighter_spawned(fighter: WarriorSim)
+signal boss_phase(boss: WarriorSim, phase: int)
 var enemy_index: Dictionary = {}  # WarriorSim -> índice en el piso (para guardar el progreso)
 var town_buildings: Array = []
 var _inside_building: String = ""
@@ -131,6 +132,8 @@ func build_town(p_world: CombatWorld, data: Dictionary) -> void:
 ## Piso de la torre (ver MeadowFloor): sin Level del editor, enemigos por campamento.
 func build_floor(p_world: CombatWorld, data: Dictionary, save: Dictionary = {}) -> void:
 	world = p_world
+	world.spawn_hook = func(arch: String, at: Vector2, level: int) -> WarriorSim: return spawn_dynamic(arch, at, level)
+	world.boss_phase_changed.connect(_on_boss_phase)
 	_rng.seed = int(data["seed"])
 	var level := get_node_or_null("Level")
 	if level != null:
@@ -458,6 +461,14 @@ func spawn_dynamic(arch: String, at: Vector2, level: int) -> WarriorSim:
 	var fighter := spawn_class_enemy(StringName(arch), at, level, -1, 0.0)
 	fighter_spawned.emit(fighter)
 	return fighter
+
+
+## Cambio de fase de un jefe: onda roja en el suelo, sacudida y rugido.
+func _on_boss_phase(boss: WarriorSim, phase: int) -> void:
+	spawn_shockwave(boss.position, 220.0, Color(1.0, 0.25, 0.15, 0.95), 0.9, 0.82)
+	spawn_ground_flash(boss.position, 150.0, Color(1.0, 0.35, 0.2, 0.7), 0.6)
+	shake(3.0 + float(phase), 0.35)
+	boss_phase.emit(boss, phase)
 
 
 ## Aldeano aliado (rescate): combate a los enemigos cercanos y sigue al jugador (rasgo "ally").

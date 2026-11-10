@@ -31,7 +31,6 @@ signal class_changed(class_id: StringName)
 signal visibility_changed(invisible: bool)
 signal cast_cancelled(skill: Dictionary)
 signal dot_damage(amount: float, meta: Dictionary)
-signal staggered(seconds: float)
 signal guard_changed(active: bool, kind: String)
 signal guard_result(kind: String, source: Vector2, physical: bool)
 signal perfect_evade()
@@ -44,7 +43,13 @@ const ACCELERATION := 1500.0
 const FRICTION := 2100.0
 const MAX_HEALTH := 300.0
 
-const BUFFER_SECONDS := 0.22
+## Buffer de input: una tecla pulsada durante otra acción sale en cuanto se puede (estilo Albion).
+const BUFFER_SECONDS := 0.35
+## Cancelaciones: fracción de la recuperación a partir de la cual otra skill puede cortarla.
+const RECOVERY_CANCEL := 0.35
+## Armadura: reducción del daño físico = armadura / (armadura + ARMOR_K), con tope.
+const ARMOR_K := 320.0
+const ARMOR_CAP := 0.6
 const BASE_CRIT := 0.05
 ## Velocidad normalizada (WoW Classic para golpes instantáneos): el ritmo de las
 ## skills no depende del arma, así que el daño por golpe se normaliza a esta
@@ -95,11 +100,8 @@ var absorb_amount: float = 0.0
 var absorb_timer: float = 0.0
 var _followup_time: float = 0.0
 var _followups_done: int = 0
-## Poise (= armadura): al llegar a 0 hay stagger. Defensa M2 mantenida (Block / Mana Shield).
-var poise: float = 100.0
-var max_poise: float = 100.0
-var stagger_immunity: float = 0.0
-var _since_poise_hit: float = 99.0
+## Armadura (kit + equipo): reduce el daño físico recibido. Defensa M2 mantenida (Block / Mana Shield).
+var armor: float = 0.0
 var guarding: bool = false
 var guard_time: float = 0.0
 var guard_kind: String = ""
@@ -131,6 +133,9 @@ var resource: ClassResource
 var ultimate_charge: float = 0.0
 ## Id del arquetipo enemigo (para tablas de botín).
 var archetype_id: String = ""
+## Jefes: fase actual (0 = no es jefe) y pausa de aviso al cambiar de fase (quieto, sin atacar).
+var boss_phase: int = 0
+var phase_pause: float = 0.0
 ## Marcado por la misión del piso (cazar al élite, duelo...): las barras de vida lo resaltan.
 var quest_target: bool = false
 
@@ -208,9 +213,13 @@ func recompute_stats(heal: bool) -> void:
 	max_health = (Progression.health_for(progression.level) + float(gear.get("stamina", 0.0)) * 10.0) * float(mods.get("health_mult", 1.0))
 	health = max_health if heal else clampf(ratio, 0.0, 1.0) * max_health
 	health_changed.emit(health, max_health)
-	var armor := float(kit.get_script_constant_map().get("ARMOR", 50.0)) + 0.6 * float(progression.level)
-	max_poise = (armor + float(gear.get("armor", 0.0))) * float(mods.get("armor_mult", 1.0))
-	poise = max_poise if heal else minf(poise, max_poise)
+	var base_armor := float(kit.get_script_constant_map().get("ARMOR", 50.0)) + 0.6 * float(progression.level)
+	armor = (base_armor + float(gear.get("armor", 0.0))) * float(mods.get("armor_mult", 1.0))
+
+
+## Fracción del daño físico que absorbe la armadura (0..ARMOR_CAP).
+func physical_reduction() -> float:
+	return clampf(armor / (armor + ARMOR_K), 0.0, ARMOR_CAP)
 
 
 ## Daño base de un golpe: tirada del arma normalizada + AP/14 · velocidad normalizada.
@@ -289,6 +298,12 @@ func step(tick_number: int, delta: float, input: Variant) -> void:
 
 	cc.tick(delta)
 	_tick_dots(delta)
+	if phase_pause > 0.0:
+		phase_pause = maxf(0.0, phase_pause - delta)
+		velocity = Vector2.ZERO
+		buffered_slot = ""
+		if state == AttackState.IDLE:
+			return  # cambio de fase: el jefe se detiene (ventana de daño) antes de volver a atacar
 	if stun_timer > 0.0:
 		aiming_slot = ""
 		stun_timer = maxf(0.0, stun_timer - delta)
@@ -386,11 +401,7 @@ func _tick_timers(delta: float) -> void:
 	mark_timer = maxf(0.0, mark_timer - delta)
 	root_timer = maxf(0.0, root_timer - delta)
 	silence_timer = maxf(0.0, silence_timer - delta)
-	stagger_immunity = maxf(0.0, stagger_immunity - delta)
 	empowered_timer = maxf(0.0, empowered_timer - delta)
-	_since_poise_hit += delta
-	if _since_poise_hit > 3.0 and poise < max_poise:
-		poise = minf(max_poise, poise + 25.0 * delta)
 	if slow_timer > 0.0:
 		slow_timer = maxf(0.0, slow_timer - delta)
 	if knock_timer > 0.0:
@@ -463,23 +474,18 @@ func _guard_hit(amount: float, source: Vector2, effects: Dictionary) -> float:
 		if absf(rad_to_deg(aim_dir.angle_to(source - position))) > 100.0:
 			return amount  # de espaldas no hay bloqueo
 		if perfect:
-			# Perfect Parry: anula el golpe; si es físico lo contraataca y rompe el poise del atacante.
+			# Perfect Parry: anula el golpe; si es físico lo contraataca e interrumpe lo que el atacante esté casteando.
 			if physical and attacker != null and attacker.has_method("take_damage"):
-				attacker.take_damage(average_hit() * 1.5, position, {DamageSystem.KEY: type, "poise": 0.0})
-				if attacker.has_method("break_poise"):
-					attacker.break_poise()
+				attacker.take_damage(average_hit() * 1.5, position, {DamageSystem.KEY: type, "interrupt": true})
 			guard_result.emit("perfect", source, physical)
 			return -1.0
-		_lose_poise(float(effects.get("poise", 0.0)) * 0.6)  # bloquear gasta poise
 		guard_result.emit("block", source, physical)
 		return amount * (1.0 - float(m2.get("block_reduction", 0.8) if physical else m2.get("spell_reduction", 0.4)))
 	# Mana Shield
 	if perfect:
-		# Arcane Deflection: devuelve el golpe; si era físico, rompe el poise del atacante.
+		# Arcane Deflection: devuelve el golpe al atacante e interrumpe su cast.
 		if attacker != null and attacker.has_method("take_damage"):
-			attacker.take_damage(amount, position, {DamageSystem.KEY: DamageSystem.Type.ARCANE, "poise": 0.0})
-			if physical and attacker.has_method("break_poise"):
-				attacker.break_poise()
+			attacker.take_damage(amount, position, {DamageSystem.KEY: DamageSystem.Type.ARCANE, "interrupt": true})
 		guard_result.emit("deflect", source, physical)
 		return -1.0
 	var per_damage := float(m2.get("mana_per_damage", 1.0))
@@ -494,28 +500,6 @@ func _guard_hit(amount: float, source: Vector2, effects: Dictionary) -> float:
 	guard_changed.emit(false, guard_kind)
 	guard_result.emit("shield_break", source, physical)
 	return maxf(amount - mana / maxf(per_damage, 0.01), 0.0)
-
-
-func _lose_poise(amount: float) -> void:
-	if amount <= 0.0 or stagger_immunity > 0.0 or not alive:
-		return
-	poise -= amount
-	_since_poise_hit = 0.0
-	if poise <= 0.0:
-		_stagger(0.9)
-
-
-func _stagger(seconds: float) -> void:
-	poise = max_poise
-	stagger_immunity = seconds + 3.0  # sin cadenas infinitas de stagger
-	_apply_stun(seconds)
-	staggered.emit(seconds)
-
-
-## Un Perfect Parry/Deflection rompe el poise (ignora la inmunidad temporal).
-func break_poise() -> void:
-	if alive:
-		_stagger(1.3)
 
 
 func is_evading() -> bool:
@@ -535,6 +519,8 @@ func _update_attack(delta: float) -> void:
 			if bool(current_skill.get("cast_bar", false)) and (_cast_hit or move_input.length() > 0.1):
 				_cancel_cast()
 				return
+			if _try_escape_cancel():
+				return
 			if state_time >= float(current_skill.get("windup", 0.0)):
 				_enter_active()
 		AttackState.ACTIVE:
@@ -545,8 +531,59 @@ func _update_attack(delta: float) -> void:
 			_update_followups(delta)
 			if state_time >= float(current_skill.get("recovery", 0.0)):
 				_finish_attack()
+			elif _try_recovery_cancel():
+				return
 		_:
 			pass
+
+
+## ¿La skill del slot es de escape (movilidad o esquiva con dash/teleport)?
+func _is_escape(slot: String) -> bool:
+	var ability := ability_for_slot(slot)
+	return String(ability.get("cast", "")) in ["dash", "teleport"] and String(ability.get("kind", "")) in ["mobility", "defense"]
+
+
+## Cancelación de escape: una skill de movilidad/esquiva en el buffer corta el windup del básico o de un
+## cast con barra (se devuelve el coste). Las demás skills ya comprometidas no se pueden cortar en windup.
+func _try_escape_cancel() -> bool:
+	if buffered_slot.is_empty() or buffered_slot == current_slot or not _is_escape(buffered_slot) or not _can_start(buffered_slot):
+		return false
+	if bool(current_skill.get("cast_bar", false)):
+		_cancel_cast()
+	elif current_slot == "M1":
+		_abort_attack()
+	else:
+		return false
+	_try_start_attack()
+	return true
+
+
+## Cancelación de recuperación: pasada una parte de la recuperación, cualquier otra acción en el buffer
+## (o un escape en cualquier momento) la corta. Las ráfagas con golpes encadenados se terminan antes.
+func _try_recovery_cancel() -> bool:
+	if buffered_slot.is_empty() or not _can_start(buffered_slot):
+		return false
+	var plan: Dictionary = current_skill.get("followups", {})
+	if not plan.is_empty() and _followups_done < int(plan.get("count", 0)):
+		return false
+	var recovery := float(current_skill.get("recovery", 0.0))
+	if not _is_escape(buffered_slot) and state_time < recovery * RECOVERY_CANCEL:
+		return false
+	_finish_attack()
+	_try_start_attack()
+	return true
+
+
+## Corta la acción en curso sin coste ni cooldown (básico interrumpido por un escape).
+func _abort_attack() -> void:
+	var skill := current_skill
+	state = AttackState.IDLE
+	state_time = 0.0
+	current_skill = {}
+	current_slot = ""
+	_cast_hit = false
+	attack_state_changed.emit(state)
+	cast_cancelled.emit(skill)
 
 
 ## Cast con barra: moverse o recibir un golpe antes de completarla la cancela (se devuelve el coste).
@@ -653,9 +690,10 @@ func receive_buff(effects: Dictionary) -> void:
 	if not absorb.is_empty():
 		absorb_amount = float(absorb.get("amount", 60.0)) * (1.0 + 0.03 * float(progression.level))
 		absorb_timer = float(absorb.get("seconds", 5.0))
-	var restore := float(effects.get("poise_restore", 0.0))
-	if restore > 0.0:
-		poise = minf(max_poise, poise + restore)
+	var heal_pct := float(effects.get("heal_pct", 0.0))
+	if heal_pct > 0.0 and alive:
+		health = minf(max_health, health + max_health * heal_pct)
+		health_changed.emit(health, max_health)
 
 
 func _is_behind(target: Object) -> bool:
@@ -1024,8 +1062,6 @@ func _hit_target(target: Object, mult: float, effects: Dictionary, skill: Dictio
 	fx["attacker"] = self
 	if sk.has("behind_stun") and _is_behind(target):
 		fx["stun"] = float(sk["behind_stun"])  # por la espalda el stun es más largo
-	if type == DamageSystem.Type.PHYSICAL:
-		fx["poise"] = float(sk.get("poise", clampf(6.0 + 10.0 * mult, 6.0, 60.0)))
 	if fx.has("dot"):
 		var dot: Dictionary = (fx["dot"] as Dictionary).duplicate()
 		if dot.has("dps_mult"):
@@ -1186,6 +1222,8 @@ func take_damage(amount: float, source_position: Vector2 = Vector2.ZERO, effects
 		if amount <= 0.0:
 			return 0.0
 	amount = DamageSystem.mitigate(amount, DamageSystem.type_of(effects), resist)
+	if DamageSystem.type_of(effects) == DamageSystem.Type.PHYSICAL:
+		amount *= 1.0 - physical_reduction()
 	var dealt := minf(amount, health)
 	health -= dealt
 	_gain_rage(RAGE_ON_HIT_TAKEN)
@@ -1197,9 +1235,6 @@ func take_damage(amount: float, source_position: Vector2 = Vector2.ZERO, effects
 
 	_apply_dot_effect(effects)
 	_apply_status_effects(effects, source_position)
-	var poise_hit := float(effects.get("poise", 0.0))
-	if poise_hit > 0.0 and DamageSystem.type_of(effects) == DamageSystem.Type.PHYSICAL and health > 0.0:
-		_lose_poise(poise_hit)
 	var stun := cc.apply("stun", float(effects.get("stun", 0.0)) * float(mods.get("cc_scale", 1.0))) if effects.has("stun") else 0.0
 	if stun > 0.0 and health > 0.0:
 		_apply_stun(stun)
@@ -1353,6 +1388,10 @@ func ability_for_slot(slot: String) -> Dictionary:
 		var overrides := BalanceData.skill_override(String(ability.get("id", "")))
 		for key: String in overrides:
 			ability[key] = overrides[key]
+		# Enemigos: windup más largo para que el telegraph se lea (EnemyArchetypes.TIER[tier].windup).
+		var windup_mult := float(mods.get("windup_mult", 1.0))
+		if windup_mult != 1.0 and not bool(ability.get("cast_bar", false)):
+			ability["windup"] = float(ability.get("windup", 0.0)) * windup_mult
 	return ability
 
 
@@ -1586,8 +1625,6 @@ func reset(spawn: Vector2 = Vector2(480, 380)) -> void:
 	stun_timer = 0.0
 	root_timer = 0.0
 	invisible_timer = 0.0
-	poise = max_poise
-	stagger_immunity = 0.0
 	guarding = false
 	empowered_timer = 0.0
 	cc.reset()

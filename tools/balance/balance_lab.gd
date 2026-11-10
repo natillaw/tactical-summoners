@@ -18,7 +18,7 @@ const MOD_LABELS := {
 	"crit_bonus": ["Crítico +", "Suma probabilidad de crítico (0.10 = +10 puntos)."],
 	"cooldown_mult": ["Cooldowns ×", "Multiplica los cooldowns de las skills (menos = más rápido)."],
 	"regen_mult": ["Regeneración ×", "Multiplica la regeneración de maná/energía."],
-	"armor_mult": ["Armadura (poise) ×", "Multiplica la armadura = poise: más armadura, más difícil de hacer stagger."],
+	"armor_mult": ["Armadura ×", "Multiplica la armadura: más armadura, menos daño físico recibido."],
 }
 const SKILL_FIELDS := ["damage_mult", "cooldown", "cost", "windup", "active", "recovery", "range", "radius"]
 const FIELD_HELP := {

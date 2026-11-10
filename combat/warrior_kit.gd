@@ -26,7 +26,7 @@ const RESOURCE_NAME: String = "Rage"
 const MAX_RAGE: float = 100.0
 const ULTIMATE_COST: float = 100.0
 const SPECIAL_COST: float = 30.0
-## Armadura = Poise: cuánto daño de poise aguanta antes de entrar en stagger.
+## Armadura base de la clase: reduce el daño físico recibido (armadura / (armadura + 320), tope 60 %).
 const ARMOR: float = 100.0
 
 const SLOT_M1 := "M1"
@@ -96,7 +96,7 @@ const M1: Dictionary = {
 const M2: Dictionary = {
 	"id": &"block", "name": "Block", "short": "BLOCK", "slot": "M2",
 	"kind": "defense", "role": "Defensa", "implemented": true, "selectable": false,
-	"description": "Mantén M2 para bloquear (-80% daño físico, -40% hechizos, gasta poise). Justo al empezar es Perfect Parry: anula el golpe, lo contraataca y rompe el poise del enemigo (solo ataques físicos; a un hechizo solo le anula el daño). No gasta Rage.",
+	"description": "Mantén M2 para bloquear (-80% daño físico, -40% hechizos). Justo al empezar es Perfect Parry: anula el golpe, lo contraataca e interrumpe al enemigo (solo ataques físicos; a un hechizo solo le anula el daño). No gasta Rage.",
 	"cast": "guard", "anim": "slash", "perfect_window": 0.2, "block_reduction": 0.8, "spell_reduction": 0.4,
 	"windup": 0.0, "active": 0.0, "recovery": 0.0, "cooldown": 0.0, "cost": 0.0, "move_factor": 0.45,
 }
@@ -305,7 +305,7 @@ const BLADESTORM: Dictionary = {
 	"windup": 0.20,
 	"active": 1.6,
 	"recovery": 0.35,
-	"cooldown": 180.0,
+	"cooldown": 60.0,
 	"cost": 40.0,
 	"charge": 0.0,
 	"radius": 105.0,
@@ -348,12 +348,12 @@ const HAMSTRING: Dictionary = {
 
 const RALLY_CRY: Dictionary = {
 	"id": &"rally_cry", "name": "Rally Cry", "short": "RALLY", "slot": "S2",
-	"kind": "support", "role": "Apoyo de grupo", "description": "Grito de guerra: tú y tus aliados cercanos (220 px) hacéis +20% de daño 6 s y recuperáis poise. En grupo es lo que da valor al Warrior; en solitario te potencia unos segundos.",
+	"kind": "support", "role": "Apoyo de grupo", "description": "Grito de guerra: tú y tus aliados cercanos (220 px) hacéis +20% de daño 6 s y recuperáis un 8% de la vida. En grupo es lo que da valor al Warrior; en solitario te potencia unos segundos.",
 	"implemented": true, "selectable": true, "cast": "team_buff", "anim": "cast",
 	"clip": {"name": "standing_2h_cast_spell_01", "start": 0.33, "contact": 0.63, "end": 1.3},
 	"windup": 0.30, "active": 0.10, "recovery": 0.30, "cooldown": 18.0, "cost": 20.0,
 	"radius": 220.0, "damage_mult": 0.0,
-	"effects": {"damage_buff": {"mult": 1.2, "seconds": 6.0}, "poise_restore": 60.0},
+	"effects": {"damage_buff": {"mult": 1.2, "seconds": 6.0}, "heal_pct": 0.08},
 	"rage_gain": 0.0, "move_factor": 0.5,
 	"vfx": "melee/sword-slash", "impact_vfx": "impacts/hit-spark", "vfx_scale": 0.58, "vfx_speed": 1.35, "impact_scale": 0.55, "impact_speed": 1.3, "sfx": "slash",
 }

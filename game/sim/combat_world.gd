@@ -8,6 +8,8 @@ class_name CombatWorld
 extends "res://core/tickable.gd"
 
 signal tick_advanced(tick_number: int)
+## Un jefe cambia de fase (2 o 3): la presentación avisa y los esbirros invocados ya están en `fighters`.
+signal boss_phase_changed(boss: WarriorSim, phase: int)
 
 const WarriorSimScript := preload("res://game/sim/warrior_sim.gd")
 const DummySimScript := preload("res://game/sim/dummy_sim.gd")
@@ -25,6 +27,8 @@ var pending_input: InputMessage = null
 ## Otros combatientes (enemigos de clase, rivales del simulador); el jugador es `warrior`.
 var fighters: Array = []
 var warrior_bot: BotBrain = null
+## Cómo se crean los enemigos que aparecen en mitad del combate (el juego pone aquí el que crea también el actor).
+var spawn_hook: Callable = Callable()
 
 
 func _init(seed_value: int = 1337) -> void:
@@ -72,7 +76,8 @@ func step(delta: float, tick_number: int = -1) -> void:
 		player_input = warrior_bot.think(warrior, self, delta)
 	warrior.step(tick, delta, player_input)
 	_propagate_alerts()
-	for fighter: WarriorSim in fighters:
+	_update_bosses()
+	for fighter: WarriorSim in fighters.duplicate():
 		fighter.step(tick, delta, fighter.brain.think(fighter, self, delta) if fighter.brain != null else {})
 	for dummy: DummySim in dummies:
 		dummy.step(tick, delta, warrior)
@@ -134,12 +139,52 @@ func add_archetype(archetype_id: String, team: int, spawn: Vector2, base_level: 
 		return add_fighter(StringName(archetype_id), team, spawn, base_level)
 	var shown := ("Élite " if String(data.get("tier", "")) == "elite" else "") + String(data["name"])
 	var fighter := add_fighter(data["class"], team, spawn, base_level + int(data.get("level_bonus", 0)), shown)
+	fighter.archetype_id = archetype_id
 	fighter.brain.configure(data)
 	var mods: Dictionary = data.get("mods", {})
 	for key: String in mods:
 		fighter.mods[key] = float(mods[key])
+	# Fórmula por piso (EnemyArchetypes.floor_scale): el nivel base del enemigo es el piso.
+	var scale := EnemyArchetypes.floor_scale(archetype_id, base_level)
+	for key: String in scale:
+		fighter.mods[key] = float(fighter.mods.get(key, 1.0)) * float(scale[key])
+	if EnemyArchetypes.tier_of(archetype_id) == "boss":
+		fighter.boss_phase = 1
+		fighter.mods["boss_base_damage"] = float(fighter.mods.get("damage_mult", 1.0))
+		fighter.mods["boss_base_speed"] = float(fighter.mods.get("speed_mult", 1.0))
+		fighter.mods["boss_base_cooldown"] = float(fighter.mods.get("cooldown_mult", 1.0))
 	fighter.recompute_stats(true)
 	return fighter
+
+
+## Fases de jefe: por debajo del 66 % y del 33 % de vida el jefe se detiene un momento (aviso), invoca
+## esbirros y vuelve más rápido y más fuerte. Nunca retrocede de fase.
+func _update_bosses() -> void:
+	for boss: WarriorSim in fighters.duplicate():
+		if boss.boss_phase <= 0 or not boss.alive:
+			continue
+		var ratio := boss.health / maxf(boss.max_health, 1.0)
+		var phase := 1
+		for threshold: float in EnemyArchetypes.BOSS_PHASES:
+			if ratio <= threshold:
+				phase += 1
+		if phase <= boss.boss_phase:
+			continue
+		boss.boss_phase = phase
+		var table: Dictionary = EnemyArchetypes.BOSS_PHASE_MODS[phase - 1]
+		boss.mods["damage_mult"] = float(boss.mods["boss_base_damage"]) * float(table["damage"])
+		boss.mods["speed_mult"] = float(boss.mods["boss_base_speed"]) * float(table["speed"])
+		boss.mods["cooldown_mult"] = float(boss.mods["boss_base_cooldown"]) * float(table["cooldown"])
+		boss.phase_pause = EnemyArchetypes.BOSS_PHASE_PAUSE
+		var level := maxi(boss.progression.level - int(EnemyArchetypes.data(boss.archetype_id).get("level_bonus", 0)), 1)
+		for i in int(table["adds"]):
+			var angle := TAU * float(i) / float(maxi(int(table["adds"]), 1)) + float(phase)
+			var at := resolve_position(boss.position + Vector2(cos(angle), sin(angle)) * 110.0, WarriorSimScript.RADIUS)
+			var add: WarriorSim = spawn_hook.call("esbirro", at, level) if spawn_hook.is_valid() else add_archetype("esbirro", boss.team, at, level)
+			if add.brain != null:
+				add.brain.alerted = true
+				add.brain.group = boss.brain.group if boss.brain != null else -1
+		boss_phase_changed.emit(boss, phase)
 
 
 ## Grupo de enemigos del mismo arquetipo repartidos en círculo (enjambre).

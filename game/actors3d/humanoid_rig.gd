@@ -234,8 +234,12 @@ func set_speed(speed: float) -> void:
 	_apply_speed()
 
 
+## Hit-stop mínimo: se nota el impacto sin cortar el ritmo (tope 0.05 s).
+const HITSTOP_MAX := 0.05
+
+
 func hitstop(seconds: float) -> void:
-	_hitstop = maxf(_hitstop, seconds)
+	_hitstop = maxf(_hitstop, minf(seconds, HITSTOP_MAX))
 	_apply_speed()
 
 

@@ -6,7 +6,7 @@
 ##  - Lee tus ataques: calcula cuánto falta para el impacto y reacciona con su defensa (bloqueo con
 ##    Perfect Parry si es bueno, roll/paso evasivo, escudo de maná) con un tiempo de reacción.
 ##  - Bait: si bloqueas, deja de golpear y usa control (stun, empuje, atracción) en vez de gastar daño.
-##  - Punish: si estás aturdido o en stagger, suelta su ráfaga fuerte sin dudar.
+##  - Punish: si estás aturdido, suelta su ráfaga fuerte sin dudar.
 ##  - Flanqueo: con un aliado ya peleando contigo, el melee rodea hasta tu espalda.
 ##  - Kiting: los de rango mantienen la distancia, escapan con su movilidad y se retiran con poca vida.
 ##  - Búsqueda: si te vuelves invisible, va a donde te vio por última vez.

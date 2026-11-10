@@ -2,7 +2,7 @@
 ##
 ## Marco oscuro, fondo, relleno rojo con divisiones cada 100 de vida, insignia con el nivel a la
 ## izquierda, vida restante en número ("234 / 300"), nombre y estados encima y una línea fina de
-## poise debajo. Los élites tienen marco dorado y son más grandes; los esbirros, más pequeños.
+## Los élites tienen marco dorado y son más grandes; los esbirros, más pequeños.
 ## Sustituye a las barras 3D (que se desalineaban al inclinar la cámara).
 class_name UnitBars
 extends Control
@@ -13,7 +13,6 @@ const BACK := Color(0.10, 0.09, 0.11, 0.92)
 const FILL := Color(0.80, 0.22, 0.20)
 const FILL_LOW := Color(0.95, 0.45, 0.20)
 const GOLD := Color(0.95, 0.76, 0.32)
-const POISE := Color(0.95, 0.85, 0.4)
 
 var arena: Arena3D
 
@@ -101,12 +100,6 @@ func _draw_unit(at: Vector2, sim: Object, fighter: bool, ally: bool = false) -> 
 		var x := bar.position.x + bar.size.x * (float(i) * 100.0 / max_hp)
 		if x < bar.end.x - 1.0:
 			draw_line(Vector2(x, bar.position.y), Vector2(x, bar.end.y), BORDER, 1.0)
-	# Poise: línea fina bajo la barra.
-	var max_poise := float(sim.get("max_poise") if sim.get("max_poise") != null else 0.0)
-	if max_poise > 0.0:
-		var poise_ratio := clampf(float(sim.poise) / max_poise, 0.0, 1.0)
-		draw_rect(Rect2(bar.position.x, bar.end.y + 1.5, bar.size.x, 1.5), Color(0, 0, 0, 0.7))
-		draw_rect(Rect2(bar.position.x, bar.end.y + 1.5, bar.size.x * poise_ratio, 1.5), POISE)
 	# Vida restante en número.
 	_text("%d / %d" % [ceili(hp), ceili(max_hp)], Vector2(bar.position.x, bar.end.y - 0.5 + (0.0 if height > 6.0 else -0.5)), 7 if height > 5.0 else 5, Color(1, 1, 1, 0.95), bar.size.x)
 	# Nombre y estados encima.
