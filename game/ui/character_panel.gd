@@ -56,7 +56,7 @@ func _ready() -> void:
 	title.add_theme_color_override("font_color", GOLD)
 	bar.add_child(title)
 	var hint := Label.new()
-	hint.text = "I / Esc: cerrar"
+	hint.text = "Tecla I o Esc para cerrar"
 	hint.add_theme_color_override("font_color", DIM)
 	bar.add_child(hint)
 	var close := Button.new()
@@ -152,7 +152,7 @@ func _build_stage() -> void:
 	rim.light_energy = 0.6
 	_viewport.add_child(rim)
 	var cam := Camera3D.new()
-	cam.position = Vector3(0.0, 1.05, 3.6)
+	cam.position = Vector3(0.0, 1.0, 3.05)
 	cam.fov = 32.0
 	_viewport.add_child(cam)
 	cam.look_at(Vector3(0.0, 0.95, 0.0))
@@ -339,10 +339,10 @@ func refresh() -> void:
 	var dim := DIM.to_html(false)
 	var text := "[font_size=13][color=#%s]%s[/color][/font_size]\n" % [gold, CharacterProfile.player_name if CharacterProfile.chosen else "Héroe"]
 	text += "Nivel %d  ·  %s\n" % [prog.level, String(warrior.kit.CLASS_NAME)]
-	text += "[color=#%s]XP %d / %d[/color]\n\n" % [dim, prog.xp, Progression.xp_to_next(prog.level)]
+	text += "[color=#%s]XP %d / %d[/color]\n" % [dim, prog.xp, Progression.xp_to_next(prog.level)]
 	text += "[color=#%s]Atributos[/color]\n" % gold
 	text += _row("Vida", "%d" % int(warrior.max_health))
-	text += _row("Armadura", "%d  (-%d%% físico)" % [int(warrior.armor), int(warrior.physical_reduction() * 100.0)])
+	text += _row("Armadura", "%d (-%d%%)" % [int(warrior.armor), int(warrior.physical_reduction() * 100.0)])
 	text += _row("Fuerza", "%d" % int(s.get_stat(&"strength")))
 	text += _row(String(warrior.kit.RESOURCE_NAME), "%d" % int(warrior.rage_max()))
 	text += "\n[color=#%s]Ofensiva[/color]\n" % gold
@@ -350,8 +350,7 @@ func refresh() -> void:
 	text += _row("Crítico", "%.1f%%" % (s.get_stat(&"crit_chance") * 100.0))
 	text += _row("Golpe medio", "%d" % int(warrior.average_hit() * float(warrior.mods.get("damage_mult", 1.0))))
 	if w != null:
-		text += _row("Arma", "%.1f DPS" % w.dps())
-		text += _row("Daño", "%d–%d · vel %.1f" % [w.weapon_min, w.weapon_max, w.weapon_speed])
+		text += _row("Arma", "%.1f DPS · %d–%d" % [w.dps(), w.weapon_min, w.weapon_max])
 	_stats.text = text
 	var mats: Array = []
 	for id: String in Materials.DEFS:
