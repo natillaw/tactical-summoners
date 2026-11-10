@@ -60,6 +60,19 @@ Los 15 tests headless pasan en la línea base.
 | F | UI: ficha estilo WoW | ✅ código; ⏸ sin captura de verificación. HUD: solo se quitó la línea de poise |
 | G | Assets con Blender | ⏸ sin empezar |
 
+## Actualización (misma fecha, segunda pasada)
+
+- **Clérigo descartado** por decisión del dueño: el juego tiene 4 clases (Guerrero, Pícaro, Mago, Arquero).
+- **Armas:** 35 revisadas en Blender; lanzas y bastones rehechos. Detalle y pendientes en `docs/ASSETS_GUIA.md`.
+- **Armaduras:** los 20 sets revisados en captura. Magos corregidos (saturación). Pícaros y arqueros en estilo
+  salvo las correas de muslo. **Los 5 de guerrero siguen fuera de estilo** (rehacer sobre el traje del pack).
+- **Curva de balance corregida y medida** (`docs/BALANCE.md`): esbirro 4-5 golpes en todos los pisos; Coloso
+  81 golpes básicos en el piso 5 y 65 en el 10 (antes 230-290). Guerrero bot: 100 % en pisos 1, 2 y 4,
+  60-75 % en 5-9, 40 % en el 10.
+- **Feeling de combate (bloque A2): sigue sin hacer.** Hecho solo lo de sistema (cancelaciones, buffer, casts,
+  hit-stop, windup enemigo). Falta todo lo visual: animaciones y VFX por skill, contraste de enemigos,
+  indicadores de AOE, barras de vida, y ver un combate real en captura.
+
 ## Qué queda y por qué
 
 El presupuesto de uso se agotó antes de lo previsto (la ventana de 5 h pasó del 3 % al 56 %). Queda, por orden:
