@@ -390,10 +390,6 @@ func spawn_class_enemy(class_id: StringName, at: Vector2, level: int = 1, group:
 	var fighter := world.add_archetype(String(class_id), 1, at, level)  # acepta arquetipo o clase
 	fighter.brain.group = group
 	fighter.brain.aggro_range = aggro
-	if group >= 0:  # piso 1: enemigos más suaves para un héroe de nivel 1
-		fighter.mods["damage_mult"] = float(fighter.mods.get("damage_mult", 1.0)) * 0.5
-		fighter.mods["health_mult"] = float(fighter.mods.get("health_mult", 1.0)) * 0.8
-		fighter.recompute_stats(true)
 	var actor := PLAYER_SCENE.instantiate() as WarriorActor3D
 	actor.enemy_mode = true
 	actor.name = "Enemy_" + fighter.display_name

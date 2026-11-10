@@ -23,16 +23,16 @@ const STEPS := ["RockPath_Round_Small_1", "RockPath_Round_Small_2", "RockPath_Ro
 ## Campamentos: cada uno elige sus enemigos entre varias composiciones (10 enemigos en total).
 const CAMPS := [
 	{"name": "La Avanzada", "options": [
-		["esbirro", "esbirro", "esbirro", "soldado"],
-		["esbirro", "esbirro", "soldado", "soldado"],
+		["esbirro", "esbirro", "esbirro", "esbirro_arquero"],
+		["esbirro", "esbirro", "esbirro_arquero", "esbirro_arquero"],
 	]},
 	{"name": "El Claro del Bosque", "options": [
-		["guardian", "duelista", "hechicero"],
-		["guardian", "cazador", "hechicero"],
+		["guardian", "esbirro", "esbirro_mago"],
+		["duelista", "esbirro", "esbirro_mago"],
 	]},
 	{"name": "La Cumbre", "options": [
-		["cazador", "soldado", "duelista"],
-		["hechicero", "soldado", "duelista"],
+		["cazador", "duelista", "esbirro"],
+		["hechicero", "soldado", "esbirro"],
 	]},
 ]
 const KILL_GOAL := 10
