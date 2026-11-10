@@ -21,7 +21,9 @@ var _loot_rng := RandomNumberGenerator.new()
 var _quick_cast_enabled: bool = true  # X alterna; solo aplica en top-down
 var _floor: Dictionary = {}
 var _town: Dictionary = {}
+var _floor_save: Dictionary = {}
 var npc_panel: NpcPanel
+var char_panel: CharacterPanel
 var _elixir_time: float = 0.0
 var _quest_label: Label
 var _quest_done: bool = false
@@ -51,10 +53,15 @@ func _ready() -> void:
 		Materials.add("pocion_vida", 2)
 	match CharacterProfile.mode:
 		"floor":
-			_floor = MeadowFloor.generate(CharacterProfile.floor_seed)
-			arena.build_floor(world, _floor)
+			var fl := CharacterProfile.current_floor
+			if not CharacterProfile.floor_saves.has(fl):  # primera visita: se genera y queda guardado
+				CharacterProfile.floor_saves[fl] = {"seed": randi() % 1000000 + 1, "dead": [], "gathered": [], "done": false}
+			_floor_save = CharacterProfile.floor_saves[fl]
+			_floor = MeadowFloor.generate(int(_floor_save["seed"]), fl)
+			_quest_done = bool(_floor_save["done"])
+			arena.build_floor(world, _floor, _floor_save)
 			_build_quest_ui()
-			_drop_rng.seed = CharacterProfile.floor_seed * 7919
+			_drop_rng.seed = int(_floor_save["seed"]) * 7919
 			for fighter: WarriorSim in world.fighters:
 				var f := fighter
 				f.died.connect(func() -> void: _on_enemy_died(f))
@@ -66,6 +73,9 @@ func _ready() -> void:
 			$HudLayer.add_child(npc_panel)
 		_:
 			arena.build(world)
+	char_panel = CharacterPanel.new()
+	char_panel.warrior = world.warrior
+	$HudLayer.add_child(char_panel)
 	hud.bind(world)
 	loadout_panel.set_world(world)
 	world.warrior.progression.leveled_up.connect(func(_l: int) -> void: _refresh_status())
@@ -74,7 +84,23 @@ func _ready() -> void:
 	TickManager.register(world)
 
 
+func _modal_open() -> bool:
+	return (npc_panel != null and npc_panel.visible) or (char_panel != null and char_panel.visible)
+
+
 func _save_progress() -> void:
+	if world != null and CharacterProfile.mode == "floor" and not _floor_save.is_empty():
+		var dead: Array = (_floor_save["dead"] as Array).duplicate()
+		for fighter: WarriorSim in arena.enemy_index:
+			if not fighter.alive:
+				dead.append(arena.enemy_index[fighter])
+		_floor_save["dead"] = dead
+		var gathered: Array = []
+		for i in range(arena.gather_nodes.size()):
+			if not arena.gather_nodes[i]["left"]:
+				gathered.append(i)
+		_floor_save["gathered"] = gathered
+		_floor_save["done"] = _quest_done
 	if world != null:
 		CharacterProfile.level = world.warrior.progression.level
 		CharacterProfile.xp = world.warrior.progression.xp
@@ -84,8 +110,6 @@ func _save_progress() -> void:
 func _goto(mode: String) -> void:
 	_save_progress()
 	CharacterProfile.mode = mode
-	if mode == "floor":
-		CharacterProfile.floor_seed = randi() % 1000000 + 1  # cada entrada a la Torre es un mapa nuevo
 	get_tree().reload_current_scene()
 
 
@@ -140,7 +164,7 @@ func _nearest_station() -> Dictionary:
 
 
 func _interact() -> void:
-	if not world.warrior.alive or (npc_panel != null and npc_panel.visible):
+	if not world.warrior.alive or _modal_open():
 		return
 	var st := _nearest_station()
 	if not st.is_empty():
@@ -239,9 +263,9 @@ func _update_quest() -> void:
 		_quest_label.add_theme_color_override("font_color", Color(0.85, 0.95, 1.0))
 		return
 	var quest: Dictionary = _floor["quest"]
-	var kills := 0
-	for fighter: WarriorSim in world.fighters:
-		if fighter.team == 1 and not fighter.alive:
+	var kills: int = (_floor_save["dead"] as Array).size()
+	for fighter: WarriorSim in arena.enemy_index:
+		if not fighter.alive:
 			kills += 1
 	var goal := int(quest["kill"])
 	if kills >= goal:
@@ -283,6 +307,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.physical_keycode:
 			KEY_F: _interact()
+			KEY_I: char_panel.toggle()
 			KEY_H: _use_potion("pocion_vida")
 			KEY_J: _use_potion("elixir_fuerza")
 			KEY_K: _use_potion("pocion_arcana")
@@ -341,7 +366,7 @@ func _physics_process(_delta: float) -> void:
 	if Input.is_action_just_pressed("toggle_loadout"):
 		loadout_panel.toggle()
 
-	if loadout_panel.visible or (npc_panel != null and npc_panel.visible):
+	if loadout_panel.visible or _modal_open():
 		return
 
 	if Input.is_action_just_pressed("restart_training"):
