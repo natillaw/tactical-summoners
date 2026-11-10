@@ -185,10 +185,10 @@ const ARMOR_SLOTS := ["head", "chest", "legs", "hands", "boots"]
 ## (tools/outfits/make_rogue_*.py). hood = capucha; body/legs/boots = de que traje base sale cada pieza.
 const QSETS := {
 	"ladron": {"hood": "", "body": "Ranger", "legs": "Ranger", "boots": "Ranger", "pauldron": false, "hair": true, "beard": false},      # bandana
-	"cuervo": {"hood": "Ranger_HoodPeak.gltf", "body": "Ranger", "legs": "Ranger", "boots": "Ranger", "pauldron": true, "hair": false, "beard": false},   # capucha picuda + pico
+	"cuervo": {"hood": "Ranger_HoodPeak.gltf", "body": "Ranger", "legs": "Ranger", "boots": "Ranger", "pauldron": true, "hair": true, "beard": false},   # capucha picuda + pico
 	"desierto": {"hood": "", "body": "Peasant", "legs": "Peasant", "boots": "Ranger", "pauldron": false, "hair": false, "beard": false},   # turbante + velo
-	"bosque": {"hood": "Ranger.gltf", "body": "Ranger", "legs": "Ranger", "boots": "Ranger", "pauldron": true, "hair": false, "beard": false},    # capucha + bandana
-	"carmesi": {"hood": "", "body": "Peasant", "legs": "Ranger", "boots": "Ranger", "pauldron": false, "hair": false, "beard": true},        # gorra con pluma + antifaz
+	"bosque": {"hood": "Ranger.gltf", "body": "Ranger", "legs": "Ranger", "boots": "Ranger", "pauldron": true, "hair": true, "beard": false},    # capucha + bandana
+	"carmesi": {"hood": "", "body": "Peasant", "legs": "Ranger", "boots": "Ranger", "pauldron": false, "hair": true, "beard": true},        # gorra con pluma + antifaz
 }
 const CLOSED_HELMETS := ["knight", "dark"]  ## cubren toda la cara: tampoco cabe barba
 

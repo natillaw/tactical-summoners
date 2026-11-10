@@ -107,18 +107,24 @@ func _draw_unit(at: Vector2, sim: Object, fighter: bool) -> void:
 	_text("%d / %d" % [ceili(hp), ceili(max_hp)], Vector2(bar.position.x, bar.end.y - 0.5 + (0.0 if height > 6.0 else -0.5)), 7 if height > 5.0 else 5, Color(1, 1, 1, 0.95), bar.size.x)
 	# Nombre y estados encima.
 	var tag := ""
-	if float(sim.get("silence_timer")) > 0.0:
+	if _num(sim, "silence_timer") > 0.0:
 		tag += "[SILENCIADO] "
-	if float(sim.get("root_timer")) > 0.0:
+	if _num(sim, "root_timer") > 0.0:
 		tag += "[ATADO] "
-	if float(sim.get("mark_timer")) > 0.0:
+	if _num(sim, "mark_timer") > 0.0:
 		tag += "[MARCADO] "
-	if float(sim.get("stun_timer")) > 0.0:
+	if _num(sim, "stun_timer") > 0.0:
 		tag += "[ATURDIDO] "
 	var name_color := Color(1.0, 0.86, 0.45) if tier == "elite" else (Color(1.0, 0.6, 0.95) if tier == "boss" else Color(0.95, 0.92, 0.88))
 	_text(name_text, Vector2(bar.position.x - 12.0, bar.position.y - 7.0), 7, name_color, width + 12.0, true)
 	if tag != "":
 		_text(tag.strip_edges(), Vector2(bar.position.x - 12.0, bar.position.y - 15.0), 7, Color(1.0, 0.8, 0.35), width + 12.0, true)
+
+
+## Lectura segura: los muñecos no tienen todos los campos (silencio, atadura...).
+func _num(obj: Object, prop: String) -> float:
+	var value: Variant = obj.get(prop)
+	return float(value) if value != null else 0.0
 
 
 func _text(text: String, pos: Vector2, size: int, color: Color, width: float, outline: bool = false) -> void:

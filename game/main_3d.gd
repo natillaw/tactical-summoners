@@ -23,7 +23,18 @@ var _floor: Dictionary = {}
 var _town: Dictionary = {}
 var _floor_save: Dictionary = {}
 var _exit_open: bool = false
-var _quality_step: int = 0
+## Niveles de calidad. El juego arranca en el más nítido (MSAA 2x) y baja solo si los FPS caen de ~52,
+## para sostener los 60 sin perder definición más de lo necesario. F11 los recorre a mano.
+const QUALITY := [
+	{"name": "Alta (MSAA 2x)", "msaa": Viewport.MSAA_2X, "fxaa": false, "scale": 1.0, "reach": 1.0},
+	{"name": "Media (FXAA)", "msaa": Viewport.MSAA_DISABLED, "fxaa": true, "scale": 1.0, "reach": 0.8},
+	{"name": "Rendimiento (FXAA, 85% FSR)", "msaa": Viewport.MSAA_DISABLED, "fxaa": true, "scale": 0.85, "reach": 0.65},
+	{"name": "Mínima (FXAA, 70% FSR)", "msaa": Viewport.MSAA_DISABLED, "fxaa": true, "scale": 0.7, "reach": 0.5},
+]
+var _auto_quality: bool = true
+var _fps_clock: float = 0.0
+var _fps_frames: int = 0
+var _slow_windows: int = 0
 var npc_panel: NpcPanel
 var char_panel: CharacterPanel
 var unit_bars: UnitBars
@@ -39,6 +50,8 @@ const GATHER_RANGE := 75.0
 
 
 func _ready() -> void:
+	_loaded_at = Time.get_ticks_msec()
+	_apply_quality(CharacterProfile.quality_step)
 	status_label.position = Vector2(8.0, 6.0)  # el panel de recursos ahora va abajo: la esquina queda libre
 	world = CombatWorld.new(1337)
 	if CharacterProfile.chosen:
@@ -102,6 +115,37 @@ func _ready() -> void:
 
 func _ui_sfx(category: StringName, volume_db: float = -8.0) -> void:
 	arena.play_sfx(category, volume_db)
+
+
+func _apply_quality(step: int) -> void:
+	CharacterProfile.quality_step = clampi(step, 0, QUALITY.size() - 1)
+	var q: Dictionary = QUALITY[CharacterProfile.quality_step]
+	var vp := get_viewport()
+	vp.msaa_3d = q["msaa"]
+	vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA if q["fxaa"] else Viewport.SCREEN_SPACE_AA_DISABLED
+	vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR if float(q["scale"]) < 1.0 else Viewport.SCALING_3D_MODE_BILINEAR
+	vp.scaling_3d_scale = float(q["scale"])
+	arena.set_decor_reach(float(q["reach"]))  # menos distancia de dibujo de vegetación en calidades bajas
+	if _toast_label != null:
+		_toast("Calidad gráfica: %s" % q["name"])
+
+
+## Si el promedio de FPS de 5 s baja de 52, baja un nivel de calidad (con 6 s de gracia tras cargar).
+func _auto_quality_tick(delta: float) -> void:
+	if not _auto_quality:
+		return
+	_fps_clock += delta
+	_fps_frames += 1
+	if _fps_clock < 5.0:
+		return
+	var avg := float(_fps_frames) / _fps_clock
+	var settled := Time.get_ticks_msec() - _loaded_at > 10000
+	_fps_clock = 0.0
+	_fps_frames = 0
+	_slow_windows = _slow_windows + 1 if (settled and avg < 52.0) else 0
+	if _slow_windows >= 2 and CharacterProfile.quality_step < QUALITY.size() - 1:  # dos ventanas lentas seguidas
+		_slow_windows = 0
+		_apply_quality(CharacterProfile.quality_step + 1)
 
 
 func _modal_open() -> bool:
@@ -383,12 +427,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.physical_keycode:
 			KEY_F: _interact()
-			KEY_F11:  # calidad gráfica: 100% -> 77% -> 59% de resolución interna con reescalado FSR
-				_quality_step = (_quality_step + 1) % 3
-				var scale: float = [1.0, 0.77, 0.59][_quality_step]
-				get_viewport().scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR if scale >= 1.0 else Viewport.SCALING_3D_MODE_FSR
-				get_viewport().scaling_3d_scale = scale
-				_toast("Calidad gráfica: %d%%" % int(scale * 100.0))
+			KEY_F11:  # calidad gráfica manual (desactiva el ajuste automático)
+				_auto_quality = false
+				_apply_quality((CharacterProfile.quality_step + 1) % QUALITY.size())
 			KEY_LEFT, KEY_RIGHT:  # junto al portal del pueblo: elegir piso entre los desbloqueados
 				var here := _nearest_station()
 				if CharacterProfile.mode == "town" and not here.is_empty() and here["id"] == "portal":
@@ -429,9 +470,11 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 var _autosave_clock: float = 0.0
+var _loaded_at: int = 0
 
 
 func _process(_delta: float) -> void:
+	_auto_quality_tick(_delta)
 	_autosave_clock += _delta
 	if _autosave_clock > 45.0 and CharacterProfile.chosen:  # autoguardado cada 45 s
 		_autosave_clock = 0.0

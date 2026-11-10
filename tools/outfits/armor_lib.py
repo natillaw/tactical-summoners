@@ -317,8 +317,15 @@ def dome(acc, center, radii, mat="plate", rot=None, lat0=0.0, lat1=math.pi / 2, 
 def export(acc, name):
     ob = acc.to_object(name)
     bpy.ops.object.select_all(action='DESELECT'); ob.select_set(True); acc.B.arm.select_set(True)
-    bpy.ops.export_scene.gltf(filepath=os.path.join(OUT_DIR, name + ".gltf"), export_format='GLTF_SEPARATE', use_selection=True,
-        export_image_format='NONE', export_materials='EXPORT', export_vertex_color='ACTIVE', export_skins=True, export_animations=False, export_yup=True)
+    import time
+    for attempt in range(6):   # the Godot editor scanning the folder can lock the .bin for a moment
+        try:
+            bpy.ops.export_scene.gltf(filepath=os.path.join(OUT_DIR, name + ".gltf"), export_format='GLTF_SEPARATE', use_selection=True,
+                export_image_format='NONE', export_materials='EXPORT', export_vertex_color='ACTIVE', export_skins=True, export_animations=False, export_yup=True)
+            break
+        except Exception:
+            if attempt == 5: raise
+            time.sleep(1.0)
     bpy.data.objects.remove(ob)
 
 

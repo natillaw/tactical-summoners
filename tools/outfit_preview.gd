@@ -63,7 +63,7 @@ func _ready() -> void:
 	holder.rotation_degrees.y = 0
 	for v: float in [25.0, 155.0, 90.0]:
 		holder.rotation_degrees.y = v
-		cam.position.y = float(OS.get_environment("ZY")) if OS.get_environment("ZY") != "" else 1.0
+		cam.position.y = (float(OS.get_environment("ZY")) if OS.get_environment("ZY") != "" else 1.0) - (2.0 if OS.get_environment("ZF") != "" else 0.0)
 		cam.position.x = (zi - (n - 1) * 0.5) * cos(deg_to_rad(v)) * 1.0
 		cam.position.z = 8.0 + (zi - (n - 1) * 0.5) * -sin(deg_to_rad(v)) * 1.0
 		await get_tree().process_frame

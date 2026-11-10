@@ -34,6 +34,14 @@ def peak(z0, up, back):
     return fn
 
 
+def fit(zc, sx=0.96, sz=0.8):
+    """Hug the head: shrink the hood about the head centre (the stock hood sits well above the skull)."""
+    def fn(bm):
+        for v in bm.verts:
+            v.co.x *= sx; v.co.y = 0.015 + (v.co.y - 0.015) * sx; v.co.z = zc + (v.co.z - zc) * sz - 0.012
+    return fn
+
+
 def export(arm, ob, name, src):
     ob.name = name; ob.data.name = name
     head = ob.vertex_groups.get("Head") or ob.vertex_groups.new(name="Head")
@@ -56,5 +64,6 @@ for sex in ("Male", "Female"):
     for name, fn in (("HoodShort", short(1.60 if sex == "Male" else 1.56)), ("HoodPeak", peak(1.72 if sex == "Male" else 1.68, 0.55, 0.02))):
         arm, hood = load(src)
         edit(hood, fn)
+        if name == "HoodPeak": edit(hood, fit(1.70 if sex == "Male" else 1.66))
         export(arm, hood, f"{sex}_Ranger_{name}", src)
 print("rogue geometry done")

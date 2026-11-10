@@ -115,6 +115,7 @@ var _dot_fx: CPUParticles3D
 ## En el pueblo no se pelea: idle y caminata normales, armas guardadas.
 var peaceful: bool = false
 var _offhand: Node3D
+var _blade_tip: Node3D
 var _aim_stance: float = 0.0
 var _spin_rate: float = 15.0
 var _spin_limit: float = 1e9
@@ -144,29 +145,8 @@ func setup(p_sim: WarriorSim, p_arena: Arena3D) -> void:
 	else:
 		rig.setup(model_path)
 
-	var weapon_paths := _weapon_paths()
-	sword = (load(weapon_paths[0]) as PackedScene).instantiate() as Node3D
-	var weapon_scale: float = {"dagger": 0.4, "bow": 0.5}.get(String(weapon_paths[1]), 1.0)
-	rig.attach_to_hand(sword, "r" if weapon_paths[1] != "bow" else "l")
-	sword.scale = Vector3.ONE * weapon_scale
-	if String(weapon_paths[1]) == "bow":
-		sword.rotate_object_local(Vector3.UP, deg_to_rad(-90.0))  # girar sobre el eje del puño deja el arco vertical (medido en 3 poses)
-	if weapon_paths.size() > 2:
-		var offhand := (load(weapon_paths[2]) as PackedScene).instantiate() as Node3D
-		_offhand = offhand
-		rig.attach_to_hand(offhand, "l")
-		offhand.scale = Vector3.ONE * weapon_scale
-	var tip_len := 0.92 if String(weapon_paths[1]) == "sword" else 0.4
-	var blade_base := Node3D.new()
-	blade_base.position = Vector3(0, 0.14, 0)
-	sword.add_child(blade_base)
-	var blade_tip := Node3D.new()
-	blade_tip.position = Vector3(0, tip_len, 0)
-	sword.add_child(blade_tip)
-	trail = WeaponTrail.new()
-	add_child(trail)
-	trail.setup(blade_base, blade_tip)
-	_analyze_clips(sword.transform * blade_tip.position)
+	_build_weapon_visual()
+	_analyze_clips(sword.transform * _blade_tip.position)
 
 	_shadow = FxShape.new().setup(FxShape.Mode.DISC, 0.45, Color(0, 0, 0, 0))
 	add_child(_shadow)
@@ -201,15 +181,47 @@ func setup(p_sim: WarriorSim, p_arena: Arena3D) -> void:
 	position = View3D.to3(sim.position)
 
 
-## [ruta del arma principal, tipo, (ruta del arma de la otra mano)] según la clase.
-func _weapon_paths() -> Array:
-	match sim.class_id:
-		&"rogue":
-			return ["res://assets/models/props/dagger.fbx", "dagger", "res://assets/models/props/dagger.fbx"]
-		&"ranger":
-			return ["res://assets/models/props/bow.fbx", "bow"]
-		_:
-			return [sword_path, "sword"]
+## Arma(s) en la mano según lo equipado (jugador) o el arquetipo (enemigo): ver WeaponCatalog.
+## Se reconstruye cuando cambia el arma (weapon_changed), así se ve lo que llevas puesto.
+func _build_weapon_visual() -> void:
+	for node in [sword, _offhand]:
+		if is_instance_valid(node):
+			var holder: Node = node.get_parent()
+			if holder is BoneAttachment3D:
+				holder.queue_free()
+			else:
+				node.queue_free()
+	if is_instance_valid(trail):
+		trail.queue_free()
+	var spec := WeaponCatalog.spec_for(sim, enemy_mode)
+	var built: Dictionary = WeaponCatalog.build(spec)
+	sword = built["node"]
+	rig.attach_to_hand(sword, String(built["hand"]))
+	if String(spec["type"]) == "bow":
+		sword.rotate_object_local(Vector3.UP, deg_to_rad(-90.0))  # girar sobre el eje del puño deja el arco vertical (medido en 3 poses)
+	_offhand = null
+	if bool(spec["dual"]):
+		var second := WeaponCatalog.build(spec)
+		_offhand = second["node"]
+		rig.attach_to_hand(_offhand, "l")
+	var tip_len: float = built["tip"]
+	var blade_base := Node3D.new()
+	blade_base.position = Vector3(0, minf(0.14, tip_len * 0.3), 0)
+	sword.add_child(blade_base)
+	_blade_tip = Node3D.new()
+	_blade_tip.position = Vector3(0, tip_len, 0)
+	sword.add_child(_blade_tip)
+	trail = WeaponTrail.new()
+	add_child(trail)
+	trail.setup(blade_base, _blade_tip)
+	sword.visible = not peaceful
+	if _offhand != null:
+		_offhand.visible = not peaceful
+
+
+func _on_weapon_swapped(_item: Item) -> void:
+	if rig != null:
+		_build_weapon_visual()
 
 
 ## Nombre + barra de vida sobre la cabeza (enemigos de clase).
@@ -357,6 +369,7 @@ func _clip_key(c: Dictionary) -> String:
 
 
 func _connect_signals() -> void:
+	sim.weapon_changed.connect(_on_weapon_swapped)
 	sim.attack_started.connect(_on_attack_started)
 	sim.attack_state_changed.connect(_on_attack_state_changed)
 	sim.attack_hit.connect(_on_attack_hit)
@@ -397,7 +410,9 @@ func _process(delta: float) -> void:
 	if _dead_visual:
 		_restore_visual()
 
-	sword.visible = sim.class_id in [&"warrior", &"rogue", &"ranger"]
+	sword.visible = not peaceful
+	if _offhand != null:
+		_offhand.visible = not peaceful
 	_update_orbs()
 	_update_defense_fx()
 	_update_facing(delta)
