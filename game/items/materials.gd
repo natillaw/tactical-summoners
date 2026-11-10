@@ -14,6 +14,9 @@ const DEFS := {
 	"cuero_basto": {"name": "Cuero Basto", "color": Color(0.7, 0.5, 0.35), "tier": 1, "kind": "botin"},
 	"hueso": {"name": "Hueso", "color": Color(0.95, 0.93, 0.85), "tier": 1, "kind": "botin"},
 	"polvo_arcano": {"name": "Polvo Arcano", "color": Color(0.8, 0.55, 1.0), "tier": 1, "kind": "botin"},
+	"pocion_vida": {"name": "Poción de Vida", "color": Color(1.0, 0.35, 0.4), "tier": 1, "kind": "consumible"},
+	"elixir_fuerza": {"name": "Elixir de Fuerza", "color": Color(1.0, 0.7, 0.2), "tier": 1, "kind": "consumible"},
+	"pocion_arcana": {"name": "Poción Arcana", "color": Color(0.5, 0.6, 1.0), "tier": 1, "kind": "consumible"},
 }
 
 ## Nodos de recolección del piso: tipo -> {material, cantidad (min,max), modelo, escala, tecla de interacción}

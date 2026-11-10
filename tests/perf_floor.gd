@@ -9,7 +9,7 @@ func _fps(seconds: float) -> float:
 	return frames / seconds
 
 func _ready() -> void:
-	CharacterProfile.tower_mode = OS.get_environment("TRAINING") == ""
+	CharacterProfile.mode = OS.get_environment("MODE") if OS.get_environment("MODE") != "" else "floor"
 	var main: Node3D = load("res://game/main_3d.tscn").instantiate()
 	add_child(main)
 	await get_tree().create_timer(2.5).timeout

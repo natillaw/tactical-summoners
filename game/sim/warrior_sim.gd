@@ -69,6 +69,8 @@ var aim_dir: Vector2 = Vector2.RIGHT
 ## Progresión y equipo: el daño sale del arma (min–max) + Fuerza/AP, como WoW Classic.
 var progression := Progression.new()
 var weapon: Item = ItemFactory.starter_sword()
+## Armadura equipada por ranura (head, chest, legs, boots); suma stats como el arma.
+var armor_items: Dictionary = {}
 var stats := CharacterStats.new()
 var height: float = 0.0
 var stun_timer: float = 0.0
@@ -191,7 +193,7 @@ func _init(p_world: Object = null) -> void:
 
 ## Recalcula stats desde nivel + arma. Con `heal` rellena la vida (al subir de nivel).
 func recompute_stats(heal: bool) -> void:
-	var gear: Dictionary = weapon.stats if weapon != null else {}
+	var gear: Dictionary = gear_stats()
 	stats = CharacterStats.new()
 	stats.set_base_stat(&"strength", Progression.strength_for(progression.level) + float(gear.get("strength", 0.0)))
 	stats.set_base_stat(&"attack_power_bonus", float(gear.get("attack_power_bonus", 0.0)))
@@ -205,7 +207,7 @@ func recompute_stats(heal: bool) -> void:
 	health = max_health if heal else clampf(ratio, 0.0, 1.0) * max_health
 	health_changed.emit(health, max_health)
 	var armor := float(kit.get_script_constant_map().get("ARMOR", 50.0)) + 0.6 * float(progression.level)
-	max_poise = armor * float(mods.get("armor_mult", 1.0))
+	max_poise = (armor + float(gear.get("armor", 0.0))) * float(mods.get("armor_mult", 1.0))
 	poise = max_poise if heal else minf(poise, max_poise)
 
 
@@ -242,6 +244,22 @@ func _update_jump(delta: float) -> void:
 		height = 0.0
 		vertical_velocity = 0.0
 		landed.emit()
+
+
+## Suma los stats del arma y de toda la armadura equipada.
+func gear_stats() -> Dictionary:
+	var total: Dictionary = {}
+	var pieces: Array = [weapon] if weapon != null else []
+	pieces.append_array(armor_items.values())
+	for piece: Item in pieces:
+		for key: String in piece.stats:
+			total[key] = float(total.get(key, 0.0)) + float(piece.stats[key])
+	return total
+
+
+func equip_armor(item: Item) -> void:
+	armor_items[item.slot] = item
+	recompute_stats(false)
 
 
 func equip_weapon(item: Item) -> void:
