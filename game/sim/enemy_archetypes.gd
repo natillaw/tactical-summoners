@@ -72,16 +72,18 @@ const TYPES := {
 ## --- Fórmula de escalado por piso (única fuente de verdad; ver docs/DECISIONES.md) ---
 ## Un enemigo es un combatiente de su clase con nivel = piso (+ `level_bonus`), así que su vida y su daño
 ## base ya crecen con el nivel igual que los del jugador. Encima se aplica, por tier:
-##   vida  = vida_de_clase(nivel)  × TIER[tier].health × (1 + HEALTH_GROWTH × (piso − 1)) × mods del arquetipo
+##   vida  = vida_de_clase(nivel)  × TIER[tier].health ÷ (1 + HEALTH_EASE × (piso − 1)) × mods del arquetipo
+##           (el nivel del enemigo sube 1 por piso y el del jugador más despacio: sin el divisor, matar a un
+##            esbirro pasaba de 4 golpes en el piso 1 a 8 en el 10; con él se queda en 4-5)
 ##   daño  = daño_de_clase(nivel)  × TIER[tier].damage × (1 + DAMAGE_GROWTH × (piso − 1)) × mods del arquetipo
 ##   windup de sus ataques × TIER[tier].windup (telegraph legible; el jugador no lo sufre)
 ## Esbirro = 2-4 golpes del jugador y pega flojo; élite = duelo corto; jefe = pelea larga con fases.
 const TIER := {
 	"minion": {"health": 0.20, "damage": 0.40, "windup": 2.0},
 	"elite": {"health": 0.80, "damage": 0.60, "windup": 1.5},
-	"boss": {"health": 4.20, "damage": 0.70, "windup": 1.7},
+	"boss": {"health": 2.00, "damage": 0.70, "windup": 1.7},
 }
-const HEALTH_GROWTH := 0.03
+const HEALTH_EASE := 0.05
 const DAMAGE_GROWTH := 0.05
 ## Fases de jefe: al bajar de estos umbrales de vida cambia de fase (2 y 3).
 const BOSS_PHASES := [0.66, 0.33]
@@ -104,7 +106,7 @@ static func floor_scale(id: String, floor_number: int) -> Dictionary:
 	var base: Dictionary = TIER[tier_of(id)]
 	var steps := float(maxi(floor_number, 1) - 1)
 	return {
-		"health_mult": float(base["health"]) * (1.0 + HEALTH_GROWTH * steps),
+		"health_mult": float(base["health"]) / (1.0 + HEALTH_EASE * steps),
 		"damage_mult": float(base["damage"]) * (1.0 + DAMAGE_GROWTH * steps),
 		"windup_mult": float(base["windup"]),
 	}
