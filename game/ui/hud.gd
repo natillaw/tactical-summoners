@@ -324,12 +324,12 @@ func _draw_controls() -> void:
 	var lines := [
 		"LMB/RMB ATK",
 		"WASD MOVE",
-		"SPACE JUMP",
+		"C CAMERA",
 		"SHIFT ROLL",
 		"TAB LOADOUT",
 		"F2 RESET",
 		"F4 REFILL",
-		"F3 DEBUG",
+		"X QUICKCAST",
 		"F5-F7 LVL/ARMA",
 	]
 	for i: int in range(lines.size()):

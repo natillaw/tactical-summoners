@@ -103,6 +103,8 @@ var _shield_fx: MeshInstance3D
 var _was_evading: bool = false
 ## Enemigo de clase: misma presentación que el jugador pero con IA, nombre y barra de vida.
 var enemy_mode: bool = false
+var _team_ring: FxShape
+var _telegraph: FxShape
 var _overhead: Node3D
 var _bar_fill: MeshInstance3D
 var _name_label: Label3D
@@ -180,6 +182,7 @@ func setup(p_sim: WarriorSim, p_arena: Arena3D) -> void:
 
 	_yaw = View3D.yaw_for(sim.aim_dir)
 	rig.play(ANIM_IDLE, 0.0)
+	_build_team_ring()
 	if enemy_mode:
 		_build_overhead()
 	_connect_signals()
@@ -198,6 +201,60 @@ func _weapon_paths() -> Array:
 
 
 ## Nombre + barra de vida sobre la cabeza (enemigos de clase).
+## Anillo de equipo bajo los pies (top-down): dorado = tú, rojo = enemigo.
+func _build_team_ring() -> void:
+	var color := Color(1.0, 0.3, 0.25, 0.9) if enemy_mode else Color(1.0, 0.85, 0.4, 0.8)
+	_team_ring = FxShape.new().setup(FxShape.Mode.RING, 0.8, color)
+	_team_ring.set_param("inner", 0.82)
+	_team_ring.set_param("fill", 0.08)
+	_team_ring.position.y = 0.03
+	_team_ring.visible = false
+	add_child(_team_ring)
+
+
+## Aviso en el suelo del ataque que prepara un enemigo de clase: cono, línea o círculo.
+func _update_enemy_telegraph() -> void:
+	if _telegraph == null:
+		_telegraph = FxShape.new().setup(FxShape.Mode.SECTOR, 1.0, Color(1.0, 0.25, 0.15, 1.0))
+		_telegraph.set_param("fill", 0.3)
+		_telegraph.set_param("edge", 0.05)
+		_telegraph.set_param("trail", 0.0)
+		_telegraph.top_level = true
+		_telegraph.visible = false
+		add_child(_telegraph)
+	var skill: Dictionary = sim.current_skill
+	var show := sim.alive and sim.state == WarriorSim.AttackState.WINDUP and not skill.is_empty()
+	var cast := String(skill.get("cast", ""))
+	if show and cast in ["dash", "teleport", "buff", "guard", "mana_shield", "counter"]:
+		show = false
+	_telegraph.visible = show
+	if not show:
+		return
+	var center := sim.position
+	var radius_px := float(skill.get("range", 80.0))
+	var arc := float(skill.get("arc", 100.0))
+	match cast:
+		"aoe":
+			radius_px = float(skill.get("radius", 100.0))
+			arc = 360.0
+			if String(skill.get("target", "")) == "ground":
+				center = sim._cast_point
+		"line":
+			arc = rad_to_deg(2.0 * atan2(float(skill.get("width", 30.0)) * 0.5, maxf(radius_px, 1.0)))
+		"projectile":
+			radius_px = minf(radius_px * 0.6, 280.0)
+			arc = 8.0
+		"leap_slam":
+			radius_px += float(skill.get("lunge", 0.0))
+	_telegraph.global_position = View3D.to3(center, 0.04)
+	_telegraph.rotation.y = View3D.yaw_for(sim.attack_aim)
+	_telegraph.scale = Vector3.ONE * View3D.meters(radius_px)
+	_telegraph.set_param("arc", deg_to_rad(arc))
+	var progress := clampf(sim.state_time / maxf(float(skill.get("windup", 0.3)), 0.05), 0.0, 1.0)
+	_telegraph.set_param("progress", progress)
+	_telegraph.set_param("intensity", 0.7 + 0.6 * progress)
+
+
 func _build_overhead() -> void:
 	_overhead = Node3D.new()
 	_overhead.position.y = 2.25
@@ -239,6 +296,7 @@ func _build_overhead() -> void:
 
 func _update_overhead() -> void:
 	_overhead.visible = sim.alive
+	_overhead.scale = Vector3.ONE * (1.5 if arena.topdown else 1.0)  # barras más grandes desde arriba
 	var tag := ""
 	if sim.silence_timer > 0.0:
 		tag += "[SILENCIADO] "
@@ -302,6 +360,10 @@ func _process(delta: float) -> void:
 	position = View3D.to3(sim.position, View3D.meters(sim.height))
 	if enemy_mode and _overhead != null:
 		_update_overhead()
+	if _team_ring != null:
+		_team_ring.visible = arena.topdown and sim.alive
+	if enemy_mode:
+		_update_enemy_telegraph()
 
 	if not sim.alive:
 		trail.emitting = false
@@ -364,17 +426,19 @@ func _update_locomotion() -> void:
 	if _hurt_time > 0.0:
 		_hurt_time -= get_process_delta_time()
 		return
-	if sim.is_airborne():
-		rig.play(ANIM_JUMP, 0.1)
-		return
 	var speed_m := View3D.meters(sim.velocity.length())
 	if speed_m > 0.4 and _is_lateral():
 		# Paso lateral con las animaciones de strafe (el cuerpo mira hacia la cámara)
-		rig.play("class/right_strafe" if _move_angle() > 0.0 else "class/left_strafe", 0.1, clampf(speed_m / 3.0, 0.7, 1.6))
+		var side := "right" if _move_angle() > 0.0 else "left"
+		rig.play(_first_clip(["class/jog_strafe_" + side, "class/run_strafe_" + side]), 0.1, clampf(speed_m / 3.6, 0.7, 1.5))
 	elif speed_m > 0.4 and _aiming_stance():
 		rig.play(_strafe_anim(), 0.1, clampf(speed_m / 2.0, 0.6, 2.2))
 	elif speed_m > 0.4 and _moving_back():
-		rig.play(ANIM_RUN, 0.12, -clampf(speed_m / RUN_ANIM_SPEED, 0.6, 1.6))
+		var back_clip := _first_clip(["class/jog_backward", "class/run_backward"])
+		if back_clip != "":
+			rig.play(back_clip, 0.12, clampf(speed_m / 3.4, 0.7, 1.5))
+		else:
+			rig.play(ANIM_RUN, 0.12, -clampf(speed_m / RUN_ANIM_SPEED, 0.6, 1.6))  # sin clip de retroceso: carrera al revés
 	elif speed_m > 0.4:
 		var anim := ANIM_SPRINT if sim.current_move_speed_multiplier() > 1.15 else ANIM_RUN
 		var ref := RUN_ANIM_SPEED * (1.6 if anim == ANIM_SPRINT else 1.0)
@@ -391,8 +455,17 @@ func _move_angle() -> float:
 	return rad_to_deg(reference.angle_to(sim.velocity))
 
 
+func _first_clip(names: Array) -> String:
+	for clip_name: String in names:
+		if rig.player.has_animation(clip_name):
+			return clip_name
+	return ""
+
+
+## Strafe lateral solo si hay clips de trote lateral (Mixamo "Jog Strafe Left/Right"); si no, se inclina.
 func _is_lateral() -> bool:
-	return false  # animaciones de strafe desactivadas (se veían mal)
+	var a := absf(_move_angle())
+	return a > 45.0 and a <= 135.0 and _first_clip(["class/jog_strafe_left", "class/run_strafe_left"]) != ""
 
 
 func _moving_back() -> bool:

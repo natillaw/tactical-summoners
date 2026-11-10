@@ -53,8 +53,9 @@ var tp_zoom: float = 1.0
 const TP_ZOOM_MIN := 0.3
 const TP_ZOOM_MAX := 2.2
 ## Modo top-down (estilo Battlerite/Albion): cámara aérea fija, ratón libre como puntero.
-var topdown: bool = false
-const TOPDOWN_OFFSET := Vector3(0.0, 13.0, 8.0)
+var topdown: bool = true
+## Inclinación de la cámara aérea: 0 = más inclinada (más vista), 1 = casi cenital (más precisa).
+var td_tilt: float = 0.5
 var tp_yaw: float = 0.0
 var tp_pitch: float = -0.35
 const TP_OFFSET := Vector3(0.9, 0.5, 4.2)
@@ -94,6 +95,7 @@ func build_static(parent: Node3D) -> void:
 	_build_environment()
 	_build_floor()
 	_build_walls()
+	_update_wall_visibility()
 	_build_pillars()
 	_build_torches()
 
@@ -327,7 +329,7 @@ func _build_sfx_pool() -> void:
 func _build_camera() -> void:
 	camera = Camera3D.new()
 	camera.name = "Camera"
-	camera.fov = 70.0
+	camera.fov = 42.0 if topdown else 70.0
 	camera.near = 0.3
 	camera.far = 120.0
 	add_child(camera)
@@ -422,11 +424,26 @@ func _process(delta: float) -> void:
 func toggle_topdown() -> void:
 	topdown = not topdown
 	camera.fov = 42.0 if topdown else 70.0
+	_update_wall_visibility()
+
+
+## Incrementa/decrementa la inclinación de la cámara top-down.
+func tilt_topdown(step: float) -> void:
+	td_tilt = clampf(td_tilt + step, 0.0, 1.0)
+
+
+## En top-down el muro sur (el más cercano a la cámara) se oculta para no tapar el combate.
+func _update_wall_visibility() -> void:
+	for wall_name in ["Wall1", "WallCap1"]:
+		var wall := _static_parent.get_node_or_null(wall_name) as Node3D
+		if wall != null:
+			wall.visible = not topdown
 
 
 func _place_camera(shake: Vector3) -> void:
 	if topdown:
-		camera.position = _cam_focus + TOPDOWN_OFFSET * tp_zoom + shake
+		var offset := Vector3(0.0, lerpf(9.0, 17.0, td_tilt), lerpf(11.0, 2.0, td_tilt))
+		camera.position = _cam_focus + offset * tp_zoom + shake
 		camera.look_at(_cam_focus + Vector3(0, 0.4, 0) + shake)
 		return
 	var basis := Basis.from_euler(Vector3(tp_pitch, tp_yaw, 0.0))
@@ -613,9 +630,11 @@ func dummy_actor_for(sim: Object) -> DummyActor3D:
 # --- Marcador de skills de suelo ---------------------------------------------------
 
 var _ground_marker: FxShape
+var _range_ring: FxShape
+var _aim_line: FxShape
 
 
-func set_ground_marker(active: bool, at: Vector2, radius_px: float) -> void:
+func set_ground_marker(active: bool, at: Vector2, radius_px: float, range_center: Vector2 = Vector2.ZERO, range_px: float = 0.0) -> void:
 	if _ground_marker == null:
 		_ground_marker = FxShape.new().setup(FxShape.Mode.RING, 1.0, Color(1.0, 0.7, 0.3, 0.9))
 		_ground_marker.set_param("inner", 0.9)
@@ -623,7 +642,32 @@ func set_ground_marker(active: bool, at: Vector2, radius_px: float) -> void:
 		_ground_marker.set_param("pulse", 1.0)
 		_ground_marker.visible = false
 		add_child(_ground_marker)
+		_range_ring = FxShape.new().setup(FxShape.Mode.RING, 1.0, Color(1.0, 1.0, 1.0, 0.45))
+		_range_ring.set_param("inner", 0.985)
+		_range_ring.set_param("fill", 0.0)
+		_range_ring.visible = false
+		add_child(_range_ring)
 	_ground_marker.visible = active
+	_range_ring.visible = active and range_px > 0.0
 	if active:
 		_ground_marker.position = View3D.to3(at, 0.05)
 		_ground_marker.scale = Vector3.ONE * View3D.meters(radius_px)
+		if range_px > 0.0:
+			_range_ring.position = View3D.to3(range_center, 0.04)  # alcance de la skill alrededor del jugador
+			_range_ring.scale = Vector3.ONE * View3D.meters(range_px)
+
+
+## Línea tenue desde el jugador hacia el cursor (solo top-down).
+func set_aim_indicator(active: bool, from: Vector2, direction: Vector2) -> void:
+	if _aim_line == null:
+		_aim_line = FxShape.new().setup(FxShape.Mode.SECTOR, 3.2, Color(1.0, 1.0, 1.0, 0.5))
+		_aim_line.set_param("arc", deg_to_rad(5.0))
+		_aim_line.set_param("fill", 0.4)
+		_aim_line.set_param("edge", 0.05)
+		_aim_line.set_param("trail", 0.0)
+		_aim_line.visible = false
+		add_child(_aim_line)
+	_aim_line.visible = active
+	if active:
+		_aim_line.position = View3D.to3(from, 0.03)
+		_aim_line.rotation.y = View3D.yaw_for(direction)

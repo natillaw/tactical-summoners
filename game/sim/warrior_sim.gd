@@ -134,6 +134,8 @@ var kit: GDScript = ClassRegistry.kit(&"warrior")
 var projectiles: Array = []
 ## Slot de skill de suelo que se está apuntando (tecla mantenida); al soltar se lanza.
 var aiming_slot: String = ""
+## Lanzamiento rápido (Battlerite): las skills de suelo salen al pulsar, hacia el cursor.
+var quick_cast: bool = false
 ## Invisibilidad (Vanish): los enemigos no te ven; atacar la rompe.
 var invisible_timer: float = 0.0
 var _cast_hit: bool = false
@@ -292,7 +294,11 @@ func _read_input(input: Variant) -> void:
 		var key := String(kit.ACTION_KEYS[slot])
 		var pressed := bool(actions.get(key, false))
 		var was := bool(_prev_actions.get(key, false))
-		if is_ground(ability_for_slot(slot)):
+		if is_ground(ability_for_slot(slot)) and quick_cast:
+			if pressed and not was and alive and stun_timer <= 0.0:
+				buffered_slot = slot
+				buffer_timer = BUFFER_SECONDS
+		elif is_ground(ability_for_slot(slot)):
 			# Skills de suelo: mantener la tecla = apuntar (marcador); soltar = lanzar.
 			if pressed and not was and alive and stun_timer <= 0.0:
 				aiming_slot = slot
@@ -305,12 +311,6 @@ func _read_input(input: Variant) -> void:
 			buffer_timer = BUFFER_SECONDS
 		_prev_actions[key] = pressed
 
-	var jump_pressed := bool(actions.get("jump", false))
-	if jump_pressed and not bool(_prev_actions.get("jump", false)) and alive and not is_airborne():
-		vertical_velocity = JUMP_VELOCITY
-		height = 0.001
-		jumped.emit()
-	_prev_actions["jump"] = jump_pressed
 
 	var m1_pressed := bool(actions.get("m1", false))
 	var m1_was := bool(_prev_actions.get("m1", false))

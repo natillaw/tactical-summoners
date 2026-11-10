@@ -18,6 +18,7 @@ extends Node3D
 
 var world: CombatWorld
 var _loot_rng := RandomNumberGenerator.new()
+var _quick_cast_enabled: bool = true  # X alterna; solo aplica en top-down
 
 
 func _ready() -> void:
@@ -51,6 +52,12 @@ func _refresh_status() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("toggle_camera"):
 		arena.toggle_topdown()  # C: alterna tercera persona <-> top-down
+	if event.is_action_pressed("toggle_quickcast"):
+		_quick_cast_enabled = not _quick_cast_enabled
+	if event.is_action_pressed("tilt_up"):
+		arena.tilt_topdown(0.1)
+	if event.is_action_pressed("tilt_down"):
+		arena.tilt_topdown(-0.1)
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.physical_keycode:
 			KEY_F5: world.warrior.progression.set_level(world.warrior.progression.level + 5)
@@ -106,6 +113,7 @@ func _physics_process(_delta: float) -> void:
 	if Input.is_action_just_pressed("refill_resources"):
 		world.warrior.debug_refill()
 
+	world.warrior.quick_cast = _quick_cast_enabled and arena.topdown
 	world.submit_input(_read_input())
 
 
@@ -131,7 +139,6 @@ func _read_input() -> InputMessage:
 		"m1": Input.is_action_pressed("attack_m1"),
 		"m2": Input.is_action_pressed("attack_m2"),
 		"shift": Input.is_action_pressed("slot_shift"),
-		"jump": Input.is_action_pressed("jump"),
 		"q": Input.is_action_pressed("slot_q"),
 		"e": Input.is_action_pressed("slot_e"),
 		"s1": Input.is_action_pressed("slot_1"),
@@ -146,6 +153,7 @@ func _read_input() -> InputMessage:
 func _update_ground_marker() -> void:
 	if world == null:
 		return
+	arena.set_aim_indicator(arena.topdown and world.warrior.alive and not loadout_panel.visible, world.warrior.position, world.warrior.aim_dir)
 	var warrior := world.warrior
 	var mouse: Variant = arena.mouse_sim()
 	var slot := warrior.ground_slot_ready()
@@ -154,4 +162,4 @@ func _update_ground_marker() -> void:
 		return
 	var ability := warrior.ability_for_slot(slot)
 	var point := warrior.clamp_ground_point(mouse, ability)
-	arena.set_ground_marker(true, point, float(ability.get("radius", 100.0)))
+	arena.set_ground_marker(true, point, float(ability.get("radius", 100.0)), warrior.position, float(ability.get("range", 0.0)))

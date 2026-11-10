@@ -155,6 +155,7 @@ func _process(delta: float) -> void:
 		var progress := sim.telegraph_progress()
 		_telegraph.rotation.y = View3D.yaw_for(sim.attack_direction)
 		_telegraph.set_param("progress", progress)
+		_telegraph.set_param("fill", 0.32 if arena.topdown else 0.18)  # más visible desde arriba
 		_telegraph.set_param("intensity", 0.6 + 0.6 * progress)
 
 	_update_dot_aura()
