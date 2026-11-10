@@ -73,6 +73,21 @@ Los 15 tests headless pasan en la línea base.
   hit-stop, windup enemigo). Falta todo lo visual: animaciones y VFX por skill, contraste de enemigos,
   indicadores de AOE, barras de vida, y ver un combate real en captura.
 
+## Feeling de combate: primera pasada visual (vista en `tests/capture_combat.tscn`)
+
+Hecho tras mirar un combate real del piso 1:
+- El cooldown de las skills se leía mal: "1.7" salía como "17" porque la fuente del HUD no dibuja el punto.
+  Ahora muestra segundos enteros.
+- Enemigos: tinte rojo más marcado, anillo de los pies más grueso y relleno, y tamaño por tier
+  (esbirro ×0.88, élite ×1.08, jefe ×1.4).
+- Números de daño un 50 % más grandes (críticos ×1.6).
+
+Visto y sin arreglar todavía:
+- El texto de misión (4 líneas grandes arriba al centro) tapa la zona de juego y la barra de vida del enemigo lejano.
+- Los paneles de depuración (efectos activos arriba a la derecha, teclas abajo a la derecha) siguen visibles.
+- La estela de Piercing Thrust es muy larga y brillante; falta revisar el resto de skills una a una.
+- Estas tres mejoras no se han vuelto a mirar en captura después de aplicarlas.
+
 ## Qué queda y por qué
 
 El presupuesto de uso se agotó antes de lo previsto (la ventana de 5 h pasó del 3 % al 56 %). Queda, por orden:

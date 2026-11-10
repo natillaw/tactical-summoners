@@ -263,7 +263,7 @@ func _draw_ability_slot(rect: Rect2, warrior: WarriorSim, slot: String) -> void:
 	if left > 0.05:
 		var ratio := clampf(left / maxf(total, 0.001), 0.0, 1.0)
 		draw_rect(Rect2(rect.position, Vector2(rect.size.x, rect.size.y * ratio)), Color(0.02, 0.02, 0.04, 0.66))
-		_draw_text("%.1f" % left, Vector2(rect.position.x, rect.position.y + rect.size.y * 0.7), 7, Color(0.95, 0.92, 0.85, 0.95), HORIZONTAL_ALIGNMENT_CENTER, rect.size.x)
+		_draw_text("%d" % ceili(left), Vector2(rect.position.x, rect.position.y + rect.size.y * 0.7), 7, Color(0.95, 0.92, 0.85, 0.95), HORIZONTAL_ALIGNMENT_CENTER, rect.size.x)
 	elif idle and affordable:
 		draw_rect(rect.grow(-2.0), Color(edge.r, edge.g, edge.b, 0.22), false, 1.0)
 
