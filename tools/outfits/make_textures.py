@@ -45,12 +45,12 @@ def regions_ranger(h, s, v):
     metal = np.clip((0.25 - s) / 0.1, 0, 1) * np.clip((v - 0.4) / 0.15, 0, 1)
     return cloth, leather, metal
 
-def recolor_ranger(src, cloth_h, cloth_s, cloth_v, leather_h, leather_s, leather_v, metal_tint, metal_v):
+def recolor_ranger(src, cloth_h, cloth_s, cloth_v, leather_h, leather_s, leather_v, metal_tint, metal_v, lift=0.0):
     rgb = lin2srgb(src[..., :3]) if False else src[..., :3]  # blender gives linear floats for sRGB images
     h, s, v = rgb2hsv(rgb)
     cw, lw, mw = regions_ranger(h, s, v)
     nh = h.copy(); ns = s.copy(); nv = v.copy()
-    nh = np.where(cw > 0, cloth_h, nh); ns = ns * (1 - cw) + np.clip(s * cloth_s, 0, 1) * cw; nv = nv * (1 - cw) + v * cloth_v * cw
+    nh = np.where(cw > 0, cloth_h, nh); ns = ns * (1 - cw) + np.clip(s * cloth_s, 0, 1) * cw; nv = nv * (1 - cw) + (v * cloth_v + lift * np.maximum(0.0, 0.45 - v)) * cw
     if leather_h is not None: nh = np.where(lw > 0.5, leather_h, nh)
     ns = ns * (1 - lw) + np.clip(s * leather_s, 0, 1) * lw; nv = nv * (1 - lw) + v * leather_v * lw
     out = hsv2rgb(nh % 1.0, np.clip(ns, 0, 1), np.clip(nv, 0, 1))

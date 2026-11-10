@@ -19,6 +19,8 @@ static var max_floor: int = 1
 static var save_checked: bool = false
 ## Nivel de calidad gráfica activo (se conserva entre escenas; el juego baja solo si hace falta).
 static var quality_step: int = 0
+## Solo para pruebas: fuerza el tipo de misión del piso (p. ej. "waves").
+static var force_mission: String = ""
 static var xp: int = 0
 static var started: bool = false
 static var armor: Dictionary = {}

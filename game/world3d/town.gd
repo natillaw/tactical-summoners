@@ -384,10 +384,10 @@ static var _npc_tags: Dictionary = {}
 
 
 ## Aldeano de Craftpix (FBX en T-pose): se le bajan los brazos y se le pone la textura compartida.
-static func _villager(parent: Node3D, v: Dictionary) -> void:
+static func _villager(parent: Node3D, v: Dictionary) -> Node3D:
 	var scene := load("res://assets/models/people/%s.fbx" % v["model"]) as PackedScene
 	if scene == null:
-		return
+		return null
 	var node := scene.instantiate() as Node3D
 	node.position = View3D.to3(v["pos"])
 	node.rotation.y = float(v["yaw"])
@@ -411,6 +411,7 @@ static func _villager(parent: Node3D, v: Dictionary) -> void:
 	var tween := node.create_tween().set_loops()
 	tween.tween_property(node, "rotation:y", float(v["yaw"]) + 0.12, 2.5 + randf()).set_trans(Tween.TRANS_SINE)
 	tween.tween_property(node, "rotation:y", float(v["yaw"]) - 0.12, 2.5 + randf()).set_trans(Tween.TRANS_SINE)
+	return node
 
 
 static func _tower_foundation(parent: Node3D, data: Dictionary) -> void:

@@ -68,7 +68,7 @@ static func _roster(rng: RandomNumberGenerator, floor_number: int, camp_index: i
 ## Mundo abierto: claros ("salas") cercados de árboles repartidos por un bosque con manchas de densidad,
 ## unidos por senderos suaves que no son obligatorios. 3 claros con campamento, el resto de salas
 ## (spawn, hallazgos) vacías. Nada fuerza un pasillo: se puede cruzar el bosque por cualquier lado.
-static func generate(seed_value: int, floor_number: int = 1) -> Dictionary:
+static func generate(seed_value: int, floor_number: int = 1, force_mission: String = "") -> Dictionary:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
 	var clearings: Array = []  # {center, radius}
@@ -110,7 +110,7 @@ static func generate(seed_value: int, floor_number: int = 1) -> Dictionary:
 	var exit_dist := -1.0
 	for c: Dictionary in order:
 		var has_camp := camp_clearings.has(c)
-		var d := spawn.distance_to(c["center"]) - (600.0 if has_camp else 0.0)
+		var d := spawn.distance_to(c["center"]) - (100000.0 if has_camp else 0.0)  # la salida va siempre en una sala sin campamento (si existe)
 		if d > exit_dist:
 			exit_dist = d
 			exit_pos = (c["center"] as Vector2) + Vector2(0.0, -95.0)
@@ -133,6 +133,14 @@ static func generate(seed_value: int, floor_number: int = 1) -> Dictionary:
 		linked.append(best_b)
 		rest.erase(best_b)
 
+	# Misión del piso: tipo por semilla (o forzado en tests); puede añadir campamentos extra, interactuables y un claro oculto.
+	var mission_rng := RandomNumberGenerator.new()
+	mission_rng.seed = seed_value ^ 0x51ED
+	var mission_type := force_mission if force_mission != "" else MissionCatalog.pick_type(seed_value, floor_number)
+	var design := MissionLayout.design(mission_type, mission_rng, floor_number, {"clearings": clearings, "camps": camps, "spawn": spawn, "exit": exit_pos})
+	if not (design["hidden"] as Dictionary).is_empty():
+		clearings.append(design["hidden"])  # sin sendero: solo se llega cruzando el bosque
+
 	var decor: Array = []
 	var obstacles: Array = []
 	var taken: Array = []
@@ -143,8 +151,17 @@ static func generate(seed_value: int, floor_number: int = 1) -> Dictionary:
 	_place_scatter(rng, ctx, decor, obstacles, taken)
 	_place_trail_stones(rng, trails, decor)
 	var gather: Array = []
-	_place_gather(rng, ctx, gather, taken)
+	_place_gather(rng, ctx, gather, taken, floor_number)
 	_place_chests(rng, clearings, camps, spawn, gather)
+	var trapped: bool = design["spec"]["type"] == "ambush"
+	var chest_count := 0
+	for g: Dictionary in gather:
+		if g["kind"] == "chest":
+			g["trapped"] = trapped
+			chest_count += 1
+	design["spec"]["chests_total"] = chest_count
+	if not (design["hidden"] as Dictionary).is_empty():
+		gather.append({"kind": "chest", "mat": "", "pos": design["hidden"]["center"], "amount": 1, "yaw": 0.0, "secret": true, "trapped": false})
 
 	var enemy_total := 0
 	for camp: Dictionary in camps:
@@ -152,7 +169,7 @@ static func generate(seed_value: int, floor_number: int = 1) -> Dictionary:
 	return {
 		"seed": seed_value, "floor": floor_number, "name": "Praderas", "bounds": Rect2(Vector2.ZERO, SIZE),
 		"spawn": spawn, "clearings": clearings, "trails": trails, "camps": camps, "decor": decor, "obstacles": obstacles, "gather": gather,
-		"exit": exit_pos, "quest": {"title": "Limpia las praderas", "kill": enemy_total, "enemies": enemy_total},
+		"exit": exit_pos, "mission": design["spec"], "interacts": design["interacts"], "quest": {"title": "Limpia las praderas", "kill": enemy_total, "enemies": enemy_total},
 	}
 
 
@@ -251,8 +268,19 @@ static func _place_trees(rng: RandomNumberGenerator, ctx: Dictionary, decor: Arr
 		var center: Vector2 = c["center"]
 		var radius: float = c["radius"]
 		var count := int(TAU * (radius + 40.0) / 52.0)
+		var gap_dir := 0.0
+		if c.has("hidden"):  # el claro oculto deja una entrada (hacia el claro más cercano), pero sin sendero
+			var nearest: Vector2 = center
+			var best := INF
+			for other: Dictionary in clearings:
+				if not other.has("hidden") and center.distance_to(other["center"]) < best:
+					best = center.distance_to(other["center"])
+					nearest = other["center"]
+			gap_dir = (nearest - center).angle()
 		for k in range(count):
 			var angle := TAU * (float(k) + rng.randf_range(-0.3, 0.3)) / float(count)
+			if c.has("hidden") and absf(angle_difference(angle, gap_dir)) < 0.5:
+				continue
 			var point := center + Vector2(cos(angle), sin(angle)) * (radius + rng.randf_range(20.0, 75.0))
 			if not Rect2(Vector2(30, 30), SIZE - Vector2(60, 60)).has_point(point):
 				continue
@@ -322,7 +350,7 @@ static func _place_scatter(rng: RandomNumberGenerator, ctx: Dictionary, decor: A
 
 ## Nodos de recolección comunes del piso 1: minerales en rocas, hierbas y flores cerca de claros y
 ## senderos, hongos en el bosque, troncos secos y fibras repartidos.
-static func _place_gather(rng: RandomNumberGenerator, ctx: Dictionary, gather: Array, taken: Array) -> void:
+static func _place_gather(rng: RandomNumberGenerator, ctx: Dictionary, gather: Array, taken: Array, floor_number: int = 1) -> void:
 	var plan := {"ore": 9, "stone": 8, "herb": 16, "flower": 10, "mushroom": 8, "fiber": 14, "wood": 8}
 	for kind: String in plan:
 		var placed := 0
@@ -347,7 +375,7 @@ static func _place_gather(rng: RandomNumberGenerator, ctx: Dictionary, gather: A
 				continue
 			var spec: Dictionary = Materials.NODES[kind]
 			var amount: Array = spec["amount"]
-			gather.append({"kind": kind, "mat": spec["mat"], "pos": point, "amount": rng.randi_range(int(amount[0]), int(amount[1])), "yaw": rng.randf() * TAU})
+			gather.append({"kind": kind, "mat": Materials.node_material(kind, floor_number, rng), "pos": point, "amount": rng.randi_range(int(amount[0]), int(amount[1])), "yaw": rng.randf() * TAU})
 			taken.append([point, 34.0])
 			placed += 1
 
@@ -356,7 +384,7 @@ static func _place_gather(rng: RandomNumberGenerator, ctx: Dictionary, gather: A
 static func _place_chests(rng: RandomNumberGenerator, clearings: Array, camps: Array, spawn: Vector2, gather: Array) -> void:
 	for c: Dictionary in clearings:
 		var center: Vector2 = c["center"]
-		var occupied := center == spawn
+		var occupied := center == spawn or c.has("hidden")
 		for camp: Dictionary in camps:
 			if camp["center"] == center:
 				occupied = true

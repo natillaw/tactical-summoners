@@ -4,6 +4,16 @@ class_name ArmorSets
 extends RefCounted
 
 const SETS := {
+	"montero": {"name": "Montero Novato", "desc": "Gorra con pluma y aljaba: el uniforme de todo cazador."},
+	"llanura": {"name": "Explorador de la Llanura", "desc": "Ala ancha y lino curtido: ligero y de largo aliento."},
+	"guardabosques": {"name": "Guardabosques", "desc": "Cornamenta y manto de piel: aguanta el monte."},
+	"centinela": {"name": "Centinela del Norte", "desc": "Capucha, hombreras y cuello de piel: el arquero más resistente."},
+	"dunas": {"name": "Rastreador de Dunas", "desc": "Plumas, cuentas y cuero: ligero y de gatillo fácil."},
+	"aprendiz": {"name": "Aprendiz de Magia", "desc": "Túnica y capucha sencillas: lo que lleva todo novato."},
+	"brasa": {"name": "Chispa de Brasa", "desc": "Rojo ascua y oro: quema mucho, cubre poco."},
+	"escarcha": {"name": "Escarcha del Norte", "desc": "Pieles y paño claro contra el frío: algo más de aguante."},
+	"sabio": {"name": "Sabio Errante", "desc": "Sombrero puntiagudo y capa larga de mago de cuento."},
+	"osario": {"name": "Osario Penitente", "desc": "Negro, hueso y cuernos: frágil pero letal."},
 	"ladron": {"name": "Ladrón de Callejón", "desc": "Cuero y paño oscuro para pasar desapercibido en la ciudad."},
 	"cuervo": {"name": "Sombra de Cuervo", "desc": "Negro violáceo y capucha picuda: pega fuerte, aguanta poco."},
 	"desierto": {"name": "Bribón del Desierto", "desc": "Lino claro y botas ligeras: ágil y fresco."},

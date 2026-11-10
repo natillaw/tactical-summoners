@@ -46,6 +46,11 @@ var dummy_actors: Array[DummyActor3D] = []
 var enemy_actors: Array[WarriorActor3D] = []
 var gather_nodes: Array = []
 var exit_portal: Node3D
+## Interactuables de la misión (altares, balizas, estandartes...): id -> {data, node, visible, done}.
+var interacts: Dictionary = {}
+var ally_actors: Array = []
+## Se emite al aparecer un combatiente en mitad del piso (oleadas, emboscadas, aliados).
+signal fighter_spawned(fighter: WarriorSim)
 var enemy_index: Dictionary = {}  # WarriorSim -> índice en el piso (para guardar el progreso)
 var town_buildings: Array = []
 var _inside_building: String = ""
@@ -446,6 +451,137 @@ func spawn_class_enemy(class_id: StringName, at: Vector2, level: int = 1, group:
 	actor.setup(fighter, self)
 	enemy_actors.append(actor)
 	return fighter
+
+
+## Enemigo que aparece en mitad del piso (oleada, emboscada): ataca desde el primer momento (sin radio de aggro).
+func spawn_dynamic(arch: String, at: Vector2, level: int) -> WarriorSim:
+	var fighter := spawn_class_enemy(StringName(arch), at, level, -1, 0.0)
+	fighter_spawned.emit(fighter)
+	return fighter
+
+
+## Aldeano aliado (rescate): combate a los enemigos cercanos y sigue al jugador (rasgo "ally").
+func spawn_ally(at: Vector2, level: int) -> WarriorSim:
+	var fighter := world.add_fighter(&"warrior", 0, at, level, "Aldeano")
+	fighter.archetype_id = "aldeano"
+	fighter.brain.configure({"difficulty": 0.55, "aggression": 0.6, "traits": ["guard", "ally"]})
+	fighter.mods["health_mult"] = 1.6
+	fighter.recompute_stats(true)
+	var actor := PLAYER_SCENE.instantiate() as WarriorActor3D
+	actor.ally_mode = true
+	actor.name = "Ally_Aldeano"
+	add_child(actor)
+	actor.setup(fighter, self)
+	ally_actors.append(actor)
+	return fighter
+
+
+## Crea los interactuables del piso (F junto a ellos). Cada uno: {id, kind, pos, label}.
+func build_interacts(list: Array) -> void:
+	var holder := Node3D.new()
+	holder.name = "Interacts"
+	add_child(holder)
+	for entry: Dictionary in list:
+		var root := Node3D.new()
+		root.position = View3D.to3(entry["pos"])
+		holder.add_child(root)
+		var tint := Color(0.75, 0.55, 1.0)
+		var stone := Town._stone_material(Color(0.7, 0.68, 0.66))
+		match String(entry["kind"]):
+			"altar":
+				tint = Color(0.8, 0.5, 1.0)
+				_pillar(root, stone, 0.7, 1.0)
+			"beacon":
+				tint = Color(0.5, 0.9, 1.0)
+				_pillar(root, stone, 0.5, 1.6)
+			"pedestal":
+				tint = Color(1.0, 0.85, 0.4)
+				_pillar(root, stone, 0.6, 0.8)
+			"relic":
+				tint = Color(1.0, 0.85, 0.3)
+				_pillar(root, stone, 0.45, 0.7)
+			"banner":
+				tint = Color(1.0, 0.45, 0.3)
+				var banner := load("res://assets/models/props_fantasy/Banner_1.gltf") as PackedScene
+				if banner != null:
+					root.add_child(banner.instantiate())
+			"signpost":
+				tint = Color(1.0, 0.9, 0.5)
+				var sign := load("res://assets/models/props_fantasy/Banner_2.gltf") as PackedScene
+				if sign != null:
+					root.add_child(sign.instantiate())
+			"cage":
+				tint = Color(0.9, 0.9, 0.7)
+				_cage(root)
+		var glint := ArcaneFx.sparks(tint, 8, 1.8, 0.4, 0.12, false)
+		glint.position.y = 1.4
+		root.add_child(glint)
+		var label := Label3D.new()
+		label.text = String(entry["label"])
+		label.font = GameTheme.font(true)
+		label.font_size = 40
+		label.outline_size = 10
+		label.pixel_size = 0.008
+		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		label.no_depth_test = true
+		label.modulate = Color(1.0, 0.95, 0.7)
+		label.position.y = 2.6
+		root.add_child(label)
+		interacts[String(entry["id"])] = {"data": entry, "node": root, "label": label, "visible": true, "done": false}
+
+
+func _pillar(root: Node3D, mat: Material, radius: float, height: float) -> void:
+	var mesh := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = radius * 0.8
+	cyl.bottom_radius = radius
+	cyl.height = height
+	cyl.material = mat
+	mesh.mesh = cyl
+	mesh.position.y = height * 0.5
+	root.add_child(mesh)
+
+
+func _cage(root: Node3D) -> void:
+	var bar_mat := StandardMaterial3D.new()
+	bar_mat.albedo_color = Color(0.25, 0.22, 0.2)
+	bar_mat.metallic = 0.6
+	for i in range(8):
+		var bar := MeshInstance3D.new()
+		var box := BoxMesh.new()
+		box.size = Vector3(0.08, 2.0, 0.08)
+		box.material = bar_mat
+		bar.mesh = box
+		var angle := TAU * float(i) / 8.0
+		bar.position = Vector3(cos(angle) * 0.9, 1.0, sin(angle) * 0.9)
+		root.add_child(bar)
+	var top := MeshInstance3D.new()
+	var disc := CylinderMesh.new()
+	disc.top_radius = 1.0
+	disc.bottom_radius = 1.0
+	disc.height = 0.08
+	disc.material = bar_mat
+	top.mesh = disc
+	top.position.y = 2.0
+	root.add_child(top)
+	var villager := Town._villager(root, {"model": "peasant_2", "pos": Vector2.ZERO, "yaw": 0.0})
+	if villager != null:
+		villager.position = Vector3.ZERO
+
+
+## Actualiza un interactuable: {visible, label, done}. Los ocultos no se pueden usar.
+func set_interact(id: String, props: Dictionary) -> void:
+	if not interacts.has(id):
+		return
+	var item: Dictionary = interacts[id]
+	if props.has("visible"):
+		item["visible"] = bool(props["visible"])
+		(item["node"] as Node3D).visible = bool(props["visible"])
+	if props.has("label"):
+		(item["label"] as Label3D).text = String(props["label"])
+	if props.has("done"):
+		item["done"] = bool(props["done"])
+		(item["label"] as Label3D).modulate = Color(0.6, 1.0, 0.6) if bool(props["done"]) else Color(1.0, 0.95, 0.7)
 
 
 func spawn_swarm(archetype_id: String, count: int, center: Vector2, level: int = 1) -> void:

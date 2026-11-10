@@ -74,6 +74,16 @@ const OUTFITS := {
 	"armor_hoplite": {"name": "Armadura: Panoplia de Bronce", "gear": "hoplite"},
 	"armor_norse": {"name": "Armadura: Cota del Norte", "gear": "norse"},
 	"armor_dark": {"name": "Armadura: Hierro Ennegrecido", "gear": "dark"},
+	"armor_montero": {"name": "Arquero: Montero Novato", "gear": "montero"},
+	"armor_llanura": {"name": "Arquero: Explorador de la Llanura", "gear": "llanura"},
+	"armor_guardabosques": {"name": "Arquero: Guardabosques", "gear": "guardabosques"},
+	"armor_centinela": {"name": "Arquero: Centinela del Norte", "gear": "centinela"},
+	"armor_dunas": {"name": "Arquero: Rastreador de Dunas", "gear": "dunas"},
+	"armor_aprendiz": {"name": "Mago: Aprendiz de Magia", "gear": "aprendiz"},
+	"armor_brasa": {"name": "Mago: Chispa de Brasa", "gear": "brasa"},
+	"armor_escarcha": {"name": "Mago: Escarcha del Norte", "gear": "escarcha"},
+	"armor_sabio": {"name": "Mago: Sabio Errante", "gear": "sabio"},
+	"armor_osario": {"name": "Mago: Osario Penitente", "gear": "osario"},
 	"armor_ladron": {"name": "Picaro: Ladron de Callejon", "gear": "ladron"},
 	"armor_cuervo": {"name": "Picaro: Sombra de Cuervo", "gear": "cuervo"},
 	"armor_desierto": {"name": "Picaro: Bribon del Desierto", "gear": "desierto"},
@@ -142,7 +152,7 @@ static func build(opts: Dictionary) -> Node3D:
 			if ResourceLoader.exists(apath):
 				for mi: MeshInstance3D in _graft(apath, skeleton, [], []):
 					_armor_materials(mi, String(part["armor"]))
-			else:
+			elif not bool(part.get("optional", false)):
 				push_warning("CharacterBuilder: falta " + apath)
 			continue
 		var file := String(part["file"])
@@ -184,6 +194,18 @@ const ARMOR_SLOTS := ["head", "chest", "legs", "hands", "boots"]
 ## Sets de picaro: salen de los trajes Quaternius (Ranger/Peasant) recoloreados y editados, no de geometria propia
 ## (tools/outfits/make_rogue_*.py). hood = capucha; body/legs/boots = de que traje base sale cada pieza.
 const QSETS := {
+	# --- arqueros (base Ranger recoloreada; gorra, sombrero, cornamenta, plumas, aljaba... vienen en las piezas añadidas)
+	"montero": {"pre": "ar", "hood": "", "body": "Ranger", "legs": "Ranger", "boots": "Ranger", "bracer": true, "pauldron": false, "hair": true, "beard": true},        # gorra con pluma + aljaba
+	"llanura": {"pre": "ar", "hood": "", "body": "Ranger", "legs": "Ranger", "boots": "Ranger", "bracer": true, "pauldron": false, "hair": true, "beard": true},        # sombrero de ala ancha
+	"guardabosques": {"pre": "ar", "hood": "", "body": "Ranger", "legs": "Ranger", "boots": "Ranger", "bracer": true, "pauldron": false, "hair": true, "beard": true},   # cornamenta + manto de piel
+	"centinela": {"pre": "ar", "hood": "Ranger.gltf", "body": "Ranger", "legs": "Ranger", "boots": "Ranger", "bracer": true, "pauldron": true, "hair": true, "beard": false},  # capucha + hombreras + cuello de piel
+	"dunas": {"pre": "ar", "hood": "", "body": "Ranger", "legs": "Ranger", "boots": "Ranger", "bracer": true, "pauldron": false, "hair": true, "beard": true},           # cinta de plumas + cuentas
+	# --- magos (base Peasant: tunica + falda de tunica; capucha Ranger). "pre" = prefijo de las texturas recoloreadas
+	"aprendiz": {"pre": "mg", "hood": "Ranger.gltf", "body": "Peasant", "legs": "Robe", "boots": "Peasant", "bracer": false, "pauldron": false, "hair": true, "beard": true},   # capucha + cuerda + bufanda
+	"brasa": {"pre": "mg", "hood": "", "body": "Peasant", "legs": "Robe", "boots": "Peasant", "bracer": false, "pauldron": false, "hair": true, "beard": true},          # diadema + capelo
+	"escarcha": {"pre": "mg", "hood": "Ranger.gltf", "body": "Peasant", "legs": "Robe", "boots": "Peasant", "bracer": false, "pauldron": false, "hair": true, "beard": true},   # capucha + cuello de piel
+	"sabio": {"pre": "mg", "hood": "", "body": "Peasant", "legs": "Robe", "boots": "Peasant", "bracer": false, "pauldron": false, "hair": true, "beard": true},          # sombrero puntiagudo + capa
+	"osario": {"pre": "mg", "hood": "Ranger.gltf", "body": "Peasant", "legs": "Robe", "boots": "Peasant", "bracer": false, "pauldron": false, "hair": true, "beard": true},    # capucha con cuernos de hueso + costillas
 	"ladron": {"hood": "", "body": "Ranger", "legs": "Ranger", "boots": "Ranger", "pauldron": false, "hair": true, "beard": false},      # bandana
 	"cuervo": {"hood": "Ranger_HoodPeak.gltf", "body": "Ranger", "legs": "Ranger", "boots": "Ranger", "pauldron": true, "hair": true, "beard": false},   # capucha picuda + pico
 	"desierto": {"hood": "", "body": "Peasant", "legs": "Peasant", "boots": "Ranger", "pauldron": false, "hair": false, "beard": false},   # turbante + velo
@@ -209,7 +231,7 @@ static func _hair_hidden(hair_id: String, gear: Dictionary) -> bool:
 static func _gear_parts(gear: Dictionary) -> Array:
 	var parts: Array = []
 	var sleeve_set := String(gear.get("chest", gear.values()[0]))
-	var sleeve_tex: String = "Ranger_BaseColor_rg_" + sleeve_set if QSETS.has(sleeve_set) else {"footman": "Ranger_BaseColor_archer", "hoplite": "Ranger_BaseColor_warrior"}.get(sleeve_set, "Ranger_BaseColor_rogue")
+	var sleeve_tex: String = "Ranger_BaseColor_" + String(QSETS[sleeve_set].get("pre", "rg")) + "_" + sleeve_set if QSETS.has(sleeve_set) else {"footman": "Ranger_BaseColor_archer", "hoplite": "Ranger_BaseColor_warrior"}.get(sleeve_set, "Ranger_BaseColor_rogue")
 	parts.append({"file": "Ranger.gltf", "sex": true, "only": ["Arms"], "hide": ["Bracer"], "tex": sleeve_tex})  # mangas ajustadas: bajo los brazales
 	var base := {"chest": "Body", "legs": "Legs", "boots": "Feet"}
 	for slot: String in ["chest", "legs", "boots"]:
@@ -228,15 +250,17 @@ static func _set_parts(set_id: String, slot: String) -> Array:
 	if not QSETS.has(set_id):
 		return [{"armor": set_id, "slot": slot}]
 	var def: Dictionary = QSETS[set_id]
-	var rtex := "Ranger_BaseColor_rg_" + set_id
-	var ptex := "Peasant_BaseColor_rg_" + set_id
+	var pre := String(def.get("pre", "rg"))
+	var rtex := "Ranger_BaseColor_" + pre + "_" + set_id
+	var ptex := "Peasant_BaseColor_" + pre + "_" + set_id
 	var out: Array = []
 	match slot:
 		"head":
 			if String(def["hood"]) != "":
 				out.append({"file": String(def["hood"]), "sex": true, "only": ["Hood"], "tex": rtex})
 		"hands":
-			out.append({"file": "Ranger.gltf", "sex": true, "only": ["Bracer"], "tex": rtex})
+			if bool(def.get("bracer", true)):
+				out.append({"file": "Ranger.gltf", "sex": true, "only": ["Bracer"], "tex": rtex})
 		"chest":
 			if String(def["body"]) == "Ranger":
 				out.append({"file": "Ranger.gltf", "sex": true, "only": ["Body"], "tex": rtex})
@@ -246,10 +270,17 @@ static func _set_parts(set_id: String, slot: String) -> Array:
 				out.append({"file": "Ranger.gltf", "sex": true, "only": ["Pauldron"], "tex": rtex})
 				out.append({"file": "Warrior_Acc_PauldronR.gltf", "sex": true, "optional": true, "mat_from": "Pauldron"})
 		"legs":
-			out.append({"file": String(def["legs"]) + ".gltf", "sex": true, "only": ["Legs"], "tex": rtex if String(def["legs"]) == "Ranger" else ptex})
+			if String(def["legs"]) == "Robe":
+				out.append({"file": "Peasant.gltf", "sex": true, "only": ["Legs"], "tex": ptex})
+				out.append({"file": "Mage_Robe.gltf", "sex": true, "tex": ptex})
+			else:
+				out.append({"file": String(def["legs"]) + ".gltf", "sex": true, "only": ["Legs"], "tex": rtex if String(def["legs"]) == "Ranger" else ptex})
 		"boots":
-			out.append({"file": "Ranger.gltf", "sex": true, "only": ["Feet"], "tex": rtex})
-	out.append({"armor": set_id, "slot": slot})  # piezas añadidas encima del traje base (bandana, capa, fajín...)
+			if String(def["boots"]) == "Peasant":
+				out.append({"file": "Peasant.gltf", "sex": true, "only": ["Feet"], "tex": ptex})
+			else:
+				out.append({"file": "Ranger.gltf", "sex": true, "only": ["Feet"], "tex": rtex})
+	out.append({"armor": set_id, "slot": slot, "optional": true})  # piezas añadidas encima del traje base (bandana, capa, fajín...)
 	return out
 
 
@@ -313,6 +344,16 @@ const ARMOR_SLOT := {  # ranura -> [textura, rugosidad, metálico]
 	"leather": ["leather", 0.85, 0.0], "cloth": ["cloth", 0.95, 0.0], "pants": ["cloth", 0.95, 0.0], "bone": ["leather", 0.6, 0.0],
 }
 const ARMOR_TINTS := {  # apagados, estilo pintado de Quaternius
+	"montero": {"cloth": Color(0.28, 0.42, 0.2), "leather": Color(0.38, 0.26, 0.14), "trim": Color(0.62, 0.5, 0.28), "plate": Color(0.5, 0.52, 0.45), "mail": Color(0.5, 0.52, 0.45), "pants": Color(0.25, 0.3, 0.18), "bone": Color(0.85, 0.8, 0.66)},
+	"llanura": {"cloth": Color(0.78, 0.68, 0.48), "leather": Color(0.5, 0.36, 0.2), "trim": Color(0.62, 0.42, 0.24), "plate": Color(0.6, 0.55, 0.45), "mail": Color(0.6, 0.55, 0.45), "pants": Color(0.6, 0.52, 0.38), "bone": Color(0.88, 0.82, 0.68)},
+	"guardabosques": {"cloth": Color(0.2, 0.34, 0.26), "leather": Color(0.3, 0.22, 0.14), "trim": Color(0.55, 0.45, 0.28), "plate": Color(0.4, 0.45, 0.4), "mail": Color(0.4, 0.45, 0.4), "pants": Color(0.18, 0.26, 0.2), "bone": Color(0.86, 0.82, 0.7)},
+	"centinela": {"cloth": Color(0.4, 0.46, 0.58), "leather": Color(0.3, 0.26, 0.22), "trim": Color(0.62, 0.62, 0.68), "plate": Color(0.5, 0.54, 0.62), "mail": Color(0.5, 0.54, 0.62), "pants": Color(0.28, 0.32, 0.42), "bone": Color(0.92, 0.92, 0.94)},
+	"dunas": {"cloth": Color(0.7, 0.34, 0.2), "leather": Color(0.46, 0.32, 0.18), "trim": Color(0.76, 0.58, 0.28), "plate": Color(0.6, 0.5, 0.4), "mail": Color(0.6, 0.5, 0.4), "pants": Color(0.62, 0.3, 0.18), "bone": Color(0.9, 0.85, 0.72)},
+	"aprendiz": {"cloth": Color(0.4, 0.45, 0.72), "leather": Color(0.4, 0.3, 0.16), "trim": Color(0.78, 0.64, 0.32), "plate": Color(0.6, 0.6, 0.66), "mail": Color(0.6, 0.6, 0.66), "pants": Color(0.3, 0.3, 0.5), "bone": Color(0.85, 0.8, 0.7)},
+	"brasa": {"cloth": Color(0.62, 0.18, 0.1), "leather": Color(0.3, 0.18, 0.1), "trim": Color(0.85, 0.66, 0.28), "plate": Color(0.6, 0.5, 0.4), "mail": Color(0.6, 0.5, 0.4), "pants": Color(0.5, 0.15, 0.08), "bone": Color(0.9, 0.85, 0.75)},
+	"escarcha": {"cloth": Color(0.72, 0.82, 0.94), "leather": Color(0.45, 0.5, 0.58), "trim": Color(0.74, 0.8, 0.88), "plate": Color(0.7, 0.75, 0.82), "mail": Color(0.7, 0.75, 0.82), "pants": Color(0.55, 0.68, 0.85), "bone": Color(0.95, 0.95, 0.98)},
+	"sabio": {"cloth": Color(0.42, 0.27, 0.6), "leather": Color(0.3, 0.2, 0.12), "trim": Color(0.85, 0.7, 0.35), "plate": Color(0.6, 0.55, 0.65), "mail": Color(0.6, 0.55, 0.65), "pants": Color(0.32, 0.2, 0.5), "bone": Color(0.88, 0.84, 0.74)},
+	"osario": {"cloth": Color(0.16, 0.1, 0.2), "leather": Color(0.1, 0.08, 0.1), "trim": Color(0.55, 0.5, 0.6), "plate": Color(0.3, 0.3, 0.34), "mail": Color(0.3, 0.3, 0.34), "pants": Color(0.12, 0.08, 0.16), "bone": Color(0.88, 0.84, 0.72)},
 	"ladron": {"cloth": Color(0.3, 0.34, 0.44), "leather": Color(0.25, 0.18, 0.13), "trim": Color(0.55, 0.5, 0.4), "plate": Color(0.5, 0.5, 0.55), "mail": Color(0.5, 0.5, 0.55), "pants": Color(0.2, 0.2, 0.26), "bone": Color(0.8, 0.76, 0.66)},
 	"cuervo": {"cloth": Color(0.17, 0.15, 0.22), "leather": Color(0.14, 0.12, 0.14), "trim": Color(0.45, 0.4, 0.5), "plate": Color(0.3, 0.3, 0.36), "mail": Color(0.3, 0.3, 0.36), "pants": Color(0.12, 0.11, 0.15), "bone": Color(0.7, 0.68, 0.64)},
 	"desierto": {"cloth": Color(0.8, 0.72, 0.52), "leather": Color(0.5, 0.36, 0.22), "trim": Color(0.7, 0.5, 0.25), "plate": Color(0.6, 0.55, 0.45), "mail": Color(0.6, 0.55, 0.45), "pants": Color(0.66, 0.58, 0.42), "bone": Color(0.85, 0.8, 0.68)},

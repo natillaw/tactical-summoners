@@ -92,10 +92,20 @@ func _ready() -> void:
 	column.add_child(_message)
 
 
+## Una línea de cada vecino (ver docs/LORE.md) al abrir su ventana.
+const LORE := {
+	"blacksmith": "\"Subí hasta el piso cuatro con mi hermano. Forjo para que nadie suba mal armado.\"",
+	"alchemy": "\"La esencia de los Ecos es lo único que impide que la Torre se los lleve de vuelta.\"",
+	"leatherworker": "\"El cuero de los Ecos aún recuerda el frío. Se nota al cortarlo.\"",
+	"tailor": "\"Remiendo lo que la Torre rompe. Mis telas son ligeras: para quien prefiere no ser alcanzado.\"",
+	"carpenter": "\"Hice el marco del portal. La madera de los Pliegues crece sola, jurado.\"",
+}
+
+
 func open_for(station: Dictionary, p_warrior: WarriorSim) -> void:
 	warrior = p_warrior
 	_station = station
-	_message.text = ""
+	_message.text = String(LORE.get(String(station["id"]), ""))
 	_title.text = "%s  —  <%s>" % [station["npc"], station["label"]]
 	var tavern: bool = station["id"] == "tavern"
 	_body.visible = not tavern
@@ -143,7 +153,11 @@ func _build_tavern() -> void:
 	var rumor := Button.new()
 	rumor.text = "Pedir rumores"
 	var rumors := [
-		"\"Los filones de cobre brillan entre las rocas del bosque. El herrero paga bien por ellos.\"",
+		"\"Los filones de cobre brillan entre las rocas del bosque. Del piso seis en adelante hay hierro.\"",
+		"\"La Torre se sube un piso a la vez. Los que corren no vuelven.\"",
+		"\"Un Eco no muere: se acuerda de que murió. Por eso pelean como los héroes que fueron.\"",
+		"\"Cada diez pisos hay un Coloso con una Llave. Sin ella, el Pliegue siguiente no se abre.\"",
+		"\"Si ves un cartel junto al inicio de un piso, puedes elegir camino: el difícil paga mejor.\"",
 		"\"Las hierbas curativas crecen cerca de los claros. Elowen las convierte en pociones.\"",
 		"\"Los élites del piso uno aprenden de ti: no los subestimes, y lleva pociones.\"",
 		"\"Cada vez que entras, la Torre es distinta. Nadie recorre el mismo bosque dos veces.\"",
@@ -183,7 +197,7 @@ func _fill_list() -> void:
 		if Crafting.category_of(r) != _category:
 			continue
 		var row := Button.new()
-		row.text = r["name"]
+		row.text = r["name"] + ("" if Crafting.is_unlocked(r) else "  (piso %d)" % int(r["min_floor"]))
 		row.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		row.add_theme_color_override("font_color", HAVE if Crafting.can_craft(r) else Color(0.62, 0.6, 0.58))
 		row.custom_minimum_size = Vector2(0, 34)
@@ -217,7 +231,10 @@ func _refresh_detail() -> void:
 		return
 	var r := _selected
 	var text := "[img=30]%s[/img] [font_size=16][color=#f2c75a]%s[/color][/font_size]\n" % [_icon_path(String(r["id"]), String(r.get("armor", ""))), r["name"]]
-	text += Crafting.describe_result(r, warrior.class_id) + "\n\n[color=#c9b27a]Materiales:[/color]\n"
+	text += Crafting.describe_result(r, warrior.class_id)
+	if not Crafting.is_unlocked(r):
+		text += "\n[color=#ff6666]Bloqueado: llega al piso %d para aprender esta receta.[/color]" % int(r["min_floor"])
+	text += "\n\n[color=#c9b27a]Materiales:[/color]\n"
 	for id: String in r["cost"]:
 		var have := int(Materials.inventory.get(id, 0))
 		var need := int(r["cost"][id])

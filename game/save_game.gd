@@ -6,7 +6,7 @@ extends RefCounted
 
 const PATH := "user://savegame.json"
 const VERSION := 1
-const ITEM_FIELDS := ["id", "item_name", "slot", "rarity", "item_level", "weapon_type", "weapon_min", "weapon_max", "weapon_speed", "stats", "trait_id", "set_id", "legendary_effect"]
+const ITEM_FIELDS := ["id", "item_name", "slot", "rarity", "item_level", "weapon_type", "weapon_min", "weapon_max", "weapon_speed", "stats", "trait_id", "set_id", "model_id", "legendary_effect"]
 
 
 static func exists() -> bool:
@@ -75,6 +75,7 @@ static func apply(data: Dictionary) -> void:
 		var f: Dictionary = floors[key]
 		CharacterProfile.floor_saves[int(key)] = {
 			"seed": int(f.get("seed", 1)), "dead": _ints(f.get("dead", [])), "gathered": _ints(f.get("gathered", [])), "done": bool(f.get("done", false)),
+			"mission_state": f.get("mission_state", {}), "rewarded": bool(f.get("rewarded", false)),
 		}
 	CharacterProfile.current_floor = int(data.get("current_floor", 1))
 	CharacterProfile.max_floor = int(data.get("max_floor", 1))

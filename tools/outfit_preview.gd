@@ -8,6 +8,10 @@ var OUTFITS: Array = _cases()
 func _cases() -> Array:
 	if OS.get_environment("MIX") != "":  # piezas sueltas, 1 a 1 (crafteo pieza a pieza), con pelo
 		return [{"legs": "knight"}, {"boots": "hoplite"}, {"head": "norse"}, {"chest": "dark"}, {"hands": "footman", "legs": "footman"}, {"head": "hoplite", "chest": "knight", "legs": "norse", "boots": "dark", "hands": "footman"}]
+	if OS.get_environment("ARCHER") != "":
+		return ["armor_montero", "armor_llanura", "armor_guardabosques", "armor_centinela", "armor_dunas", "warrior"]
+	if OS.get_environment("MAGE") != "":
+		return ["armor_aprendiz", "armor_brasa", "armor_escarcha", "armor_sabio", "armor_osario", "warrior"]
 	if OS.get_environment("ROGUE") != "":
 		return ["armor_ladron", "armor_cuervo", "armor_desierto", "armor_bosque", "armor_carmesi", "warrior"]
 	if OS.get_environment("ARMOR") != "":
@@ -30,6 +34,8 @@ func _ready() -> void:
 	add_child(holder)
 	for sex_i in 2:
 		for i in n:
+			if OS.get_environment("SOLO") != "" and i != int(OS.get_environment("SOLO")):
+				continue
 			var hair_id := OS.get_environment("HAIR") if OS.get_environment("HAIR") != "" else ("parted" if sex_i == 0 else "long")
 			var opts := {"sex": ["male", "female"][sex_i], "outfit": "peasant", "hair": hair_id, "skin": "claro"}
 			if OUTFITS[i] is Dictionary:

@@ -61,6 +61,8 @@ func think(sim: WarriorSim, world: Object, delta: float) -> Dictionary:
 		return out
 	var target := _pick_target(sim, world)
 	if target == null:
+		if "ally" in traits:
+			return _follow_player(sim, world, out)
 		return _search(sim, out, delta)
 	_has_seen = true
 	_last_seen = target.position
@@ -167,6 +169,8 @@ func _pick_target(sim: WarriorSim, world: Object) -> Object:
 		if score < best_score:
 			best_score = score
 			best = target
+	if best != null and "ally" in traits and sim.position.distance_to(best.position) > 380.0:
+		return null  # el aliado solo pelea con lo que tiene cerca; si no, acompaña al jugador
 	if best != null and aggro_range > 0.0 and not alerted:
 		if sim.health < sim.max_health or sim.position.distance_to(best.position) <= aggro_range:
 			alerted = true
@@ -209,6 +213,16 @@ func _ally_engaged(sim: WarriorSim, world: Object, target: Object) -> bool:
 		if other != sim and other.alive and other.team == sim.team and other.position.distance_to(target.position) < 170.0:
 			return true
 	return false
+
+
+## Aliado sin enemigos cerca: se queda a unos pasos del jugador.
+func _follow_player(sim: WarriorSim, world: Object, out: Dictionary) -> Dictionary:
+	var player: WarriorSim = world.warrior
+	var to_player := player.position - sim.position
+	if to_player.length() > 140.0:
+		out["move_dir"] = to_player.normalized() * (1.0 if to_player.length() > 320.0 else 0.8)
+		out["aim_dir"] = to_player.normalized()
+	return out
 
 
 ## Sin objetivo visible: va a donde lo vio por última vez y se queda alerta.

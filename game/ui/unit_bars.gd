@@ -36,6 +36,9 @@ func _draw() -> void:
 	for a: WarriorActor3D in arena.enemy_actors:
 		if is_instance_valid(a) and a.sim != null and a.sim.alive:
 			items.append({"pos": a.global_position, "sim": a.sim, "fighter": true})
+	for a: WarriorActor3D in arena.ally_actors:
+		if is_instance_valid(a) and a.sim != null and a.sim.alive:
+			items.append({"pos": a.global_position, "sim": a.sim, "fighter": true, "ally": true})
 	for d: DummyActor3D in arena.dummy_actors:
 		if is_instance_valid(d) and d.sim != null and d.sim.get("alive") != false and float(d.sim.health) > 0.0:
 			items.append({"pos": d.global_position, "sim": d.sim, "fighter": false})
@@ -47,16 +50,16 @@ func _draw() -> void:
 		if cam.is_position_behind(world_pos):
 			continue
 		var screen := cam.unproject_position(world_pos)
-		_draw_unit(to_local * screen, item["sim"], bool(item["fighter"]))
+		_draw_unit(to_local * screen, item["sim"], bool(item["fighter"]), bool(item.get("ally", false)))
 
 
-func _draw_unit(at: Vector2, sim: Object, fighter: bool) -> void:
+func _draw_unit(at: Vector2, sim: Object, fighter: bool, ally: bool = false) -> void:
 	var tier := "minion"
 	var name_text := "Muñeco"
 	var level := 1
 	if fighter:
 		var data := EnemyArchetypes.data(String(sim.get("archetype_id")))
-		tier = String(data.get("tier", "elite"))
+		tier = "minion" if ally else String(data.get("tier", "elite"))
 		name_text = String(sim.get("display_name"))
 		level = int(sim.progression.level)
 	else:
@@ -89,7 +92,8 @@ func _draw_unit(at: Vector2, sim: Object, fighter: bool) -> void:
 	# Marco, fondo, relleno.
 	draw_rect(bar.grow(1.5), border)
 	draw_rect(bar, BACK)
-	draw_rect(Rect2(bar.position, Vector2(bar.size.x * ratio, bar.size.y)), FILL if ratio > 0.3 else FILL_LOW)
+	var fill := Color(0.35, 0.8, 0.4) if ally else (FILL if ratio > 0.3 else FILL_LOW)
+	draw_rect(Rect2(bar.position, Vector2(bar.size.x * ratio, bar.size.y)), fill)
 	draw_rect(Rect2(bar.position, Vector2(bar.size.x * ratio, bar.size.y * 0.35)), Color(1, 1, 1, 0.16))  # brillo superior
 	# Divisiones cada 100 de vida (como las marcas de League).
 	var ticks := int(max_hp / 100.0)
@@ -117,6 +121,8 @@ func _draw_unit(at: Vector2, sim: Object, fighter: bool) -> void:
 		tag += "[ATURDIDO] "
 	var name_color := Color(1.0, 0.86, 0.45) if tier == "elite" else (Color(1.0, 0.6, 0.95) if tier == "boss" else Color(0.95, 0.92, 0.88))
 	_text(name_text, Vector2(bar.position.x - 12.0, bar.position.y - 7.0), 7, name_color, width + 12.0, true)
+	if bool(sim.get("quest_target")):  # objetivo de la misión
+		tag = ("◆ OBJETIVO " + tag).strip_edges()
 	if tag != "":
 		_text(tag.strip_edges(), Vector2(bar.position.x - 12.0, bar.position.y - 15.0), 7, Color(1.0, 0.8, 0.35), width + 12.0, true)
 
