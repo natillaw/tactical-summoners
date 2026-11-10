@@ -54,6 +54,9 @@ func show_result(result: Dictionary) -> void:
 	text += "\n\n[color=#c9b27a]Botín del piso[/color]\n"
 	for id: String in result["loot"]:
 		text += "  [img=16]res://assets/ui/items/%s.png[/img] %s x%d\n" % [id, Materials.display(id), int(result["loot"][id])]
+	if result.get("item") != null:
+		var item: Item = result["item"]
+		text += "  [color=#%s]%s[/color]  [%s]\n" % [ItemRarity.color(item.rarity).to_html(false), item.item_name, ItemRarity.display(item.rarity)]
 	text += "\nEnemigos derrotados: %d/%d  ·  Tiempo: %s" % [int(result["kills"]), int(result["total"]), MissionCatalog.clock(float(result["elapsed"]))]
 	_text.text = text
 	var vp := get_viewport_rect().size

@@ -10,12 +10,7 @@ const RECIPES := [
 	{"id": "maza_cobre", "station": "blacksmith", "name": "Maza de Cobre", "cost": {"mena_cobre": 4, "madera": 3, "piedra": 2}, "weapon": "mace"},
 	{"id": "daga_cobre", "station": "blacksmith", "name": "Daga de Cobre", "cost": {"mena_cobre": 3, "cuero_basto": 1}, "weapon": "dagger"},
 	{"id": "lanza_cobre", "station": "blacksmith", "name": "Lanza de Cobre", "cost": {"mena_cobre": 3, "madera": 4}, "weapon": "spear"},
-	# Espadas con diseño propio (modelo editado de Quaternius; ver WeaponCatalog.CUSTOM)
-	{"id": "espada_recluta", "station": "blacksmith", "name": "Espada de Recluta", "cost": {"mena_cobre": 3, "madera": 2}, "weapon": "sword", "model": "espada_recluta", "dps_mult": 0.95, "speed": 2.4},
-	{"id": "espada_xifos", "station": "blacksmith", "name": "Xifos de Bronce", "cost": {"mena_cobre": 4, "madera": 1, "cuero_basto": 1}, "weapon": "sword", "model": "espada_xifos", "dps_mult": 1, "speed": 2.2},
-	{"id": "espada_alfanje", "station": "blacksmith", "name": "Alfanje del Desierto", "cost": {"mena_cobre": 4, "cuero_basto": 2, "piedra": 1}, "weapon": "sword", "model": "espada_alfanje", "dps_mult": 1, "speed": 2.0, "stats": {"crit_chance": 0.01}},
-	{"id": "espada_larga", "station": "blacksmith", "name": "Espada Larga de Acero", "cost": {"mena_cobre": 6, "madera": 2, "piedra": 2}, "weapon": "sword", "model": "espada_larga", "dps_mult": 1.1, "speed": 2.8},
-	{"id": "espada_colmillo", "station": "blacksmith", "name": "Colmillo de Sangre", "cost": {"mena_cobre": 6, "hueso": 3, "polvo_arcano": 1, "cuero_basto": 2}, "weapon": "sword", "model": "espada_colmillo", "dps_mult": 1.15, "speed": 3.0, "stats": {"attack_power_bonus": 2}},
+	# Las 35 armas con modelo propio (espadas, hachas, mazas, lanzas, dagas, arcos, bastones) están en WeaponDesigns.
 	# Herrería: armadura
 	{"id": "yelmo_cobre", "station": "blacksmith", "name": "Yelmo de Cobre", "cost": {"mena_cobre": 3, "cuero_basto": 2}, "armor": "head", "stats": {"stamina": 3.0, "armor": 6.0}},
 	{"id": "peto_cobre", "station": "blacksmith", "name": "Peto de Cobre", "cost": {"mena_cobre": 6, "cuero_basto": 3}, "armor": "chest", "stats": {"stamina": 5.0, "strength": 1.0, "armor": 12.0}},
@@ -32,9 +27,6 @@ const RECIPES := [
 	{"id": "guantes_tela", "station": "tailor", "name": "Guantes de Tela", "cost": {"fibra": 3, "hueso": 1}, "armor": "hands", "stats": {"stamina": 1.0, "armor": 1.0, "crit_chance": 0.01, "attack_power_bonus": 2.0}},
 	{"id": "sandalias_tela", "station": "tailor", "name": "Sandalias de Tela", "cost": {"fibra": 3, "flor_silvestre": 1}, "armor": "boots", "stats": {"stamina": 2.0, "armor": 1.0, "crit_chance": 0.01}},
 	# Carpintería
-	{"id": "arco_corto", "station": "carpenter", "name": "Arco Corto", "cost": {"madera": 4, "fibra": 2}, "weapon": "bow"},
-	{"id": "arco_largo", "station": "carpenter", "name": "Arco Largo", "cost": {"madera": 5, "fibra": 3, "cuero_basto": 1}, "weapon": "bow"},
-	{"id": "baston_roble", "station": "carpenter", "name": "Bastón de Roble", "cost": {"madera": 4, "polvo_arcano": 1}, "weapon": "staff"},
 	{"id": "garrote_madera", "station": "carpenter", "name": "Garrote Reforzado", "cost": {"madera": 5, "piedra": 2}, "weapon": "mace"},
 	{"id": "lanza_madera", "station": "carpenter", "name": "Lanza de Madera", "cost": {"madera": 4, "piedra": 2}, "weapon": "spear"},
 	# Sets de armadura de nivel bajo (visual: CharacterBuilder armor_<set>); ver ArmorSets.
@@ -167,6 +159,10 @@ static func all_recipes() -> Array:
 			if r.has("set") or r.has("grade"):
 				continue
 			_all.append(_grade2(r))
+		_all.append_array(WeaponDesigns.recipes())
+		for r: Dictionary in RECIPES:  # los 20 sets de armadura también tienen versión de grado 2
+			if r.has("set"):
+				_all.append(_grade2(r))
 	return _all
 
 
@@ -192,7 +188,7 @@ static func _grade2(r: Dictionary) -> Dictionary:
 	for pair: Array in [["de Cobre", "de Hierro"], ["de Cuero", "de Cuero Curtido"], ["de Tela", "de Lino"], ["Reforzado", "de Roble Reforzado"]]:
 		renamed = renamed.replace(pair[0], pair[1])
 	if renamed == name:
-		renamed = name + (" Mayor" if r.has("gives") else (" de Roble" if r["station"] == "carpenter" else " Reforzado"))
+		renamed = name + (" Mayor" if r.has("gives") else (" de Roble" if r["station"] == "carpenter" else (" Templado" if r.has("set") else " Reforzado")))
 	g["name"] = renamed
 	return g
 
@@ -306,10 +302,14 @@ static func _describe_base(recipe: Dictionary) -> String:
 	if recipe.has("weapon"):
 		var base: Dictionary = ItemFactory.WEAPON_TYPES[recipe["weapon"]]
 		var lvl := int(recipe.get("level", ITEM_LEVEL))
-		var dps := (2.0 + 0.7 * lvl)
+		var dps := (2.0 + 0.7 * lvl) * float(recipe.get("dps_mult", 1.0))
+		var extra := ""
+		for k: String in recipe.get("stats", {}):
+			extra += "
++%s %s" % [("%d%%" % int(float(recipe["stats"][k]) * 100.0)) if k == "crit_chance" else str(int(recipe["stats"][k])), k]
 		return "%s  ·  Nv.%d
-~%.1f DPS  ·  vel %.1f
-[color=#aaaaaa]La calidad se revela al forjar.[/color]" % [base["name"], lvl, dps, float(base["speed"])]
+~%.1f DPS  ·  vel %.1f%s
+[color=#aaaaaa]La calidad se revela al forjar.[/color]" % [base["name"], lvl, dps, float(recipe.get("speed", base["speed"])), extra]
 	if recipe.has("armor"):
 		var lines: Array = ["%s  ·  Nv.%d" % [Gear.SLOT_NAMES[recipe["armor"]], int(recipe.get("level", ITEM_LEVEL))]]
 		for k: String in recipe["stats"]:

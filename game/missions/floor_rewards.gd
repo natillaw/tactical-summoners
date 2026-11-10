@@ -20,7 +20,7 @@ static func kill_xp(tier: String, floor_number: int) -> int:
 
 
 ## Calcula la recompensa. `runtime` = MissionRuntime ya completada; `kills`/`total` = enemigos del mapa derrotados.
-static func compute(floor_number: int, player_level: int, runtime: MissionRuntime, kills: int, total: int, rng: RandomNumberGenerator) -> Dictionary:
+static func compute(floor_number: int, player_level: int, runtime: MissionRuntime, kills: int, total: int, rng: RandomNumberGenerator, class_id: StringName = &"warrior") -> Dictionary:
 	var base := float(Progression.xp_to_next(player_level)) * level_fraction(floor_number)
 	var ratio := clampf(float(kills) / maxf(float(total), 1.0), 0.0, 1.0)
 	var lines: Array = [["Misión cumplida", 0.85]]
@@ -47,7 +47,9 @@ static func compute(floor_number: int, player_level: int, runtime: MissionRuntim
 	var boost := 2 if floor_number % 5 == 0 else (1 + (1 if runtime.optional_met() else 0))
 	for id: String in loot:
 		loot[id] = int(loot[id]) * boost if id != "pocion_vida" and id != "pocion_vida_mayor" else int(loot[id])
+	var item: Item = Loot.roll("floor_optional" if runtime.optional_met() else "floor", floor_number, class_id, rng)
 	return {
+		"item": item,
 		"floor": floor_number, "xp": xp, "multiplier": mult, "lines": lines, "loot": loot, "kills": kills, "total": total,
 		"elapsed": float(runtime.state["elapsed"]), "levels_worth": base * mult / float(Progression.xp_to_next(player_level)),
 	}

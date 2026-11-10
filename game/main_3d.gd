@@ -82,6 +82,7 @@ func _ready() -> void:
 			_quest_done = bool(_floor_save["done"])
 			_exit_open = _quest_done
 			arena.build_floor(world, _floor, _floor_save)
+			arena.boss_phase.connect(func(boss: WarriorSim, phase: int) -> void: _toast("¡%s entra en fase %d!" % [boss.display_name, phase]))
 			_build_quest_ui()
 			_drop_rng.seed = int(_floor_save["seed"]) * 7919
 			for fighter: WarriorSim in world.fighters:
@@ -233,6 +234,10 @@ func _on_enemy_died(fighter: WarriorSim) -> void:
 	for id: String in drops:
 		Materials.add(id, int(drops[id]))
 		parts.append("+%d %s" % [drops[id], Materials.display(id)])
+	var drop := Loot.roll(EnemyArchetypes.tier_of(fighter.archetype_id) if EnemyArchetypes.TYPES.has(fighter.archetype_id) else "minion", int(_floor.get("floor", 1)), world.warrior.class_id, _drop_rng)
+	if drop != null:
+		parts.append(Loot.give(drop, world.warrior))
+		arena.play_sfx(&"coin", -4.0)
 	if not parts.is_empty():
 		_toast(", ".join(parts))
 
@@ -340,6 +345,9 @@ func _open_chest(entry: Dictionary) -> void:
 	for id: String in loot:
 		Materials.add(id, int(loot[id]))
 		parts.append("+%d %s" % [loot[id], Materials.display(id)])
+	var chest_item := Loot.roll("chest", int(_floor["floor"]), world.warrior.class_id, rng)
+	if chest_item != null:
+		parts.append(Loot.give(chest_item, world.warrior))
 	arena.play_sfx(&"coin", -5.0)
 	arena.play_sfx(&"gather_wood", -9.0)
 	ArcaneFx.burst(arena, View3D.to3(entry["data"]["pos"], 0.8), Color(1.0, 0.85, 0.35), 30, 2.6, 0.13)
