@@ -28,6 +28,21 @@ const TYPES := {
 		"level_bonus": 1, "traits": ["kite"], "mods": {"health_mult": 1.1},
 		"description": "Se mantiene lejos, te silencia, te arrastra y se protege con su escudo de maná si te acercas.",
 	},
+	"esbirro": {
+		"name": "Esbirro", "class": &"warrior", "difficulty": 0.3, "aggression": 0.9,
+		"level_bonus": 0, "traits": [], "mods": {"health_mult": 0.45, "damage_mult": 0.6, "armor_mult": 0.5},
+		"description": "Débil pero aparece en grupo de 4: obliga a usar skills de área y a no quedarse quieto.",
+	},
+	"guardian": {
+		"name": "Guardián", "class": &"warrior", "difficulty": 0.6, "aggression": 0.5,
+		"level_bonus": 1, "traits": ["guard", "shield"], "mods": {"armor_mult": 1.4},
+		"description": "Mantiene el escudo en alto: de frente bloquea el 80% del daño físico. Hay que rodearlo, aturdirlo o usar magia.",
+	},
+	"coloso": {
+		"name": "Coloso", "class": &"warrior", "difficulty": 0.8, "aggression": 0.7,
+		"level_bonus": 3, "traits": ["guard", "punish"], "mods": {"health_mult": 6.0, "armor_mult": 3.0, "cc_scale": 0.35, "damage_mult": 1.2},
+		"description": "Jefe: muchísima vida y poise, resiste el control (stun/atadura/silencio duran un tercio). Se le rompe la guardia con Perfect Parry o ráfagas.",
+	},
 	"cazador": {
 		"name": "Cazador", "class": &"ranger", "difficulty": 0.65, "aggression": 0.6,
 		"level_bonus": 1, "traits": ["kite"], "mods": {},

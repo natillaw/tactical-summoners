@@ -71,7 +71,7 @@ const M2: Dictionary = {
 
 ## M2: cruce de dagas, más daño.
 const CROSS_CUT: Dictionary = {
-	"id": &"cross_cut", "name": "Cross Cut", "short": "CUT", "slot": "S2",
+	"id": &"cross_cut", "name": "Cross Cut", "short": "CUT", "slot": "SHIFT",
 	"kind": "basic", "role": "Daño", "description": "Saltas hacia delante y cruzas ambas dagas al aterrizar. -20% de daño de frente.",
 	"implemented": true, "selectable": true, "cast": "leap_slam", "anim": "slash",
 	"full_clip": {"clip": "class/mutant_jump_attack", "from": 0.32, "to": 0.58, "contact": 0.44, "late": true},
@@ -137,13 +137,23 @@ const DEATH_SENTENCE: Dictionary = {
 }
 
 const EVISCERATE: Dictionary = {
-	"id": &"eviscerate", "name": "Eviscerate", "short": "EVISC", "slot": "S2",
+	"id": &"eviscerate", "name": "Eviscerate", "short": "EVISC", "slot": "R",
 	"kind": "burst", "role": "Burst / remate", "description": "Puñalada brutal. Combo de ejecución: +60% de daño contra envenenados y +40% contra aturdidos (Fan of Knives -> Cheap Shot -> Eviscerate).",
 	"implemented": true, "selectable": true, "cast": "melee", "anim": "slash", "flank": true,
 	"full_clip": {"clip": "class/stabbing", "from": 0.1, "to": 0.5, "contact": 0.27},
 	"windup": 0.22, "active": 0.08, "recovery": 0.30, "cooldown": 5.0, "cost": 55.0,
 	"range": 75.0, "arc": 100.0, "damage_mult": 2.6, "bonus_vs": {"poisoned": 1.6, "stunned": 1.4},
 	"rage_gain": 0.0, "move_factor": 0.2,
+}
+
+const MARK_FOR_DEATH: Dictionary = {
+	"id": &"mark_for_death", "name": "Mark for Death", "short": "MARK", "slot": "S2",
+	"kind": "support", "role": "Apoyo / preparación", "description": "Lanzas un cuchillo que MARCA al objetivo 8 s: recibe +25% de daño de ti y de tus aliados. Prepara Eviscerate y Death Sentence.",
+	"implemented": true, "selectable": true, "cast": "projectile", "anim": "slash",
+	"full_clip": {"clip": "ual2/OverhandThrow", "from": 0.12, "to": 0.6, "contact": 0.28},
+	"windup": 0.12, "active": 0.05, "recovery": 0.20, "cooldown": 12.0, "cost": 15.0,
+	"speed": 720.0, "range": 430.0, "hit_radius": 10.0, "damage_mult": 0.5, "effects": {"mark": 8.0},
+	"poise": 0.0, "rage_gain": 0.0, "move_factor": 0.5, "color": [0.95, 0.3, 0.3],
 }
 
 ## Pasiva: a vida baja, más daño y velocidad.
@@ -161,13 +171,13 @@ const DEFAULT_LOADOUT: Dictionary = {
 	"SHIFT": &"shadowstep",
 	"Q": &"vanish",
 	"E": &"cheap_shot",
-	"R": &"fan_of_knives",
-	"S2": &"eviscerate",
+	"R": &"eviscerate",
+	"S2": &"mark_for_death",
 	"F": &"death_sentence",
 }
 
-const ALL_ABILITIES: Array = [M1, M2, SHADOWSTEP, VANISH, CHEAP_SHOT, FAN_OF_KNIVES, EVISCERATE, CROSS_CUT, DEATH_SENTENCE]
-const POOL_ABILITIES: Array = [SHADOWSTEP, VANISH, CHEAP_SHOT, FAN_OF_KNIVES, EVISCERATE, CROSS_CUT, DEATH_SENTENCE]
+const ALL_ABILITIES: Array = [M1, M2, SHADOWSTEP, CROSS_CUT, VANISH, CHEAP_SHOT, EVISCERATE, FAN_OF_KNIVES, MARK_FOR_DEATH, DEATH_SENTENCE]
+const POOL_ABILITIES: Array = [SHADOWSTEP, CROSS_CUT, VANISH, CHEAP_SHOT, EVISCERATE, FAN_OF_KNIVES, MARK_FOR_DEATH, DEATH_SENTENCE]
 
 
 static func create_rage_resource() -> Rage:
@@ -264,7 +274,7 @@ static func sanitize_loadout(raw: Dictionary) -> Dictionary:
 	var out: Dictionary = {}
 	for slot: String in SELECTABLE_SLOTS:
 		var id := StringName(String(raw.get(slot, String(DEFAULT_LOADOUT[slot]))))
-		if not POOL_ABILITIES.any(func(entry: Dictionary) -> bool: return entry["id"] == id):
+		if not POOL_ABILITIES.any(func(entry: Dictionary) -> bool: return entry["id"] == id and String(entry.get("slot", slot)) == slot):
 			id = DEFAULT_LOADOUT[slot]
 		out[slot] = id
 	return out

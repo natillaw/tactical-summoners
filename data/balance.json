@@ -1,0 +1,7 @@
+{
+	"classes": {
+		"rogue": {"damage_mult": 0.85},
+		"mage": {"damage_mult": 1.2}
+	},
+	"skills": {}
+}

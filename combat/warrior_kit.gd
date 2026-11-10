@@ -336,13 +336,25 @@ const SUNDER_ARMOR: Dictionary = {
 }
 
 const HAMSTRING: Dictionary = {
-	"id": &"hamstring", "name": "Hamstring", "short": "HAMSTR", "slot": "S2",
+	"id": &"hamstring", "name": "Hamstring", "short": "HAMSTR", "slot": "E",
 	"kind": "control", "role": "Control / combo", "description": "Tajo a las piernas: ralentiza 50% 3 s y hace sangrar. Combo: Piercing Thrust pega +30% a un objetivo ralentizado, y Charge lo aturde para rematar.",
 	"implemented": true, "selectable": true, "cast": "melee", "anim": "slash", "melee_clips": [1],
 	"windup": 0.14, "active": 0.08, "recovery": 0.22, "cooldown": 7.0, "cost": 10.0,
 	"range": 85.0, "arc": 100.0, "damage_mult": 0.9,
 	"effects": {"slow": {"factor": 0.5, "duration": 3.0}, "dot": {"damage_type": 0, "dps_mult": 0.3, "duration": 3.0}},
 	"rage_gain": 8.0, "move_factor": 0.35,
+	"vfx": "melee/sword-slash", "impact_vfx": "impacts/hit-spark", "vfx_scale": 0.58, "vfx_speed": 1.35, "impact_scale": 0.55, "impact_speed": 1.3, "sfx": "slash",
+}
+
+const RALLY_CRY: Dictionary = {
+	"id": &"rally_cry", "name": "Rally Cry", "short": "RALLY", "slot": "S2",
+	"kind": "support", "role": "Apoyo de grupo", "description": "Grito de guerra: tú y tus aliados cercanos (220 px) hacéis +20% de daño 6 s y recuperáis poise. En grupo es lo que da valor al Warrior; en solitario te potencia unos segundos.",
+	"implemented": true, "selectable": true, "cast": "team_buff", "anim": "cast",
+	"clip": {"name": "standing_2h_cast_spell_01", "start": 0.33, "contact": 0.63, "end": 1.3},
+	"windup": 0.30, "active": 0.10, "recovery": 0.30, "cooldown": 18.0, "cost": 20.0,
+	"radius": 220.0, "damage_mult": 0.0,
+	"effects": {"damage_buff": {"mult": 1.2, "seconds": 6.0}, "poise_restore": 60.0},
+	"rage_gain": 0.0, "move_factor": 0.5,
 	"vfx": "melee/sword-slash", "impact_vfx": "impacts/hit-spark", "vfx_scale": 0.58, "vfx_speed": 1.35, "impact_scale": 0.55, "impact_speed": 1.3, "sfx": "slash",
 }
 
@@ -372,12 +384,12 @@ const DEFAULT_LOADOUT: Dictionary = {
 	"Q": &"piercing_thrust",
 	"E": &"sunder_armor",
 	"R": &"seismic_break",
-	"S2": &"hamstring",
+	"S2": &"rally_cry",
 	"F": &"bladestorm",
 }
 
-const ALL_ABILITIES: Array = [M1, M2, CHARGE, PIERCING_THRUST, SUNDER_ARMOR, SEISMIC_BREAK, HAMSTRING, BLADESTORM]
-const POOL_ABILITIES: Array = [CHARGE, PIERCING_THRUST, SUNDER_ARMOR, SEISMIC_BREAK, HAMSTRING, BLADESTORM]
+const ALL_ABILITIES: Array = [M1, M2, CHARGE, PIERCING_THRUST, SUNDER_ARMOR, HAMSTRING, SEISMIC_BREAK, RALLY_CRY, BLADESTORM]
+const POOL_ABILITIES: Array = [CHARGE, PIERCING_THRUST, SUNDER_ARMOR, HAMSTRING, SEISMIC_BREAK, RALLY_CRY, BLADESTORM]
 
 
 static func create_rage_resource() -> Rage:
@@ -474,7 +486,7 @@ static func sanitize_loadout(raw: Dictionary) -> Dictionary:
 	var out: Dictionary = {}
 	for slot: String in SELECTABLE_SLOTS:
 		var id := StringName(String(raw.get(slot, String(DEFAULT_LOADOUT[slot]))))
-		if not POOL_ABILITIES.any(func(entry: Dictionary) -> bool: return entry["id"] == id):
+		if not POOL_ABILITIES.any(func(entry: Dictionary) -> bool: return entry["id"] == id and String(entry.get("slot", slot)) == slot):
 			id = DEFAULT_LOADOUT[slot]
 		out[slot] = id
 	return out

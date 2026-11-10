@@ -341,19 +341,21 @@ func _test_loadout_affects_casts() -> void:
 	var world := _make_world(false, 5)
 	var start := world.warrior.position
 
-	world.warrior.assign_slot(&"E", &"charge")
-	_check(String(world.warrior.ability_for_slot("E")["id"]) == "charge", "assign_slot cambia la habilidad del slot")
+	world.warrior.assign_slot(&"E", &"hamstring")
+	_check(String(world.warrior.ability_for_slot("E")["id"]) == "hamstring", "assign_slot cambia la habilidad del slot (opciones del rol)")
 
 	world.warrior.debug_refill()
 	_step(world, 30, _input(Vector2(1, 0), false, false, Vector2.ZERO, false, false, true))
-	_check(world.warrior.position.distance_to(start) > 100.0, "el slot reasignado ejecuta la nueva habilidad")
+	_check(world.warrior.cooldown_left("E") > 0.0 or world.warrior.is_attacking(), "el slot reasignado ejecuta la nueva habilidad")
+	world.warrior.assign_slot(&"E", &"charge")
+	_check(String(world.warrior.ability_for_slot("E")["id"]) == "hamstring", "assign_slot rechaza skills de otro rol (Charge es de Shift)")
 
 	world.warrior.assign_slot(&"E", &"heavy_strikes")
-	_check(String(world.warrior.ability_for_slot("E")["id"]) == "charge", "assign_slot rechaza habilidades no seleccionables")
+	_check(String(world.warrior.ability_for_slot("E")["id"]) == "hamstring", "assign_slot rechaza habilidades no seleccionables")
 
-	world.warrior.set_loadout({"SHIFT": &"bogus", "E": &"piercing_thrust"})
+	world.warrior.set_loadout({"SHIFT": &"bogus", "E": &"hamstring"})
 	_check(String(world.warrior.ability_for_slot("SHIFT")["id"]) == "charge", "set_loadout repara ids inválidos")
-	_check(String(world.warrior.ability_for_slot("E")["id"]) == "piercing_thrust", "set_loadout conserva ids válidos")
+	_check(String(world.warrior.ability_for_slot("E")["id"]) == "hamstring", "set_loadout conserva ids válidos")
 
 
 func _test_debug_refill() -> void:
@@ -706,10 +708,10 @@ func _test_mage() -> void:
 	_check(target.health < hp, "Arcane Bolt (proyectil) alcanza y daña al objetivo")
 	var w2 := _make_world(false, 52)
 	w2.warrior.set_class(&"mage")
-	w2.warrior.assign_slot(&"Q", &"arcane_orb")
+	w2.warrior.assign_slot(&"R", &"arcane_orb")
 	var t2: DummySim = w2.dummies[0]
 	t2.position = w2.warrior.position + Vector2(0, -150)
-	_step(w2, 90, _input(Vector2(0, -1), false, false, Vector2.ZERO, false, true))  # Arcane Orb (Q), cast de 0.9 s
+	_step(w2, 90, _input(Vector2(0, -1), false, false, Vector2.ZERO, false, false, false, true))  # Arcane Orb (tecla 1), cast de 0.9 s
 	var after_hit: float = t2.health
 	_step(w2, 90, null)
 	_check(t2.health < after_hit, "Fireball quema al objetivo después del impacto")
@@ -880,8 +882,8 @@ func _test_rogue_rework() -> void:
 	var start: Vector2 = w.position
 	var hp: float = e.health
 	w.aim_dir = Vector2(0, -1)
-	w.assign_slot(&"S2", &"cross_cut")
-	w.buffered_slot = "S2"
+	w.assign_slot(&"SHIFT", &"cross_cut")
+	w.buffered_slot = "SHIFT"
 	w.buffer_timer = 1.0
 	_step(world, 45, _input(Vector2(0, -1), false, false))
 	_check(w.position.distance_to(start) > 35.0 and e.health < hp, "Cross Cut salta hacia delante y golpea al aterrizar")
@@ -896,6 +898,7 @@ func _test_rogue_rework() -> void:
 	# Fan of Knives (R): AoE de poco daño con veneno.
 	_step(world, 40, _input(Vector2(0, -1), false, false))  # termina la recuperación anterior
 	w.debug_refill()
+	w.assign_slot(&"R", &"fan_of_knives")
 	e.position = w.position + Vector2(60, 0)
 	var hp2: float = e.health
 	w.buffered_slot = "R"
@@ -921,8 +924,9 @@ func _test_ranger_rework() -> void:
 	a.position = r.position + Vector2(0, -200)
 	var b: DummySim = world.add_dummy(a.position + Vector2(70, 0), false)
 	r.debug_refill()
+	r.assign_slot(&"Q", &"explosive_arrow")
 	var hp_b: float = b.health
-	r.buffered_slot = "R"
+	r.buffered_slot = "Q"
 	r.buffer_timer = 1.0
 	_step(world, 60, _input(Vector2(0, -1), false, false))
 	_check(b.health < hp_b, "Explosive Arrow explota y daña a los cercanos al impacto")
@@ -1009,7 +1013,7 @@ func _test_flank_stacks_castbar() -> void:
 	r.aim_dir = Vector2(0, -1)
 	var before: float = t.health
 	r.debug_refill()
-	r.buffered_slot = "S2"
+	r.buffered_slot = "R"
 	r.buffer_timer = 1.0
 	_step(world2, 40, _input(Vector2(0, -1), false, false))
 	_check(r.cast_progress() > 0.2 and r.cast_progress() < 0.9, "La barra de cast del disparo concentrado avanza (%.2f)" % r.cast_progress())
@@ -1017,7 +1021,7 @@ func _test_flank_stacks_castbar() -> void:
 	_step(world2, 5, moving)
 	_check(r.cast_progress() < 0.0 and is_equal_approx(t.health, before), "Moverse cancela el cast y no sale disparo")
 	_step(world2, 60, _input(Vector2(0, -1), false, false))
-	r.buffered_slot = "S2"
+	r.buffered_slot = "R"
 	r.buffer_timer = 1.0
 	_step(world2, 140, _input(Vector2(0, -1), false, false))
 	_check(t.health < before, "Quieto, el disparo concentrado sale con la barra llena")
@@ -1139,7 +1143,7 @@ func _test_mage_redesign_and_ai() -> void:
 	foe.take_damage(1.0, w.position, {"pull": 170.0})
 	_step(world, 20, null)
 	_check(foe.position.distance_to(w.position) < start_gap - 100.0, "Arcane Pull arrastra al objetivo hacia el mago (%d px)" % int(start_gap - foe.position.distance_to(w.position)))
-	_check(w.kit.DEFAULT_LOADOUT["Q"] == &"arcane_bind" and w.kit.DEFAULT_LOADOUT["R"] == &"arcane_silence", "El mago lleva Bind y Silence en su barra")
+	_check(w.kit.DEFAULT_LOADOUT["Q"] == &"arcane_bind" and w.kit.DEFAULT_LOADOUT["E"] == &"arcane_pulse", "El mago lleva Bind y Pulse por defecto (Silence/Time Rift son alternativas)")
 	# Arcane Bind: el objetivo atado no se mueve (pero sí puede atacar).
 	var rooted := world.add_fighter(&"warrior", 1, w.position + Vector2(200, 0), 1)
 	rooted.take_damage(1.0, w.position, {"root": 2.5})
@@ -1238,14 +1242,14 @@ func _test_combos() -> void:
 	var seismic_plain := _hit_damage(&"warrior", "R", func(_d: DummySim) -> void: pass)
 	var seismic_marked := _hit_damage(&"warrior", "R", func(d: DummySim) -> void: d.apply_effects({"mark": 5.0}))
 	_check(seismic_marked > seismic_plain * 1.5, "Combo Warrior: un objetivo marcado recibe más (marca +25%% y Seismic +40%%)")
-	var mage_plain := _hit_damage(&"mage", "S2", func(_d: DummySim) -> void: pass)
-	var mage_rooted := _hit_damage(&"mage", "S2", func(d: DummySim) -> void: d.root_timer = 2.0)
+	var mage_plain := _hit_damage(&"mage", "R", func(_d: DummySim) -> void: pass)
+	var mage_rooted := _hit_damage(&"mage", "R", func(d: DummySim) -> void: d.root_timer = 2.0)
 	_check(mage_rooted > mage_plain * 1.5, "Combo Mago: Starfall pega +60%% a un atado (%.0f vs %.0f)" % [mage_rooted, mage_plain])
-	var rogue_plain := _hit_damage(&"rogue", "S2", func(_d: DummySim) -> void: pass)
-	var rogue_combo := _hit_damage(&"rogue", "S2", func(d: DummySim) -> void:
+	var rogue_plain := _hit_damage(&"rogue", "R", func(_d: DummySim) -> void: pass)
+	var rogue_combo := _hit_damage(&"rogue", "R", func(d: DummySim) -> void:
 		d.stun_timer = 1.0
 		d.dots.add(DamageSystem.Type.POISON, 5.0, 5.0))
 	_check(rogue_combo > rogue_plain * 2.0, "Combo Rogue: Eviscerate pega mucho más a un envenenado y aturdido (%.0f vs %.0f)" % [rogue_combo, rogue_plain])
-	var ranger_plain := _hit_damage(&"ranger", "S2", func(_d: DummySim) -> void: pass)
-	var ranger_rooted := _hit_damage(&"ranger", "S2", func(d: DummySim) -> void: d.root_timer = 2.0)
+	var ranger_plain := _hit_damage(&"ranger", "R", func(_d: DummySim) -> void: pass)
+	var ranger_rooted := _hit_damage(&"ranger", "R", func(d: DummySim) -> void: d.root_timer = 2.0)
 	_check(ranger_rooted > ranger_plain * 1.4, "Combo Ranger: Concentrated Shot pega +50%% a un atado por Bear Trap")

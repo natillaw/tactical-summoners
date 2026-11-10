@@ -63,7 +63,7 @@ const M1: Dictionary = {
 	"kind": "basic", "role": "Daño a distancia", "description": "Disparo arcano sin cooldown.",
 	"implemented": true, "selectable": false, "cast": "projectile", "anim": "cast",
 	"damage_type": 7,  # DamageSystem.Type.ARCANE
-	"windup": 0.20, "active": 0.05, "recovery": 0.18, "cooldown": 0.0, "cost": 4.0,
+	"windup": 0.20, "active": 0.05, "recovery": 0.18, "cooldown": 0.0, "cost": 0.0,
 	"speed": 520.0, "range": 480.0, "hit_radius": 10.0, "damage_mult": 0.9,
 	"rage_gain": 0.0, "move_factor": 0.6, "color": [0.7, 0.5, 1.0],
 }
@@ -82,7 +82,7 @@ const M2: Dictionary = {
 ## M2: bola de fuego con quemadura.
 const ARCANE_ORB: Dictionary = {
 	"id": &"arcane_orb",
-	"clip": {"name": "standing_2h_magic_attack_01", "start": 0.4, "contact": 1.13, "end": 1.7}, "name": "Arcane Orb", "short": "ORB", "slot": "Q",
+	"clip": {"name": "standing_2h_magic_attack_01", "start": 0.4, "contact": 1.13, "end": 1.7}, "name": "Arcane Orb", "short": "ORB", "slot": "R",
 	"kind": "basic", "role": "Daño / quemadura", "description": "Cast 0.9 s (quieto): orbe arcano lento que corroe al objetivo.",
 	"implemented": true, "selectable": true, "cast": "projectile", "cast_bar": true, "anim": "cast",
 	"damage_type": 7,  # DamageSystem.Type.ARCANE
@@ -118,7 +118,7 @@ const ARCANE_PULSE: Dictionary = {
 
 const STARFALL: Dictionary = {
 	"id": &"starfall",
-	"clip": {"name": "standing_2h_magic_area_attack_02", "start": 0.5, "contact": 1.8, "end": 2.4}, "name": "Starfall", "short": "STARFALL", "slot": "S2",
+	"clip": {"name": "standing_2h_magic_area_attack_02", "start": 0.5, "contact": 1.8, "end": 2.4}, "name": "Starfall", "short": "STARFALL", "slot": "R",
 	"kind": "control", "role": "Daño en área", "description": "Apunta al suelo: un starfallo cae con gran daño de fuego.",
 	"implemented": true, "selectable": true, "cast": "aoe", "cast_bar": true, "anim": "cast", "target": "ground",
 	"damage_type": 7,
@@ -155,7 +155,7 @@ const ARCANE_BIND: Dictionary = {
 const ARCANE_SILENCE: Dictionary = {
 	"id": &"arcane_silence",
 	"clip": {"name": "standing_2h_magic_attack_04", "start": 0.5, "contact": 0.9, "end": 1.5},
-	"name": "Silence", "short": "MUTE", "slot": "R",
+	"name": "Silence", "short": "MUTE", "slot": "E",
 	"kind": "control", "role": "Control / anti-skills", "description": "Proyectil que SILENCIA al objetivo 3.5 s: no puede usar skills (solo su ataque básico). Cancela cargas y casteos en curso.",
 	"implemented": true, "selectable": true, "cast": "projectile", "anim": "cast",
 	"damage_type": 7,
@@ -168,7 +168,7 @@ const ARCANE_SILENCE: Dictionary = {
 const TIME_RIFT: Dictionary = {
 	"id": &"time_rift",
 	"clip": {"name": "standing_2h_cast_spell_01", "start": 0.33, "contact": 0.63, "end": 1.3},
-	"name": "Time Rift", "short": "RIFT", "slot": "S2",
+	"name": "Time Rift", "short": "RIFT", "slot": "Q",
 	"kind": "control", "role": "Control de zona", "description": "Apunta al suelo: una grieta temporal ralentiza muchísimo (-55%) a quien esté dentro durante 4 s. Para fijar enemigos antes de un hechizo grande.",
 	"implemented": true, "selectable": true, "cast": "aoe", "anim": "cast", "target": "ground",
 	"damage_type": 7,
@@ -176,6 +176,17 @@ const TIME_RIFT: Dictionary = {
 	"range": 300.0, "radius": 130.0, "damage_mult": 0.4, "lingering": 4.0,
 	"effects": {"slow": {"factor": 0.45, "duration": 4.0}},
 	"rage_gain": 0.0, "move_factor": 0.3, "color": [0.6, 0.55, 1.0],
+}
+
+const ARCANE_BARRIER: Dictionary = {
+	"id": &"arcane_barrier", "name": "Arcane Barrier", "short": "BARRIER", "slot": "S2",
+	"kind": "support", "role": "Apoyo de grupo", "description": "Barrera arcana sobre ti y tus aliados cercanos (220 px): absorbe 70 de daño durante 5 s (más al subir de nivel con tu poder).",
+	"implemented": true, "selectable": true, "cast": "team_buff", "anim": "cast", "damage_type": 7,
+	"clip": {"name": "standing_1h_cast_spell_01", "start": 0.3, "contact": 0.6, "end": 1.0},
+	"windup": 0.30, "active": 0.10, "recovery": 0.25, "cooldown": 16.0, "cost": 25.0,
+	"radius": 220.0, "damage_mult": 0.0,
+	"effects": {"absorb": {"amount": 70.0, "seconds": 5.0}},
+	"rage_gain": 0.0, "move_factor": 0.5, "color": [0.7, 0.5, 1.0],
 }
 
 ## Pasiva (mismo contrato que el Warrior): a vida baja, más daño y velocidad.
@@ -193,13 +204,13 @@ const DEFAULT_LOADOUT: Dictionary = {
 	"SHIFT": &"blink",
 	"Q": &"arcane_bind",
 	"E": &"arcane_pulse",
-	"R": &"arcane_silence",
-	"S2": &"starfall",
+	"R": &"starfall",
+	"S2": &"arcane_barrier",
 	"F": &"arcane_surge",
 }
 
-const ALL_ABILITIES: Array = [M1, M2, BLINK, ARCANE_ORB, ARCANE_BIND, ARCANE_PULSE, ARCANE_SILENCE, TIME_RIFT, STARFALL, ARCANE_SURGE]
-const POOL_ABILITIES: Array = [BLINK, ARCANE_ORB, ARCANE_BIND, ARCANE_PULSE, ARCANE_SILENCE, TIME_RIFT, STARFALL, ARCANE_SURGE]
+const ALL_ABILITIES: Array = [M1, M2, BLINK, ARCANE_BIND, TIME_RIFT, ARCANE_PULSE, ARCANE_SILENCE, STARFALL, ARCANE_ORB, ARCANE_BARRIER, ARCANE_SURGE]
+const POOL_ABILITIES: Array = [BLINK, ARCANE_BIND, TIME_RIFT, ARCANE_PULSE, ARCANE_SILENCE, STARFALL, ARCANE_ORB, ARCANE_BARRIER, ARCANE_SURGE]
 
 
 static func create_rage_resource() -> Rage:
@@ -296,7 +307,7 @@ static func sanitize_loadout(raw: Dictionary) -> Dictionary:
 	var out: Dictionary = {}
 	for slot: String in SELECTABLE_SLOTS:
 		var id := StringName(String(raw.get(slot, String(DEFAULT_LOADOUT[slot]))))
-		if not POOL_ABILITIES.any(func(entry: Dictionary) -> bool: return entry["id"] == id):
+		if not POOL_ABILITIES.any(func(entry: Dictionary) -> bool: return entry["id"] == id and String(entry.get("slot", slot)) == slot):
 			id = DEFAULT_LOADOUT[slot]
 		out[slot] = id
 	return out

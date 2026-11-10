@@ -30,6 +30,7 @@ var _handled_threat: bool = false
 var _bait_timer: float = 0.0
 var _last_seen: Vector2 = Vector2.ZERO
 var _has_seen: bool = false
+var _shield_clock: float = 0.0
 
 
 func _init(seed_value: int = 1) -> void:
@@ -111,6 +112,11 @@ func think(sim: WarriorSim, world: Object, delta: float) -> Dictionary:
 				_react(sim, m2_cast, time_to_hit)
 	if m2_cast in ["guard", "mana_shield"]:
 		actions["m2"] = _hold_guard > 0.0 and sim.rage() > 3.0
+
+	if "shield" in traits and distance < 300.0 and m2_cast == "guard":
+		_shield_clock = fmod(_shield_clock + delta, 2.6)
+		if _shield_clock < 1.7:
+			_hold_guard = maxf(_hold_guard, 0.2)  # escudo en alto; 0.9 s de cada 2.6 s baja la guardia para atacar
 
 	# --- Skills ---
 	_think_timer -= delta
@@ -229,10 +235,13 @@ func _is_control(ability: Dictionary) -> bool:
 	return effects.has("stun") or effects.has("knockback") or effects.has("pull") or effects.has("silence") or effects.has("root")
 
 
-## Elige una skill útil ahora. Devuelve el slot o "".
+## Elige la mejor skill ahora (puntuación por combos). Devuelve el slot o "".
 func _choose_skill(sim: WarriorSim, target: Object, dir: Vector2, distance: float, ranged: bool, out: Dictionary, target_guarding: bool, target_down: bool) -> String:
 	var hp_ratio := sim.health / maxf(sim.max_health, 1.0)
 	var hesitation := 0.0 if target_down else 0.25 * (1.0 - difficulty)
+	var best_slot := ""
+	var best_score := -INF
+	var best_aim: Variant = null
 	for slot: String in ["F", "R", "S2", "E", "Q", "SHIFT"]:
 		var ability := sim.ability_for_slot(slot)
 		if ability.is_empty() or not sim._can_start(slot):
@@ -241,10 +250,10 @@ func _choose_skill(sim: WarriorSim, target: Object, dir: Vector2, distance: floa
 			continue
 		var cast := String(ability.get("cast", "melee"))
 		var kind := String(ability.get("kind", ""))
-		# Contra una guardia no se malgasta daño: solo control (atraer, empujar, aturdir).
-		if target_guarding and not _is_control(ability) and not cast in ["dash", "teleport", "buff"]:
+		if target_guarding and not _is_control(ability) and not cast in ["dash", "teleport", "buff", "team_buff"]:
 			continue
 		var useful := false
+		var aim_override: Variant = null
 		match cast:
 			"dash":
 				if ranged:
@@ -254,21 +263,69 @@ func _choose_skill(sim: WarriorSim, target: Object, dir: Vector2, distance: floa
 			"teleport":
 				if ranged:
 					useful = distance < 120.0 or (hp_ratio < 0.3 and distance < 200.0)
-					out["aim_point"] = sim.position - dir * float(ability.get("range", 200.0))
+					aim_override = sim.position - dir * float(ability.get("range", 200.0))
 				else:
 					useful = distance > 110.0 and distance < float(ability.get("range", 200.0)) + 60.0
 			"counter":
 				useful = false
 			"buff":
 				useful = hp_ratio < 0.5 and distance < 260.0
+			"team_buff":
+				useful = distance < 340.0 and sim.buff_timer <= 0.0 and sim.absorb_amount <= 0.0
 			_:
 				useful = _in_range(ability, distance, target)
-				# Los buenos esperan una apertura (aturdido / stagger) para soltar el ultimate.
 				if useful and kind == "ultimate" and not target_down and difficulty > 0.5 and rng.randf() < 0.5:
 					useful = false
-				# No silencia a quien ya está silenciado.
 				if useful and String(ability.get("id", "")) == "arcane_silence" and _num(target, "silence_timer") > 0.0:
 					useful = false
-		if useful:
-			return slot
-	return ""
+		if not useful:
+			continue
+		var score := _combo_score(ability, target, target_down, cast)
+		if score > best_score:
+			best_score = score
+			best_slot = slot
+			best_aim = aim_override
+	if best_aim != null:
+		out["aim_point"] = best_aim
+	return best_slot
+
+
+const STATE_FOR_EFFECT := {"stun": "stunned", "root": "rooted", "slow": "slowed", "silence": "silenced", "mark": "marked"}
+
+
+## Cuánto conviene lanzar esta skill ahora: remates sobre estados activos, preparación si falta el estado.
+func _combo_score(ability: Dictionary, target: Object, target_down: bool, cast: String) -> float:
+	var score := 1.0 + rng.randf() * 0.2
+	var table: Dictionary = ability.get("bonus_vs", {})
+	var ready := 0
+	for state: String in table:
+		if _target_state(target, state):
+			ready += 1
+	if not table.is_empty():
+		score += 3.0 * float(ready) - (0.8 if ready == 0 else 0.0)  # los remates esperan a su preparación
+	var effects: Dictionary = ability.get("effects", {})
+	for key: String in STATE_FOR_EFFECT:
+		if effects.has(key):
+			score += -1.5 if _target_state(target, String(STATE_FOR_EFFECT[key])) else 1.5  # preparar el combo
+	if String(ability.get("kind", "")) == "ultimate":
+		score += 2.0 if target_down else -0.5
+	if cast == "team_buff":
+		score += 1.0
+	return score
+
+
+func _target_state(target: Object, state: String) -> bool:
+	match state:
+		"stunned":
+			return _num(target, "stun_timer") > 0.0
+		"rooted":
+			return _num(target, "root_timer") > 0.0
+		"slowed":
+			return _num(target, "slow_timer") > 0.0
+		"silenced":
+			return _num(target, "silence_timer") > 0.0
+		"marked":
+			return _num(target, "mark_timer") > 0.0 or _num(target, "vulnerable_timer") > 0.0
+		"poisoned":
+			return target.dots.stacks_of(DamageSystem.Type.POISON) > 0
+	return false

@@ -55,7 +55,7 @@ const JUMP_VELOCITY := 520.0
 const GRAVITY := 2200.0
 
 const RAGE_ON_HIT_TAKEN := 5.0
-const ULTIMATE_ON_HIT := 8.0
+const ULTIMATE_ON_HIT := 4.0
 const ULTIMATE_ON_DAMAGE_TAKEN := 5.0
 
 var world: Object = null
@@ -86,6 +86,11 @@ var knock_timer: float = 0.0
 var silence_timer: float = 0.0
 var root_timer: float = 0.0
 var mark_timer: float = 0.0
+## Apoyo de grupo: buff de daño y absorción (Rally Cry / Arcane Barrier).
+var buff_timer: float = 0.0
+var buff_mult: float = 1.0
+var absorb_amount: float = 0.0
+var absorb_timer: float = 0.0
 var _followup_time: float = 0.0
 var _followups_done: int = 0
 ## Poise (= armadura): al llegar a 0 hay stagger. Defensa M2 mantenida (Block / Mana Shield).
@@ -352,6 +357,10 @@ func _to_vec(value: Variant) -> Vector2:
 
 
 func _tick_timers(delta: float) -> void:
+	buff_timer = maxf(0.0, buff_timer - delta)
+	absorb_timer = maxf(0.0, absorb_timer - delta)
+	if absorb_timer <= 0.0:
+		absorb_amount = 0.0
 	mark_timer = maxf(0.0, mark_timer - delta)
 	root_timer = maxf(0.0, root_timer - delta)
 	silence_timer = maxf(0.0, silence_timer - delta)
@@ -603,6 +612,30 @@ func _prop(target: Object, name: String) -> float:
 	return float(value) if value != null else 0.0
 
 
+## Apoyo de grupo: aplica los efectos de la skill a ti y a los aliados dentro del radio.
+func _apply_team_buff() -> void:
+	var radius := float(current_skill.get("radius", 200.0))
+	var members: Array = world.all_fighters() if world != null and world.has_method("all_fighters") else [self]
+	for member: WarriorSim in members:
+		if member.alive and member.team == team and member.position.distance_to(position) <= radius:
+			member.receive_buff(_effects())
+	cast_event.emit("team_buff", current_skill, position, attack_aim)
+
+
+func receive_buff(effects: Dictionary) -> void:
+	var dmg: Dictionary = effects.get("damage_buff", {})
+	if not dmg.is_empty():
+		buff_mult = float(dmg.get("mult", 1.2))
+		buff_timer = float(dmg.get("seconds", 6.0))
+	var absorb: Dictionary = effects.get("absorb", {})
+	if not absorb.is_empty():
+		absorb_amount = float(absorb.get("amount", 60.0)) * (1.0 + 0.03 * float(progression.level))
+		absorb_timer = float(absorb.get("seconds", 5.0))
+	var restore := float(effects.get("poise_restore", 0.0))
+	if restore > 0.0:
+		poise = minf(max_poise, poise + restore)
+
+
 func _is_behind(target: Object) -> bool:
 	var away: Vector2 = (target.position - position).normalized()
 	return (target.facing as Vector2).dot(away) > 0.25
@@ -729,6 +762,8 @@ func _enter_active() -> void:
 				leap_target = position + attack_aim * lunge
 			_leap_to = world.resolve_position(leap_target, RADIUS, self) if world != null else leap_target
 			cast_event.emit("leap_start", current_skill, position, attack_aim)
+		"team_buff":
+			_apply_team_buff()
 		"buff":
 			invisible_timer = float(current_skill.get("invisible", 5.0))
 			cast_event.emit("vanish", current_skill, position, attack_aim)
@@ -957,6 +992,8 @@ func _hit_target(target: Object, mult: float, effects: Dictionary, skill: Dictio
 	if empowered_timer > 0.0:
 		damage *= 1.4
 	damage *= _status_bonus(target, sk)  # combos: bonus_vs {estado: multiplicador}
+	if buff_timer > 0.0:
+		damage *= buff_mult  # Rally Cry
 	if invisible_timer > 0.0:
 		damage *= 1.6  # Ambush: el primer golpe desde el sigilo pega +60%
 	var critical: bool = result["critical"]
@@ -1126,7 +1163,14 @@ func take_damage(amount: float, source_position: Vector2 = Vector2.ZERO, effects
 		return 0.0
 
 	if mark_timer > 0.0:
-		amount *= 1.25  # marcado (Sunder Armor)
+		amount *= 1.25  # marcado
+	if absorb_amount > 0.0 and not bool(effects.get("tick", false)):
+		var soaked := minf(absorb_amount, amount)
+		absorb_amount -= soaked
+		amount -= soaked
+		guard_result.emit("absorb", source_position, true)
+		if amount <= 0.0:
+			return 0.0
 	amount = DamageSystem.mitigate(amount, DamageSystem.type_of(effects), resist)
 	var dealt := minf(amount, health)
 	health -= dealt
@@ -1142,7 +1186,7 @@ func take_damage(amount: float, source_position: Vector2 = Vector2.ZERO, effects
 	var poise_hit := float(effects.get("poise", 0.0))
 	if poise_hit > 0.0 and DamageSystem.type_of(effects) == DamageSystem.Type.PHYSICAL and health > 0.0:
 		_lose_poise(poise_hit)
-	var stun := cc.apply("stun", float(effects.get("stun", 0.0))) if effects.has("stun") else 0.0
+	var stun := cc.apply("stun", float(effects.get("stun", 0.0)) * float(mods.get("cc_scale", 1.0))) if effects.has("stun") else 0.0
 	if stun > 0.0 and health > 0.0:
 		_apply_stun(stun)
 
@@ -1192,13 +1236,13 @@ func _apply_status_effects(effects: Dictionary, source: Vector2) -> void:
 		knock_timer = 0.18
 	var root := float(effects.get("root", 0.0))
 	if root > 0.0:
-		root_timer = maxf(root_timer, cc.apply("root", root))
+		root_timer = maxf(root_timer, cc.apply("root", root) * float(mods.get("cc_scale", 1.0)))
 	var mark := float(effects.get("mark", 0.0))
 	if mark > 0.0:
 		mark_timer = maxf(mark_timer, mark)
 	var silence := float(effects.get("silence", 0.0))
 	if silence > 0.0:
-		silence_timer = maxf(silence_timer, silence)
+		silence_timer = maxf(silence_timer, silence * float(mods.get("cc_scale", 1.0)))
 		if state == AttackState.WINDUP and String(current_slot) not in ["M1", "M2"]:
 			_cancel_cast()
 	var pull := float(effects.get("pull", 0.0))
@@ -1321,6 +1365,8 @@ func assign_slot(slot: StringName, ability_id: StringName) -> void:
 		return
 	if not kit.pool_ids().has(ability_id):
 		return
+	if String(kit.ability_by_id(ability_id).get("slot", slot_name)) != slot_name:
+		return  # cada slot ofrece solo las opciones de su rol
 	loadout[slot_name] = ability_id
 	loadout_changed.emit(loadout_to_strings())
 
