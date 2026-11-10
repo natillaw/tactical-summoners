@@ -43,6 +43,7 @@ const M1_CLIPS := [
 	{"clip": "ual2/Sword_Regular_B", "from": 0.0, "to": 1.0, "contact": 0.49},
 	{"clip": "ual2/Sword_Regular_C", "from": 0.0, "to": 0.62, "contact": 0.34},
 	{"clip": "ual1/Punch_Jab", "from": 0.0, "to": 0.6, "contact": 0.2, "no_align": true},  # mano izquierda
+	{"clip": "class/stabbing", "from": 0.18, "to": 0.5, "contact": 0.27, "no_align": true},  # puñalada
 ]
 ## Estocada: el lance frontal de Sword_Dash (el clip custom/thrust era un tajo hacia arriba).
 const CLIP_THRUST := {"clip": "ual2/Sword_Dash", "from": 0.08, "to": 0.40, "contact": 0.21}
@@ -97,6 +98,7 @@ var _align_yaw: float = 0.0
 var _swing_dir: float = 1.0
 var _orbs: Dictionary = {}
 var _cast_index: int = 0
+var _flurry_i: int = 0
 var _shield_fx: MeshInstance3D
 var _was_evading: bool = false
 ## Enemigo de clase: misma presentación que el jugador pero con IA, nombre y barra de vida.
@@ -240,6 +242,8 @@ func _update_overhead() -> void:
 	var tag := ""
 	if sim.silence_timer > 0.0:
 		tag += "[SILENCIADO] "
+	if sim.root_timer > 0.0:
+		tag += "[ATADO] "
 	if sim.stun_timer > 0.0:
 		tag += "[ATURDIDO] "
 	_name_label.text = "%s%s  Nv.%d" % [tag, sim.display_name, sim.progression.level]
@@ -610,10 +614,12 @@ func _on_cast_event(event: String, skill: Dictionary, at: Vector2, direction: Ve
 			ArcaneFx.burst(arena, View3D.to3(at + direction * 18.0, 1.2), DamageSystem.color_of(DamageSystem.type_of(skill)), 14, 1.5, 0.1)
 		"projectile_hit":
 			match String(skill.get("id", "")):
-				"arcane_pull":
-					ArcaneFx.beam(arena, View3D.to3(at, 1.1), View3D.to3(sim.position, 1.3), Color(0.85, 0.55, 1.0), 0.4)
-					ArcaneFx.burst(arena, View3D.to3(at, 1.1), Color(0.85, 0.55, 1.0), 30, 3.0, 0.12)
-					arena.play_sfx(SFX_MAGIC, -4.0, 0.7)
+				"arcane_bind":
+					var bind_color := Color(0.8, 0.5, 1.0)
+					ArcaneFx.ice_shards(arena, View3D.to3(at), 0.9, 10, bind_color)
+					ArcaneFx.burst(arena, View3D.to3(at, 0.3), bind_color, 36, 3.0, 0.12)
+					arena.spawn_shockwave(at, 55.0, bind_color, 0.4, 0.7)
+					arena.play_sfx(SFX_SLAM, -6.0, 1.5)
 					return
 				"arcane_silence":
 					ArcaneFx.swirl_zone(arena, View3D.to3(at), 0.7, Color(0.5, 0.4, 0.8), 0.8)
@@ -642,6 +648,20 @@ func _on_cast_event(event: String, skill: Dictionary, at: Vector2, direction: Ve
 			arena.spawn_ground_flash(at, boom_radius, Color(1.0, 0.5, 0.15, 0.55), 0.4)
 			arena.play_sfx(SFX_SLAM, -3.0, 1.1)
 			_shake(3.5, 0.2)
+		"flurry_hit", "flurry_hit_last":
+			var list: Array = skill.get("flurry_clips", [4])
+			_flurry_i += 1
+			_play_clip(M1_CLIPS[int(list[_flurry_i % list.size()])], 0.03, 0.12)
+			var last := event == "flurry_hit_last"
+			var hit_at := at + direction * 48.0
+			ArcaneFx.hit_sparks(arena, View3D.to3(hit_at, 1.1), Color(0.9, 0.2, 0.25) if last else ArcaneFx.STEEL, View3D.dir3(direction), 34 if last else 14, last)
+			arena.play_sfx(SFX_HIT_HEAVY if last else SFX_SLASH, -3.0 if last else -7.0, 0.8 if last else randf_range(1.1, 1.4))
+			if last:
+				arena.spawn_shockwave(hit_at, 80.0, Color(0.9, 0.2, 0.25), 0.4, 0.7)
+				_shake(4.0, 0.2)
+				rig.hitstop(0.09)
+			else:
+				_shake(1.2, 0.06)
 		"blink_out":
 			var blink_color := DamageSystem.color_of(DamageSystem.type_of(skill))
 			ArcaneFx.column(arena, View3D.to3(at), blink_color, 2.2)
@@ -654,7 +674,10 @@ func _on_cast_event(event: String, skill: Dictionary, at: Vector2, direction: Ve
 			ArcaneFx.column(arena, View3D.to3(at), in_color, 2.2)
 			ArcaneFx.burst(arena, View3D.to3(at, 1.0), in_color, 40, 3.0, 0.12)
 			arena.spawn_shockwave(at, 40.0, in_color, 0.35, 0.7)
-			get_tree().create_timer(0.12).timeout.connect(func() -> void: rig.visible = true)
+			get_tree().create_timer(0.12).timeout.connect(func() -> void:
+				rig.visible = true
+				if skill.has("arrive_clip"):
+					_play_clip(skill["arrive_clip"], 0.1, 0.25))
 		"spin_start":
 			_spinning = true
 			_spin_yaw = 0.0

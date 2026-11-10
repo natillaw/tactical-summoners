@@ -144,6 +144,8 @@ func _speed() -> float:
 
 
 func _move(direction: Vector2, speed: float, delta: float) -> void:
+	if root_timer > 0.0:
+		return  # atado al suelo
 	position = world.resolve_position(position + direction * speed * delta, radius, self)
 
 

@@ -84,6 +84,9 @@ var slow_factor: float = 1.0
 var knock_vel: Vector2 = Vector2.ZERO
 var knock_timer: float = 0.0
 var silence_timer: float = 0.0
+var root_timer: float = 0.0
+var _followup_time: float = 0.0
+var _followups_done: int = 0
 ## Poise (= armadura): al llegar a 0 hay stagger. Defensa M2 mantenida (Block / Mana Shield).
 var poise: float = 100.0
 var max_poise: float = 100.0
@@ -348,6 +351,7 @@ func _to_vec(value: Variant) -> Vector2:
 
 
 func _tick_timers(delta: float) -> void:
+	root_timer = maxf(0.0, root_timer - delta)
 	silence_timer = maxf(0.0, silence_timer - delta)
 	stagger_immunity = maxf(0.0, stagger_immunity - delta)
 	empowered_timer = maxf(0.0, empowered_timer - delta)
@@ -505,6 +509,7 @@ func _update_attack(delta: float) -> void:
 			if state_time >= float(current_skill.get("active", 0.1)):
 				_enter_recovery()
 		AttackState.RECOVERY:
+			_update_followups(delta)
 			if state_time >= float(current_skill.get("recovery", 0.0)):
 				_finish_attack()
 		_:
@@ -742,7 +747,25 @@ func _update_active(delta: float) -> void:
 			cast_event.emit("aoe_tick", current_skill, position, attack_aim)
 
 
+## Golpes encadenados tras el aterrizaje (ráfaga de Death Sentence): `followups` = {count, interval, mult, final_mult}.
+func _update_followups(delta: float) -> void:
+	var plan: Dictionary = current_skill.get("followups", {})
+	if plan.is_empty():
+		return
+	_followup_time += delta
+	var count := int(plan.get("count", 0))
+	var interval := float(plan.get("interval", 0.15))
+	while _followups_done < count and _followup_time >= interval * float(_followups_done + 1):
+		var last := _followups_done == count - 1
+		_hit_targets.clear()
+		_damage_melee(float(current_skill.get("range", 80.0)) + 10.0, float(current_skill.get("arc", 120.0)) + 30.0, float(plan.get("final_mult" if last else "mult", 1.0)), {})
+		cast_event.emit("flurry_hit_last" if last else "flurry_hit", current_skill, position, attack_aim)
+		_followups_done += 1
+
+
 func _enter_recovery() -> void:
+	_followup_time = 0.0
+	_followups_done = 0
 	if String(current_skill.get("cast", "")) == "leap_slam":
 		height = 0.0
 		position = _leap_to
@@ -781,6 +804,8 @@ func _finish_attack() -> void:
 
 
 func _update_dash(delta: float) -> void:
+	if root_timer > 0.0:
+		return  # atado: no hay dash
 	if _dash_remaining <= 0.0:
 		return
 	var active_time := maxf(float(current_skill.get("active", 0.2)), 0.001)
@@ -897,6 +922,8 @@ func _hit_target(target: Object, mult: float, effects: Dictionary, skill: Dictio
 	damage *= float(mods.get("damage_mult", 1.0))
 	if empowered_timer > 0.0:
 		damage *= 1.4
+	if invisible_timer > 0.0:
+		damage *= 1.6  # Ambush: el primer golpe desde el sigilo pega +60%
 	var critical: bool = result["critical"]
 	var fx := effects.duplicate()
 	fx[DamageSystem.KEY] = type
@@ -973,7 +1000,7 @@ func _update_movement(delta: float) -> void:
 	if last_stand_active:
 		factor *= float(kit.PASSIVE.get("speed_bonus", 1.25))
 
-	var desired := move_input * MOVE_SPEED * factor * float(mods.get("speed_mult", 1.0)) * (slow_factor if slow_timer > 0.0 else 1.0)
+	var desired := move_input * MOVE_SPEED * factor * (0.0 if root_timer > 0.0 else 1.0) * float(mods.get("speed_mult", 1.0)) * (slow_factor if slow_timer > 0.0 else 1.0)
 	var rate := ACCELERATION if move_input.length_squared() > 0.0001 else FRICTION
 	velocity = velocity.move_toward(desired, rate * delta)
 	if velocity.length_squared() < 0.01:
@@ -1126,6 +1153,9 @@ func _apply_status_effects(effects: Dictionary, source: Vector2) -> void:
 	if knockback > 0.0 and source != Vector2.ZERO:
 		knock_vel = (position - source).normalized() * (knockback / 0.18)
 		knock_timer = 0.18
+	var root := float(effects.get("root", 0.0))
+	if root > 0.0:
+		root_timer = maxf(root_timer, cc.apply("root", root))
 	var silence := float(effects.get("silence", 0.0))
 	if silence > 0.0:
 		silence_timer = maxf(silence_timer, silence)
@@ -1454,6 +1484,7 @@ func reset(spawn: Vector2 = Vector2(480, 380)) -> void:
 	height = 0.0
 	vertical_velocity = 0.0
 	stun_timer = 0.0
+	root_timer = 0.0
 	invisible_timer = 0.0
 	poise = max_poise
 	stagger_immunity = 0.0
