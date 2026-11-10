@@ -326,9 +326,10 @@ func _process(delta: float) -> void:
 func _update_facing(delta: float) -> void:
 	# Cámara estilo Smite: el personaje siempre mira hacia donde mira la cámara (siempre se ve su
 	# espalda). Al moverse en diagonal el cuerpo se inclina hasta 60° hacia el movimiento.
-	var cam_yaw := View3D.yaw_for(sim.aim_dir if enemy_mode else arena.cam_forward_sim())
+	var follows_aim: bool = enemy_mode or arena.topdown  # top-down: el personaje siempre mira al puntero
+	var cam_yaw := View3D.yaw_for(sim.aim_dir if follows_aim else arena.cam_forward_sim())
 	var target_yaw := cam_yaw
-	var rate := TURN_SPEED
+	var rate := TURN_SPEED_ATTACK if arena.topdown else TURN_SPEED
 	if sim.is_attacking():
 		target_yaw = View3D.yaw_for(sim.attack_aim) - _align_yaw
 		if String(sim.current_skill.get("dash_dir", "")) == "move":
@@ -386,7 +387,7 @@ func _update_locomotion() -> void:
 ## ¿Se mueve de espaldas respecto a donde mira la cámara? (animación de carrera al revés)
 ## Ángulo (grados) entre hacia dónde mira el personaje/cámara y su movimiento: 0 = adelante, + = derecha.
 func _move_angle() -> float:
-	var reference: Vector2 = sim.aim_dir if enemy_mode else arena.cam_forward_sim()
+	var reference: Vector2 = sim.aim_dir if (enemy_mode or arena.topdown) else arena.cam_forward_sim()
 	return rad_to_deg(reference.angle_to(sim.velocity))
 
 

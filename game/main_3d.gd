@@ -49,6 +49,8 @@ func _refresh_status() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("toggle_camera"):
+		arena.toggle_topdown()  # C: alterna tercera persona <-> top-down
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.physical_keycode:
 			KEY_F5: world.warrior.progression.set_level(world.warrior.progression.level + 5)
@@ -63,7 +65,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if loadout_panel.visible:
 		return
 	if event is InputEventMouseMotion:
-		arena.tp_look(event.relative)
+		if not arena.topdown:
+			arena.tp_look(event.relative)
 	elif event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			arena.tp_zoom_by(-0.1)
@@ -72,10 +75,10 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _process(_delta: float) -> void:
-	var want := Input.MOUSE_MODE_CAPTURED if not loadout_panel.visible else Input.MOUSE_MODE_VISIBLE
+	var want := Input.MOUSE_MODE_CAPTURED if not (loadout_panel.visible or arena.topdown) else Input.MOUSE_MODE_VISIBLE
 	if Input.mouse_mode != want:
 		Input.mouse_mode = want
-	crosshair.visible = not loadout_panel.visible
+	crosshair.visible = not loadout_panel.visible and not arena.topdown
 	_update_ground_marker()
 
 
