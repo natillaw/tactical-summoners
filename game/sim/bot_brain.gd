@@ -19,6 +19,8 @@ var rng := RandomNumberGenerator.new()
 var difficulty: float = 0.6
 var aggression: float = 0.8
 var traits: Array = []
+## Esbirros: solo pueden usar estos slots además de M1 (null = todos).
+var allowed_slots: Variant = null
 
 var _think_timer: float = 0.0
 var _strafe: float = 1.0
@@ -47,6 +49,7 @@ func configure(data: Dictionary) -> void:
 	difficulty = float(data.get("difficulty", difficulty))
 	aggression = float(data.get("aggression", aggression))
 	traits = data.get("traits", [])
+	allowed_slots = data.get("skills", null)
 
 
 func think(sim: WarriorSim, world: Object, delta: float) -> Dictionary:
@@ -115,7 +118,7 @@ func think(sim: WarriorSim, world: Object, delta: float) -> Dictionary:
 	else:
 		_reaction += delta
 		var react_after := lerpf(0.45, 0.08, difficulty)
-		if not _handled_threat and _reaction >= react_after:
+		if not _handled_threat and _reaction >= react_after and not ("dumb" in traits):
 			_handled_threat = true
 			if rng.randf() < 0.35 + 0.65 * difficulty:
 				_react(sim, m2_cast, time_to_hit)
@@ -257,6 +260,8 @@ func _choose_skill(sim: WarriorSim, target: Object, dir: Vector2, distance: floa
 	var best_score := -INF
 	var best_aim: Variant = null
 	for slot: String in ["F", "R", "S2", "E", "Q", "SHIFT"]:
+		if allowed_slots != null and not (slot in (allowed_slots as Array)):
+			continue
 		var ability := sim.ability_for_slot(slot)
 		if ability.is_empty() or not sim._can_start(slot):
 			continue

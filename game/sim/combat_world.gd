@@ -132,7 +132,8 @@ func add_archetype(archetype_id: String, team: int, spawn: Vector2, base_level: 
 	var data := EnemyArchetypes.data(archetype_id)
 	if data.is_empty():
 		return add_fighter(StringName(archetype_id), team, spawn, base_level)
-	var fighter := add_fighter(data["class"], team, spawn, base_level + int(data.get("level_bonus", 0)), String(data["name"]))
+	var shown := ("Élite " if String(data.get("tier", "")) == "elite" else "") + String(data["name"])
+	var fighter := add_fighter(data["class"], team, spawn, base_level + int(data.get("level_bonus", 0)), shown)
 	fighter.brain.configure(data)
 	var mods: Dictionary = data.get("mods", {})
 	for key: String in mods:
