@@ -60,6 +60,7 @@ func _run() -> void:
 	_test_flank_stacks_castbar()
 	_test_class_enemies_and_balance_sim()
 	_test_defense_and_poise()
+	_test_mage_redesign_and_ai()
 
 	print("== %d checks, %d failed ==" % [_checks, _failures])
 	print("RESULT: %s" % ("PASS" if _failures == 0 else "FAIL"))
@@ -712,6 +713,7 @@ func _test_mage() -> void:
 	_check(target.health < hp, "Arcane Bolt (proyectil) alcanza y daña al objetivo")
 	var w2 := _make_world(false, 52)
 	w2.warrior.set_class(&"mage")
+	w2.warrior.assign_slot(&"Q", &"arcane_orb")
 	var t2: DummySim = w2.dummies[0]
 	t2.position = w2.warrior.position + Vector2(0, -150)
 	_step(w2, 90, _input(Vector2(0, -1), false, false, Vector2.ZERO, false, true))  # Arcane Orb (Q), cast de 0.9 s
@@ -1125,3 +1127,33 @@ func _test_defense_and_poise() -> void:
 	var after: float = r.take_damage(40.0, r.position + Vector2(40, 0), {})
 	_check(is_zero_approx(in_window) and after > 0.0, "Dodge Roll es invulnerable solo dentro de su ventana")
 	r.set_class(&"warrior")
+
+
+func _test_mage_redesign_and_ai() -> void:
+	# Silence: el objetivo no puede usar skills; Pull lo arrastra hacia el mago.
+	var world := _make_world(false, 151)
+	var w = world.warrior
+	w.set_class(&"mage")
+	w.reset(w.position)
+	var foe := world.add_fighter(&"warrior", 1, w.position + Vector2(0, -250), 1)
+	foe.silence_timer = 0.0
+	foe.take_damage(1.0, w.position, {"silence": 3.0})
+	foe.debug_refill()
+	_check(foe.silence_timer > 2.5 and not foe._can_start("SHIFT") and not foe._can_start("F"), "Silence impide usar skills (solo ataque básico)")
+	var start_gap: float = foe.position.distance_to(w.position)
+	foe.take_damage(1.0, w.position, {"pull": 170.0})
+	_step(world, 20, null)
+	_check(foe.position.distance_to(w.position) < start_gap - 100.0, "Arcane Pull arrastra al objetivo hacia el mago (%d px)" % int(start_gap - foe.position.distance_to(w.position)))
+	_check(w.kit.DEFAULT_LOADOUT["Q"] == &"arcane_pull" and w.kit.DEFAULT_LOADOUT["R"] == &"arcane_silence", "El mago lleva Pull y Silence en su barra")
+	# Arquetipos: el Campeón bloquea con timing y tiene más poise que el Soldado.
+	var world2 := _make_world(false, 152)
+	var soldier := world2.add_archetype("soldado", 1, world2.warrior.position + Vector2(0, -200), 3)
+	var champion := world2.add_archetype("campeon", 1, world2.warrior.position + Vector2(80, -200), 3)
+	_check(champion.max_poise > soldier.max_poise * 1.4 and champion.brain.difficulty > soldier.brain.difficulty, "El Campeón tiene más poise y más nivel de IA que el Soldado")
+	_check(champion.progression.level == 5, "El arquetipo suma niveles (nivel base + bonus)")
+	# La IA reacciona al ataque del rival: el hechicero se aparta / usa su escudo y no se queda quieto.
+	var world3 := _make_world(false, 153)
+	var caster := world3.add_archetype("hechicero", 1, world3.warrior.position + Vector2(0, -90), 2)
+	var start_pos: Vector2 = caster.position
+	_step(world3, 120, null)
+	_check(caster.position.distance_to(start_pos) > 30.0, "El hechicero se reposiciona en vez de quedarse parado")

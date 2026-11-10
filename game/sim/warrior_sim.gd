@@ -83,6 +83,7 @@ var slow_timer: float = 0.0
 var slow_factor: float = 1.0
 var knock_vel: Vector2 = Vector2.ZERO
 var knock_timer: float = 0.0
+var silence_timer: float = 0.0
 ## Poise (= armadura): al llegar a 0 hay stagger. Defensa M2 mantenida (Block / Mana Shield).
 var poise: float = 100.0
 var max_poise: float = 100.0
@@ -347,6 +348,7 @@ func _to_vec(value: Variant) -> Vector2:
 
 
 func _tick_timers(delta: float) -> void:
+	silence_timer = maxf(0.0, silence_timer - delta)
 	stagger_immunity = maxf(0.0, stagger_immunity - delta)
 	empowered_timer = maxf(0.0, empowered_timer - delta)
 	_since_poise_hit += delta
@@ -552,6 +554,8 @@ func _can_start(slot: String) -> bool:
 	var ability := ability_for_slot(slot)
 	if ability.is_empty():
 		return false
+	if silence_timer > 0.0 and slot != "M1" and slot != "M2":
+		return false  # silenciado: solo ataque básico y defensa
 	if cooldown_left(slot) > 0.0:
 		return false
 	if bool(ability.get("requires_behind", false)) and not _has_behind_target(ability):
@@ -1121,6 +1125,17 @@ func _apply_status_effects(effects: Dictionary, source: Vector2) -> void:
 	var knockback := float(effects.get("knockback", 0.0))
 	if knockback > 0.0 and source != Vector2.ZERO:
 		knock_vel = (position - source).normalized() * (knockback / 0.18)
+		knock_timer = 0.18
+	var silence := float(effects.get("silence", 0.0))
+	if silence > 0.0:
+		silence_timer = maxf(silence_timer, silence)
+		if state == AttackState.WINDUP and String(current_slot) not in ["M1", "M2"]:
+			_cancel_cast()
+	var pull := float(effects.get("pull", 0.0))
+	if pull > 0.0 and source != Vector2.ZERO:
+		var to_source := source - position
+		var travel := minf(pull, maxf(to_source.length() - 70.0, 0.0))
+		knock_vel = to_source.normalized() * (travel / 0.18)
 		knock_timer = 0.18
 	if bool(effects.get("interrupt", false)) and state == AttackState.WINDUP:
 		_cancel_cast()

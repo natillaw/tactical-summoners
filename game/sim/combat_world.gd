@@ -123,6 +123,20 @@ func add_fighter(class_id: StringName, team: int, spawn: Vector2, level: int = 1
 	return fighter
 
 
+## Enemigo de arquetipo (EnemyArchetypes): clase + dificultad + rasgos de comportamiento.
+func add_archetype(archetype_id: String, team: int, spawn: Vector2, base_level: int = 1) -> WarriorSim:
+	var data := EnemyArchetypes.data(archetype_id)
+	if data.is_empty():
+		return add_fighter(StringName(archetype_id), team, spawn, base_level)
+	var fighter := add_fighter(data["class"], team, spawn, base_level + int(data.get("level_bonus", 0)), String(data["name"]))
+	fighter.brain.configure(data)
+	var mods: Dictionary = data.get("mods", {})
+	for key: String in mods:
+		fighter.mods[key] = float(mods[key])
+	fighter.recompute_stats(true)
+	return fighter
+
+
 func get_living_dummies() -> Array:
 	var living: Array = []
 	for dummy: DummySim in dummies:

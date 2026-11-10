@@ -179,7 +179,7 @@ func _think(delta: float, warrior: Object) -> void:
 		return  # plantado mientras prepara un ataque con telegraph
 
 	# 1) Defensa reactiva: parry o voltereta ante tu ataque.
-	if attack_began and distance < REACT_DISTANCE:
+	if attack_began and distance < REACT_DISTANCE and silence_timer <= 0.0:
 		if _parry_cooldown <= 0.0 and world.rng.randf() < PARRY_CHANCE:
 			_start_parry()
 			return
@@ -214,6 +214,12 @@ func _think(delta: float, warrior: Object) -> void:
 
 func _decide_attack(warrior: Object, dir: Vector2, distance: float) -> bool:
 	var hp := health / maxf(max_health, 1.0)
+	if silence_timer > 0.0:  # silenciado: solo puede dar su combo básico
+		if distance <= float(WarriorKit.M1["range"]) + TARGET_RADIUS and _breath <= 0.0:
+			combo_index = 0
+			_begin_m1_swing()
+			return true
+		return false
 
 	if charge_cooldown <= 0.0 and distance >= CHARGE_MIN and distance <= CHARGE_MAX:
 		charge_cooldown = CHARGE_COOLDOWN

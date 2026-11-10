@@ -237,7 +237,12 @@ func _build_overhead() -> void:
 
 func _update_overhead() -> void:
 	_overhead.visible = sim.alive
-	_name_label.text = "%s  Nv.%d" % [sim.display_name, sim.progression.level]
+	var tag := ""
+	if sim.silence_timer > 0.0:
+		tag += "[SILENCIADO] "
+	if sim.stun_timer > 0.0:
+		tag += "[ATURDIDO] "
+	_name_label.text = "%s%s  Nv.%d" % [tag, sim.display_name, sim.progression.level]
 	var ratio := clampf(sim.health / maxf(sim.max_health, 1.0), 0.0, 1.0)
 	_bar_fill.scale = Vector3(maxf(ratio, 0.001), 1.0, 1.0)
 	var cam := get_viewport().get_camera_3d()
@@ -604,6 +609,17 @@ func _on_cast_event(event: String, skill: Dictionary, at: Vector2, direction: Ve
 				ArcaneFx.muzzle(arena, View3D.to3(at + direction * 22.0, 1.3), View3D.dir3(direction), ArcaneFx.GOLD)
 			ArcaneFx.burst(arena, View3D.to3(at + direction * 18.0, 1.2), DamageSystem.color_of(DamageSystem.type_of(skill)), 14, 1.5, 0.1)
 		"projectile_hit":
+			match String(skill.get("id", "")):
+				"arcane_pull":
+					ArcaneFx.beam(arena, View3D.to3(at, 1.1), View3D.to3(sim.position, 1.3), Color(0.85, 0.55, 1.0), 0.4)
+					ArcaneFx.burst(arena, View3D.to3(at, 1.1), Color(0.85, 0.55, 1.0), 30, 3.0, 0.12)
+					arena.play_sfx(SFX_MAGIC, -4.0, 0.7)
+					return
+				"arcane_silence":
+					ArcaneFx.swirl_zone(arena, View3D.to3(at), 0.7, Color(0.5, 0.4, 0.8), 0.8)
+					ArcaneFx.burst(arena, View3D.to3(at, 1.8), Color(0.5, 0.4, 0.8), 36, 2.0, 0.12)
+					arena.play_sfx(SFX_MAGIC, -3.0, 1.6)
+					return
 			if DamageSystem.type_of(skill) != DamageSystem.Type.ARCANE:
 				return  # las flechas ya generan chispas en _on_attack_hit
 			var hit_color := DamageSystem.color_of(DamageSystem.type_of(skill))
@@ -705,6 +721,20 @@ func _class_slam(at: Vector2, radius: float, skill: Dictionary) -> bool:
 
 func _arcane_slam(at: Vector2, radius: float, skill: Dictionary) -> void:
 	var color := DamageSystem.color_of(DamageSystem.Type.ARCANE)
+	match String(skill.get("id", "")):
+		"time_rift":
+			ArcaneFx.swirl_zone(arena, View3D.to3(at), View3D.meters(radius), Color(0.6, 0.55, 1.0), float(skill.get("lingering", 4.0)))
+			arena.spawn_shockwave(at, radius, Color(0.6, 0.55, 1.0), 0.6, 0.8)
+			arena.play_sfx(SFX_MAGIC, -5.0, 0.6)
+			return
+		"arcane_pulse":
+			# Onda de repulsión: anillos que se expanden y chispas hacia fuera
+			arena.spawn_shockwave(at, radius, color, 0.4, 0.55)
+			arena.spawn_shockwave(at, radius * 1.4, color.lightened(0.4), 0.55, 0.8)
+			ArcaneFx.burst(arena, View3D.to3(at, 0.9), color, 60, 6.0, 0.14)
+			arena.play_sfx(SFX_SLAM, -4.0, 1.3)
+			_shake(2.6, 0.16)
+			return
 	arena.spawn_shockwave(at, radius, color, 0.6, 0.7)
 	arena.spawn_shockwave(at, radius * 0.6, color.lightened(0.4), 0.4, 0.75)
 	arena.spawn_ground_flash(at, radius, Color(color.r, color.g, color.b, 0.55), 0.5)

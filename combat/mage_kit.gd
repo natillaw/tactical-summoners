@@ -107,25 +107,14 @@ const BLINK: Dictionary = {
 const ARCANE_PULSE: Dictionary = {
 	"id": &"arcane_pulse",
 	"clip": {"name": "standing_2h_magic_area_attack_01", "start": 0.95, "contact": 1.27, "end": 1.8}, "name": "Arcane Pulse", "short": "PULSE", "slot": "E",
-	"kind": "control", "role": "Control", "description": "Pulso arcano a tu alrededor: daña y ralentiza.",
+	"kind": "control", "role": "Control", "description": "Pulso arcano a tu alrededor: EMPUJA a los enemigos lejos de ti y los ralentiza. Defensa activa contra quien se pega.",
 	"implemented": true, "selectable": true, "cast": "aoe", "anim": "cast",
 	"damage_type": 7,  # DamageSystem.Type.ARCANE
 	"windup": 0.30, "active": 0.10, "recovery": 0.25, "cooldown": 9.0, "cost": 25.0,
-	"radius": 130.0, "damage_mult": 1.2, "effects": {"slow": {"factor": 0.5, "duration": 3.0}},
+	"radius": 130.0, "damage_mult": 1.0, "effects": {"slow": {"factor": 0.5, "duration": 2.5}, "knockback": 190.0, "interrupt": true},
 	"rage_gain": 0.0, "move_factor": 0.0,
 }
 
-const ARCANE_RIFT: Dictionary = {
-	"id": &"arcane_rift",
-	"clip": {"name": "standing_2h_cast_spell_01", "start": 0.33, "contact": 0.63, "end": 1.3}, "name": "Arcane Rift", "short": "RIFT", "slot": "R",
-	"kind": "control", "role": "Daño en el tiempo", "description": "Apunta al suelo: grieta arcana que corroe a quienes la pisan.",
-	"implemented": true, "selectable": true, "cast": "aoe", "anim": "cast", "target": "ground",
-	"damage_type": 7,  # DamageSystem.Type.ARCANE
-	"windup": 0.30, "active": 0.10, "recovery": 0.25, "cooldown": 10.0, "cost": 25.0,
-	"range": 300.0, "radius": 110.0, "damage_mult": 0.5,
-	"effects": {"dot": {"damage_type": 7, "dps_mult": 0.6, "duration": 6.0}},
-	"rage_gain": 0.0, "move_factor": 0.3,
-}
 
 const STARFALL: Dictionary = {
 	"id": &"starfall",
@@ -141,12 +130,52 @@ const STARFALL: Dictionary = {
 const ARCANE_SURGE: Dictionary = {
 	"id": &"arcane_surge",
 	"clip": {"name": "standing_2h_magic_attack_05", "start": 0.4, "contact": 2.07, "end": 2.7}, "name": "Arcane Surge", "short": "SURGE", "slot": "F",
-	"kind": "ultimate", "role": "Ultimate", "description": "Ultimate. Cast 2.2 s (quieto): explosión arcana enorme donde apuntes.",
+	"kind": "ultimate", "role": "Ultimate", "description": "Ultimate. Cast 2.2 s (quieto): explosión arcana enorme donde apuntes; empuja y silencia 2.5 s a todos los alcanzados.",
 	"implemented": true, "selectable": true, "cast": "aoe", "cast_bar": true, "anim": "cast", "target": "ground",
 	"damage_type": 7,
 	"windup": 2.2, "active": 0.10, "recovery": 0.40, "cooldown": 1.0, "cost": 0.0, "charge": 100.0,
-	"range": 320.0, "radius": 160.0, "damage_mult": 6.0,
+	"range": 320.0, "radius": 160.0, "damage_mult": 5.0,
+	"effects": {"knockback": 150.0, "silence": 2.5},
 	"rage_gain": 0.0, "move_factor": 0.0,
+}
+
+const ARCANE_PULL: Dictionary = {
+	"id": &"arcane_pull",
+	"clip": {"name": "standing_2h_magic_attack_02", "start": 1.0, "contact": 1.3, "end": 1.9},
+	"name": "Arcane Pull", "short": "PULL", "slot": "Q",
+	"kind": "control", "role": "Control / atraer", "description": "Proyectil rápido que ENGANCHA al objetivo y lo arrastra hasta ti (y lo ralentiza 1.2 s). Ideal contra quien huye o para sacarlo de su grupo.",
+	"implemented": true, "selectable": true, "cast": "projectile", "anim": "cast",
+	"damage_type": 7,
+	"windup": 0.25, "active": 0.05, "recovery": 0.25, "cooldown": 10.0, "cost": 25.0,
+	"speed": 760.0, "range": 440.0, "hit_radius": 12.0, "damage_mult": 0.6,
+	"effects": {"pull": 170.0, "slow": {"factor": 0.6, "duration": 1.2}},
+	"poise": 0.0, "rage_gain": 0.0, "move_factor": 0.4, "color": [0.85, 0.55, 1.0],
+}
+
+const ARCANE_SILENCE: Dictionary = {
+	"id": &"arcane_silence",
+	"clip": {"name": "standing_2h_magic_attack_04", "start": 0.5, "contact": 0.9, "end": 1.5},
+	"name": "Silence", "short": "MUTE", "slot": "R",
+	"kind": "control", "role": "Control / anti-skills", "description": "Proyectil que SILENCIA al objetivo 3.5 s: no puede usar skills (solo su ataque básico). Cancela cargas y casteos en curso.",
+	"implemented": true, "selectable": true, "cast": "projectile", "anim": "cast",
+	"damage_type": 7,
+	"windup": 0.25, "active": 0.05, "recovery": 0.25, "cooldown": 14.0, "cost": 20.0,
+	"speed": 640.0, "range": 460.0, "hit_radius": 12.0, "damage_mult": 0.3,
+	"effects": {"silence": 3.5, "interrupt": true},
+	"rage_gain": 0.0, "move_factor": 0.4, "color": [0.55, 0.45, 0.8],
+}
+
+const TIME_RIFT: Dictionary = {
+	"id": &"time_rift",
+	"clip": {"name": "standing_2h_cast_spell_01", "start": 0.33, "contact": 0.63, "end": 1.3},
+	"name": "Time Rift", "short": "RIFT", "slot": "S2",
+	"kind": "control", "role": "Control de zona", "description": "Apunta al suelo: una grieta temporal ralentiza muchísimo (-55%) a quien esté dentro durante 4 s. Para fijar enemigos antes de un hechizo grande.",
+	"implemented": true, "selectable": true, "cast": "aoe", "anim": "cast", "target": "ground",
+	"damage_type": 7,
+	"windup": 0.35, "active": 0.10, "recovery": 0.25, "cooldown": 12.0, "cost": 30.0,
+	"range": 300.0, "radius": 130.0, "damage_mult": 0.4, "lingering": 4.0,
+	"effects": {"slow": {"factor": 0.45, "duration": 4.0}},
+	"rage_gain": 0.0, "move_factor": 0.3, "color": [0.6, 0.55, 1.0],
 }
 
 ## Pasiva (mismo contrato que el Warrior): a vida baja, más daño y velocidad.
@@ -162,15 +191,15 @@ const ULTIMATE: Dictionary = ARCANE_SURGE
 
 const DEFAULT_LOADOUT: Dictionary = {
 	"SHIFT": &"blink",
-	"Q": &"arcane_orb",
+	"Q": &"arcane_pull",
 	"E": &"arcane_pulse",
-	"R": &"arcane_rift",
+	"R": &"arcane_silence",
 	"S2": &"starfall",
 	"F": &"arcane_surge",
 }
 
-const ALL_ABILITIES: Array = [M1, M2, BLINK, ARCANE_ORB, ARCANE_PULSE, ARCANE_RIFT, STARFALL, ARCANE_SURGE]
-const POOL_ABILITIES: Array = [BLINK, ARCANE_ORB, ARCANE_PULSE, ARCANE_RIFT, STARFALL, ARCANE_SURGE]
+const ALL_ABILITIES: Array = [M1, M2, BLINK, ARCANE_ORB, ARCANE_PULL, ARCANE_PULSE, ARCANE_SILENCE, TIME_RIFT, STARFALL, ARCANE_SURGE]
+const POOL_ABILITIES: Array = [BLINK, ARCANE_ORB, ARCANE_PULL, ARCANE_PULSE, ARCANE_SILENCE, TIME_RIFT, STARFALL, ARCANE_SURGE]
 
 
 static func create_rage_resource() -> Rage:
