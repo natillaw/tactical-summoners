@@ -27,9 +27,21 @@ static func soft_dot() -> GradientTexture2D:
 	return _soft
 
 
-static func _additive(color: Color, alpha: float = 1.0) -> StandardMaterial3D:
+const PARTICLE_DIR := "res://assets/vfx/particles/"
+static var _tex_cache: Dictionary = {}
+
+
+## Textura de partícula del Kenney Particle Pack (star_04, spark_05, magic_03, slash_02...).
+static func particle_tex(name: String) -> Texture2D:
+	if not _tex_cache.has(name):
+		var path := PARTICLE_DIR + name + ".png"
+		_tex_cache[name] = load(path) if ResourceLoader.exists(path) else soft_dot()
+	return _tex_cache[name]
+
+
+static func _additive(color: Color, alpha: float = 1.0, tex_name: String = "") -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
-	mat.albedo_texture = soft_dot()
+	mat.albedo_texture = particle_tex(tex_name) if tex_name != "" else soft_dot()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
@@ -47,7 +59,7 @@ static func _fade_curve() -> Curve:
 
 
 ## Partículas de chispas. `one_shot` = explosión; si no, flujo continuo (estela).
-static func sparks(color: Color, amount: int, lifetime: float, speed: float, size: float, one_shot: bool) -> CPUParticles3D:
+static func sparks(color: Color, amount: int, lifetime: float, speed: float, size: float, one_shot: bool, tex_name: String = "star_04") -> CPUParticles3D:
 	var p := CPUParticles3D.new()
 	p.amount = amount
 	p.lifetime = lifetime
@@ -68,7 +80,7 @@ static func sparks(color: Color, amount: int, lifetime: float, speed: float, siz
 	p.scale_amount_curve = _fade_curve()
 	var quad := QuadMesh.new()
 	quad.size = Vector2(size, size)
-	quad.material = _additive(color)
+	quad.material = _additive(color, 1.0, tex_name)
 	p.mesh = quad
 	return p
 
@@ -379,10 +391,50 @@ static func beam(parent: Node, from: Vector3, to: Vector3, color: Color, seconds
 
 
 ## Zona persistente (Time Rift): anillo que gira, remolino de partículas y se apaga tras `seconds`.
+## Destello con textura (billboard) que crece y se desvanece: cortes, impactos, fogonazos.
+static func flash_sprite(parent: Node, at: Vector3, tex_name: String, color: Color, size_m: float, seconds: float = 0.2, roll: float = 0.0) -> void:
+	var sprite := MeshInstance3D.new()
+	var quad := QuadMesh.new()
+	quad.size = Vector2(size_m, size_m)
+	var mat := _additive(color, 1.0, tex_name)
+	mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	mat.billboard_keep_scale = true
+	quad.material = mat
+	sprite.mesh = quad
+	parent.add_child(sprite)
+	sprite.global_position = at
+	sprite.rotation.z = roll
+	sprite.scale = Vector3.ONE * 0.5
+	var tween := sprite.create_tween()
+	tween.tween_property(sprite, "scale", Vector3.ONE * 1.1, seconds * 0.6)
+	tween.parallel().tween_property(mat, "albedo_color:a", 0.0, seconds)
+	tween.tween_callback(sprite.queue_free)
+
+
+## Círculo mágico en el suelo (decal horizontal giratorio) para hechizos de zona.
+static func ground_decal(parent: Node, at: Vector3, tex_name: String, color: Color, radius_m: float, seconds: float) -> void:
+	var decal := MeshInstance3D.new()
+	var quad := QuadMesh.new()
+	quad.size = Vector2(radius_m * 2.0, radius_m * 2.0)
+	var mat := _additive(color, 0.9, tex_name)
+	mat.billboard_mode = BaseMaterial3D.BILLBOARD_DISABLED
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	quad.material = mat
+	decal.mesh = quad
+	parent.add_child(decal)
+	decal.global_position = at + Vector3(0, 0.04, 0)
+	decal.rotation.x = -PI * 0.5
+	var tween := decal.create_tween()
+	tween.tween_property(decal, "rotation:z", TAU * 0.5, seconds)
+	tween.parallel().tween_property(mat, "albedo_color:a", 0.0, seconds).set_delay(seconds * 0.6)
+	tween.tween_callback(decal.queue_free)
+
+
 static func swirl_zone(parent: Node, at: Vector3, radius_m: float, color: Color, seconds: float) -> void:
 	var holder := Node3D.new()
 	parent.add_child(holder)
 	holder.global_position = at + Vector3(0, 0.05, 0)
+	ground_decal(parent, at, "magic_03", color, radius_m * 1.05, seconds)
 	var ring := FxShape.new().setup(FxShape.Mode.RING, radius_m, color)
 	ring.set_param("inner", 0.88)
 	ring.set_param("fill", 0.14)

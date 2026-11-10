@@ -23,6 +23,8 @@ const RECIPES := [
 ]
 ## Calidad al forjar (se revela al terminar): único y legendario no se pueden fabricar.
 const ODDS := [[ItemRarity.Tier.POCO_COMUN, 0.85], [ItemRarity.Tier.RARO, 0.13], [ItemRarity.Tier.EPICO, 0.02]]
+## Calidad del último objeto forjado (para sonidos/avisos de la UI).
+static var last_quality: int = 0
 const ITEM_LEVEL := 3  # todo lo del piso 1 se fabrica como objeto poco común de nivel 3
 
 
@@ -64,10 +66,12 @@ static func craft(recipe: Dictionary, warrior: WarriorSim, rng: RandomNumberGene
 		rng.randomize()
 	for id: String in recipe["cost"]:
 		Materials.inventory[id] = int(Materials.inventory.get(id, 0)) - int(recipe["cost"][id])
+	last_quality = 0
 	if recipe.has("gives"):
 		Materials.add(String(recipe["gives"]), int(recipe["amount"]))
 		return "Creaste: %s" % recipe["name"]
 	var quality := roll_quality(rng)
+	last_quality = quality
 	var item: Item
 	if recipe.has("weapon"):
 		item = ItemFactory.roll_weapon(rng, ITEM_LEVEL, quality, String(recipe["weapon"]))

@@ -1368,47 +1368,47 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":16,
+			"count":576,
 			"max":[
-				0.0073337857611477375,
-				1.0469237565994263,
-				0.11159690469503403
+				0.3470465838909149,
+				0.9700000286102295,
+				0.21769888699054718
 			],
 			"min":[
-				-0.011200654320418835,
-				0.5297107696533203,
-				0.1072489470243454
+				-0.32200732827186584,
+				0.18912193179130554,
+				-0.28211507201194763
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":16,
+			"count":576,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":16,
+			"count":576,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":3,
 			"componentType":5121,
-			"count":16,
+			"count":576,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":4,
 			"componentType":5126,
-			"count":16,
+			"count":576,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":5,
 			"componentType":5123,
-			"count":72,
+			"count":2880,
 			"type":"SCALAR"
 		},
 		{
@@ -1421,49 +1421,49 @@
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":192,
+			"byteLength":6912,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":192,
-			"byteOffset":192,
+			"byteLength":6912,
+			"byteOffset":6912,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":128,
-			"byteOffset":384,
+			"byteLength":4608,
+			"byteOffset":13824,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":64,
-			"byteOffset":512,
+			"byteLength":2304,
+			"byteOffset":18432,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":256,
-			"byteOffset":576,
+			"byteLength":9216,
+			"byteOffset":20736,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":144,
-			"byteOffset":832,
+			"byteLength":5760,
+			"byteOffset":29952,
 			"target":34963
 		},
 		{
 			"buffer":0,
 			"byteLength":4160,
-			"byteOffset":976
+			"byteOffset":35712
 		}
 	],
 	"buffers":[
 		{
-			"byteLength":5136,
+			"byteLength":39872,
 			"uri":"Male_Mage_Robe.bin"
 		}
 	]

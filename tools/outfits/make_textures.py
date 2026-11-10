@@ -60,14 +60,19 @@ def recolor_ranger(src, cloth_h, cloth_s, cloth_v, leather_h, leather_s, leather
     return res
 
 def recolor_peasant_blue(src):
+    """Mage palette: slate periwinkle tunic, deep indigo-violet cloth (also used by the robe skirt),
+    antique-gold leather. Shading is kept, only hue/sat/value are remapped."""
     rgb = src[..., :3]; h, s, v = rgb2hsv(rgb)
-    # light tan shirt/sleeves -> royal blue; dark browns stay leather but cooler/darker
     light = np.clip((v - 0.30) / 0.15, 0, 1) * np.clip((0.55 - s) / 0.2, 0, 1)
-    nh = np.where(light > 0, 0.60, h); ns = np.where(light > 0, np.clip(0.30 + s * 0.9, 0, 0.7), s)
-    nv = v * (1 - light * 0.15)
-    # dark cloth (trousers) -> deep indigo
     dark = np.clip((0.25 - v) / 0.1, 0, 1) * np.clip((s - 0.1) / 0.1, 0, 1)
-    nh = np.where(dark > 0.5, 0.68, nh); ns = np.where(dark > 0.5, np.clip(s * 1.2, 0, 0.8), ns)
+    brown = window(h, 0.02, 0.14, 0.02) * np.clip((s - 0.35) / 0.1, 0, 1) * np.clip((0.55 - v) / 0.1, 0, 1) * (1 - dark) * (1 - light)
+    nh, ns, nv = h.copy(), s.copy(), v.copy()
+    # light cloth -> slate periwinkle (muted, a touch violet)
+    nh = np.where(light > 0, 0.635, nh); ns = ns * (1 - light) + np.clip(0.18 + s * 0.65, 0, 0.5) * light; nv = nv * (1 - light * 0.1)
+    # dark cloth -> rich indigo-violet, lifted so the folds read
+    nh = np.where(dark > 0.5, 0.715, nh); ns = ns * (1 - dark) + np.clip(0.28 + s * 0.7, 0, 0.62) * dark; nv = nv * (1 - dark) + np.clip(v * 1.9 + 0.1, 0, 0.5) * dark
+    # brown leather -> antique gold
+    nh = np.where(brown > 0.5, 0.115, nh); ns = ns * (1 - brown) + np.clip(s * 0.85, 0, 1) * brown; nv = nv * (1 - brown) + np.clip(v * 1.15, 0, 1) * brown
     out = hsv2rgb(nh % 1.0, np.clip(ns, 0, 1), np.clip(nv, 0, 1))
     res = src.copy(); res[..., :3] = out
     return res
@@ -75,9 +80,9 @@ def recolor_peasant_blue(src):
 if __name__ == "__main__":
     rg = load("T_Ranger_BaseColor.png"); ps = load("T_Peasant_BaseColor.png")
     #            cloth h   s    v     leather h  s    v     metal tint            metal v
-    save(recolor_ranger(rg, 0.995, 0.95, 1.05, None, 0.9, 0.78, (1.0, 1.0, 1.05), 1.0), "T_Ranger_BaseColor_warrior.png")
+    save(recolor_ranger(rg, 0.995, 1.0, 1.25, None, 0.9, 0.78, (1.0, 1.0, 1.05), 1.0), "T_Ranger_BaseColor_warrior.png")
     save(recolor_ranger(rg, 0.62, 0.15, 0.75, None, 0.55, 0.55, (0.8, 0.82, 0.9), 0.75), "T_Ranger_BaseColor_rogue.png")
-    save(recolor_ranger(rg, 0.26, 0.85, 1.0, None, 0.7, 1.12, (1.0, 0.95, 0.85), 1.0), "T_Ranger_BaseColor_archer.png")
-    save(recolor_ranger(rg, 0.61, 1.0, 1.05, 0.09, 0.6, 0.9, (1.0, 0.92, 0.6), 1.0), "T_Ranger_BaseColor_mage.png")
+    save(recolor_ranger(rg, 0.10, 0.55, 1.1, None, 0.75, 1.1, (1.0, 0.95, 0.85), 1.0), "T_Ranger_BaseColor_archer.png")
+    save(recolor_ranger(rg, 0.715, 0.62, 0.95, 0.105, 0.75, 1.2, (1.0, 0.9, 0.55), 1.0), "T_Ranger_BaseColor_mage.png")
     save(recolor_peasant_blue(ps), "T_Peasant_BaseColor_mage.png")
     print("textures done")

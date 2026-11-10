@@ -21,6 +21,7 @@ var _message: Label
 var _body: HBoxContainer
 var _dialog: VBoxContainer
 var _window: PanelContainer
+var sfx: Callable = Callable()
 
 
 func _ready() -> void:
@@ -33,9 +34,7 @@ func _ready() -> void:
 	add_child(shade)
 	var window := PanelContainer.new()
 	_window = window
-	var th := Theme.new()
-	th.default_font_size = 11
-	window.theme = th
+	window.theme = GameTheme.make(11)
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.1, 0.075, 0.05, 0.96)
 	style.border_color = GOLD
@@ -114,6 +113,8 @@ func open_for(station: Dictionary, p_warrior: WarriorSim) -> void:
 
 
 func close_panel() -> void:
+	if sfx.is_valid():
+		sfx.call(&"ui_close", -8.0)
 	visible = false
 	closed.emit()
 
@@ -149,6 +150,7 @@ func _build_tavern() -> void:
 	]
 	rumor.pressed.connect(func() -> void: _message.text = rumors[randi() % rumors.size()])
 	_dialog.add_child(rumor)
+	_wire()
 
 
 func _build_tabs() -> void:
@@ -185,6 +187,8 @@ func _fill_list() -> void:
 		row.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		row.add_theme_color_override("font_color", HAVE if Crafting.can_craft(r) else Color(0.62, 0.6, 0.58))
 		row.custom_minimum_size = Vector2(0, 34)
+		row.icon = HeroItemIcons.get_icon(String(r["id"]))
+		row.add_theme_constant_override("icon_max_width", 26)
 		row.pressed.connect(func() -> void:
 			_selected = r
 			_refresh_detail())
@@ -193,6 +197,12 @@ func _fill_list() -> void:
 			_selected = r
 			first = false
 	_refresh_detail()
+	_wire()
+
+
+func _wire() -> void:
+	if sfx.is_valid():
+		Sfx.wire_buttons(self, sfx)
 
 
 func _refresh_detail() -> void:
@@ -214,7 +224,21 @@ func _refresh_detail() -> void:
 func _on_create() -> void:
 	if _selected.is_empty():
 		return
-	_message.text = Crafting.craft(_selected, warrior)
+	var made := Crafting.craft(_selected, warrior)
+	_message.text = made
+	if sfx.is_valid() and not made.begins_with("Faltan"):
+		if _selected.has("weapon"):
+			sfx.call(&"craft_weapon", -6.0)
+		elif _selected.has("armor"):
+			sfx.call(&"craft_armor", -6.0)
+		else:
+			sfx.call(&"craft_potion", -6.0)
+		if Crafting.last_quality >= ItemRarity.Tier.EPICO:
+			sfx.call(&"levelup", -6.0)
+		elif Crafting.last_quality >= ItemRarity.Tier.RARO:
+			sfx.call(&"ui_confirm", -6.0)
+	elif sfx.is_valid():
+		sfx.call(&"ui_denied", -8.0)
 	var keep := _selected
 	_fill_list()
 	_selected = keep

@@ -82,11 +82,33 @@ static func generate(seed_value: int) -> Dictionary:
 	stations_all.append({"id": "portal", "label": "Portal de la Torre", "pos": PORTAL_POS + Vector2(0.0, 40.0), "radius": 130.0})
 	var decor: Array = []
 	_scatter(rng, decor, obstacles, stations_all)
+	var villagers := _villagers(obstacles)
 	return {
 		"seed": seed_value, "name": "Pueblo", "bounds": Rect2(Vector2.ZERO, SIZE),
 		"spawn": Vector2(1200.0, 1560.0), "buildings": buildings, "stations": stations_all,
-		"ring": ring, "obstacles": obstacles, "decor": decor,
+		"ring": ring, "obstacles": obstacles, "decor": decor, "villagers": villagers,
 	}
+
+
+## Aldeanos decorativos (fijos): plaza, camino y clientes de la taberna.
+static func _villagers(obstacles: Array) -> Array:
+	var list: Array = [
+		{"model": "peasant_1", "pos": Vector2(1060.0, 1180.0), "yaw": 2.2},
+		{"model": "peasant_4", "pos": Vector2(1330.0, 1130.0), "yaw": -1.8},
+		{"model": "rich_citizens_2", "pos": Vector2(1290.0, 1260.0), "yaw": 3.6},
+		{"model": "peasant_2", "pos": Vector2(980.0, 1010.0), "yaw": 1.2},
+		{"model": "city_dwellers_1", "pos": Vector2(1420.0, 960.0), "yaw": -2.6},
+		{"model": "peasant_5", "pos": Vector2(840.0, 1210.0), "yaw": 0.6},
+		{"model": "queen", "pos": Vector2(1230.0, 900.0), "yaw": 3.1},
+		{"model": "peasant_6", "pos": Vector2(740.0, 1090.0), "yaw": 1.9},
+	]
+	var tavern: Dictionary = BUILDINGS[2]
+	for patron in [{"model": "peasant_3", "local": Vector2(-2.6, 2.4), "yaw": 1.4}, {"model": "rich_citizens_4", "local": Vector2(2.9, 3.4), "yaw": -1.2}, {"model": "king", "local": Vector2(-1.4, 3.6), "yaw": 2.6}]:
+		var pos: Vector2 = (tavern["center"] as Vector2) + ((patron["local"] as Vector2) * 40.0).rotated(-float(tavern["yaw"]))
+		list.append({"model": patron["model"], "pos": pos, "yaw": float(tavern["yaw"]) + float(patron["yaw"])})
+	for v: Dictionary in list:
+		obstacles.append({"position": v["pos"], "radius": 20.0})
+	return list
 
 
 static func _scatter(rng: RandomNumberGenerator, decor: Array, obstacles: Array, stations: Array) -> void:
@@ -157,6 +179,8 @@ static func build(parent: Node3D, data: Dictionary) -> Array:
 	for st: Dictionary in data["stations"]:
 		if st["id"] != "portal":
 			_station_props(holder, st, data)
+	for v: Dictionary in data["villagers"]:
+		_villager(holder, v)
 	_tower_foundation(holder, data)
 	_portal(holder)
 	_lights_and_fences(holder, data)
@@ -274,6 +298,7 @@ static func _building(parent: Node3D, b: Dictionary) -> Dictionary:
 	sign.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	sign.no_depth_test = true
 	sign.modulate = Color(1.0, 0.9, 0.55)
+	sign.font = GameTheme.font(true)
 	sign.position = Vector3(0.0, WALL_H + 3.0, hz + 0.5)
 	root.add_child(sign)
 	return {"id": b["id"], "center": b["center"], "yaw": yaw, "hx": hx, "hz": hz, "roof": roof, "walls": camera_walls, "sign": sign}
@@ -299,13 +324,17 @@ static func _interior(root: Node3D, b: Dictionary) -> void:
 
 
 ## Oculta techo y muros del lado de la cámara cuando el jugador está dentro (como WoW al entrar).
-static func update_interiors(handles: Array, player_px: Vector2) -> void:
+static func update_interiors(handles: Array, player_px: Vector2) -> String:
+	var inside_id := ""
 	for h: Dictionary in handles:
 		var local := (player_px - (h["center"] as Vector2)).rotated(float(h["yaw"])) / 40.0
 		var inside := absf(local.x) < float(h["hx"]) + 0.3 and absf(local.y) < float(h["hz"]) + 0.3
 		(h["roof"] as Node3D).visible = not inside
+		if inside:
+			inside_id = String(h["id"])
 		for w: Node3D in h["walls"]:
 			w.visible = not inside
+	return inside_id
 
 
 static func _station_props(parent: Node3D, station: Dictionary, _data: Dictionary) -> void:
@@ -324,8 +353,42 @@ static func _station_props(parent: Node3D, station: Dictionary, _data: Dictionar
 	tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	tag.no_depth_test = true
 	tag.modulate = Color(1.0, 0.92, 0.45)
+	tag.font = GameTheme.font(true)
 	tag.position = View3D.to3(station["pos"], 2.6)
 	parent.add_child(tag)
+
+
+static var _people_mat: StandardMaterial3D
+
+
+## Aldeano de Craftpix (FBX en T-pose): se le bajan los brazos y se le pone la textura compartida.
+static func _villager(parent: Node3D, v: Dictionary) -> void:
+	var scene := load("res://assets/models/people/%s.fbx" % v["model"]) as PackedScene
+	if scene == null:
+		return
+	var node := scene.instantiate() as Node3D
+	node.position = View3D.to3(v["pos"])
+	node.rotation.y = float(v["yaw"])
+	parent.add_child(node)
+	if _people_mat == null:
+		_people_mat = StandardMaterial3D.new()
+		_people_mat.albedo_texture = load("res://assets/texture/people_texture_map.png") as Texture2D
+		_people_mat.roughness = 0.9
+	for mi in node.find_children("*", "MeshInstance3D", true, false):
+		(mi as MeshInstance3D).material_override = _people_mat
+	var sk := node.find_children("*", "Skeleton3D", true, false)[0] as Skeleton3D
+	for bone_name in ["Upperarm_R", "Upperarm_L"]:
+		var b := sk.find_bone(bone_name)
+		var parent_idx := sk.get_bone_parent(b)
+		var parent_basis := sk.get_bone_global_pose(parent_idx).basis
+		var global_basis := parent_basis * Basis(sk.get_bone_rest(b).basis)
+		var side := signf(sk.get_bone_global_pose(b).origin.x)
+		var lowered := Basis(Vector3(0, 0, 1), -side * 1.25) * global_basis
+		sk.set_bone_pose_rotation(b, (parent_basis.inverse() * lowered).get_rotation_quaternion())
+	# Respira: leve vaivén para que no parezcan estatuas.
+	var tween := node.create_tween().set_loops()
+	tween.tween_property(node, "rotation:y", float(v["yaw"]) + 0.12, 2.5 + randf()).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(node, "rotation:y", float(v["yaw"]) - 0.12, 2.5 + randf()).set_trans(Tween.TRANS_SINE)
 
 
 static func _tower_foundation(parent: Node3D, data: Dictionary) -> void:

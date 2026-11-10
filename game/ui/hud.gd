@@ -245,7 +245,12 @@ func _draw_ability_slot(rect: Rect2, warrior: WarriorSim, slot: String) -> void:
 	var short := String(ability.get("short", ability.get("name", "")))
 	var icon_color := GOLD if left <= 0.0 and affordable else Color(0.62, 0.64, 0.72, 1.0)
 	var icon_center := rect.position + Vector2(rect.size.x * 0.5, 18)
-	_draw_glyph(String(ability.get("cast", "melee")), icon_center, icon_color)
+	var icon := HeroSkillIcons.get_icon(ClassRegistry.active_kit().CLASS_ID, String(ability.get("id", "")))
+	if icon != null:
+		var tint := Color.WHITE if left <= 0.0 and affordable else Color(0.5, 0.5, 0.58, 1.0)
+		draw_texture_rect(icon, Rect2(icon_center - Vector2(13, 13), Vector2(26, 26)), false, tint)
+	else:
+		_draw_glyph(String(ability.get("cast", "melee")), icon_center, icon_color)
 
 	_draw_text(short, Vector2(rect.position.x, rect.position.y + rect.size.y - 2), 7, TEXT, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x)
 
