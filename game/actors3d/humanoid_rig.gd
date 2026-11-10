@@ -94,7 +94,7 @@ func setup_model(p_model: Node3D) -> void:
 		var class_lib := load(CLASS_ANIMS) as AnimationLibrary
 		for clip_name: StringName in class_lib.get_animation_list():
 			var key := String(clip_name)
-			if "walk" in key or "idle" in key or "fall" in key or "strafe" in key:
+			if "walk" in key or "idle" in key or "fall" in key or "strafe" in key or "jog" in key or "run_" in key:
 				class_lib.get_animation(clip_name).loop_mode = Animation.LOOP_LINEAR
 		player.add_animation_library("class", class_lib)
 		if overlay != null:

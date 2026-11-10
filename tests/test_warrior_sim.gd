@@ -61,6 +61,7 @@ func _run() -> void:
 	_test_class_enemies_and_balance_sim()
 	_test_defense_and_poise()
 	_test_mage_redesign_and_ai()
+	_test_quick_cast()
 
 	print("== %d checks, %d failed ==" % [_checks, _failures])
 	print("RESULT: %s" % ("PASS" if _failures == 0 else "FAIL"))
@@ -546,15 +547,6 @@ func _test_weapon_level_items_enemy() -> void:
 func _test_jump_and_enemy_spacing() -> void:
 	var world := _make_world(false, 8)
 	var w = world.warrior
-	var msg = InputMessageScript.new()
-	msg.actions = {"jump": true}
-	world.submit_input(msg)
-	world.step(DT)
-	var peak := 0.0
-	for i in 60:
-		world.step(DT)
-		peak = maxf(peak, w.height)
-	_check(peak > 40.0 and w.height == 0.0, "Space salta y aterriza (pico %d px)" % int(peak))
 	# El Soldado no se queda pegado: tras golpear mantiene distancia.
 	var w2 := _make_world(false, 9)
 	var enemy: EnemySim = w2.add_enemy(w2.warrior.position + Vector2(150, 0), 1)
@@ -1201,3 +1193,19 @@ func _first_ambush_damage(invisible: bool) -> float:
 	var before: float = dummy.health
 	r._hit_target(dummy, 1.0, {})
 	return before - dummy.health
+
+
+func _test_quick_cast() -> void:
+	# Quick cast (top-down): la skill de suelo sale al pulsar, en el punto del cursor.
+	var world := _make_world(false, 161)
+	var w = world.warrior
+	w.quick_cast = true
+	var target: DummySim = world.dummies[0]
+	target.position = w.position + Vector2(0, -150)
+	w.debug_refill()
+	var msg = _input(Vector2(0, -1), false, false, Vector2.ZERO, false, false, false, true)  # tecla 1 = Seismic Break
+	msg.aim_point = target.position
+	msg.has_aim_point = true
+	var hp: float = target.health
+	_step(world, 90, msg)  # la tecla sigue pulsada: no hace falta soltar
+	_check(target.health < hp, "Quick cast: Seismic Break sale al pulsar, sin mantener y soltar")

@@ -253,3 +253,10 @@ piezas del Medieval Village / Fantasy Props MegaKit; animación propia de estoca
 
 ## 2026-11-09 — Modo top-down (tecla C)
 - **C** alterna entre tercera persona y top-down (estilo Battlerite/Albion): cámara aérea fija, ratón libre como puntero (apuntado de skills y de suelo hacia el cursor), el personaje gira al instante hacia el puntero, WASD relativo a la pantalla. La simulación ya era plana (2D), así que golpes, proyectiles, zonas y poise funcionan igual en ambos modos.
+
+## 2026-11-09 — Top-down por defecto
+- El juego arranca en **top-down** (C alterna a tercera persona). Salto eliminado (la tecla Space ya no hace nada; los saltos de skills — Cross Cut, Evasive Leap, Seismic — se mantienen como skills).
+- **Cámara:** AvPág/RePág (PageUp/PageDown) cambian la inclinación; rueda = zoom; el muro sur se oculta en top-down.
+- **Lanzamiento rápido (X alterna, por defecto ON en top-down):** las skills de suelo salen al pulsar, hacia el cursor; con OFF se mantiene hold-to-aim (marcador + anillo de alcance de la skill).
+- **Legibilidad:** línea de apuntado hacia el cursor, anillo de alcance de las skills de suelo, anillo de equipo bajo los pies (dorado = tú, rojo = enemigo), barras de vida enemigas ×1.5, y **avisos en el suelo para los ataques de los enemigos de clase** (cono/línea/círculo con progreso) además de los del Soldado, con más relleno desde arriba.
+- **Locomotión:** si existen en `assets/models/anims/class/` los clips `jog_backward` (o `run_backward`) y `jog_strafe_left/right` (o `run_strafe_*`), tras `tools/bake_spells.gd` se usan automáticamente para correr hacia atrás / lateral; si no, carrera al revés.
