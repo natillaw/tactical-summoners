@@ -129,7 +129,7 @@ static func _scatter(rng: RandomNumberGenerator, decor: Array, obstacles: Array,
 	for b: Dictionary in BUILDINGS:
 		keep_clear.append([b["center"], 260.0])
 	keep_clear.append([TOWER_CENTER, TOWER_RADIUS + 90.0])
-	var pines := ["Pine_1", "Pine_2", "Pine_3", "CommonTree_1", "CommonTree_2", "CommonTree_3", "CommonTree_4"]
+	var pines := ["Pine_1", "Pine_1", "Pine_1", "Pine_2", "Pine_2", "Pine_2", "Pine_3", "Pine_3", "Pine_3", "CommonTree_3", "CommonTree_4"]  # los comunes cuestan mucho GPU: pocos
 	var flora := ["Grass_Common_Tall", "Grass_Common_Short", "Flower_3_Group", "Flower_4_Group", "Clover_1", "Fern_1"]
 	# Camino de la plaza al portal y del spawn a la plaza (se mantiene despejado).
 	var road := [Vector2(1200.0, 1560.0), Vector2(1200.0, 1100.0), PORTAL_POS + Vector2(0.0, 60.0)]

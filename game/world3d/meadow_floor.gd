@@ -14,7 +14,8 @@ const NATURE := "res://assets/models/nature/"
 const PROPS := "res://assets/models/props_fantasy/"
 
 ## Pinos y árboles comunes (verdes). Los árboles rojos (TwistedTree, Bush_Common) y los secos grises (DeadTree) quedan reservados para el tier +10; no se usan en los pisos 1-10.
-const TREES := ["Pine_1", "Pine_2", "Pine_3", "CommonTree_1", "CommonTree_2", "CommonTree_3", "CommonTree_4"]
+## Los árboles comunes (copas redondas) cuestan ~12x más GPU que un pino por sobredibujado: solo ~18% de los árboles.
+const TREES := ["Pine_1", "Pine_1", "Pine_1", "Pine_2", "Pine_2", "Pine_2", "Pine_3", "Pine_3", "Pine_3", "CommonTree_3", "CommonTree_4"]
 const AUTUMN_TREES := ["TwistedTree_1", "TwistedTree_2"]
 const ROCKS := ["Rock_Medium_1", "Rock_Medium_2", "Rock_Medium_3"]
 const GRASS := ["Grass_Common_Tall", "Grass_Common_Short", "Grass_Wispy_Tall", "Clover_1", "Fern_1"]
@@ -262,7 +263,7 @@ static func _place_trees(rng: RandomNumberGenerator, ctx: Dictionary, decor: Arr
 	var noise := FastNoiseLite.new()
 	noise.seed = rng.randi()
 	noise.frequency = 0.0022
-	for attempt in range(950):
+	for attempt in range(850):
 		var point := Vector2(rng.randf_range(30.0, SIZE.x - 30.0), rng.randf_range(30.0, SIZE.y - 30.0))
 		var edge := minf(minf(point.x, SIZE.x - point.x), minf(point.y, SIZE.y - point.y))
 		var patch := clampf(noise.get_noise_2dv(point) * 1.6 + 0.35, 0.0, 1.0)
@@ -500,6 +501,7 @@ static func _fix_materials(scene: PackedScene) -> void:
 				if mat.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED:
 					fresh.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
 					fresh.alpha_scissor_threshold = 0.5
+					fresh.alpha_antialiasing_mode = BaseMaterial3D.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE  # bordes de hojas nítidos con MSAA
 				mesh.surface_set_material(i, fresh)
 	probe.free()
 
@@ -518,6 +520,9 @@ static func _build_environment(parent: Node3D) -> void:
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
 	env.ambient_light_energy = 0.9
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	env.adjustment_enabled = true  # más contraste y color: menos lavado
+	env.adjustment_contrast = 1.12
+	env.adjustment_saturation = 1.12
 	env.fog_enabled = true
 	env.fog_light_color = Color(0.78, 0.87, 0.95)
 	env.fog_density = 0.0022

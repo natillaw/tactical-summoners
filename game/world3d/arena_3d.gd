@@ -728,6 +728,21 @@ func start_ambient() -> void:
 	_ambient.play()
 
 
+## Escala la distancia de dibujo de la vegetación (1.0 = la del generador) según la calidad gráfica.
+func set_decor_reach(factor: float) -> void:
+	for holder_name in ["FloorDecor", "TownDecor"]:
+		var holder := get_node_or_null(holder_name)
+		if holder == null:
+			continue
+		for node in holder.get_children():
+			var item := node as GeometryInstance3D
+			if item == null or item.visibility_range_end <= 0.0:
+				continue
+			if not item.has_meta("base_reach"):
+				item.set_meta("base_reach", item.visibility_range_end)
+			item.visibility_range_end = float(item.get_meta("base_reach")) * factor
+
+
 func play_sfx(sound: Variant, volume_db: float = -6.0, pitch: float = 1.0) -> void:
 	var stream: AudioStream = Sfx.get_stream(sound) if (sound is StringName or sound is String) else sound as AudioStream
 	if stream == null or _sfx_pool.is_empty():

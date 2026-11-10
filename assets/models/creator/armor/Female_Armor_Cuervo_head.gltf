@@ -1338,20 +1338,6 @@
 				"metallicFactor":0,
 				"roughnessFactor":0.5
 			}
-		},
-		{
-			"doubleSided":true,
-			"name":"trim",
-			"pbrMetallicRoughness":{
-				"baseColorFactor":[
-					0.800000011920929,
-					0.800000011920929,
-					0.800000011920929,
-					1
-				],
-				"metallicFactor":0,
-				"roughnessFactor":0.5
-			}
 		}
 	],
 	"meshes":[
@@ -1369,25 +1355,13 @@
 					},
 					"indices":6,
 					"material":0
-				},
-				{
-					"attributes":{
-						"POSITION":7,
-						"NORMAL":8,
-						"TEXCOORD_0":9,
-						"COLOR_0":10,
-						"JOINTS_0":11,
-						"WEIGHTS_0":12
-					},
-					"indices":13,
-					"material":1
 				}
 			]
 		}
 	],
 	"skins":[
 		{
-			"inverseBindMatrices":14,
+			"inverseBindMatrices":7,
 			"joints":[
 				64,
 				63,
@@ -1462,111 +1436,58 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":602,
+			"count":1606,
 			"max":[
-				0.08147624880075455,
+				0.12361889332532883,
 				1.6673269271850586,
 				0.15204423666000366
 			],
 			"min":[
-				-0.08147624880075455,
+				-0.12361889332532883,
 				1.5416297912597656,
-				0.007763000205159187
+				-0.14861667156219482
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":602,
+			"count":1606,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":602,
+			"count":1606,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":3,
 			"componentType":5123,
-			"count":602,
+			"count":1606,
 			"normalized":true,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":4,
 			"componentType":5121,
-			"count":602,
+			"count":1606,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":5,
 			"componentType":5126,
-			"count":602,
+			"count":1606,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":6,
 			"componentType":5123,
-			"count":2628,
+			"count":7068,
 			"type":"SCALAR"
 		},
 		{
 			"bufferView":7,
-			"componentType":5126,
-			"count":268,
-			"max":[
-				0.08875181525945663,
-				1.6381572484970093,
-				0.12352460622787476
-			],
-			"min":[
-				-0.08875181525945663,
-				1.6253918409347534,
-				0.010772362351417542
-			],
-			"type":"VEC3"
-		},
-		{
-			"bufferView":8,
-			"componentType":5126,
-			"count":268,
-			"type":"VEC3"
-		},
-		{
-			"bufferView":9,
-			"componentType":5126,
-			"count":268,
-			"type":"VEC2"
-		},
-		{
-			"bufferView":10,
-			"componentType":5123,
-			"count":268,
-			"normalized":true,
-			"type":"VEC4"
-		},
-		{
-			"bufferView":11,
-			"componentType":5121,
-			"count":268,
-			"type":"VEC4"
-		},
-		{
-			"bufferView":12,
-			"componentType":5126,
-			"count":268,
-			"type":"VEC4"
-		},
-		{
-			"bufferView":13,
-			"componentType":5123,
-			"count":888,
-			"type":"SCALAR"
-		},
-		{
-			"bufferView":14,
 			"componentType":5126,
 			"count":65,
 			"type":"MAT4"
@@ -1575,97 +1496,55 @@
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":7224,
+			"byteLength":19272,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":7224,
-			"byteOffset":7224,
+			"byteLength":19272,
+			"byteOffset":19272,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":4816,
-			"byteOffset":14448,
+			"byteLength":12848,
+			"byteOffset":38544,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":4816,
-			"byteOffset":19264,
+			"byteLength":12848,
+			"byteOffset":51392,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":2408,
-			"byteOffset":24080,
+			"byteLength":6424,
+			"byteOffset":64240,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":9632,
-			"byteOffset":26488,
+			"byteLength":25696,
+			"byteOffset":70664,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":5256,
-			"byteOffset":36120,
-			"target":34963
-		},
-		{
-			"buffer":0,
-			"byteLength":3216,
-			"byteOffset":41376,
-			"target":34962
-		},
-		{
-			"buffer":0,
-			"byteLength":3216,
-			"byteOffset":44592,
-			"target":34962
-		},
-		{
-			"buffer":0,
-			"byteLength":2144,
-			"byteOffset":47808,
-			"target":34962
-		},
-		{
-			"buffer":0,
-			"byteLength":2144,
-			"byteOffset":49952,
-			"target":34962
-		},
-		{
-			"buffer":0,
-			"byteLength":1072,
-			"byteOffset":52096,
-			"target":34962
-		},
-		{
-			"buffer":0,
-			"byteLength":4288,
-			"byteOffset":53168,
-			"target":34962
-		},
-		{
-			"buffer":0,
-			"byteLength":1776,
-			"byteOffset":57456,
+			"byteLength":14136,
+			"byteOffset":96360,
 			"target":34963
 		},
 		{
 			"buffer":0,
 			"byteLength":4160,
-			"byteOffset":59232
+			"byteOffset":110496
 		}
 	],
 	"buffers":[
 		{
-			"byteLength":63392,
+			"byteLength":114656,
 			"uri":"Female_Armor_Cuervo_head.bin"
 		}
 	]
