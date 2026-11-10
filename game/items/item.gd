@@ -14,6 +14,7 @@ var weapon_min: float = 0.0
 var weapon_max: float = 0.0
 var weapon_speed: float = 2.6
 var stats: Dictionary = {}
+var set_id: String = ""           ## set de armadura (decide el aspecto del personaje), ver ArmorSets
 var trait_id: String = ""         ## rasgo del tipo de arma (sangrado, aturdimiento…), pendiente de implementar
 var legendary_effect: String = "" ## efecto especial (solo legendarios), pendiente de implementar
 
@@ -34,6 +35,8 @@ func describe() -> String:
 	for key: String in stats:
 		var v: float = stats[key]
 		lines.append("+%s %s" % [("%.0f%%" % (v * 100.0)) if key == "crit_chance" else str(int(v)), key])
+	if set_id != "":
+		lines.append("Set: " + ArmorSets.set_name(set_id))
 	if trait_id != "":
 		lines.append("Rasgo: " + trait_id)
 	if legendary_effect != "":

@@ -14,9 +14,12 @@ const PORTAL_POS := Vector2(1200.0, 740.0)
 const WALL_H := 3.1
 
 const BUILDINGS := [
-	{"id": "blacksmith", "label": "Herrería", "center": Vector2(560.0, 1010.0), "nx": 4, "nz": 4, "yaw": -PI * 0.5, "style": "UnevenBrick", "roof": "6x6", "npc": "Brann, el Herrero", "look": {"sex": "male", "skin": "moreno", "hair": "beard", "hair_color": "negro", "outfit": "peasant"}},
-	{"id": "alchemy", "label": "Salón de Alquimia", "center": Vector2(1840.0, 1010.0), "nx": 4, "nz": 4, "yaw": PI * 0.5, "style": "Plaster", "roof": "6x6", "npc": "Elowen, la Alquimista", "look": {"sex": "female", "skin": "claro", "hair": "long", "hair_color": "morado", "outfit": "ranger"}},
-	{"id": "tavern", "label": "Taberna", "center": Vector2(1700.0, 1470.0), "nx": 4, "nz": 5, "yaw": PI * 0.5, "style": "Plaster", "roof": "6x8", "npc": "Gorm, el Tabernero", "look": {"sex": "male", "skin": "trigueño", "hair": "parted", "hair_color": "gris", "outfit": "peasant"}},
+	{"id": "blacksmith", "label": "Herrería", "center": Vector2(560.0, 1010.0), "nx": 4, "nz": 4, "yaw": PI * 0.5, "style": "UnevenBrick", "roof": "6x6", "npc": "Brann, el Herrero", "look": {"sex": "male", "skin": "moreno", "hair": "beard", "hair_color": "negro", "outfit": "peasant"}},
+	{"id": "alchemy", "label": "Salón de Alquimia", "center": Vector2(1840.0, 1010.0), "nx": 4, "nz": 4, "yaw": -PI * 0.5, "style": "Plaster", "roof": "6x6", "npc": "Elowen, la Alquimista", "look": {"sex": "female", "skin": "claro", "hair": "long", "hair_color": "morado", "outfit": "ranger"}},
+	{"id": "tavern", "label": "Taberna", "center": Vector2(1700.0, 1470.0), "nx": 4, "nz": 5, "yaw": -PI * 0.5, "style": "Plaster", "roof": "6x8", "npc": "Gorm, el Tabernero", "look": {"sex": "male", "skin": "trigueño", "hair": "parted", "hair_color": "gris", "outfit": "peasant"}},
+	{"id": "leatherworker", "label": "Peletería", "center": Vector2(560.0, 560.0), "nx": 4, "nz": 4, "yaw": PI * 0.5, "style": "Plaster", "roof": "6x6", "npc": "Hilda, la Peletera", "look": {"sex": "female", "skin": "trigueño", "hair": "buns", "hair_color": "pelirrojo", "outfit": "peasant"}},
+	{"id": "tailor", "label": "Sastrería", "center": Vector2(560.0, 1480.0), "nx": 4, "nz": 4, "yaw": PI * 0.5, "style": "Plaster", "roof": "6x6", "npc": "Maren, la Sastre", "look": {"sex": "female", "skin": "claro", "hair": "long", "hair_color": "rubio", "outfit": "ranger"}},
+	{"id": "carpenter", "label": "Carpintería", "center": Vector2(1840.0, 560.0), "nx": 4, "nz": 4, "yaw": -PI * 0.5, "style": "UnevenBrick", "roof": "6x6", "npc": "Tobin, el Carpintero", "look": {"sex": "male", "skin": "moreno", "hair": "parted", "hair_color": "castaño", "outfit": "peasant"}},
 ]
 const STATION_PROPS := {
 	"blacksmith": ["Anvil", "WeaponStand", "Workbench", "Whetstone", "Barrel"],
@@ -58,7 +61,6 @@ static func generate(seed_value: int) -> Dictionary:
 		var npc_local := Vector2(0.0, -hz + 2.2) * 40.0
 		var npc_pos := center + npc_local.rotated(-yaw)
 		obstacles.append({"position": npc_pos, "radius": 22.0})
-		obstacles.append({"position": center + (npc_local + Vector2(0.0, 70.0)).rotated(-yaw), "radius": 44.0})
 		stations.append({
 			"id": b["id"], "label": b["label"], "npc": b["npc"], "pos": npc_pos, "radius": 150.0,
 			"yaw": yaw, "look": b["look"],
@@ -99,7 +101,7 @@ static func _villagers(obstacles: Array) -> Array:
 		{"model": "peasant_2", "pos": Vector2(980.0, 1010.0), "yaw": 1.2},
 		{"model": "city_dwellers_1", "pos": Vector2(1420.0, 960.0), "yaw": -2.6},
 		{"model": "peasant_5", "pos": Vector2(840.0, 1210.0), "yaw": 0.6},
-		{"model": "queen", "pos": Vector2(1230.0, 900.0), "yaw": 3.1},
+		{"model": "queen", "pos": Vector2(1350.0, 860.0), "yaw": 3.1},
 		{"model": "peasant_6", "pos": Vector2(740.0, 1090.0), "yaw": 1.9},
 	]
 	var tavern: Dictionary = BUILDINGS[2]
@@ -167,6 +169,7 @@ static func _scatter(rng: RandomNumberGenerator, decor: Array, obstacles: Array,
 
 ## Devuelve los edificios (techo y muros delanteros) para ocultarlos al entrar. Ver update_interiors.
 static func build(parent: Node3D, data: Dictionary) -> Array:
+	_npc_tags.clear()
 	MeadowFloor._build_environment(parent)
 	_ground(parent)
 	var holder := Node3D.new()
@@ -294,7 +297,7 @@ static func _building(parent: Node3D, b: Dictionary) -> Dictionary:
 	sign.text = String(b["label"])
 	sign.font_size = 64
 	sign.outline_size = 14
-	sign.pixel_size = 0.012
+	sign.pixel_size = 0.0075
 	sign.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	sign.no_depth_test = true
 	sign.modulate = Color(1.0, 0.9, 0.55)
@@ -309,6 +312,9 @@ const INTERIOR := {
 	"blacksmith": [["Anvil", -2.4, -1.2, 0.0], ["WeaponStand", 2.6, -3.2, 0.0], ["Workbench", -2.4, -3.0, PI * 0.5], ["Barrel", 2.8, -0.2, 0.0], ["Whetstone", -2.8, 0.8, 0.0], ["Sword_Bronze", 2.6, -2.2, 0.0], ["Pickaxe_Bronze", -3.2, 2.0, 0.0]],
 	"alchemy": [["Cauldron", -2.2, -1.0, 0.0], ["Shelf_Small_Bottles", 0.0, -3.7, 0.0], ["Bookcase_2", 3.4, -2.0, -PI * 0.5], ["Table_Large", 2.0, 1.0, 0.0], ["Potion_1", 1.6, 1.0, 0.0], ["Potion_2", 2.1, 1.1, 0.0], ["Potion_4", 2.6, 0.9, 0.0], ["BookStand", -3.0, 2.0, 0.0]],
 	"tavern": [["Table_Large", 0.0, -1.2, 0.0], ["Mug", -0.6, -1.2, 0.0], ["Mug", 0.5, -1.1, 0.0], ["Barrel_Apples", 3.2, -4.0, 0.0], ["Barrel", 3.3, -3.0, 0.0], ["Table_Large", -2.2, 2.2, 0.0], ["Chair_1", -2.6, 1.2, 0.0], ["Chair_1", -1.8, 3.2, PI], ["Table_Large", 2.4, 3.0, 0.0], ["Chair_1", 2.2, 2.0, 0.0], ["Torch_Metal", -3.5, -3.5, 0.0], ["Torch_Metal", 3.5, 4.2, 0.0]],
+	"leatherworker": [["Peg_Rack", 0.0, -3.5, 0.0], ["Cabinet", 3.4, -1.8, -PI * 0.5], ["Table_Large", -2.0, 1.0, 0.0], ["Pouch_Large", -2.4, 1.0, 0.0], ["Bag", -1.6, 1.0, 0.0], ["Barrel", 3.2, 2.6, 0.0], ["Rope_1", -3.2, -3.0, 0.0], ["Bucket_Metal", 3.0, 0.4, 0.0]],
+	"tailor": [["Peg_Rack", 0.0, -3.5, 0.0], ["Cabinet", -3.4, -1.8, PI * 0.5], ["Table_Large", 2.0, 1.2, 0.0], ["Bag", 1.6, 1.2, 0.0], ["Pouch_Large", 2.4, 1.2, 0.0], ["Bookcase_2", 3.4, -2.6, -PI * 0.5], ["Banner_2", -3.5, 2.8, 0.0], ["CandleStick_Triple", 2.0, 0.9, 0.0]],
+	"carpenter": [["Workbench", -2.4, -3.0, PI * 0.5], ["Workbench", 2.4, -3.0, -PI * 0.5], ["Crate_Wooden", 3.2, 1.0, 0.0], ["Crate_Wooden", 3.2, 2.2, 0.0], ["Barrel", -3.2, 2.2, 0.0], ["Bucket_Wooden_1", -3.0, 0.6, 0.0], ["Rope_1", 0.0, -3.7, 0.0], ["Shelf_Simple", -3.7, -0.4, PI * 0.5]],
 }
 
 
@@ -332,6 +338,9 @@ static func update_interiors(handles: Array, player_px: Vector2) -> String:
 		(h["roof"] as Node3D).visible = not inside
 		if inside:
 			inside_id = String(h["id"])
+		var tag: Label3D = _npc_tags.get(String(h["id"]))
+		if is_instance_valid(tag):  # el letrero del NPC solo se ve de cerca o dentro (no flota sobre los techos)
+			tag.visible = inside or player_px.distance_to(h["center"]) < 300.0
 		for w: Node3D in h["walls"]:
 			w.visible = not inside
 	return inside_id
@@ -356,9 +365,11 @@ static func _station_props(parent: Node3D, station: Dictionary, _data: Dictionar
 	tag.font = GameTheme.font(true)
 	tag.position = View3D.to3(station["pos"], 2.6)
 	parent.add_child(tag)
+	_npc_tags[String(station["id"])] = tag
 
 
 static var _people_mat: StandardMaterial3D
+static var _npc_tags: Dictionary = {}
 
 
 ## Aldeano de Craftpix (FBX en T-pose): se le bajan los brazos y se le pone la textura compartida.

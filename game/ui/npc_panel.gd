@@ -187,7 +187,7 @@ func _fill_list() -> void:
 		row.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		row.add_theme_color_override("font_color", HAVE if Crafting.can_craft(r) else Color(0.62, 0.6, 0.58))
 		row.custom_minimum_size = Vector2(0, 34)
-		row.icon = HeroItemIcons.get_icon(String(r["id"]))
+		row.icon = HeroItemIcons.get_icon(String(r["id"]), String(r.get("armor", "")))
 		row.add_theme_constant_override("icon_max_width", 26)
 		row.pressed.connect(func() -> void:
 			_selected = r
@@ -205,18 +205,23 @@ func _wire() -> void:
 		Sfx.wire_buttons(self, sfx)
 
 
+func _icon_path(id: String, slot: String) -> String:
+	var path := "res://assets/ui/items/%s.png" % id
+	return path if ResourceLoader.exists(path) or slot == "" else "res://assets/ui/items/slot_%s.png" % slot
+
+
 func _refresh_detail() -> void:
 	if _selected.is_empty():
 		_detail.text = ""
 		_create.disabled = true
 		return
 	var r := _selected
-	var text := "[font_size=16][color=#f2c75a]%s[/color][/font_size]\n" % r["name"]
+	var text := "[img=30]%s[/img] [font_size=16][color=#f2c75a]%s[/color][/font_size]\n" % [_icon_path(String(r["id"]), String(r.get("armor", ""))), r["name"]]
 	text += Crafting.describe_result(r) + "\n\n[color=#c9b27a]Materiales:[/color]\n"
 	for id: String in r["cost"]:
 		var have := int(Materials.inventory.get(id, 0))
 		var need := int(r["cost"][id])
-		text += "  [color=%s]%s  %d/%d[/color]\n" % ["#80ff80" if have >= need else "#ff6666", Materials.display(id), have, need]
+		text += "  [img=18]res://assets/ui/items/%s.png[/img] [color=%s]%s  %d/%d[/color]\n" % [id, "#80ff80" if have >= need else "#ff6666", Materials.display(id), have, need]
 	_detail.text = text
 	_create.disabled = not Crafting.can_craft(r)
 

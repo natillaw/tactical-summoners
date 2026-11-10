@@ -12,6 +12,8 @@ const WEAPON_TYPES := {
 	"mace": {"name": "Maza", "speed": 3.0, "spread": 0.20, "trait": "aturdimiento"},
 	"spear": {"name": "Lanza", "speed": 3.4, "spread": 0.15, "trait": "alcance +"},
 	"dagger": {"name": "Daga", "speed": 1.8, "spread": 0.30, "trait": "golpes rápidos"},
+	"bow": {"name": "Arco", "speed": 2.8, "spread": 0.22, "trait": "disparo preciso"},
+	"staff": {"name": "Bastón", "speed": 3.0, "spread": 0.18, "trait": "canaliza magia"},
 }
 const PREFIXES := ["Oxidada", "Sólida", "Afilada", "Forjada", "Rúnica", "Ancestral"]
 const AFFIX_STATS := ["strength", "stamina", "crit_chance", "attack_power_bonus"]

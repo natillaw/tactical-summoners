@@ -70,23 +70,23 @@ const OUTFITS := {
 
 	# Armaduras de guerrero con casco (placas / malla): tools/outfits/make_armor.py. "armor" = piezas de armadura (material por ranura, ver ARMOR_TINTS).
 	"armor_footman": {"name": "Armadura: Soldado", "hide_hair": true, "parts": [
-		{"file": "Ranger.gltf", "sex": true, "hide": ["Hood", "Pauldron"], "tex": "Ranger_BaseColor_archer"},
+		{"file": "Ranger.gltf", "sex": true, "hide": ["Hood", "Pauldron", "Legs", "Feet"], "tex": "Ranger_BaseColor_archer"},
 		{"armor": "footman"},
 	]},
 	"armor_knight": {"name": "Armadura: Caballero", "hide_hair": true, "parts": [
-		{"file": "Ranger.gltf", "sex": true, "hide": ["Hood", "Body", "Pauldron"], "tex": "Ranger_BaseColor_rogue"},
+		{"file": "Ranger.gltf", "sex": true, "hide": ["Hood", "Body", "Pauldron", "Legs", "Feet"], "tex": "Ranger_BaseColor_rogue"},
 		{"armor": "knight"},
 	]},
 	"armor_hoplite": {"name": "Armadura: Hoplita", "hide_hair": true, "parts": [
-		{"file": "Ranger.gltf", "sex": true, "hide": ["Hood", "Body", "Pauldron"], "tex": "Ranger_BaseColor_warrior"},
+		{"file": "Ranger.gltf", "sex": true, "hide": ["Hood", "Body", "Pauldron", "Legs", "Feet"], "tex": "Ranger_BaseColor_warrior"},
 		{"armor": "hoplite"},
 	]},
 	"armor_norse": {"name": "Armadura: Norteño", "hide_hair": true, "parts": [
-		{"file": "Ranger.gltf", "sex": true, "hide": ["Hood", "Body", "Pauldron"], "tex": "Ranger_BaseColor_rogue"},
+		{"file": "Ranger.gltf", "sex": true, "hide": ["Hood", "Body", "Pauldron", "Legs", "Feet"], "tex": "Ranger_BaseColor_rogue"},
 		{"armor": "norse"},
 	]},
 	"armor_dark": {"name": "Armadura: Caballero Oscuro", "hide_hair": true, "parts": [
-		{"file": "Ranger.gltf", "sex": true, "hide": ["Hood", "Body", "Pauldron"], "tex": "Ranger_BaseColor_rogue"},
+		{"file": "Ranger.gltf", "sex": true, "hide": ["Hood", "Body", "Pauldron", "Legs", "Feet"], "tex": "Ranger_BaseColor_rogue"},
 		{"armor": "dark"},
 	]},
 	"rogue": {"name": "Pícaro", "parts": [{"file": "Ranger.gltf", "sex": true, "tex": "Ranger_BaseColor_rogue"}]},
@@ -232,15 +232,15 @@ static func _borrow_material(mi: MeshInstance3D, pool: Array[MeshInstance3D], ke
 ## Materiales de armadura por ranura (plate/mail/leather/trim/cloth/bone): texturas neutras + tinte por set.
 const ARMOR_DIR := "res://assets/models/creator/armor/"
 const ARMOR_SLOT := {  # ranura -> [textura, rugosidad, metálico]
-	"plate": ["plate", 0.5, 0.15], "trim": ["plate", 0.38, 0.3], "mail": ["mail", 0.55, 0.2],
-	"leather": ["leather", 0.85, 0.0], "cloth": ["cloth", 0.95, 0.0], "bone": ["leather", 0.6, 0.0],
+	"plate": ["plate", 0.62, 0.08], "trim": ["plate", 0.5, 0.15], "mail": ["mail", 0.65, 0.1],
+	"leather": ["leather", 0.85, 0.0], "cloth": ["cloth", 0.95, 0.0], "pants": ["cloth", 0.95, 0.0], "bone": ["leather", 0.6, 0.0],
 }
-const ARMOR_TINTS := {
-	"knight": {"plate": Color(0.84, 0.87, 0.93), "trim": Color(0.95, 0.78, 0.38), "mail": Color(0.72, 0.75, 0.8), "leather": Color(0.38, 0.24, 0.15), "cloth": Color(0.2, 0.3, 0.66), "bone": Color(0.9, 0.85, 0.72)},
-	"footman": {"plate": Color(0.74, 0.76, 0.8), "trim": Color(0.72, 0.56, 0.3), "mail": Color(0.62, 0.64, 0.68), "leather": Color(0.46, 0.3, 0.18), "cloth": Color(0.66, 0.15, 0.12), "bone": Color(0.9, 0.85, 0.72)},
-	"hoplite": {"plate": Color(0.95, 0.62, 0.28), "trim": Color(1.0, 0.82, 0.36), "mail": Color(0.8, 0.55, 0.3), "leather": Color(0.52, 0.28, 0.15), "cloth": Color(0.72, 0.1, 0.1), "bone": Color(0.9, 0.85, 0.72)},
-	"norse": {"plate": Color(0.46, 0.47, 0.52), "trim": Color(0.88, 0.6, 0.28), "mail": Color(0.55, 0.57, 0.62), "leather": Color(0.42, 0.27, 0.16), "cloth": Color(0.22, 0.34, 0.28), "bone": Color(0.92, 0.87, 0.72)},
-	"dark": {"plate": Color(0.2, 0.2, 0.24), "trim": Color(0.78, 0.14, 0.12), "mail": Color(0.3, 0.3, 0.34), "leather": Color(0.15, 0.12, 0.12), "cloth": Color(0.4, 0.05, 0.07), "bone": Color(0.8, 0.78, 0.74)},
+const ARMOR_TINTS := {  # apagados, estilo pintado de Quaternius
+	"knight": {"plate": Color(0.5, 0.55, 0.64), "trim": Color(0.78, 0.64, 0.36), "mail": Color(0.58, 0.6, 0.64), "leather": Color(0.36, 0.25, 0.17), "cloth": Color(0.24, 0.32, 0.55), "pants": Color(0.2, 0.24, 0.36), "bone": Color(0.8, 0.76, 0.66)},
+	"footman": {"plate": Color(0.6, 0.62, 0.66), "trim": Color(0.62, 0.5, 0.3), "mail": Color(0.52, 0.54, 0.58), "leather": Color(0.42, 0.29, 0.19), "cloth": Color(0.55, 0.2, 0.17), "pants": Color(0.42, 0.38, 0.3), "bone": Color(0.8, 0.76, 0.66)},
+	"hoplite": {"plate": Color(0.72, 0.52, 0.3), "trim": Color(0.8, 0.66, 0.36), "mail": Color(0.62, 0.46, 0.3), "leather": Color(0.45, 0.28, 0.17), "cloth": Color(0.58, 0.16, 0.14), "pants": Color(0.66, 0.58, 0.44), "bone": Color(0.8, 0.76, 0.66)},
+	"norse": {"plate": Color(0.4, 0.42, 0.46), "trim": Color(0.7, 0.5, 0.28), "mail": Color(0.48, 0.5, 0.54), "leather": Color(0.4, 0.27, 0.17), "cloth": Color(0.24, 0.35, 0.3), "pants": Color(0.3, 0.34, 0.26), "bone": Color(0.82, 0.78, 0.66)},
+	"dark": {"plate": Color(0.24, 0.24, 0.28), "trim": Color(0.6, 0.2, 0.17), "mail": Color(0.32, 0.32, 0.36), "leather": Color(0.18, 0.14, 0.14), "cloth": Color(0.34, 0.08, 0.1), "pants": Color(0.14, 0.13, 0.16), "bone": Color(0.7, 0.68, 0.64)},
 }
 static var _armor_cache: Dictionary = {}
 
@@ -253,6 +253,7 @@ static func _armor_material(set_id: String, slot: String) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
 	m.albedo_texture = load(ARMOR_DIR + "T_" + String(def[0]) + ".png") as Texture2D
 	m.albedo_color = (ARMOR_TINTS.get(set_id, ARMOR_TINTS["knight"]) as Dictionary).get(slot, Color.WHITE)
+	m.vertex_color_use_as_albedo = true  # oclusión horneada en COLOR_0
 	m.normal_enabled = true
 	m.normal_texture = load(ARMOR_DIR + "T_" + String(def[0]) + "_n.png") as Texture2D
 	m.roughness = float(def[1])
