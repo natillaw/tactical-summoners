@@ -470,7 +470,7 @@ static func _build_environment(parent: Node3D) -> void:
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.fog_enabled = true
 	env.fog_light_color = Color(0.78, 0.87, 0.95)
-	env.fog_density = 0.006
+	env.fog_density = 0.0022
 	var world_env := WorldEnvironment.new()
 	world_env.environment = env
 	parent.add_child(world_env)

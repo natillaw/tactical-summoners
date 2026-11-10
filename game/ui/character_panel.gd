@@ -11,7 +11,8 @@ var _window: PanelContainer
 var _slots: VBoxContainer
 var _stats: RichTextLabel
 var _bag: VBoxContainer
-var _mats: Label
+var _mats: RichTextLabel
+var sfx: Callable = Callable()
 
 
 func _ready() -> void:
@@ -23,9 +24,7 @@ func _ready() -> void:
 	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(shade)
 	_window = PanelContainer.new()
-	var th := Theme.new()
-	th.default_font_size = 11
-	_window.theme = th
+	_window.theme = GameTheme.make(11)
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.1, 0.075, 0.05, 0.96)
 	style.border_color = GOLD
@@ -68,9 +67,10 @@ func _ready() -> void:
 	mid.add_child(_stats)
 	var right := _column(body, "Mochila (clic: equipar)", 1.0)
 	_bag = right
-	_mats = Label.new()
-	_mats.autowrap_mode = TextServer.AUTOWRAP_WORD
-	_mats.add_theme_color_override("font_color", Color(0.8, 0.9, 1.0))
+	_mats = RichTextLabel.new()
+	_mats.bbcode_enabled = true
+	_mats.fit_content = true
+	_mats.custom_minimum_size = Vector2(0, 30)
 	column.add_child(_mats)
 
 
@@ -94,6 +94,8 @@ func _column(parent: Control, title: String, ratio: float) -> VBoxContainer:
 
 func toggle() -> void:
 	visible = not visible
+	if sfx.is_valid():
+		sfx.call(&"ui_open" if visible else &"ui_close", -8.0)
 	if visible:
 		var vp := get_viewport_rect().size
 		_window.custom_minimum_size = vp * 0.88
@@ -112,6 +114,8 @@ func _item_button(item: Item, prefix: String = "") -> Button:
 	var b := Button.new()
 	b.text = prefix + item.item_name
 	b.clip_text = true
+	b.icon = HeroItemIcons.get_icon(item.id)
+	b.add_theme_constant_override("icon_max_width", 22)
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	b.add_theme_color_override("font_color", ItemRarity.color(item.rarity))
 	b.tooltip_text = item.describe()
@@ -139,6 +143,8 @@ func refresh() -> void:
 		if slot != "weapon":
 			b.pressed.connect(func() -> void:
 				Gear.unequip(slot, warrior)
+				if sfx.is_valid():
+					sfx.call(&"unequip", -6.0)
 				refresh())
 		_slots.add_child(b)
 	for c in _bag.get_children():
@@ -152,6 +158,8 @@ func refresh() -> void:
 		var b := _item_button(item)
 		b.pressed.connect(func() -> void:
 			Gear.equip(item, warrior)
+			if sfx.is_valid():
+				sfx.call(&"equip", -6.0)
 			refresh())
 		_bag.add_child(b)
 	var s := warrior.stats
@@ -171,5 +179,7 @@ func refresh() -> void:
 	var mats: Array = []
 	for id: String in Materials.DEFS:
 		if int(Materials.inventory.get(id, 0)) > 0:
-			mats.append("%s x%d" % [Materials.display(id), Materials.inventory[id]])
-	_mats.text = "Materiales: " + (", ".join(mats) if not mats.is_empty() else "ninguno")
+			mats.append("[img=16]res://assets/ui/items/%s.png[/img] %s x%d" % [id, Materials.display(id), Materials.inventory[id]])
+	_mats.text = "Materiales:  " + ("   ".join(mats) if not mats.is_empty() else "ninguno")
+	if sfx.is_valid():
+		Sfx.wire_buttons(self, sfx)

@@ -1418,47 +1418,47 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":56,
+			"count":576,
 			"max":[
-				0.20635083317756653,
-				1.0226935148239136,
-				0.1186971440911293
+				0.3470465838909149,
+				1.0299999713897705,
+				0.21671980619430542
 			],
 			"min":[
-				0.015039175748825073,
-				0.4879092574119568,
-				-0.012117457576096058
+				-0.32200732827186584,
+				0.18912193179130554,
+				-0.26094022393226624
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":56,
+			"count":576,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":56,
+			"count":576,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":3,
 			"componentType":5121,
-			"count":56,
+			"count":576,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":4,
 			"componentType":5126,
-			"count":56,
+			"count":576,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":5,
 			"componentType":5123,
-			"count":252,
+			"count":2880,
 			"type":"SCALAR"
 		},
 		{
@@ -1471,49 +1471,49 @@
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":672,
+			"byteLength":6912,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":672,
-			"byteOffset":672,
+			"byteLength":6912,
+			"byteOffset":6912,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":448,
-			"byteOffset":1344,
+			"byteLength":4608,
+			"byteOffset":13824,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":224,
-			"byteOffset":1792,
+			"byteLength":2304,
+			"byteOffset":18432,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":896,
-			"byteOffset":2016,
+			"byteLength":9216,
+			"byteOffset":20736,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":504,
-			"byteOffset":2912,
+			"byteLength":5760,
+			"byteOffset":29952,
 			"target":34963
 		},
 		{
 			"buffer":0,
 			"byteLength":4160,
-			"byteOffset":3416
+			"byteOffset":35712
 		}
 	],
 	"buffers":[
 		{
-			"byteLength":7576,
+			"byteLength":39872,
 			"uri":"Female_Mage_Robe.bin"
 		}
 	]

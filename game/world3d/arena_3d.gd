@@ -47,6 +47,10 @@ var enemy_actors: Array[WarriorActor3D] = []
 var gather_nodes: Array = []
 var enemy_index: Dictionary = {}  # WarriorSim -> índice en el piso (para guardar el progreso)
 var town_buildings: Array = []
+var _inside_building: String = ""
+var _last_step_pos: Vector2 = Vector2.ZERO
+var _step_distance: float = 0.0
+var _ambient: AudioStreamPlayer
 
 var _sfx_pool: Array[AudioStreamPlayer] = []
 var _sfx_index: int = 0
@@ -106,6 +110,7 @@ func build_town(p_world: CombatWorld, data: Dictionary) -> void:
 	_static_parent = self
 	town_buildings = Town.build(self, data)
 	_build_sfx_pool()
+	start_ambient()
 	fx = Node3D.new()
 	fx.name = "Fx"
 	add_child(fx)
@@ -129,6 +134,7 @@ func build_floor(p_world: CombatWorld, data: Dictionary, save: Dictionary = {}) 
 	world.warrior.reset(data["spawn"])
 	_static_parent = self
 	MeadowFloor.build(self, data)
+	start_ambient()
 	gather_nodes = MeadowFloor.build_gather(self, data)
 	var taken_before: Array = save.get("gathered", [])
 	for i in range(gather_nodes.size()):
@@ -476,7 +482,11 @@ func _process(delta: float) -> void:
 		return
 
 	if not town_buildings.is_empty():
-		Town.update_interiors(town_buildings, world.warrior.position)
+		var inside_now := Town.update_interiors(town_buildings, world.warrior.position)
+		if inside_now != _inside_building:
+			play_sfx(&"door_open" if inside_now != "" else &"door_close", -8.0)
+			_inside_building = inside_now
+	_update_footsteps(delta)
 	var target := View3D.to3(world.warrior.position)
 	_cam_focus = _cam_focus.lerp(target, 1.0 - exp(-8.0 * delta))
 
@@ -680,7 +690,42 @@ func spawn_damage_number(at: Vector2, amount: float, critical: bool = false, hei
 	number.launch()
 
 
-func play_sfx(stream: AudioStream, volume_db: float = -6.0, pitch: float = 1.0) -> void:
+## `sound` es un AudioStream o el nombre de una categoría de Sfx ("hit", "ui_click"...).
+## Pasos del jugador: uno cada ~1.7 m recorridos; el material depende del lugar (hierba, madera, piedra).
+func _update_footsteps(_delta: float) -> void:
+	if world == null or not world.warrior.alive:
+		return
+	var pos := world.warrior.position
+	var moved := pos.distance_to(_last_step_pos)
+	_last_step_pos = pos
+	if moved > 40.0 or world.warrior.height > 0.0:  # teletransporte / en el aire
+		return
+	_step_distance += moved
+	if _step_distance < 68.0:
+		return
+	_step_distance = 0.0
+	var surface := &"step_grass"
+	if _inside_building != "":
+		surface = &"step_wood"
+	elif not town_buildings.is_empty() and pos.distance_to(Town.TOWER_CENTER) < Town.TOWER_RADIUS + 40.0 or (not town_buildings.is_empty() and pos.distance_to(Vector2(1200.0, 1100.0)) < 330.0):
+		surface = &"step_stone"
+	play_sfx(surface, -17.0, randf_range(0.92, 1.08))
+
+
+## Viento ambiente en bucle (pueblo y pisos).
+func start_ambient() -> void:
+	var loop := Sfx.loop_stream(&"ambient_wind")
+	if loop == null:
+		return
+	_ambient = AudioStreamPlayer.new()
+	_ambient.stream = loop
+	_ambient.volume_db = -20.0
+	add_child(_ambient)
+	_ambient.play()
+
+
+func play_sfx(sound: Variant, volume_db: float = -6.0, pitch: float = 1.0) -> void:
+	var stream: AudioStream = Sfx.get_stream(sound) if (sound is StringName or sound is String) else sound as AudioStream
 	if stream == null or _sfx_pool.is_empty():
 		return
 	var player := _sfx_pool[_sfx_index]

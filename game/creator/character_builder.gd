@@ -28,6 +28,16 @@ const HAIRS := {
 	"long": {"name": "Largo", "file": "Hair_Long.gltf"},
 	"buns": {"name": "Moños", "file": "Hair_Buns.gltf"},
 	"beard": {"name": "Barba", "file": "Hair_Beard.gltf"},
+	"bob": {"name": "Media melena (bob)", "file": "Hair_Bob_M.gltf", "file_f": "Hair_Bob_F.gltf"},
+	"shoulder": {"name": "Al hombro ondulado", "file": "Hair_Shoulder_M.gltf", "file_f": "Hair_Shoulder_F.gltf"},
+	"wavy": {"name": "Largo ondulado", "file": "Hair_Wavy_M.gltf", "file_f": "Hair_Wavy_F.gltf"},
+	"pompadour": {"name": "Tupé", "file": "Hair_Pompadour_M.gltf", "file_f": "Hair_Pompadour_F.gltf"},
+	"messy": {"name": "Desordenado", "file": "Hair_Messy_M.gltf", "file_f": "Hair_Messy_F.gltf"},
+	"poof": {"name": "Voluminoso", "file": "Hair_Poof_M.gltf", "file_f": "Hair_Poof_F.gltf"},
+	"crop": {"name": "Corto texturado", "file": "Hair_Crop_M.gltf", "file_f": "Hair_Crop_F.gltf"},
+	"twin_buns": {"name": "Doble moño", "file": "Hair_TwinBuns_M.gltf", "file_f": "Hair_TwinBuns_F.gltf"},
+	"long_beard": {"name": "Barba larga", "file": "Hair_LongBeard_M.gltf", "file_f": "Hair_LongBeard_F.gltf"},
+	"goatee": {"name": "Perilla", "file": "Hair_Goatee_M.gltf", "file_f": "Hair_Goatee_F.gltf"},
 }
 
 const HAIR_COLORS := {
@@ -52,11 +62,33 @@ const OUTFITS := {
 		{"file": "Warrior_Acc_PauldronR.gltf", "sex": true, "optional": true, "mat_from": "Pauldron"},
 	]},
 	"mage": {"name": "Mago", "parts": [
-		{"file": "Peasant.gltf", "sex": true, "tex": "Peasant_BaseColor_mage"},
+		{"file": "Peasant.gltf", "sex": true, "hide": ["Legs"], "tex": "Peasant_BaseColor_mage"},
 		{"file": "Mage_Robe.gltf", "sex": true, "mat_from": "Body"},
 		{"file": "Ranger.gltf", "sex": true, "only": ["Hood"], "tex": "Ranger_BaseColor_mage"},
 	]},
 	"archer": {"name": "Arquero", "parts": [{"file": "Ranger.gltf", "sex": true, "hide": ["Hood"], "tex": "Ranger_BaseColor_archer"}]},
+
+	# Armaduras de guerrero con casco (placas / malla): tools/outfits/make_armor.py. "armor" = piezas de armadura (material por ranura, ver ARMOR_TINTS).
+	"armor_footman": {"name": "Armadura: Soldado", "hide_hair": true, "parts": [
+		{"file": "Ranger.gltf", "sex": true, "hide": ["Hood", "Pauldron"], "tex": "Ranger_BaseColor_archer"},
+		{"armor": "footman"},
+	]},
+	"armor_knight": {"name": "Armadura: Caballero", "hide_hair": true, "parts": [
+		{"file": "Ranger.gltf", "sex": true, "hide": ["Hood", "Body", "Pauldron"], "tex": "Ranger_BaseColor_rogue"},
+		{"armor": "knight"},
+	]},
+	"armor_hoplite": {"name": "Armadura: Hoplita", "hide_hair": true, "parts": [
+		{"file": "Ranger.gltf", "sex": true, "hide": ["Hood", "Body", "Pauldron"], "tex": "Ranger_BaseColor_warrior"},
+		{"armor": "hoplite"},
+	]},
+	"armor_norse": {"name": "Armadura: Norteño", "hide_hair": true, "parts": [
+		{"file": "Ranger.gltf", "sex": true, "hide": ["Hood", "Body", "Pauldron"], "tex": "Ranger_BaseColor_rogue"},
+		{"armor": "norse"},
+	]},
+	"armor_dark": {"name": "Armadura: Caballero Oscuro", "hide_hair": true, "parts": [
+		{"file": "Ranger.gltf", "sex": true, "hide": ["Hood", "Body", "Pauldron"], "tex": "Ranger_BaseColor_rogue"},
+		{"armor": "dark"},
+	]},
 	"rogue": {"name": "Pícaro", "parts": [{"file": "Ranger.gltf", "sex": true, "tex": "Ranger_BaseColor_rogue"}]},
 }
 
@@ -97,9 +129,11 @@ static func build(opts: Dictionary) -> Node3D:
 			_crop_to_head_and_hands(mi, skeleton)
 
 	var hair: Dictionary = HAIRS.get(String(o["hair"]), HAIRS["none"])
-	if String(hair["file"]) != "":
+	var hair_file := String(hair.get("file_f", hair["file"])) if sex == "female" else String(hair["file"])
+	var outfit_def: Dictionary = OUTFITS.get(String(o["outfit"]), OUTFITS["none"])
+	if hair_file != "" and not bool(outfit_def.get("hide_hair", false)):
 		var hair_color: Color = HAIR_COLORS.get(String(o["hair_color"]), Color.WHITE)
-		for mi: MeshInstance3D in _graft(DIR + "hair/" + String(hair["file"]), skeleton, []):
+		for mi: MeshInstance3D in _graft(DIR + "hair/" + hair_file, skeleton, []):
 			_tint(mi, hair_color)
 	if bool(o["brows"]):
 		var brow_color: Color = HAIR_COLORS.get(String(o["hair_color"]), Color.WHITE)
@@ -112,6 +146,14 @@ static func build(opts: Dictionary) -> Node3D:
 		parts = [{"file": outfit["file"], "dir": outfit["dir"], "sex": outfit.get("sex", false), "hide": outfit.get("hide", [])}]
 	var grafted: Array[MeshInstance3D] = []
 	for part: Dictionary in parts:
+		if part.has("armor"):
+			var apath := ARMOR_DIR + ("Male_" if sex == "male" else "Female_") + "Armor_" + String(part["armor"]).capitalize() + ".gltf"
+			if ResourceLoader.exists(apath):
+				for mi: MeshInstance3D in _graft(apath, skeleton, [], []):
+					_armor_materials(mi, String(part["armor"]))
+			else:
+				push_warning("CharacterBuilder: falta " + apath)
+			continue
 		var file := String(part["file"])
 		if bool(part.get("sex", false)):
 			file = ("Male_" if sex == "male" else "Female_") + file
@@ -149,13 +191,11 @@ static func _graft(path: String, skeleton: Skeleton3D, hide_names: Array, only_n
 		var skip := false
 		for h: String in hide_names:
 			skip = skip or h in String(mi.name)
-		for n: String in only_names:
-			skip = skip or not (n in String(mi.name))
 		if not only_names.is_empty():
 			var keep := false
 			for n: String in only_names:
 				keep = keep or n in String(mi.name)
-			skip = not keep or (skip and false)
+			skip = skip or not keep
 		mi.get_parent().remove_child(mi)
 		if skip:
 			mi.free()
@@ -187,6 +227,45 @@ static func _borrow_material(mi: MeshInstance3D, pool: Array[MeshInstance3D], ke
 			for i in range(mi.mesh.get_surface_count()):
 				mi.set_surface_override_material(i, mat)
 			return
+
+
+## Materiales de armadura por ranura (plate/mail/leather/trim/cloth/bone): texturas neutras + tinte por set.
+const ARMOR_DIR := "res://assets/models/creator/armor/"
+const ARMOR_SLOT := {  # ranura -> [textura, rugosidad, metálico]
+	"plate": ["plate", 0.5, 0.15], "trim": ["plate", 0.38, 0.3], "mail": ["mail", 0.55, 0.2],
+	"leather": ["leather", 0.85, 0.0], "cloth": ["cloth", 0.95, 0.0], "bone": ["leather", 0.6, 0.0],
+}
+const ARMOR_TINTS := {
+	"knight": {"plate": Color(0.84, 0.87, 0.93), "trim": Color(0.95, 0.78, 0.38), "mail": Color(0.72, 0.75, 0.8), "leather": Color(0.38, 0.24, 0.15), "cloth": Color(0.2, 0.3, 0.66), "bone": Color(0.9, 0.85, 0.72)},
+	"footman": {"plate": Color(0.74, 0.76, 0.8), "trim": Color(0.72, 0.56, 0.3), "mail": Color(0.62, 0.64, 0.68), "leather": Color(0.46, 0.3, 0.18), "cloth": Color(0.66, 0.15, 0.12), "bone": Color(0.9, 0.85, 0.72)},
+	"hoplite": {"plate": Color(0.95, 0.62, 0.28), "trim": Color(1.0, 0.82, 0.36), "mail": Color(0.8, 0.55, 0.3), "leather": Color(0.52, 0.28, 0.15), "cloth": Color(0.72, 0.1, 0.1), "bone": Color(0.9, 0.85, 0.72)},
+	"norse": {"plate": Color(0.46, 0.47, 0.52), "trim": Color(0.88, 0.6, 0.28), "mail": Color(0.55, 0.57, 0.62), "leather": Color(0.42, 0.27, 0.16), "cloth": Color(0.22, 0.34, 0.28), "bone": Color(0.92, 0.87, 0.72)},
+	"dark": {"plate": Color(0.2, 0.2, 0.24), "trim": Color(0.78, 0.14, 0.12), "mail": Color(0.3, 0.3, 0.34), "leather": Color(0.15, 0.12, 0.12), "cloth": Color(0.4, 0.05, 0.07), "bone": Color(0.8, 0.78, 0.74)},
+}
+static var _armor_cache: Dictionary = {}
+
+
+static func _armor_material(set_id: String, slot: String) -> StandardMaterial3D:
+	var key := set_id + "/" + slot
+	if _armor_cache.has(key):
+		return _armor_cache[key]
+	var def: Array = ARMOR_SLOT.get(slot, ARMOR_SLOT["plate"])
+	var m := StandardMaterial3D.new()
+	m.albedo_texture = load(ARMOR_DIR + "T_" + String(def[0]) + ".png") as Texture2D
+	m.albedo_color = (ARMOR_TINTS.get(set_id, ARMOR_TINTS["knight"]) as Dictionary).get(slot, Color.WHITE)
+	m.normal_enabled = true
+	m.normal_texture = load(ARMOR_DIR + "T_" + String(def[0]) + "_n.png") as Texture2D
+	m.roughness = float(def[1])
+	m.metallic = float(def[2])
+	_armor_cache[key] = m
+	return m
+
+
+static func _armor_materials(mi: MeshInstance3D, set_id: String) -> void:
+	for i in range(mi.mesh.get_surface_count()):
+		var base := mi.mesh.surface_get_material(i)
+		var slot := String(base.resource_name) if base != null else "plate"
+		mi.set_surface_override_material(i, _armor_material(set_id, slot))
 
 
 static func _tint(mi: MeshInstance3D, color: Color) -> void:

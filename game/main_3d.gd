@@ -70,18 +70,27 @@ func _ready() -> void:
 			arena.build_town(world, _town)
 			_build_quest_ui()
 			npc_panel = NpcPanel.new()
+			npc_panel.sfx = Callable(self, "_ui_sfx")
 			$HudLayer.add_child(npc_panel)
 		_:
 			arena.build(world)
 	char_panel = CharacterPanel.new()
 	char_panel.warrior = world.warrior
+	char_panel.sfx = Callable(self, "_ui_sfx")
 	$HudLayer.add_child(char_panel)
 	hud.bind(world)
 	loadout_panel.set_world(world)
-	world.warrior.progression.leveled_up.connect(func(_l: int) -> void: _refresh_status())
+	world.warrior.progression.leveled_up.connect(func(_l: int) -> void:
+		_refresh_status()
+		arena.play_sfx(&"levelup", -4.0)
+		_toast("¡Subiste de nivel!"))
 	world.warrior.weapon_changed.connect(func(_i: Item) -> void: _refresh_status())
 	_refresh_status()
 	TickManager.register(world)
+
+
+func _ui_sfx(category: StringName, volume_db: float = -8.0) -> void:
+	arena.play_sfx(category, volume_db)
 
 
 func _modal_open() -> bool:
@@ -169,8 +178,11 @@ func _interact() -> void:
 	var st := _nearest_station()
 	if not st.is_empty():
 		if st["id"] == "portal":
+			arena.play_sfx(&"portal", -4.0)
 			_goto("floor")
 		else:
+			arena.play_sfx(&"npc_talk", -6.0)
+			arena.play_sfx(&"ui_open", -8.0)
 			npc_panel.open_for(st, world.warrior)
 		return
 	var near := _nearest_gather()
@@ -187,15 +199,21 @@ func _use_potion(id: String) -> void:
 			if w.health >= w.max_health:
 				return
 			w.health = minf(w.max_health, w.health + w.max_health * 0.4)
+			arena.play_sfx(&"drink", -6.0)
+			arena.play_sfx(&"heal", -10.0)
 			_toast("Poción de Vida: +40% de vida")
 		"elixir_fuerza":
 			if _elixir_time > 0.0:
 				return
 			w.mods["damage_mult"] = float(w.mods.get("damage_mult", 1.0)) * 1.25
 			_elixir_time = 60.0
+			arena.play_sfx(&"drink", -6.0)
+			arena.play_sfx(&"buff", -8.0)
 			_toast("Elixir de Fuerza: +25% de daño (60 s)")
 		"pocion_arcana":
 			w.resource.current_amount = minf(w.resource.max_amount, w.resource.current_amount + w.resource.max_amount * 0.6)
+			arena.play_sfx(&"drink", -6.0)
+			arena.play_sfx(&"absorb", -9.0)
 			_toast("Poción Arcana: recurso restaurado")
 	Materials.inventory[id] = int(Materials.inventory[id]) - 1
 
@@ -220,6 +238,11 @@ func _gather(entry: Dictionary) -> void:
 	var amount := int(entry["amount"])
 	Materials.add(mat, amount)
 	var at := View3D.to3(entry["data"]["pos"], 0.6)
+	match String(entry["data"]["kind"]):
+		"ore", "stone": arena.play_sfx(&"gather_ore", -8.0)
+		"wood": arena.play_sfx(&"gather_wood", -8.0)
+		"herb", "flower", "fiber": arena.play_sfx(&"gather_herb", -8.0)
+		_: arena.play_sfx(&"gather_misc", -8.0)
 	ArcaneFx.burst(arena, at, Materials.DEFS[mat]["color"], 22, 2.2, 0.12)
 	var text := "+%d %s" % [amount, Materials.display(mat)]
 	if mat == "hierba_curativa":
@@ -232,6 +255,8 @@ func _gather(entry: Dictionary) -> void:
 func _update_gather_ui(delta: float) -> void:
 	if _hint_label == null:
 		return
+	_mats_label.visible = not _modal_open()
+	_toast_label.visible = not _modal_open()
 	var near := _nearest_gather()
 	var station := _nearest_station()
 	if npc_panel != null and npc_panel.visible:
@@ -269,6 +294,8 @@ func _update_quest() -> void:
 			kills += 1
 	var goal := int(quest["kill"])
 	if kills >= goal:
+		if not _quest_done:
+			arena.play_sfx(&"quest_done", -4.0)
 		_quest_done = true
 	if _quest_done:
 		_quest_label.text = "PISO %d · %s

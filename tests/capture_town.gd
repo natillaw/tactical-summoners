@@ -12,7 +12,7 @@ func _ready() -> void:
 	var arena: Arena3D = main.arena
 	var world: CombatWorld = main.world
 	arena.tp_zoom = 1.9
-	world.warrior.position = Vector2(1200, 900)
+	world.warrior.position = Vector2(1200, 1150)
 	await _shot("town_tower")
 	var st: Dictionary = main._town["stations"][0]
 	var b: Dictionary = main._town["buildings"][0]

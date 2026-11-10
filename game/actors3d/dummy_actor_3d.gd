@@ -7,9 +7,9 @@ extends Node3D
 
 const MODEL := "res://assets/models/anims/UAL1_Standard.glb"
 
-const SFX_ALERT := preload("res://assets/audio/sfx/ninja/Alert/Alert2.wav")
-const SFX_SWING := preload("res://assets/audio/sfx/ninja/Whoosh_Slash/Whoosh.wav")
-const SFX_IMPACT := preload("res://assets/audio/sfx/ninja/Hit_Impact/Impact2.wav")
+const SFX_ALERT := &"alert"
+const SFX_SWING := &"slash"
+const SFX_IMPACT := &"hit_heavy"
 
 const ANIM_IDLE := "ual1/Idle"
 const ANIM_HIT := "ual1/Hit_Chest"

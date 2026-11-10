@@ -12,19 +12,19 @@ extends Node3D
 const MODEL := "res://assets/models/characters/warrior.glb"
 const SWORD := "res://assets/models/props/sword_bronze.glb"
 
-const SFX_SLASH := preload("res://assets/audio/sfx/ninja/Whoosh_Slash/Slash2.wav")
-const SFX_SLASH_HEAVY := preload("res://assets/audio/sfx/ninja/Whoosh_Slash/Sword2.wav")
-const SFX_HIT := preload("res://assets/audio/sfx/ninja/Hit_Impact/Hit2.wav")
-const SFX_HIT_HEAVY := preload("res://assets/audio/sfx/ninja/Hit_Impact/Impact3.wav")
-const SFX_HURT := preload("res://assets/audio/sfx/ninja/Hit_Impact/Impact.wav")
-const SFX_DEATH := preload("res://assets/audio/sfx/ninja/Hit_Impact/Impact5.wav")
-const SFX_MAGIC := preload("res://assets/audio/sfx/ninja/Magic_Skill/Magic2.wav")
-const SFX_BUFF := preload("res://assets/audio/sfx/ninja/Magic_Skill/Heal3.wav")
-const SFX_PARRY := preload("res://assets/audio/sfx/ninja/Hit_Impact/Hit7.wav")
-const SFX_ROLL := preload("res://assets/audio/sfx/ninja/Whoosh_Slash/Whoosh.wav")
-const SFX_CHARGE := preload("res://assets/audio/sfx/ninja/Whoosh_Slash/Launch.wav")
-const SFX_SLAM := preload("res://assets/audio/sfx/ninja/Hit_Impact/Impact3.wav")
-const SFX_SPIN := preload("res://assets/audio/sfx/ninja/Magic_Skill/Magic2.wav")
+const SFX_SLASH := &"slash"
+const SFX_SLASH_HEAVY := &"slash_heavy"
+const SFX_HIT := &"hit"
+const SFX_HIT_HEAVY := &"hit_heavy"
+const SFX_HURT := &"hurt"
+const SFX_DEATH := &"death"
+const SFX_MAGIC := &"magic"
+const SFX_BUFF := &"buff"
+const SFX_PARRY := &"parry"
+const SFX_ROLL := &"roll"
+const SFX_CHARGE := &"charge"
+const SFX_SLAM := &"slam"
+const SFX_SPIN := &"slash_heavy"
 
 const ANIM_IDLE := "ual1/Sword_Idle"
 const ANIM_RUN := "ual1/Jog_Fwd"
@@ -109,6 +109,7 @@ var _overhead: Node3D
 var _bar_fill: MeshInstance3D
 var _name_label: Label3D
 var _mark_icon: MeshInstance3D
+var _was_alert: bool = false
 var _aim_stance: float = 0.0
 var _spin_rate: float = 15.0
 var _spin_limit: float = 1e9
@@ -297,6 +298,15 @@ func _build_overhead() -> void:
 
 ## Icono flotante giratorio sobre los objetivos marcados (Mark for Death / Hunter's Mark).
 func _update_mark_icon() -> void:
+	if sim.brain != null:  # al alertarse, el enemigo ruge (el sonido depende de la clase)
+		var alert_now: bool = sim.brain.alerted
+		if alert_now and not _was_alert and sim.alive:
+			arena.play_sfx(&"alert", -10.0)
+			var growl := &"beast"
+			if not String(sim.archetype_id).begins_with("esbirro"):
+				growl = &"ogre" if sim.class_id == &"warrior" else (&"shade" if sim.class_id in [&"mage", &"rogue"] else &"beast")
+			arena.play_sfx(growl, -9.0, randf_range(0.9, 1.1))
+		_was_alert = alert_now
 	if sim.mark_timer <= 0.0 or not sim.alive:
 		if _mark_icon != null:
 			_mark_icon.visible = false
@@ -937,6 +947,10 @@ func _spawn_hit_fx(skill: Dictionary, hit_position: Vector2, heavy: bool) -> voi
 		color = ArcaneFx.POISON
 		ArcaneFx.burst(arena, View3D.to3(hit_position, 1.0), ArcaneFx.POISON, 30, 2.5, 0.12)
 	ArcaneFx.hit_sparks(arena, View3D.to3(hit_position, 1.1), color, View3D.dir3(sim.attack_aim), 18, heavy)
+	# Corte con textura: el trazo (slash_0N) y un fogonazo de impacto.
+	var cut_names := ["slash_01", "slash_02", "slash_03", "slash_04"]
+	ArcaneFx.flash_sprite(arena, View3D.to3(hit_position, 1.1), cut_names[randi() % cut_names.size()], color.lightened(0.3), 2.0 if heavy else 1.3, 0.22, randf_range(-0.8, 0.8))
+	ArcaneFx.flash_sprite(arena, View3D.to3(hit_position, 1.1), "star_06" if heavy else "spark_04", Color(1.0, 0.95, 0.8), 1.1 if heavy else 0.6, 0.14)
 	if (skill.get("effects", {}) as Dictionary).has("mark"):
 		ArcaneFx.burst(arena, View3D.to3(hit_position, 1.2), Color(1.0, 0.55, 0.15), 30, 2.5, 0.12)
 		arena.spawn_shockwave(hit_position, 50.0, Color(1.0, 0.55, 0.15, 0.9), 0.4, 0.7)
