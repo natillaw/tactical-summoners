@@ -25,12 +25,14 @@ func _ready() -> void:
 	first.alive = false
 	main._gather(main.arena.gather_nodes[0])
 	main._save_progress()
+	main._save_progress()  # dos veces (al cambiar de modo y al salir): no debe duplicar
 	main.queue_free()
 	await get_tree().process_frame
 	await get_tree().process_frame
 	var again := await _enter()
 	_check(int(CharacterProfile.floor_saves[1]["seed"]) == seed_a, "mismo piso (misma semilla) al volver")
 	_check(again.arena.enemy_index.size() == total - 1, "el enemigo muerto no reaparece (%d de %d)" % [again.arena.enemy_index.size(), total])
+	_check((CharacterProfile.floor_saves[1]["dead"] as Array).size() == 1, "sin duplicados en el guardado")
 	_check(not again.arena.gather_nodes[0]["left"], "el nodo recogido sigue recogido")
 	print("floor persistence: ", "OK" if fails == 0 else "%d fallos" % fails)
 	get_tree().quit(1 if fails > 0 else 0)

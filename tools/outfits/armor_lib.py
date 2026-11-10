@@ -7,8 +7,8 @@ from mathutils import Vector, Matrix, kdtree
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 BODY_DIR = os.path.join(ROOT, "assets", "models", "creator", "body")
 OUT_DIR = os.path.join(ROOT, "assets", "models", "creator", "armor")
-UVS = {"plate": 4.0, "mail": 7.0, "leather": 5.0, "trim": 4.0, "cloth": 3.0, "bone": 5.0}   # texture tiles per metre
-MATS = ["plate", "mail", "leather", "trim", "cloth", "bone"]
+UVS = {"plate": 4.0, "mail": 7.0, "leather": 5.0, "trim": 4.0, "cloth": 3.0, "bone": 5.0, "pants": 3.0}   # texture tiles per metre
+MATS = ["plate", "mail", "leather", "trim", "cloth", "bone", "pants"]
 
 
 class Body:
@@ -51,7 +51,7 @@ class Body:
 class Acc:
     """Accumulates sheets/solids with per-face material + per-loop UV + optional forced weights."""
     def __init__(self, body):
-        self.B = body; self.verts = []; self.faces = []; self.mat = []; self.uv = []; self.smooth = []; self.force = {}
+        self.B = body; self.verts = []; self.faces = []; self.mat = []; self.uv = []; self.smooth = []; self.force = {}; self.ao = {}
 
     def _add(self, cos, faces, mat, uvs, smooth=True, force=None):
         base = len(self.verts); self.verts += cos
@@ -62,9 +62,11 @@ class Acc:
                 self.force[base + i] = force
         return base
 
-    def sheet(self, cos, faces, mat, uvf, thick=0.007, normals=None, smooth=True, force=None, close=True):
+    def sheet(self, cos, faces, mat, uvf, thick=0.007, normals=None, smooth=None, force=None, close=True):
         """Open surface -> thick shell (outer faces + inner faces + rim). uvf(co, normal)->(u, v) per vertex."""
         n = len(cos)
+        if smooth is None:
+            smooth = mat not in ("plate", "trim")   # metal plates stay faceted: crisp, sharp
         if normals is None:
             normals = [Vector() for _ in cos]
             for f in faces:
@@ -119,6 +121,9 @@ class Acc:
             mt = bpy.data.materials.new(m); mt.use_nodes = True; me.materials.append(mt)
         for p, m, s in zip(me.polygons, self.mat, self.smooth):
             p.material_index = MATS.index(m); p.use_smooth = s
+        ca = me.color_attributes.new("Col", 'FLOAT_COLOR', 'POINT')
+        for i in range(len(self.verts)):
+            a = self.ao.get(i, 1.0); ca.data[i].color = (a, a, a, 1.0)
         for g in B.arm.data.bones:
             ob.vertex_groups.new(name=g.name)
         for i, c in enumerate(self.verts):
@@ -147,11 +152,11 @@ def box_uv(scale):
     return f
 
 
-def shell(acc, pred, off, mat, thick=0.007, uvf=None, face_pred=None, smooth=0):
+def shell(acc, pred, off, mat, thick=0.007, uvf=None, face_pred=None, smooth=0, lenient=False):
     """Offset copy of the body faces whose vertices all satisfy pred(i)."""
     B = acc.B
     inc = [pred(i) for i in range(len(B.co))]
-    faces = [f for f in B.faces if sum(1 for i in f if inc[i]) >= len(f) - 1 and (face_pred is None or face_pred(f))]
+    faces = [f for f in B.faces if (sum(1 for i in f if inc[i]) >= (len(f) - 1 if lenient else len(f))) and (face_pred is None or face_pred(f))]
     if not faces:
         return
     vm = {}; cos = []; nor = []
@@ -182,7 +187,20 @@ def shell(acc, pred, off, mat, thick=0.007, uvf=None, face_pred=None, smooth=0):
             pts = [cos[i] for i in f]; fn = (pts[1] - pts[0]).cross(pts[-1] - pts[0])
             for i in f: nrm[i] += fn
         nor = [v.normalized() if v.length > 1e-9 else Vector((0, 0, 1)) for v in nrm]
-    acc.sheet(cos, nf, mat, uvf or box_uv(UVS[mat]), thick, normals=nor)
+    # cheap baked occlusion: concave spots (under lame ledges, muscle grooves) get darker via vertex colour
+    nbs = [set() for _ in cos]
+    for f in nf:
+        for a, b in zip(f, f[1:] + f[:1]):
+            nbs[a].add(b); nbs[b].add(a)
+    ao = []
+    for i, c in enumerate(cos):
+        if not nbs[i]: ao.append(1.0); continue
+        avg = sum((cos[j] for j in nbs[i]), Vector()) / len(nbs[i])
+        conc = (avg - c).dot(nor[i])
+        ao.append(max(0.5, min(1.0, 1.0 - conc * 30.0)))
+    base = acc.sheet(cos, nf, mat, uvf or box_uv(UVS[mat]), thick, normals=nor)
+    for j, a in enumerate(ao):
+        acc.ao[base + j] = a; acc.ao[base + len(cos) + j] = a
 
 
 def lathe(acc, profile, center, ax=1.0, ay=1.12, n=32, shape=None, cut=None, mat="plate", thick=0.006, uvs=4.0, force=None, smooth=True):
@@ -296,4 +314,4 @@ def export(acc, name):
     ob = acc.to_object(name)
     bpy.ops.object.select_all(action='DESELECT'); ob.select_set(True); acc.B.arm.select_set(True)
     bpy.ops.export_scene.gltf(filepath=os.path.join(OUT_DIR, name + ".gltf"), export_format='GLTF_SEPARATE', use_selection=True,
-        export_image_format='NONE', export_materials='EXPORT', export_skins=True, export_animations=False, export_yup=True)
+        export_image_format='NONE', export_materials='EXPORT', export_vertex_color='ACTIVE', export_skins=True, export_animations=False, export_yup=True)

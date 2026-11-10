@@ -131,7 +131,11 @@ func setup(p_sim: WarriorSim, p_arena: Arena3D) -> void:
 		for mi: MeshInstance3D in rig.meshes:
 			CharacterBuilder._tint(mi, Color(1.0, 0.66, 0.6))  # tinte rojizo: se distingue del jugador
 	elif CharacterProfile.chosen:
-		rig.setup_model(CharacterBuilder.build(CharacterProfile.appearance))
+		var look_opts: Dictionary = CharacterProfile.appearance.duplicate()
+		var set_outfit := ArmorSets.outfit_for(CharacterProfile.armor)  # el set equipado manda sobre la ropa elegida
+		if set_outfit != "":
+			look_opts["outfit"] = set_outfit
+		rig.setup_model(CharacterBuilder.build(look_opts))
 	else:
 		rig.setup(model_path)
 
@@ -258,42 +262,10 @@ func _update_enemy_telegraph() -> void:
 
 
 func _build_overhead() -> void:
+	# Las barras de vida las dibuja UnitBars (2D, estilo League); aquí solo el ancla del icono de marca.
 	_overhead = Node3D.new()
 	_overhead.position.y = 2.25
 	add_child(_overhead)
-	var back := MeshInstance3D.new()
-	var back_mesh := QuadMesh.new()
-	back_mesh.size = Vector2(0.96, 0.14)
-	back.mesh = back_mesh
-	var back_mat := StandardMaterial3D.new()
-	back_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	back_mat.albedo_color = Color(0.04, 0.04, 0.06, 0.9)
-	back_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	back_mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
-	back_mat.no_depth_test = true
-	back.material_override = back_mat
-	_overhead.add_child(back)
-	_bar_fill = MeshInstance3D.new()
-	var fill_mesh := QuadMesh.new()
-	fill_mesh.size = Vector2(0.9, 0.09)
-	_bar_fill.mesh = fill_mesh
-	var fill_mat := StandardMaterial3D.new()
-	fill_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	fill_mat.albedo_color = Color(0.9, 0.3, 0.25)
-	fill_mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
-	fill_mat.no_depth_test = true
-	fill_mat.render_priority = 1
-	_bar_fill.material_override = fill_mat
-	_overhead.add_child(_bar_fill)
-	_name_label = Label3D.new()
-	_name_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_name_label.no_depth_test = true
-	_name_label.pixel_size = 0.003
-	_name_label.font_size = 40
-	_name_label.outline_size = 10
-	_name_label.modulate = Color(1.0, 0.7, 0.55)
-	_name_label.position.y = 0.22
-	_overhead.add_child(_name_label)
 
 
 ## Icono flotante giratorio sobre los objetivos marcados (Mark for Death / Hunter's Mark).
@@ -340,23 +312,7 @@ func _update_mark_icon() -> void:
 
 func _update_overhead() -> void:
 	_overhead.visible = sim.alive
-	_overhead.scale = Vector3.ONE * (1.5 if arena.topdown else 1.0)  # barras más grandes desde arriba
 	_update_mark_icon()
-	var tag := ""
-	if sim.silence_timer > 0.0:
-		tag += "[SILENCIADO] "
-	if sim.root_timer > 0.0:
-		tag += "[ATADO] "
-	if sim.mark_timer > 0.0:
-		tag += "[MARCADO] "
-	if sim.stun_timer > 0.0:
-		tag += "[ATURDIDO] "
-	_name_label.text = "%s%s  Nv.%d" % [tag, sim.display_name, sim.progression.level]
-	var ratio := clampf(sim.health / maxf(sim.max_health, 1.0), 0.0, 1.0)
-	_bar_fill.scale = Vector3(maxf(ratio, 0.001), 1.0, 1.0)
-	var cam := get_viewport().get_camera_3d()
-	if cam != null:
-		_bar_fill.global_position = _overhead.global_position - cam.global_transform.basis.x * (1.0 - ratio) * 0.45
 
 
 func _shake(amount: float, seconds: float) -> void:

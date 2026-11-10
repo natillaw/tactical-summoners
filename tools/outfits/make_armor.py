@@ -31,25 +31,127 @@ def limb_uv(B, bone, mat):
     return lambda co, nrm: fl(co, nrm) if co.x >= 0 else fr(co, nrm)
 
 
-def limb(acc, B, bone, t0, t1, off, mat, thick=0.006, smooth=0):
-    """Shell around a limb segment (bone base name e.g. 'upperarm'); off(i, t) -> offset along the body normal."""
-    bl, br = bone + "_l", bone + "_r"
-    def pred(i):
-        d = B.dom[i]
-        if d != bl and d != br: return False
-        t = B.t(i, d); return t0 <= t <= t1
-    shell(acc, pred, lambda i: off(i, B.t(i, B.dom[i])), mat, thick, limb_uv(B, bone, mat), None, smooth)
+from mathutils.bvhtree import BVHTree
+OFFK = 0.7   # armour hugs the body: all offsets are scaled by this
+RCAST = {"foot": 0.1, "upperarm": 0.13, "lowerarm": 0.11, "thigh": 0.118, "calf": 0.13}
+_BVH = {}
 
 
-def torso(acc, B, z0, z1, off, mat, thick=0.006, bones=TORSO, face_pred=None, smooth=0):
-    def pred(i):
-        c = B.co[i]; return B.dom[i] in bones and z0 <= c.z <= z1
-    shell(acc, pred, lambda i: off(i), mat, thick, torso_uv(B, mat), face_pred, smooth)
+def bvh(B):
+    if id(B) not in _BVH:
+        _BVH[id(B)] = BVHTree.FromPolygons([tuple(c) for c in B.co], [tuple(f) for f in B.faces])
+    return _BVH[id(B)]
+
+
+def limb(acc, B, bone, t0, t1, off, mat, thick=0.006, smooth=0, segs=22, axis=None, cap=False):
+    """Clean tube lofted around a limb bone (both sides). Radius = body surface (ray-cast from the axis, smoothed) + off(t, theta);
+    theta=0 is the front of the limb. Gives regular topology and crisp edges, independent of the body mesh layout."""
+    tree = bvh(B)
+    for sd in ("l", "r"):
+        h, tl = axis(sd) if axis else B.bone[bone + "_" + sd]; d = tl - h; ln = d.length; dn = d / ln
+        e1 = (Vector((0, -1, 0)) - dn * Vector((0, -1, 0)).dot(dn)).normalized(); e2 = dn.cross(e1)
+        nt = max(3, min(46, round((t1 - t0) * ln / 0.011)))
+        R = []
+        for k in range(nt + 1):
+            t = t0 + (t1 - t0) * k / nt; o = h + dn * (ln * t); row = []
+            for i in range(segs):
+                th = 2 * math.pi * i / segs; dr = e1 * math.cos(th) + e2 * math.sin(th)
+                best = 0.0
+                hit = tree.ray_cast(o, dr, 0.32)                 # outwards from the axis
+                if hit[0] is not None: best = (hit[0] - o).length
+                D = RCAST[bone]                                   # and inwards from just outside: robust if the axis sits near the skin
+                hit2 = tree.ray_cast(o + dr * D, -dr, D)
+                if hit2[0] is not None: best = max(best, (hit2[0] - o).length)
+                row.append(best if best > 0.02 else 0.06)
+            R.append(row)
+        Rbase = None
+        for it in range(2 + smooth):   # blur: lose muscle bumps, keep the silhouette
+            if it == 2: Rbase = [r[:] for r in R]
+            R2 = [r[:] for r in R]
+            for k in range(nt + 1):
+                for i in range(segs):
+                    acc_r = 0.0; wsum = 0.0
+                    for dk in (-1, 0, 1):
+                        kk = min(nt, max(0, k + dk))
+                        for di in (-1, 0, 1):
+                            w = (2.0 if dk == 0 else 1.0) * (2.0 if di == 0 else 1.0)
+                            acc_r += R[kk][(i + di) % segs] * w; wsum += w
+                    R2[k][i] = acc_r / wsum
+            R = R2
+        if Rbase is not None:   # plates never dip below the lightly-smoothed skin (shin crest, kneecap)
+            R = [[max(a, b) for a, b in zip(r1, r2)] for r1, r2 in zip(R, Rbase)]
+        cos = []; faces = []; ao = []
+        ntiles = max(2, round(2 * math.pi * 0.07 * UVS[mat])); uvs = {}
+        for k in range(nt + 1):
+            t = t0 + (t1 - t0) * k / nt; o = h + dn * (ln * t)
+            for i in range(segs + 1):
+                ii = i % segs; th = 2 * math.pi * ii / segs; dr = e1 * math.cos(th) + e2 * math.sin(th)
+                cos.append(o + dr * (R[k][ii] + off(t, th) * OFFK))
+        if cap:   # close the far end with a rounded tip (toe cap)
+            o = h + dn * (ln * t1)
+            for sc in (0.75, 0.4, 0.05):
+                for i in range(segs + 1):
+                    ii = i % segs; th = 2 * math.pi * ii / segs; dr = e1 * math.cos(th) + e2 * math.sin(th)
+                    cos.append(o + dn * (ln * 0.12 * (1 - sc) ) + dr * ((R[nt][ii] + off(t1, th) * OFFK) * sc))
+            nt += 3
+        for k in range(nt):
+            for i in range(segs):
+                a_ = k * (segs + 1) + i; faces.append([a_, a_ + 1, a_ + segs + 2, a_ + segs + 1] if sd == "l" else [a_, a_ + segs + 1, a_ + segs + 2, a_ + 1])
+        def uvf(co, nrm, o=h, ax=dn, ee1=e1, ee2=e2):
+            dd = co - o; ang = math.atan2(dd.dot(ee2), dd.dot(ee1)) / (2 * math.pi)
+            return (ang * ntiles, dd.dot(ax) * UVS[mat])
+        acc.sheet(cos, faces, mat, uvf, thick)
+
+
+def torso(acc, B, z0, z1, off, mat, thick=0.006, smooth=0, face_ok=None, segs=40):
+    """Clean ring-loft around the vertical axis (cuirasses, hauberks, bands). Radius = body surface from ray casts (blurred),
+    + off(z, theta) with theta=0 at the front. face_ok(z, theta) can drop quads (e.g. diagonal straps, front-only plates)."""
+    tree = bvh(B); capx = B.bone["clavicle_l"][1].x
+    nz = max(3, min(60, round((z1 - z0) / 0.011))); R = []
+    last = 0.15
+    for k in range(nz + 1):
+        z = z0 + (z1 - z0) * k / nz; row = []
+        for i in range(segs):
+            th = -math.pi + 2 * math.pi * i / segs; d = Vector((math.sin(th), -math.cos(th), 0))
+            hit = tree.ray_cast(Vector((0, 0.0, z)), d, 0.45)
+            r = (hit[0] - Vector((0, 0.0, z))).length if hit[0] is not None else last
+            r = min(r, capx / max(abs(math.sin(th)), 0.3)); row.append(r)
+        R.append(row)
+    for it in range(3 + smooth):
+        R2 = [r[:] for r in R]
+        for k in range(nz + 1):
+            for i in range(segs):
+                tot = 0.0; ws = 0.0
+                for dk in (-1, 0, 1):
+                    kk = min(nz, max(0, k + dk))
+                    for di in (-1, 0, 1):
+                        w = (2.0 if dk == 0 else 1.0) * (2.0 if di == 0 else 1.0); tot += R[kk][(i + di) % segs] * w; ws += w
+                R2[k][i] = tot / ws
+        R = R2
+    cos = []; ntiles = max(3, round(2 * math.pi * 0.17 * UVS[mat]))
+    for k in range(nz + 1):
+        z = z0 + (z1 - z0) * k / nz
+        for i in range(segs + 1):
+            th = -math.pi + 2 * math.pi * i / segs; r = R[k][i % segs] + off(z, th) * OFFK
+            cos.append(Vector((math.sin(th) * r, -math.cos(th) * r, z)))
+    faces = []
+    for k in range(nz):
+        for i in range(segs):
+            if face_ok:
+                zc = z0 + (z1 - z0) * (k + 0.5) / nz; thc = -math.pi + 2 * math.pi * (i + 0.5) / segs
+                if not face_ok(zc, thc): continue
+            a_ = k * (segs + 1) + i; faces.append([a_, a_ + 1, a_ + segs + 2, a_ + segs + 1])
+    if not faces: return
+    used = sorted({v for f in faces for v in f}); mp = {v: n for n, v in enumerate(used)}
+    cos2 = [cos[v] for v in used]; faces2 = [[mp[v] for v in f] for f in faces]
+    def uvf(co, nrm):
+        return ((math.atan2(co.x, -co.y) / (2 * math.pi) + 0.5) * ntiles, co.z * UVS[mat])
+    acc.sheet(cos2, faces2, mat, uvf, thick)
 
 
 def band(acc, B, bones, z0, z1, off, mat="trim", thick=0.005):
-    """Thin horizontal strip of the body (trim at hems/collars), slightly proud of the armor under it."""
-    torso(acc, B, z0, z1, lambda i: off, mat, thick, bones)
+    """Thin horizontal strip (trim at hems/collars), proud of the armor under it."""
+    torso(acc, B, z0, z1, lambda z, th: off, mat, thick)
 
 
 def zt_chest(B):
@@ -60,7 +162,7 @@ def zt_chest(B):
 def pauldron_stack(acc, B, lames=4, spike=False, trim=True, scale=1.0, mat="plate"):
     v0, f0 = len(acc.verts), len(acc.faces)
     h = B.bone["upperarm_l"][0]
-    r0 = (0.088 if B.sex == "Male" else 0.075) * scale
+    r0 = (0.088 if B.sex == "Male" else 0.075) * scale * 0.88
     # domed cap on the shoulder joint
     dome(acc, h + Vector((0.01, 0.0, 0.012)), (r0 * 1.15, r0 * 1.25, r0 * 0.95), mat, lat0=0.0, lat1=math.pi / 2 + 0.38, seg=18, rings=7, thick=0.007)
     for k in range(lames):
@@ -80,7 +182,7 @@ def pauldron_round(acc, B, scale=1.0):
     """Norse round shoulder shield: big dome with a bronze rim and boss."""
     v0, f0 = len(acc.verts), len(acc.faces)
     h = B.bone["upperarm_l"][0]
-    r = (0.1 if B.sex == "Male" else 0.088) * scale
+    r = (0.1 if B.sex == "Male" else 0.088) * scale * 0.85
     c = h + Vector((0.03, 0.0, 0.03))
     rot = Matrix.Rotation(0.5, 3, 'Y')   # tilted a little outwards
     dome(acc, c, (r, r, r * 0.55), "plate", rot=rot, lat1=math.pi / 2, seg=20, rings=6, thick=0.008)
@@ -93,7 +195,7 @@ def pauldron_round(acc, B, scale=1.0):
 
 def pauldron_small(acc, B):
     v0, f0 = len(acc.verts), len(acc.faces)
-    h = B.bone["upperarm_l"][0]; r = 0.082 if B.sex == "Male" else 0.07
+    h = B.bone["upperarm_l"][0]; r = (0.082 if B.sex == "Male" else 0.07) * 0.88
     dome(acc, h + Vector((0.015, 0, 0.01)), (r * 1.05, r * 1.1, r * 0.8), "plate", lat1=math.pi / 2 + 0.2, seg=16, rings=6, thick=0.006)
     arc_band(acc, h + Vector((0.0, 0, 0)), Vector((1, 0, 0)), Vector((0, 0, 1)), r * 0.98, r * 0.92, 0.05, -2.0, 2.0, "leather", steps=14, rings=3, thick=0.006)
     arc_band(acc, h + Vector((0.048, 0, 0)), Vector((1, 0, 0)), Vector((0, 0, 1)), r * 0.93, r * 0.93, 0.012, -2.0, 2.0, "trim", steps=14, rings=2, thick=0.004)
@@ -103,7 +205,7 @@ def pauldron_small(acc, B):
 def pauldron_disc(acc, B):
     """Hoplite shoulder guards: two stacked bronze lames."""
     v0, f0 = len(acc.verts), len(acc.faces)
-    h = B.bone["upperarm_l"][0]; r = 0.085 if B.sex == "Male" else 0.073
+    h = B.bone["upperarm_l"][0]; r = (0.085 if B.sex == "Male" else 0.073) * 0.88
     dome(acc, h + Vector((0.012, 0, 0.01)), (r * 1.1, r * 1.15, r * 0.85), "plate", lat1=math.pi / 2 + 0.3, seg=16, rings=6, thick=0.006)
     for k in range(2):
         arc_band(acc, h + Vector((0.01 + k * 0.04, 0, 0)), Vector((1, 0, 0)), Vector((0, 0, 1)), r * (1.0 - 0.05 * k), r * (0.97 - 0.05 * k), 0.048, -1.9, 1.9, "plate", steps=16, rings=3, thick=0.006)
@@ -128,8 +230,8 @@ def elbow_and_knee(acc, B, elbow=True, knee=True, spike=False):
 
 # ------------------------------------------------------------------ helmets (all skinned to Head only)
 def head_frame(B):
-    c = Vector((0.0, B.head.y - 0.002, B.head.z + 0.12))
-    return c, B.hs
+    c = Vector((0.0, B.head.y - 0.002, B.head.z + 0.118))
+    return c, B.hs * 0.84
 
 
 def dome_profile(R, h, steps, pointy=0.0, rim=None):
@@ -147,7 +249,7 @@ def head_force():
 def helmet_nasal(acc, B, tint_nose=True):
     c, s = head_frame(B); R = 0.112 * s
     prof = dome_profile(R, 0.132 * s, 8, 0.45, [(R * 0.99, -0.06 * s), (R * 1.01, -0.02 * s), (R, 0.02 * s)])
-    def rim(th): return 0.012 - 0.13 * (max(0.0, min(1.0, (abs(th) - 0.6) / 2.2)) ** 1.2)
+    def rim(th): return -0.004 - 0.13 * (max(0.0, min(1.0, (abs(th) - 0.6) / 2.2)) ** 1.2)
     def shape(th, k, r, dz):
         if k == 0: return r, rim(th) * s
         if k == 1: return r, max(dz, rim(th) * s + 0.015)
@@ -158,33 +260,34 @@ def helmet_nasal(acc, B, tint_nose=True):
     band_prof = [(R * 1.012, 0.0), (R * 1.012, 0.025 * s)]
     lathe(acc, band_prof, c + Vector((0, 0, 0.0)), 1.0, 1.12, 32, lambda th, k, r, dz: (r, (rim(th) + dz * (1 if k else 0) * 0.0 + (0.0 if k == 0 else 0.026)) * s), lambda th, dz: abs(th) > 2.0, "trim", 0.004, force=head_force())
     front_y = c.y - R * 1.12 - 0.004
-    add_box(acc, Vector((0, front_y, c.z - 0.025 * s)), (0.009 * s, 0.005, 0.045 * s), "trim", force=head_force())
+    add_box(acc, Vector((0, front_y, c.z - 0.028 * s)), (0.013 * s, 0.007, 0.055 * s), "trim", force=head_force())
     for sx in (-1, 1):
         add_cone(acc, Vector((sx * R * 0.98 * 0.78, c.y - R * 1.12 * 0.62, c.z + 0.012 * s)), Vector((sx * 0.6, -0.8, 0)), 0.007, 0.006, 6, "trim", force=head_force())
     add_cone(acc, c + Vector((0, 0, 0.128 * s)), Vector((0, 0, 1)), 0.014, 0.02, 8, "trim", force=head_force())
 
 
 def helmet_great(acc, B):
-    c, s = head_frame(B); R = 0.123 * s
-    zs = [-0.155, -0.12, -0.085, -0.055, -0.034, -0.012, 0.012, 0.045, 0.075]
-    prof = [(R * (0.95 + 0.05 * sstep(-0.16, -0.05, z)), z * s) for z in zs]
-    prof += [(R * 0.985, 0.093 * s), (R * 0.93, 0.108 * s), (R * 0.78, 0.117 * s), (R * 0.5, 0.123 * s), (R * 0.2, 0.126 * s), (0.0, 0.127 * s)]
+    """Rounded armet/sallet: domed skull, tapering face guard with an eye slit and breathing slits, comb on top."""
+    c, s = head_frame(B); R = 0.116 * s
+    zs = [-0.15, -0.125, -0.1, -0.075, -0.05, -0.028, -0.008, 0.015, 0.04]
+    prof = [(R * (0.8 + 0.2 * sstep(-0.16, 0.0, z)), z * s) for z in zs]
+    prof += dome_profile(R * 0.995, 0.118 * s, 8, 0.0)
+    def shape(th, k, r, dz):
+        # the face guard pushes forward into a soft point; the back of the neck is cut short
+        f = 1.0 + 0.1 * max(0.0, math.cos(min(abs(th), 1.4) * math.pi / 2.8)) ** 2 * (1 - sstep(-0.05, 0.03, dz / s)) * sstep(-0.16, -0.06, dz / s)
+        z = dz + (0.035 * s * sstep(1.8, 3.0, abs(th)) if dz < 0 else 0.0)
+        return r * f, z
     def cut(th, dz):
         dz /= s
-        if abs(th) < 1.0 and -0.034 < dz < -0.012: return True                  # eye slit
-        if abs(th) < 0.1 and -0.12 < dz < -0.012: return True                   # vertical slit (cross)
-        if 0.12 < abs(th) < 0.75 and -0.12 < dz < -0.085 and int(abs(th) / 0.17) % 2 == 0: return True   # breathing holes
+        if abs(th) < 0.85 and -0.03 < dz < -0.012: return True                              # eye slit
+        if abs(th) < 0.62 and -0.115 < dz < -0.045 and int(abs(th) / 0.13 + 0.5) % 2 == 0 and abs(th) > 0.05: return True   # breathing slits
         return False
-    lathe(acc, prof, c, 1.0, 1.1, 36, None, cut, "plate", 0.007, force=head_force())
-    for z in (-0.152, 0.07):    # trim hoops
-        lathe(acc, [(R * (0.955 if z < 0 else 0.99) + 0.003, z * s), (R * (0.955 if z < 0 else 0.99) + 0.003, (z + 0.014) * s)], c, 1.0, 1.1, 36, None,
-              lambda th, dz: abs(th) < 1.0 and z > 0 and False, "trim", 0.004, force=head_force())
-    # top ridge
-    add_box(acc, c + Vector((0, 0.0, 0.128 * s)), (0.008, 0.1 * s, 0.01), "trim", force=head_force())
-    # rivets along the front
-    for z in (-0.1, -0.04, 0.03, 0.07):
-        for sx in (-1, 1):
-            add_cone(acc, Vector((sx * R * 0.5, c.y - R * 1.1 * 0.86 - 0.002, c.z + z * s)), Vector((sx * 0.4, -0.9, 0)), 0.006, 0.006, 6, "trim", force=head_force())
+    lathe(acc, prof, c, 1.0, 1.12, 40, shape, cut, "plate", 0.006, force=head_force())
+    lathe(acc, [(R * 1.0, 0.0 * s), (R * 1.0, 0.016 * s)], c, 1.0, 1.12, 40, lambda th, k, r, dz: (r * (1.0 + 0.1 * max(0.0, math.cos(min(abs(th), 1.4) * math.pi / 2.8)) ** 2 * 0.0), dz), lambda th, dz: abs(th) > 1.9, "trim", 0.004, force=head_force())   # brow band
+    zdome = lambda y: c.z + 0.118 * s * max(0.0, 1 - ((y - c.y) / (R * 1.12)) ** 2) ** 0.5 - 0.003
+    crest(acc, B, c, s, c.y - R * 0.9, c.y + R * 1.0, 0.03 * s, 0.012, "trim", zdome)
+    for sx in (-1, 1):
+        add_cone(acc, Vector((sx * R * 0.72, c.y - R * 1.12 * 0.6, c.z - 0.02 * s)), Vector((sx * 0.5, -0.8, 0)), 0.006, 0.006, 6, "trim", force=head_force())
 
 
 def crest(acc, B, c, s, y0, y1, h, w, mat, z_base_fn):
@@ -272,14 +375,18 @@ def surcoat(acc, B, z_top, z_bot, half_w, mat="cloth", flare=0.05, front=True, b
     """Tabard panels (front/back) with a pointed hem, a trim border and a centre stripe; follows the belly curve."""
     for sign in ((-1,) if front else ()) + ((1,) if back else ()):
         cols = 8; rows = 9; cos = []; faces = []; hem = []
-        def yf(u, t): return (-0.128 - 0.035 * t - 0.025 * u * u) if sign < 0 else (0.142 + 0.03 * t + 0.025 * u * u)
+        def prof(z):
+            ys = [B.co[i].y for i in range(len(B.co)) if abs(B.co[i].z - z) < 0.035 and abs(B.co[i].x) < half_w * 0.9 and B.dom[i] in (TORSO | {"pelvis"} | set(THIGH))]
+            return (min(ys) if sign < 0 else max(ys)) if ys else (-0.12 if sign < 0 else 0.14)
+        rows_y = [prof(z_top + (z_bot - z_top) * r / rows) for r in range(rows + 1)]
+        def yf(u, t, r): return (rows_y[r] - 0.05 - 0.02 * u * u) if sign < 0 else (rows_y[r] + 0.05 + 0.02 * u * u)
         for r in range(rows + 1):
             t = r / rows
             for cc in range(cols + 1):
                 u = cc / cols * 2 - 1
                 hw = half_w * (1.0 + flare * 3 * t)
                 z = z_top + (z_bot - z_top) * t - point * t * t * (1 - abs(u))
-                cos.append(Vector((u * hw, yf(u, t), z)))
+                cos.append(Vector((u * hw, yf(u, t, r), z)))
         for r in range(rows):
             for cc in range(cols):
                 a_ = r * (cols + 1) + cc
@@ -320,128 +427,151 @@ def pteruges(acc, B, z_top, strips=20, length=0.24, radius=0.21, mat="leather", 
 
 
 # ------------------------------------------------------------------ the five sets
-def common_torso_plate(acc, B, lames=True, ridge=0.012, breast_off=0.03, smooth_it=6):
+def boots(acc, B, mat="plate", off=0.016, lead=0.0):
+    """Closed shoes: loft along ankle->toe axis, capped at the toe, so no toes show."""
+    def ax(sd):
+        h = B.bone["foot_" + sd][0]; tl = B.bone["ball_" + sd][1]
+        d = tl - h
+        return h + Vector((0, 0, 0.0)), h + d * 1.0
+    limb(acc, B, "foot", -0.05, 0.86, lambda t, th: off, mat, 0.005, 4, 20, ax, True)
+
+
+def base_legs(acc, B):
+    """Linen trousers, leather boots with a turned cuff and a sole (the Ranger ones are baggy and swallow thin plates)."""
+    zp = B.bone["pelvis"][0].z
+    torso(acc, B, zp - 0.03, zp + 0.07, lambda z, th: 0.014, "pants", 0.005)
+    limb(acc, B, "thigh", 0.0, 1.0, lambda t, th: 0.014, "pants", 0.005)
+    limb(acc, B, "calf", 0.0, 1.0, lambda t, th: 0.013, "pants", 0.005)
+    limb(acc, B, "calf", 0.55, 1.0, lambda t, th: 0.02, "leather", 0.005, 1)          # boot shaft
+    limb(acc, B, "calf", 0.5, 0.58, lambda t, th: 0.03, "leather", 0.005)             # turned-down cuff
+    limb(acc, B, "calf", 0.55, 0.575, lambda t, th: 0.034, "trim", 0.004)
+    boots(acc, B, "leather", 0.014)
+    for sd in (-1, 1):                                                                 # dark sole slab
+        add_box(acc, Vector((sd * B.bone["foot_l"][0].x, -0.035, 0.007)), (0.047, 0.108, 0.008), "trim")
+
+
+def common_torso_plate(acc, B, lames=True, ridge=0.012, breast_off=0.03, smooth_it=3):
     zt = zt_chest(B); zl = B.bone["spine_01"][0].z + 0.02
-    def chest(i):
-        c = B.co[i]; n = B.nor[i]; o = breast_off
-        if n.y < -0.2 and c.z > zl + 0.1: o += ridge * max(0.0, 1 - abs(c.x) / 0.045)
+    def chest(z, th):
+        o = breast_off
+        if z > zl + 0.2: o += ridge * max(0.0, 1 - abs(th) / 0.3)
         return o
-    torso(acc, B, zl + 0.1, zt, chest, "plate", 0.007, smooth=int(smooth_it))
-    def belly(i):
-        c = B.co[i]; sx = ((zl + 0.1 - c.z) / 0.045) % 1.0
+    torso(acc, B, zl + 0.1, zt, chest, "plate", 0.007, smooth=smooth_it)
+    def belly(z, th):
+        sx = ((zl + 0.1 - z) / 0.045) % 1.0
         return 0.024 + 0.013 * sx
-    torso(acc, B, B.bone["pelvis"][0].z + 0.05, zl + 0.1, belly, "plate", 0.006, bones=TORSO | {"pelvis"}, smooth=3)
+    torso(acc, B, B.bone["pelvis"][0].z + 0.05, zl + 0.1, belly, "plate", 0.006, smooth=2)
     return zt, zl
 
 
 def fauld(acc, B, n=3, off=0.032):
     z1 = B.bone["pelvis"][0].z + 0.06; lam = 0.05
-    def f(i):
-        c = B.co[i]; sx = ((z1 - c.z) / lam) % 1.0
+    def f(z, th):
+        sx = ((z1 - z) / lam) % 1.0
         return off - 0.006 + 0.012 * sx
-    torso(acc, B, z1 - lam * n, z1, f, "plate", 0.006, bones={"pelvis", "spine_01"} | set(THIGH))
-    # thigh tassets
-    limb(acc, B, "thigh", 0.0, 0.24, lambda i, t: 0.03 + 0.012 * ((t / 0.075) % 1.0), "plate", 0.006)
+    torso(acc, B, z1 - lam * n + 0.02, z1, f, "plate", 0.006, smooth=1)
+    limb(acc, B, "thigh", 0.0, 0.24, lambda t, th: 0.04 + 0.012 * ((t / 0.075) % 1.0), "plate", 0.006, 1)
 
 
-def build_knight(B):
-    acc = Acc(B)
-    helmet_great(acc, B)
-    zt, zl = common_torso_plate(acc, B)
-    fauld(acc, B)
-    band(acc, B, TORSO, zt - 0.02, zt, 0.036, "trim")
-    pauldron_stack(acc, B, 4, False, True, 1.0)
-    elbow_and_knee(acc, B)
-    limb(acc, B, "upperarm", 0.45, 0.8, lambda i, t: 0.022, "plate", 0.006)
-    limb(acc, B, "lowerarm", 0.12, 0.88, lambda i, t: 0.02 + 0.012 * (1 - t) * 0.8, "plate", 0.006)
-    limb(acc, B, "thigh", 0.26, 0.62, lambda i, t: 0.026, "plate", 0.006)
-    limb(acc, B, "calf", 0.1, 0.95, lambda i, t: 0.024 + (0.01 if B.nor[i].y < -0.3 else 0), "plate", 0.006)
-    shell(acc, lambda i: B.dom[i] in FOOT and B.co[i].z < 0.1 and B.co[i].y < 0.05, lambda i: 0.016, "plate", 0.005, box_uv(UVS["plate"]))
-    surcoat(acc, B, B.bone["pelvis"][0].z + 0.02, 0.58, 0.11, "cloth", 0.05, True, True)
-    return acc
+def tunic(acc, B, z_top_extra=0.0, mat="pants"):
+    """Padded cloth tunic (hip to collar) + leather belt: the base of every starter set."""
+    zt = zt_chest(B); zp = B.bone["pelvis"][0].z
+    torso(acc, B, zp - 0.02, zt + z_top_extra, lambda z, th: 0.016, mat, 0.005, smooth=1)
+    band(acc, B, None, zp + 0.045, zp + 0.1, 0.026, "leather")
+    add_box(acc, Vector((0, -0.145, zp + 0.072)), (0.024, 0.007, 0.024), "trim")
+    return zt, zp
+
+
+def breastplate(acc, B, mat="plate", off=0.03, ridge=0.012):
+    zt = zt_chest(B); zl = B.bone["spine_01"][0].z + 0.02
+    torso(acc, B, zt - 0.01, zt + 0.045, lambda z, th: 0.016, "plate", 0.005, smooth=1)   # gorget
+    band(acc, B, None, zt + 0.04, zt + 0.05, 0.02, "trim")
+    def chest(z, th):
+        return off + (ridge * max(0.0, 1 - abs(th) / 0.3) if z > zl + 0.18 else 0.0)
+    torso(acc, B, zl + 0.08, zt, chest, mat, 0.006, smooth=2, face_ok=lambda zc, thc: abs(thc) < 2.0)   # front + sides; open at the back like a strapped cuirass
+    band(acc, B, None, zt - 0.015, zt, off + 0.006, "trim")
+    return zt, zl
+
+
+def vambraces(acc, B, mat="leather", straps=True):
+    limb(acc, B, "lowerarm", 0.3, 0.92, lambda t, th: 0.016, mat, 0.005)
+    if straps:
+        for tt in (0.4, 0.62, 0.84):
+            limb(acc, B, "lowerarm", tt - 0.025, tt + 0.01, lambda t, th: 0.024, "leather" if mat != "leather" else "trim", 0.004)
 
 
 def build_footman(B):
+    """Soldado de Leva: gambesón acolchado, cuello de malla, tabardo rojo, yelmo nasal."""
     acc = Acc(B)
+    base_legs(acc, B)
     helmet_nasal(acc, B)
-    zt = zt_chest(B); zl = B.bone["spine_01"][0].z
-    torso(acc, B, B.bone["pelvis"][0].z + 0.04, zt, lambda i: 0.022, "mail", 0.006, bones=TORSO | {"pelvis"})
-    limb(acc, B, "thigh", 0.0, 0.3, lambda i, t: 0.026 + 0.01 * t, "mail", 0.006)
-    limb(acc, B, "upperarm", 0.0, 0.92, lambda i, t: 0.018, "mail", 0.006)
-    limb(acc, B, "lowerarm", 0.0, 0.18, lambda i, t: 0.017, "mail", 0.006)
-    limb(acc, B, "lowerarm", 0.3, 0.9, lambda i, t: 0.016, "plate", 0.005)
-    band(acc, B, TORSO | {"pelvis"}, B.bone["pelvis"][0].z + 0.05, B.bone["pelvis"][0].z + 0.115, 0.034, "leather")
-    add_box(acc, Vector((0, B.co[0].y * 0 - 0.15, B.bone["pelvis"][0].z + 0.085)), (0.025, 0.008, 0.026), "trim")
-    limb(acc, B, "calf", 0.12, 0.88, lambda i, t: 0.02, "leather", 0.005)
-    for tt in (0.2, 0.5, 0.78):
-        limb(acc, B, "calf", tt - 0.02, tt + 0.02, lambda i, t: 0.026, "trim", 0.004)
+    zt, zp = tunic(acc, B, 0.0)
+    torso(acc, B, zt - 0.03, zt + 0.04, lambda z, th: 0.028, "mail", 0.005, smooth=1)   # mail collar
+    vambraces(acc, B, "leather")
     pauldron_small(acc, B)
-    elbow_and_knee(acc, B, True, False)
-    surcoat(acc, B, zt - 0.03, 0.55, 0.115, "cloth", 0.03, True, True)
+    surcoat(acc, B, zt - 0.04, 0.62, 0.13, "cloth", 0.02, True, True, 0.06)
+    return acc
+
+
+def build_knight(B):
+    """Escudero de Acero: peto de acero sobre túnica, hombreras pequeñas, brazales, tabardo azul."""
+    acc = Acc(B)
+    base_legs(acc, B)
+    helmet_great(acc, B)
+    zt, zp = tunic(acc, B, 0.0)
+    breastplate(acc, B, "plate", 0.03, 0.012)
+    pauldron_small(acc, B)
+    vambraces(acc, B, "plate")
+    surcoat(acc, B, zp + 0.03, 0.62, 0.11, "cloth", 0.03, True, True, 0.05)
     return acc
 
 
 def build_hoplite(B):
+    """Panoplia de Bronce: coraza de bronce, pteruges de cuero, hombreras de disco, grebas atadas."""
     acc = Acc(B)
+    base_legs(acc, B)
     helmet_corinthian(acc, B)
     zt = zt_chest(B); zp = B.bone["pelvis"][0].z
-    torso(acc, B, zp + 0.03, zt, lambda i: 0.013, "plate", 0.006, bones=TORSO | {"pelvis"})
-    band(acc, B, TORSO, zt - 0.035, zt, 0.021, "trim")
-    band(acc, B, TORSO | {"pelvis"}, zp + 0.03, zp + 0.075, 0.02, "trim")
-    pteruges(acc, B, zp + 0.06, 20, 0.2, 0.2, "leather", 2)
+    torso(acc, B, zp + 0.0, zt, lambda z, th: 0.017, "plate", 0.006, smooth=0)
+    torso(acc, B, zt - 0.01, zt + 0.045, lambda z, th: 0.016, "plate", 0.005, smooth=1)
+    band(acc, B, None, zt + 0.04, zt + 0.05, 0.02, "trim")
+    band(acc, B, None, zt - 0.03, zt, 0.026, "trim")
+    band(acc, B, None, zp + 0.03, zp + 0.09, 0.027, "leather")
+    band(acc, B, None, zp + 0.092, zp + 0.1, 0.028, "trim")
+    pteruges(acc, B, zp + 0.06, 20, 0.18, 0.2, "leather", 2)
     pauldron_disc(acc, B)
-    limb(acc, B, "upperarm", 0.0, 0.3, lambda i, t: 0.016, "leather", 0.005)
-    limb(acc, B, "lowerarm", 0.15, 0.9, lambda i, t: 0.018, "plate", 0.006)
-    limb(acc, B, "lowerarm", 0.12, 0.17, lambda i, t: 0.024, "trim", 0.004)
-    limb(acc, B, "calf", 0.04, 0.96, lambda i, t: 0.02 + (0.013 if B.nor[i].y < -0.3 else 0), "plate", 0.006)
-    limb(acc, B, "calf", 0.04, 0.09, lambda i, t: 0.028, "trim", 0.004)
-    elbow_and_knee(acc, B, False, True)
+    vambraces(acc, B, "leather")
+    limb(acc, B, "calf", 0.12, 0.62, lambda t, th: 0.03 + (0.01 if math.cos(th) > 0.35 else 0), "plate", 0.006, 2)   # media greba de bronce
     return acc
 
 
 def build_norse(B):
+    """Cota del Norte: jerkin de cuero con bandolera, cofia de malla, hombreras redondas, yelmo astado."""
     acc = Acc(B)
+    base_legs(acc, B)
     helmet_norse(acc, B)
-    zt = zt_chest(B); zp = B.bone["pelvis"][0].z
-    torso(acc, B, zp + 0.04, zt, lambda i: 0.02, "mail", 0.006, bones=TORSO | {"pelvis"})
-    # scale chest plates (rows of small lames) over the mail
+    zt, zp = tunic(acc, B, 0.0, "leather")
     zl = B.bone["spine_01"][0].z + 0.02
-    torso(acc, B, zl, zt - 0.015, lambda i: 0.03 + 0.012 * (((zt - B.co[i].z) / 0.032) % 1.0), "plate", 0.005, face_pred=lambda f: B.nor[f[0]].y < 0.45)
-    limb(acc, B, "thigh", 0.0, 0.3, lambda i, t: 0.026, "mail", 0.006)
-    limb(acc, B, "upperarm", 0.0, 0.95, lambda i, t: 0.018, "mail", 0.006)
-    limb(acc, B, "lowerarm", 0.0, 0.2, lambda i, t: 0.017, "mail", 0.006)
-    limb(acc, B, "lowerarm", 0.25, 0.92, lambda i, t: 0.016, "leather", 0.005)
-    for tt in (0.35, 0.6, 0.85):
-        limb(acc, B, "lowerarm", tt - 0.03, tt + 0.01, lambda i, t: 0.024, "trim", 0.004)
-    # diagonal leather bandolier + belt
-    def strap(f):
-        c = sum((B.co[i] for i in f), Vector()) / len(f)
-        return abs(c.x * 1.0 + (c.z - (zl + 0.18)) * 0.55) < 0.026
-    torso(acc, B, zl, zt, lambda i: 0.043, "leather", 0.004, face_pred=strap)
-    band(acc, B, TORSO | {"pelvis"}, zp + 0.045, zp + 0.11, 0.036, "leather")
-    add_box(acc, Vector((0, -0.158, zp + 0.078)), (0.03, 0.008, 0.03), "trim")
-    limb(acc, B, "calf", 0.1, 0.9, lambda i, t: 0.02, "leather", 0.005)
-    for tt in (0.25, 0.55, 0.82):
-        limb(acc, B, "calf", tt - 0.025, tt + 0.025, lambda i, t: 0.028, "trim", 0.004)
-    pauldron_round(acc, B)
+    def strap(zc, thc):
+        c = math.asin(max(-1.0, min(1.0, -(zc - (zl + 0.18)) * 0.55 / 0.17)))
+        return abs(thc) < 1.5 and abs(thc - c) < 0.17
+    torso(acc, B, zl, zt, lambda z, th: 0.034, "trim", 0.004, face_ok=strap, segs=120)
+    torso(acc, B, zt - 0.025, zt + 0.035, lambda z, th: 0.03, "mail", 0.005, smooth=1)
+    vambraces(acc, B, "leather")
+    pauldron_round(acc, B, 0.85)
     return acc
 
 
 def build_dark(B):
+    """Hierro Ennegrecido: peto oscuro con púas, hombreras de dos láminas, brazales, faldón rasgado."""
     acc = Acc(B)
+    base_legs(acc, B)
     helmet_dark(acc, B)
-    zt, zl = common_torso_plate(acc, B, ridge=0.02, breast_off=0.032)
-    fauld(acc, B, 4, 0.034)
-    band(acc, B, TORSO, zt - 0.02, zt, 0.038, "trim")
-    pauldron_stack(acc, B, 5, True, True, 1.12)
-    elbow_and_knee(acc, B, True, True, True)
-    limb(acc, B, "upperarm", 0.5, 0.82, lambda i, t: 0.024, "plate", 0.006)
-    limb(acc, B, "lowerarm", 0.1, 0.9, lambda i, t: 0.022 + 0.012 * (1 - t), "plate", 0.006)
-    limb(acc, B, "thigh", 0.26, 0.64, lambda i, t: 0.028, "plate", 0.006)
-    limb(acc, B, "calf", 0.1, 0.95, lambda i, t: 0.026 + (0.012 if B.nor[i].y < -0.3 else 0), "plate", 0.006)
-    shell(acc, lambda i: B.dom[i] in FOOT and B.co[i].z < 0.1 and B.co[i].y < 0.05, lambda i: 0.018, "plate", 0.005, box_uv(UVS["plate"]))
-    # tattered tassets
-    pteruges(acc, B, B.bone["pelvis"][0].z + 0.0, 12, 0.3, 0.19, "cloth", 1)
+    zt, zp = tunic(acc, B, 0.0)
+    breastplate(acc, B, "plate", 0.032, 0.02)
+    pauldron_stack(acc, B, 2, True, True, 0.9)
+    vambraces(acc, B, "plate")
+    pteruges(acc, B, zp + 0.0, 12, 0.3, 0.19, "cloth", 1)
     return acc
 
 

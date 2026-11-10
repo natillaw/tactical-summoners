@@ -161,7 +161,7 @@ func _process(delta: float) -> void:
 	_update_dot_aura()
 	_update_stun_fx()
 	_update_root_fx()
-	_bar_root.visible = sim.alive
+	_bar_root.visible = false  # la barra la dibuja UnitBars
 	if sim.alive:
 		var ratio := clampf(sim.health / maxf(sim.max_health, 1.0), 0.0, 1.0)
 		# Billboard: escalar en X local encoge la barra hacia el centro; se

@@ -24,6 +24,7 @@ var _town: Dictionary = {}
 var _floor_save: Dictionary = {}
 var npc_panel: NpcPanel
 var char_panel: CharacterPanel
+var unit_bars: UnitBars
 var _elixir_time: float = 0.0
 var _quest_label: Label
 var _quest_done: bool = false
@@ -36,6 +37,7 @@ const GATHER_RANGE := 75.0
 
 
 func _ready() -> void:
+	status_label.position = Vector2(8.0, 6.0)  # el panel de recursos ahora va abajo: la esquina queda libre
 	world = CombatWorld.new(1337)
 	if CharacterProfile.chosen:
 		world.warrior.set_class(CharacterProfile.class_id)
@@ -74,6 +76,10 @@ func _ready() -> void:
 			$HudLayer.add_child(npc_panel)
 		_:
 			arena.build(world)
+	unit_bars = UnitBars.new()
+	unit_bars.arena = arena
+	$HudLayer.add_child(unit_bars)
+	$HudLayer.move_child(unit_bars, 0)
 	char_panel = CharacterPanel.new()
 	char_panel.warrior = world.warrior
 	char_panel.sfx = Callable(self, "_ui_sfx")
@@ -101,8 +107,9 @@ func _save_progress() -> void:
 	if world != null and CharacterProfile.mode == "floor" and not _floor_save.is_empty():
 		var dead: Array = (_floor_save["dead"] as Array).duplicate()
 		for fighter: WarriorSim in arena.enemy_index:
-			if not fighter.alive:
-				dead.append(arena.enemy_index[fighter])
+			var index: int = arena.enemy_index[fighter]
+			if not fighter.alive and not (index in dead):  # sin duplicados: se guarda al cambiar de modo y otra vez al salir
+				dead.append(index)
 		_floor_save["dead"] = dead
 		var gathered: Array = []
 		for i in range(arena.gather_nodes.size()):
@@ -129,9 +136,9 @@ func _build_quest_ui() -> void:
 	_quest_label.add_theme_color_override("font_outline_color", Color.BLACK)
 	_quest_label.add_theme_constant_override("outline_size", 6)
 	$HudLayer.add_child(_quest_label)
-	_mats_label = _label(Vector2(8.0, 125.0), 14, Color(0.9, 0.95, 1.0))
-	_hint_label = _label(Vector2(300.0, 230.0), 18, Color(1.0, 1.0, 0.7))
-	_toast_label = _label(Vector2(300.0, 200.0), 18, Color(0.7, 1.0, 0.75))
+	_mats_label = _label(Vector2(8.0, 40.0), 8, Color(0.9, 0.95, 1.0))
+	_hint_label = _label(Vector2(250.0, 232.0), 11, Color(1.0, 1.0, 0.7))
+	_toast_label = _label(Vector2(250.0, 214.0), 11, Color(0.7, 1.0, 0.75))
 
 
 func _label(pos: Vector2, size: int, color: Color) -> Label:
@@ -191,7 +198,7 @@ func _interact() -> void:
 
 
 func _use_potion(id: String) -> void:
-	if int(Materials.inventory.get(id, 0)) <= 0 or not world.warrior.alive:
+	if int(Materials.inventory.get(id, 0)) <= 0 or not world.warrior.alive or _modal_open():
 		return
 	var w := world.warrior
 	match id:
@@ -290,7 +297,7 @@ func _update_quest() -> void:
 	var quest: Dictionary = _floor["quest"]
 	var kills: int = (_floor_save["dead"] as Array).size()
 	for fighter: WarriorSim in arena.enemy_index:
-		if not fighter.alive:
+		if not fighter.alive and not (int(arena.enemy_index[fighter]) in (_floor_save["dead"] as Array)):
 			kills += 1
 	var goal := int(quest["kill"])
 	if kills >= goal:
@@ -334,7 +341,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.physical_keycode:
 			KEY_F: _interact()
-			KEY_I: char_panel.toggle()
+			KEY_I:
+				if not (npc_panel != null and npc_panel.visible):
+					char_panel.toggle()
 			KEY_H: _use_potion("pocion_vida")
 			KEY_J: _use_potion("elixir_fuerza")
 			KEY_K: _use_potion("pocion_arcana")

@@ -114,7 +114,7 @@ func _item_button(item: Item, prefix: String = "") -> Button:
 	var b := Button.new()
 	b.text = prefix + item.item_name
 	b.clip_text = true
-	b.icon = HeroItemIcons.get_icon(item.id)
+	b.icon = HeroItemIcons.get_icon(item.id, item.slot)
 	b.add_theme_constant_override("icon_max_width", 22)
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	b.add_theme_color_override("font_color", ItemRarity.color(item.rarity))

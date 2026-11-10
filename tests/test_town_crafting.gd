@@ -13,7 +13,7 @@ func _init() -> void:
 	for s: Dictionary in t["stations"]:
 		ids.append(s["id"])
 		_check(Rect2(Vector2.ZERO, Town.SIZE).has_point(s["pos"]), "estación dentro del pueblo: " + String(s["id"]))
-	for id in ["blacksmith", "alchemy", "tavern", "portal"]:
+	for id in ["blacksmith", "alchemy", "tavern", "leatherworker", "tailor", "carpenter", "portal"]:
 		_check(id in ids, "hay estación " + id)
 	for o: Dictionary in t["obstacles"]:
 		_check(t["spawn"].distance_to(o["position"]) > float(o["radius"]) + 30.0, "spawn libre")

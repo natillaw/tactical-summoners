@@ -23,10 +23,11 @@ const ULTIMATE := Color(0.55, 0.80, 1.0, 1.0)
 const SHIELD := Color(0.62, 0.82, 0.95, 1.0)
 
 const BAR_KEYS := ["M1", "M2", "SHIFT", "Q", "E", "R", "S2", "F"]
-const SLOT_W := 52.0
-const SLOT_H := 44.0
-const SLOT_GAP := 3.0
-const BAR_Y := 308.0
+const SLOT_W := 41.0
+const SLOT_H := 35.0
+const SLOT_GAP := 2.0
+const BAR_Y := 321.0
+const STATUS_Y := 281.0
 
 var world: CombatWorld
 var _damage_flash: float = 0.0
@@ -69,7 +70,7 @@ func _draw() -> void:
 	_draw_controls()
 
 	if _sim_last_stand_active(warrior) and warrior.alive:
-		_draw_text("LAST STAND  +50%% DAÑO  +25%% VELOCIDAD", Vector2(0, 302), 7, ORANGE, HORIZONTAL_ALIGNMENT_CENTER, 640)
+		_draw_text("LAST STAND  +50%% DAÑO  +25%% VELOCIDAD", Vector2(0, 252), 7, ORANGE, HORIZONTAL_ALIGNMENT_CENTER, 640)
 
 	_draw_damage_flash()
 	if not warrior.alive:
@@ -81,10 +82,10 @@ func _draw_cast_bar(warrior: WarriorSim) -> void:
 	var progress := warrior.cast_progress()
 	if progress < 0.0:
 		return
-	var rect := Rect2(220, 288, 200, 8)
+	var rect := Rect2(240, 262, 160, 6)
 	draw_rect(rect.grow(1.0), Color(0.04, 0.04, 0.06, 0.9))
 	draw_rect(Rect2(rect.position, Vector2(rect.size.x * progress, rect.size.y)), Color(1.0, 0.82, 0.3, 1.0))
-	_draw_text(String(warrior.current_skill.get("name", "")), Vector2(220, 285), 7, TEXT, HORIZONTAL_ALIGNMENT_CENTER, 200)
+	_draw_text(String(warrior.current_skill.get("name", "")), Vector2(240, 259), 6, TEXT, HORIZONTAL_ALIGNMENT_CENTER, 160)
 
 
 func _sim_last_stand_active(warrior: WarriorSim) -> bool:
@@ -130,48 +131,51 @@ func _sim_cooldown_total(warrior: WarriorSim, slot: String) -> float:
 # --- Paneles ----------------------------------------------------------------
 
 
+## Recursos del jugador: centrados abajo, sobre la barra de skills (no tapan al personaje, que va al centro).
 func _draw_status(warrior: WarriorSim) -> void:
-	_panel(Rect2(10, 6, 246, 88))
-	_draw_text(String(ClassRegistry.active_kit().CLASS_NAME).to_upper(), Vector2(16, 24), 14, GOLD)
-	_draw_text("TRAINING GROUNDS", Vector2(112, 23), 7, MUTED)
-
+	var left := 236.0
+	var width := 168.0
 	var health_ratio: float = warrior.health / maxf(warrior.max_health, 1.0)
 	var health_color := HEALTH if health_ratio > 0.30 else HEALTH_LOW
-	_bar(Rect2(16, 30, 234, 11), health_ratio, health_color)
-	_draw_text(
-		"HP  %d / %d" % [ceili(warrior.health), ceili(warrior.max_health)],
-		Vector2(16, 39), 7, TEXT, HORIZONTAL_ALIGNMENT_CENTER, 234
-	)
-
-	_bar(Rect2(16, 41, 234, 3), clampf(warrior.poise / maxf(warrior.max_poise, 1.0), 0.0, 1.0), Color(0.95, 0.85, 0.4, 1.0))  # poise
+	# Insignia con el nivel, a la izquierda.
+	var badge := Rect2(left - 16.0, STATUS_Y, 13.0, 25.0)
+	draw_rect(badge.grow(1.0), PANEL_EDGE)
+	draw_rect(badge, PANEL)
+	_draw_text(str(warrior.progression.level), Vector2(badge.position.x, badge.position.y + 18.0), 9, GOLD, HORIZONTAL_ALIGNMENT_CENTER, badge.size.x)
+	_draw_text("NV", Vector2(badge.position.x, badge.position.y + 7.0), 5, MUTED, HORIZONTAL_ALIGNMENT_CENTER, badge.size.x)
+	# Vida.
+	var hp := Rect2(left, STATUS_Y, width, 10.0)
+	draw_rect(hp.grow(1.5), Color(0.03, 0.03, 0.05, 0.95))
+	draw_rect(hp, Color(0.09, 0.10, 0.12, 0.95))
+	draw_rect(Rect2(hp.position, Vector2(hp.size.x * health_ratio, hp.size.y)), health_color)
+	draw_rect(Rect2(hp.position, Vector2(hp.size.x * health_ratio, 3.0)), Color(1, 1, 1, 0.16))
+	var ticks := int(warrior.max_health / 100.0)
+	for i in range(1, ticks + 1):
+		var x := hp.position.x + hp.size.x * (float(i) * 100.0 / warrior.max_health)
+		if x < hp.end.x - 1.0:
+			draw_line(Vector2(x, hp.position.y), Vector2(x, hp.end.y), Color(0.03, 0.03, 0.05, 0.9), 1.0)
+	_draw_text("%d / %d" % [ceili(warrior.health), ceili(warrior.max_health)], Vector2(hp.position.x, hp.end.y - 2.0), 7, TEXT, HORIZONTAL_ALIGNMENT_CENTER, width)
+	# Poise: línea fina bajo la vida.
+	_bar(Rect2(left, STATUS_Y + 11.0, width, 1.5), clampf(warrior.poise / maxf(warrior.max_poise, 1.0), 0.0, 1.0), Color(0.95, 0.85, 0.4, 1.0))
+	# Recurso (rage / maná / energía).
 	var resource_name := String(ClassRegistry.active_kit().RESOURCE_NAME)
 	var resource_color := RAGE
 	if resource_name == "Mana":
 		resource_color = Color(0.30, 0.50, 1.0, 1.0)
 	elif resource_name == "Energy":
 		resource_color = Color(1.0, 0.85, 0.2, 1.0)
+	var res := Rect2(left, STATUS_Y + 14.0, width, 7.0)
 	var rage_ratio: float = _sim_rage(warrior) / maxf(_sim_rage_max(warrior), 1.0)
-	_bar(Rect2(16, 45, 234, 8), rage_ratio, resource_color)
-	if _sim_rage(warrior) >= _sim_rage_max(warrior):
-		draw_rect(Rect2(16, 45, 234, 8), GOLD, false, 1.0)
-	_draw_text(
-		"%s  %d / %d" % [resource_name.to_upper(), floori(_sim_rage(warrior)), floori(_sim_rage_max(warrior))],
-		Vector2(16, 52), 7, TEXT, HORIZONTAL_ALIGNMENT_CENTER, 234
-	)
-
-	var ultimate_ratio: float = _sim_ultimate(warrior) / maxf(ClassRegistry.active_kit().ULTIMATE_COST, 1.0)
-	_bar(Rect2(16, 58, 234, 7), ultimate_ratio, ULTIMATE)
-	_draw_text(
-		"ULTIMATE  %d%%" % floori(ultimate_ratio * 100.0),
-		Vector2(16, 65), 7, TEXT, HORIZONTAL_ALIGNMENT_CENTER, 234
-	)
-
-	var passive := "PASSIVE  " + String(ClassRegistry.active_kit().PASSIVE["name"]).to_upper()
-	var passive_color := MUTED
-	if _sim_last_stand_active(warrior):
-		passive += "  ACTIVE %.1fs" % _sim_last_stand_seconds(warrior)
-		passive_color = ORANGE
-	_draw_text(passive, Vector2(16, 81), 7, passive_color)
+	draw_rect(res.grow(1.5), Color(0.03, 0.03, 0.05, 0.95))
+	draw_rect(res, Color(0.09, 0.10, 0.12, 0.95))
+	draw_rect(Rect2(res.position, Vector2(res.size.x * rage_ratio, res.size.y)), resource_color)
+	draw_rect(Rect2(res.position, Vector2(res.size.x * rage_ratio, 2.0)), Color(1, 1, 1, 0.16))
+	if rage_ratio >= 0.999:
+		draw_rect(res, GOLD, false, 1.0)
+	_draw_text("%d / %d" % [floori(_sim_rage(warrior)), floori(_sim_rage_max(warrior))], Vector2(res.position.x, res.end.y - 1.0), 6, TEXT, HORIZONTAL_ALIGNMENT_CENTER, width)
+	# Experiencia: hilo fino bajo el recurso.
+	var xp_next := float(Progression.xp_to_next(warrior.progression.level))
+	_bar(Rect2(left, STATUS_Y + 23.0, width, 1.5), clampf(float(warrior.progression.xp) / maxf(xp_next, 1.0), 0.0, 1.0), Color(0.55, 0.45, 0.95, 1.0))
 
 
 func _draw_buffs(warrior: WarriorSim) -> void:
@@ -234,9 +238,9 @@ func _draw_ability_slot(rect: Rect2, warrior: WarriorSim, slot: String) -> void:
 	draw_rect(rect, PANEL)
 	draw_rect(rect, edge, false, 1.0)
 
-	_draw_text(ClassRegistry.active_kit().slot_label(slot), rect.position + Vector2(4, 9), 7, MUTED)
+	_draw_text(ClassRegistry.active_kit().slot_label(slot), rect.position + Vector2(3, 7), 5, MUTED)
 	if slot == "M1" or slot == "M2":
-		_draw_text(slot, Vector2(rect.position.x, rect.position.y + 9), 7, MUTED, HORIZONTAL_ALIGNMENT_RIGHT, rect.size.x - 4)
+		_draw_text(slot, Vector2(rect.position.x, rect.position.y + 7), 5, MUTED, HORIZONTAL_ALIGNMENT_RIGHT, rect.size.x - 3)
 
 	if ability.is_empty():
 		_draw_text("EMPTY", Vector2(rect.position.x, rect.position.y + 26), 7, MUTED, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x)
@@ -244,24 +248,24 @@ func _draw_ability_slot(rect: Rect2, warrior: WarriorSim, slot: String) -> void:
 
 	var short := String(ability.get("short", ability.get("name", "")))
 	var icon_color := GOLD if left <= 0.0 and affordable else Color(0.62, 0.64, 0.72, 1.0)
-	var icon_center := rect.position + Vector2(rect.size.x * 0.5, 18)
+	var icon_center := rect.position + Vector2(rect.size.x * 0.5, 14)
 	var icon := HeroSkillIcons.get_icon(ClassRegistry.active_kit().CLASS_ID, String(ability.get("id", "")))
 	if icon != null:
 		var tint := Color.WHITE if left <= 0.0 and affordable else Color(0.5, 0.5, 0.58, 1.0)
-		draw_texture_rect(icon, Rect2(icon_center - Vector2(13, 13), Vector2(26, 26)), false, tint)
+		draw_texture_rect(icon, Rect2(icon_center - Vector2(10, 10), Vector2(20, 20)), false, tint)
 	else:
 		_draw_glyph(String(ability.get("cast", "melee")), icon_center, icon_color)
 
-	_draw_text(short, Vector2(rect.position.x, rect.position.y + rect.size.y - 2), 7, TEXT, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x)
+	_draw_text(short, Vector2(rect.position.x, rect.position.y + rect.size.y - 1), 6, TEXT, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x)
 
 	var cost_label: String = ClassRegistry.active_kit().cost_label(ability)
 	if not cost_label.is_empty():
-		_draw_text(cost_label, Vector2(rect.position.x, rect.position.y + 20), 7, MUTED if affordable else RED, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x)
+		_draw_text(cost_label, Vector2(rect.position.x, rect.position.y + 17), 5, MUTED if affordable else RED, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x)
 
 	if left > 0.05:
 		var ratio := clampf(left / maxf(total, 0.001), 0.0, 1.0)
 		draw_rect(Rect2(rect.position, Vector2(rect.size.x, rect.size.y * ratio)), Color(0.02, 0.02, 0.04, 0.66))
-		_draw_text("%.1f" % left, Vector2(rect.position.x, rect.position.y + rect.size.y * 0.78), 7, Color(0.95, 0.92, 0.85, 0.95), HORIZONTAL_ALIGNMENT_CENTER, rect.size.x)
+		_draw_text("%.1f" % left, Vector2(rect.position.x, rect.position.y + rect.size.y * 0.7), 7, Color(0.95, 0.92, 0.85, 0.95), HORIZONTAL_ALIGNMENT_CENTER, rect.size.x)
 	elif idle and affordable:
 		draw_rect(rect.grow(-2.0), Color(edge.r, edge.g, edge.b, 0.22), false, 1.0)
 

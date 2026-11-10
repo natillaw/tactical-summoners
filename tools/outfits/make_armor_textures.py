@@ -78,9 +78,9 @@ def leather(n=512):
 
 def cloth(n=512):
     y, x = np.mgrid[0:n, 0:n] / n * 2 * np.pi
-    weave = (np.cos(x * 64) * np.cos(y * 64) * 0.5 + 0.5)
+    weave = (np.cos(x * 24) * np.cos(y * 24) * 0.5 + 0.5)
     slub = periodic_noise(n, 4, 4, 21)
-    alb = 0.70 + 0.12 * slub + 0.06 * weave
+    alb = 0.74 + 0.12 * slub + 0.025 * weave
     save(np.clip(alb, 0, 1)[..., None].repeat(3, -1), "T_cloth")
     save(normal_from_height(weave * 0.3 + slub * 0.3, 2.0), "T_cloth_n", srgb=False)
 

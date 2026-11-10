@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://c8scmig2f8tc1"
-path="res://.godot/imported/Hair_Crest_F.gltf-63d64c05cd1b5fb2da7f949993b1b4ee.scn"
+uid="uid://cltvfup74perf"
+path="res://.godot/imported/Pouch_Large.gltf-5d5a1bea0bd20ff3cfffddb3e9ab4a66.scn"
 
 [deps]
 
-source_file="res://assets/models/creator/hair/Hair_Crest_F.gltf"
-dest_files=["res://.godot/imported/Hair_Crest_F.gltf-63d64c05cd1b5fb2da7f949993b1b4ee.scn"]
+source_file="res://assets/models/props_fantasy/Pouch_Large.gltf"
+dest_files=["res://.godot/imported/Pouch_Large.gltf-5d5a1bea0bd20ff3cfffddb3e9ab4a66.scn"]
 
 [params]
 

@@ -3,12 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://51nocf53ge6c"
-valid=false
+uid="uid://cnv8a62y8qt4m"
+path="res://.godot/imported/Bucket_Metal.gltf-0f4e3a265ee1a3a0f0a8f5f3d011954f.scn"
 
 [deps]
 
-source_file="res://assets/models/creator/hair/Hair_Crest_M.gltf"
+source_file="res://assets/models/props_fantasy/Bucket_Metal.gltf"
+dest_files=["res://.godot/imported/Bucket_Metal.gltf-0f4e3a265ee1a3a0f0a8f5f3d011954f.scn"]
 
 [params]
 
