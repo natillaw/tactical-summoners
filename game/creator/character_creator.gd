@@ -13,7 +13,6 @@ const CLASSES := [
 	{"id": &"warrior", "name": "Guerrero", "ready": true},
 	{"id": &"mage", "name": "Mago (arcano)", "ready": true},
 	{"id": &"rogue", "name": "Rogue (dagas, Energy)", "ready": true},
-	{"id": &"cleric", "name": "Cleric (próximamente)", "ready": false},
 	{"id": &"ranger", "name": "Ranger (arquero, Energy)", "ready": true},
 ]
 
@@ -29,6 +28,14 @@ var _rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	_rng.randomize()
+	if not CharacterProfile.save_checked:  # primera vez en esta ejecución: carga la partida guardada, si hay
+		CharacterProfile.save_checked = true
+		SaveGame.load_game()
+	if CharacterProfile.chosen:
+		_opts.merge(CharacterProfile.appearance, true)
+		for i in range(CLASSES.size()):
+			if CLASSES[i]["id"] == CharacterProfile.class_id:
+				_class_index = i
 	var ui_theme := Theme.new()
 	ui_theme.default_font_size = 12  # el UI se escala 2x (640x360): que quepan todas las filas
 	theme = ui_theme
@@ -76,10 +83,17 @@ func _ready() -> void:
 	random.pressed.connect(_randomize)
 	buttons.add_child(random)
 	_play = Button.new()
-	_play.text = "JUGAR"
+	_play.text = "CONTINUAR" if CharacterProfile.chosen else "JUGAR"
 	_play.pressed.connect(_on_play)
 	_play.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	buttons.add_child(_play)
+	if SaveGame.exists():
+		var fresh := Button.new()
+		fresh.text = "Nuevo (borra partida)"
+		fresh.pressed.connect(func() -> void:
+			SaveGame.delete()
+			get_tree().reload_current_scene())
+		buttons.add_child(fresh)
 	panel.add_child(buttons)
 
 	# Vista previa a resolución real: la UI se escala 2x (canvas_items 640x360), así que un

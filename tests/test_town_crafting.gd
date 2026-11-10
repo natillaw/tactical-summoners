@@ -81,5 +81,33 @@ func _init() -> void:
 	_check(not w.armor_items.has("boots") and CharacterProfile.bag.size() >= 1 and w.max_health < hp_with, "desequipar quita stats y va a la mochila")
 	Gear.equip(CharacterProfile.bag[0], w)
 	_check(w.armor_items.has("boots"), "equipar desde la mochila")
+	# Guardado: snapshot -> JSON -> apply conserva nivel, materiales, equipo y mochila.
+	CharacterProfile.level = 7
+	CharacterProfile.xp = 33
+	CharacterProfile.floor_saves = {1: {"seed": 42, "dead": [0, 2], "gathered": [1], "done": false}}
+	CharacterProfile.max_floor = 3
+	var before := SaveGame.snapshot()
+	var text := JSON.stringify(before)
+	var level_before := CharacterProfile.level
+	var mats_before := Materials.inventory.duplicate()
+	var bag_before := CharacterProfile.bag.size()
+	CharacterProfile.reset()
+	Materials.inventory = {}
+	SaveGame.apply(JSON.parse_string(text))
+	_check(CharacterProfile.level == level_before and CharacterProfile.xp == 33 and CharacterProfile.max_floor == 3, "guardado: nivel/xp/piso máximo")
+	_check(Materials.inventory == mats_before, "guardado: materiales")
+	_check(CharacterProfile.bag.size() == bag_before and CharacterProfile.armor.has("boots"), "guardado: mochila y armadura")
+	_check(CharacterProfile.floor_saves[1]["seed"] == 42 and CharacterProfile.floor_saves[1]["dead"] == [0, 2], "guardado: pisos (claves enteras)")
+	# Armas por clase y cofres.
+	var bow := ItemFactory.roll_weapon(rng, 3, 1, "bow")
+	bow.id = "arco_corto"
+	_check(not Gear.can_use(bow, &"warrior") and Gear.can_use(bow, &"ranger") and not Gear.can_use(bow, &"mage"), "el arco solo lo empuñan arqueros")
+	var staff := ItemFactory.roll_weapon(rng, 3, 1, "staff")
+	staff.id = "baston_roble"
+	_check(Gear.can_use(staff, &"mage") and not Gear.can_use(staff, &"rogue"), "el bastón es del mago")
+	var before_weapon := w.weapon
+	_check(not Gear.give(bow, w) and w.weapon == before_weapon, "un arma de otra clase va a la mochila sin equiparse")
+	var loot := Materials.roll_chest(rng, 1)
+	_check(not loot.is_empty() and loot.values().all(func(v: int) -> bool: return v > 0), "un cofre da materiales")
 	print("town+crafting: ", "OK" if fails == 0 else "%d fallos" % fails)
 	quit(1 if fails > 0 else 0)

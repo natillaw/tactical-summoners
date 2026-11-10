@@ -217,7 +217,7 @@ func _refresh_detail() -> void:
 		return
 	var r := _selected
 	var text := "[img=30]%s[/img] [font_size=16][color=#f2c75a]%s[/color][/font_size]\n" % [_icon_path(String(r["id"]), String(r.get("armor", ""))), r["name"]]
-	text += Crafting.describe_result(r) + "\n\n[color=#c9b27a]Materiales:[/color]\n"
+	text += Crafting.describe_result(r, warrior.class_id) + "\n\n[color=#c9b27a]Materiales:[/color]\n"
 	for id: String in r["cost"]:
 		var have := int(Materials.inventory.get(id, 0))
 		var need := int(r["cost"][id])

@@ -7,6 +7,21 @@ const ARMOR_SLOTS := ["head", "chest", "legs", "hands", "boots"]
 const SLOT_NAMES := {"weapon": "Arma", "head": "Cabeza", "chest": "Pecho", "legs": "Piernas", "hands": "Manos", "boots": "Pies"}
 
 
+## Armas que puede empuñar cada clase (la armadura es libre).
+const CLASS_WEAPONS := {
+	&"warrior": ["sword", "axe", "mace", "spear"],
+	&"rogue": ["dagger", "sword"],
+	&"mage": ["staff"],
+	&"ranger": ["bow", "dagger"],
+}
+
+
+static func can_use(item: Item, class_id: StringName) -> bool:
+	if item.slot != "weapon" or item.id == "starter_sword":
+		return true
+	return item.weapon_type in CLASS_WEAPONS.get(class_id, [])
+
+
 static func score(item: Item) -> float:
 	if item.slot == "weapon":
 		return item.dps() * 10.0 + _stat_sum(item)
@@ -27,6 +42,9 @@ static func equipped(warrior: WarriorSim, slot: String) -> Item:
 ## Entrega un objeto nuevo: lo equipa si mejora lo que llevas, si no va a la mochila. true = equipado.
 static func give(item: Item, warrior: WarriorSim) -> bool:
 	var current := equipped(warrior, item.slot)
+	if not can_use(item, warrior.class_id):
+		CharacterProfile.bag.append(item)
+		return false
 	if current == null or score(item) > score(current):
 		equip(item, warrior)
 		return true
@@ -36,6 +54,8 @@ static func give(item: Item, warrior: WarriorSim) -> bool:
 
 ## Equipa `item` (que puede venir de la mochila); el anterior vuelve a la mochila.
 static func equip(item: Item, warrior: WarriorSim) -> void:
+	if not can_use(item, warrior.class_id):
+		return
 	CharacterProfile.bag.erase(item)
 	var old := equipped(warrior, item.slot)
 	if old != null and old.id != "starter_sword":

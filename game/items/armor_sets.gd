@@ -4,6 +4,11 @@ class_name ArmorSets
 extends RefCounted
 
 const SETS := {
+	"ladron": {"name": "Ladrón de Callejón", "desc": "Cuero y paño oscuro para pasar desapercibido en la ciudad."},
+	"cuervo": {"name": "Sombra de Cuervo", "desc": "Negro violáceo y capucha picuda: pega fuerte, aguanta poco."},
+	"desierto": {"name": "Bribón del Desierto", "desc": "Lino claro y botas ligeras: ágil y fresco."},
+	"bosque": {"name": "Batidor del Bosque", "desc": "Cuero verde y hombreras ligeras: un poco más de aguante."},
+	"carmesi": {"name": "Hoja Carmesí", "desc": "Rojo oscuro de duelista: el más agresivo y el más frágil."},
 	"footman": {"name": "Soldado de Leva", "desc": "Malla y tabardo: mucha protección, nada de adornos."},
 	"knight": {"name": "Escudero de Acero", "desc": "Placas completas: la más protectora, pero cara de forjar."},
 	"hoplite": {"name": "Panoplia de Bronce", "desc": "Bronce ligero de hoplita: protege y da algo de fuerza."},
@@ -16,14 +21,12 @@ static func set_name(id: String) -> String:
 	return String(SETS.get(id, {}).get("name", id))
 
 
-## Aspecto (id de outfit del CharacterBuilder) según la armadura equipada: manda el set del peto,
-## o el de cualquier pieza si no hay peto. "" = sin set.
-static func outfit_for(armor: Dictionary) -> String:
-	var chest: Item = armor.get("chest")
-	var id := chest.set_id if chest != null else ""
-	if id == "":
-		for piece: Item in armor.values():
-			if piece.set_id != "":
-				id = piece.set_id
-				break
-	return ("armor_" + id) if id != "" else ""
+## Aspecto según la armadura equipada, pieza a pieza: {ranura: set}. Las piezas sin set (cobre...) no
+## cambian el aspecto. Vacío = ropa elegida en el creador.
+static func gear_for(armor: Dictionary) -> Dictionary:
+	var gear := {}
+	for slot: String in armor:
+		var piece: Item = armor[slot]
+		if piece != null and piece.set_id != "":
+			gear[slot] = piece.set_id
+	return gear

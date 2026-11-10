@@ -68,27 +68,17 @@ const OUTFITS := {
 	]},
 	"archer": {"name": "Arquero", "parts": [{"file": "Ranger.gltf", "sex": true, "hide": ["Hood"], "tex": "Ranger_BaseColor_archer"}]},
 
-	# Armaduras de guerrero con casco (placas / malla): tools/outfits/make_armor.py. "armor" = piezas de armadura (material por ranura, ver ARMOR_TINTS).
-	"armor_footman": {"name": "Armadura: Soldado", "hide_hair": true, "parts": [
-		{"file": "Ranger.gltf", "sex": true, "hide": ["Hood", "Pauldron", "Legs", "Feet"], "tex": "Ranger_BaseColor_archer"},
-		{"armor": "footman"},
-	]},
-	"armor_knight": {"name": "Armadura: Caballero", "hide_hair": true, "parts": [
-		{"file": "Ranger.gltf", "sex": true, "hide": ["Hood", "Body", "Pauldron", "Legs", "Feet"], "tex": "Ranger_BaseColor_rogue"},
-		{"armor": "knight"},
-	]},
-	"armor_hoplite": {"name": "Armadura: Hoplita", "hide_hair": true, "parts": [
-		{"file": "Ranger.gltf", "sex": true, "hide": ["Hood", "Body", "Pauldron", "Legs", "Feet"], "tex": "Ranger_BaseColor_warrior"},
-		{"armor": "hoplite"},
-	]},
-	"armor_norse": {"name": "Armadura: Norteño", "hide_hair": true, "parts": [
-		{"file": "Ranger.gltf", "sex": true, "hide": ["Hood", "Body", "Pauldron", "Legs", "Feet"], "tex": "Ranger_BaseColor_rogue"},
-		{"armor": "norse"},
-	]},
-	"armor_dark": {"name": "Armadura: Caballero Oscuro", "hide_hair": true, "parts": [
-		{"file": "Ranger.gltf", "sex": true, "hide": ["Hood", "Body", "Pauldron", "Legs", "Feet"], "tex": "Ranger_BaseColor_rogue"},
-		{"armor": "dark"},
-	]},
+	# Sets de armadura completos (vista previa/creador). En juego las piezas se equipan una a una: opts["gear"] = {ranura: set}.
+	"armor_footman": {"name": "Armadura: Soldado de Leva", "gear": "footman"},
+	"armor_knight": {"name": "Armadura: Escudero de Acero", "gear": "knight"},
+	"armor_hoplite": {"name": "Armadura: Panoplia de Bronce", "gear": "hoplite"},
+	"armor_norse": {"name": "Armadura: Cota del Norte", "gear": "norse"},
+	"armor_dark": {"name": "Armadura: Hierro Ennegrecido", "gear": "dark"},
+	"armor_ladron": {"name": "Picaro: Ladron de Callejon", "gear": "ladron"},
+	"armor_cuervo": {"name": "Picaro: Sombra de Cuervo", "gear": "cuervo"},
+	"armor_desierto": {"name": "Picaro: Bribon del Desierto", "gear": "desierto"},
+	"armor_bosque": {"name": "Picaro: Batidor del Bosque", "gear": "bosque"},
+	"armor_carmesi": {"name": "Picaro: Hoja Carmesi", "gear": "carmesi"},
 	"rogue": {"name": "Pícaro", "parts": [{"file": "Ranger.gltf", "sex": true, "tex": "Ranger_BaseColor_rogue"}]},
 }
 
@@ -114,7 +104,8 @@ static func build(opts: Dictionary) -> Node3D:
 	var skeleton := root.find_child("Skeleton3D", true, false) as Skeleton3D
 
 	var tone: Color = SKINS.get(String(o["skin"]), Color.WHITE)
-	var has_outfit := String(o["outfit"]) != "none"
+	var gear := _gear_of(o)
+	var has_outfit := String(o["outfit"]) != "none" or not gear.is_empty()
 	for mi: MeshInstance3D in _meshes(root):
 		var mesh_name := String(mi.name)
 		if mesh_name == "Eyebrows":
@@ -131,7 +122,7 @@ static func build(opts: Dictionary) -> Node3D:
 	var hair: Dictionary = HAIRS.get(String(o["hair"]), HAIRS["none"])
 	var hair_file := String(hair.get("file_f", hair["file"])) if sex == "female" else String(hair["file"])
 	var outfit_def: Dictionary = OUTFITS.get(String(o["outfit"]), OUTFITS["none"])
-	if hair_file != "" and not bool(outfit_def.get("hide_hair", false)):
+	if hair_file != "" and not _hair_hidden(String(o["hair"]), gear):
 		var hair_color: Color = HAIR_COLORS.get(String(o["hair_color"]), Color.WHITE)
 		for mi: MeshInstance3D in _graft(DIR + "hair/" + hair_file, skeleton, []):
 			_tint(mi, hair_color)
@@ -141,13 +132,13 @@ static func build(opts: Dictionary) -> Node3D:
 			_tint(mi, brow_color)
 
 	var outfit: Dictionary = OUTFITS.get(String(o["outfit"]), OUTFITS["none"])
-	var parts: Array = outfit.get("parts", [])
-	if parts.is_empty() and outfit.has("file"):
+	var parts: Array = outfit.get("parts", []) if gear.is_empty() else _gear_parts(gear)
+	if parts.is_empty() and outfit.has("file") and gear.is_empty():
 		parts = [{"file": outfit["file"], "dir": outfit["dir"], "sex": outfit.get("sex", false), "hide": outfit.get("hide", [])}]
 	var grafted: Array[MeshInstance3D] = []
 	for part: Dictionary in parts:
 		if part.has("armor"):
-			var apath := ARMOR_DIR + ("Male_" if sex == "male" else "Female_") + "Armor_" + String(part["armor"]).capitalize() + ".gltf"
+			var apath := ARMOR_DIR + ("Male_" if sex == "male" else "Female_") + "Armor_" + String(part["armor"]).capitalize() + "_" + String(part["slot"]) + ".gltf"
 			if ResourceLoader.exists(apath):
 				for mi: MeshInstance3D in _graft(apath, skeleton, [], []):
 					_armor_materials(mi, String(part["armor"]))
@@ -174,6 +165,92 @@ static func build(opts: Dictionary) -> Node3D:
 				_retexture(mi, tex)
 		grafted.append_array(meshes)
 	return root
+
+
+## Piezas de armadura que lleva el personaje: {ranura: set}. Viene de opts["gear"] o de un outfit "armor_<set>" (set completo).
+static func _gear_of(o: Dictionary) -> Dictionary:
+	if o.has("gear") and not (o["gear"] as Dictionary).is_empty():
+		return o["gear"]
+	var def: Dictionary = OUTFITS.get(String(o["outfit"]), {})
+	if def.has("gear"):
+		var full := {}
+		for slot: String in ARMOR_SLOTS:
+			full[slot] = String(def["gear"])
+		return full
+	return {}
+
+
+const ARMOR_SLOTS := ["head", "chest", "legs", "hands", "boots"]
+## Sets de picaro: salen de los trajes Quaternius (Ranger/Peasant) recoloreados y editados, no de geometria propia
+## (tools/outfits/make_rogue_*.py). hood = capucha; body/legs/boots = de que traje base sale cada pieza.
+const QSETS := {
+	"ladron": {"hood": "", "body": "Ranger", "legs": "Ranger", "boots": "Ranger", "pauldron": false, "hair": true, "beard": false},      # bandana
+	"cuervo": {"hood": "Ranger_HoodPeak.gltf", "body": "Ranger", "legs": "Ranger", "boots": "Ranger", "pauldron": true, "hair": false, "beard": false},   # capucha picuda + pico
+	"desierto": {"hood": "", "body": "Peasant", "legs": "Peasant", "boots": "Ranger", "pauldron": false, "hair": false, "beard": false},   # turbante + velo
+	"bosque": {"hood": "Ranger.gltf", "body": "Ranger", "legs": "Ranger", "boots": "Ranger", "pauldron": true, "hair": false, "beard": false},    # capucha + bandana
+	"carmesi": {"hood": "", "body": "Peasant", "legs": "Ranger", "boots": "Ranger", "pauldron": false, "hair": false, "beard": true},        # gorra con pluma + antifaz
+}
+const CLOSED_HELMETS := ["knight", "dark"]  ## cubren toda la cara: tampoco cabe barba
+
+
+## Con casco puesto el pelo se oculta (se atravesaría); las barbas se quedan salvo bajo yelmos cerrados.
+static func _hair_hidden(hair_id: String, gear: Dictionary) -> bool:
+	if not gear.has("head"):
+		return false
+	var qs: Dictionary = QSETS.get(String(gear["head"]), {})
+	if not qs.is_empty():
+		return not bool(qs["beard" if hair_id in ["beard", "long_beard", "goatee"] else "hair"])
+	if hair_id in ["beard", "long_beard", "goatee"]:
+		return String(gear["head"]) in CLOSED_HELMETS
+	return true
+
+
+## Piezas a injertar: la armadura equipada por ranura y, donde falta, la ropa base de Campesino.
+static func _gear_parts(gear: Dictionary) -> Array:
+	var parts: Array = []
+	var sleeve_set := String(gear.get("chest", gear.values()[0]))
+	var sleeve_tex: String = "Ranger_BaseColor_rg_" + sleeve_set if QSETS.has(sleeve_set) else {"footman": "Ranger_BaseColor_archer", "hoplite": "Ranger_BaseColor_warrior"}.get(sleeve_set, "Ranger_BaseColor_rogue")
+	parts.append({"file": "Ranger.gltf", "sex": true, "only": ["Arms"], "hide": ["Bracer"], "tex": sleeve_tex})  # mangas ajustadas: bajo los brazales
+	var base := {"chest": "Body", "legs": "Legs", "boots": "Feet"}
+	for slot: String in ["chest", "legs", "boots"]:
+		if gear.has(slot):
+			parts.append_array(_set_parts(String(gear[slot]), slot))
+		else:
+			parts.append({"file": "Peasant.gltf", "sex": true, "only": [base[slot]]})
+	for slot: String in ["head", "hands"]:
+		if gear.has(slot):
+			parts.append_array(_set_parts(String(gear[slot]), slot))
+	return parts
+
+
+## Piezas de una ranura de un set: armadura propia (guerrero) o piezas Quaternius recoloreadas (picaro).
+static func _set_parts(set_id: String, slot: String) -> Array:
+	if not QSETS.has(set_id):
+		return [{"armor": set_id, "slot": slot}]
+	var def: Dictionary = QSETS[set_id]
+	var rtex := "Ranger_BaseColor_rg_" + set_id
+	var ptex := "Peasant_BaseColor_rg_" + set_id
+	var out: Array = []
+	match slot:
+		"head":
+			if String(def["hood"]) != "":
+				out.append({"file": String(def["hood"]), "sex": true, "only": ["Hood"], "tex": rtex})
+		"hands":
+			out.append({"file": "Ranger.gltf", "sex": true, "only": ["Bracer"], "tex": rtex})
+		"chest":
+			if String(def["body"]) == "Ranger":
+				out.append({"file": "Ranger.gltf", "sex": true, "only": ["Body"], "tex": rtex})
+			else:
+				out.append({"file": "Peasant.gltf", "sex": true, "only": ["Body"], "tex": ptex})
+			if bool(def["pauldron"]):
+				out.append({"file": "Ranger.gltf", "sex": true, "only": ["Pauldron"], "tex": rtex})
+				out.append({"file": "Warrior_Acc_PauldronR.gltf", "sex": true, "optional": true, "mat_from": "Pauldron"})
+		"legs":
+			out.append({"file": String(def["legs"]) + ".gltf", "sex": true, "only": ["Legs"], "tex": rtex if String(def["legs"]) == "Ranger" else ptex})
+		"boots":
+			out.append({"file": "Ranger.gltf", "sex": true, "only": ["Feet"], "tex": rtex})
+	out.append({"armor": set_id, "slot": slot})  # piezas añadidas encima del traje base (bandana, capa, fajín...)
+	return out
 
 
 static func _meshes(node: Node) -> Array[MeshInstance3D]:
@@ -236,6 +313,11 @@ const ARMOR_SLOT := {  # ranura -> [textura, rugosidad, metálico]
 	"leather": ["leather", 0.85, 0.0], "cloth": ["cloth", 0.95, 0.0], "pants": ["cloth", 0.95, 0.0], "bone": ["leather", 0.6, 0.0],
 }
 const ARMOR_TINTS := {  # apagados, estilo pintado de Quaternius
+	"ladron": {"cloth": Color(0.3, 0.34, 0.44), "leather": Color(0.25, 0.18, 0.13), "trim": Color(0.55, 0.5, 0.4), "plate": Color(0.5, 0.5, 0.55), "mail": Color(0.5, 0.5, 0.55), "pants": Color(0.2, 0.2, 0.26), "bone": Color(0.8, 0.76, 0.66)},
+	"cuervo": {"cloth": Color(0.17, 0.15, 0.22), "leather": Color(0.14, 0.12, 0.14), "trim": Color(0.45, 0.4, 0.5), "plate": Color(0.3, 0.3, 0.36), "mail": Color(0.3, 0.3, 0.36), "pants": Color(0.12, 0.11, 0.15), "bone": Color(0.7, 0.68, 0.64)},
+	"desierto": {"cloth": Color(0.8, 0.72, 0.52), "leather": Color(0.5, 0.36, 0.22), "trim": Color(0.7, 0.5, 0.25), "plate": Color(0.6, 0.55, 0.45), "mail": Color(0.6, 0.55, 0.45), "pants": Color(0.66, 0.58, 0.42), "bone": Color(0.85, 0.8, 0.68)},
+	"bosque": {"cloth": Color(0.24, 0.4, 0.22), "leather": Color(0.32, 0.26, 0.14), "trim": Color(0.55, 0.5, 0.3), "plate": Color(0.45, 0.5, 0.4), "mail": Color(0.45, 0.5, 0.4), "pants": Color(0.2, 0.3, 0.18), "bone": Color(0.8, 0.76, 0.62)},
+	"carmesi": {"cloth": Color(0.58, 0.14, 0.14), "leather": Color(0.22, 0.13, 0.11), "trim": Color(0.75, 0.6, 0.32), "plate": Color(0.5, 0.45, 0.45), "mail": Color(0.5, 0.45, 0.45), "pants": Color(0.3, 0.1, 0.12), "bone": Color(0.85, 0.8, 0.7)},
 	"knight": {"plate": Color(0.5, 0.55, 0.64), "trim": Color(0.78, 0.64, 0.36), "mail": Color(0.58, 0.6, 0.64), "leather": Color(0.36, 0.25, 0.17), "cloth": Color(0.24, 0.32, 0.55), "pants": Color(0.2, 0.24, 0.36), "bone": Color(0.8, 0.76, 0.66)},
 	"footman": {"plate": Color(0.6, 0.62, 0.66), "trim": Color(0.62, 0.5, 0.3), "mail": Color(0.52, 0.54, 0.58), "leather": Color(0.42, 0.29, 0.19), "cloth": Color(0.55, 0.2, 0.17), "pants": Color(0.42, 0.38, 0.3), "bone": Color(0.8, 0.76, 0.66)},
 	"hoplite": {"plate": Color(0.72, 0.52, 0.3), "trim": Color(0.8, 0.66, 0.36), "mail": Color(0.62, 0.46, 0.3), "leather": Color(0.45, 0.28, 0.17), "cloth": Color(0.58, 0.16, 0.14), "pants": Color(0.66, 0.58, 0.44), "bone": Color(0.8, 0.76, 0.66)},

@@ -27,7 +27,8 @@ const NODES := {
 	"flower": {"mat": "flor_silvestre", "amount": [1, 2], "model": "Flower_3_Group", "scale": 0.8, "label": "Flores silvestres"},
 	"mushroom": {"mat": "hongo", "amount": [1, 2], "model": "Mushroom_Common", "scale": 1.3, "label": "Hongos"},
 	"fiber": {"mat": "fibra", "amount": [2, 3], "model": "Grass_Wispy_Tall", "scale": 1.0, "label": "Fibras"},
-	"wood": {"mat": "madera", "amount": [2, 3], "model": "DeadTree_1", "scale": 0.45, "label": "Tronco seco"},
+	"chest": {"mat": "", "amount": [1, 1], "model": "Chest_Wood", "scale": 1.0, "label": "Cofre"},
+	"wood": {"mat": "madera", "amount": [2, 3], "model": "Pine_3", "scale": 0.28, "label": "Arbolito (madera)"},
 }
 
 const HERB_HEAL := 25.0  # la Hierba Curativa también cura al recogerla
@@ -54,4 +55,19 @@ static func drops_for(archetype: String, rng: RandomNumberGenerator) -> Dictiona
 		out["hueso"] = 1 + rng.randi() % 2
 	if StringName(data.get("class", &"")) == &"mage" and rng.randf() < (0.5 if tier == "minion" else 1.0):
 		out["polvo_arcano"] = 1 + (1 if tier == "elite" else 0)
+	return out
+
+
+## Botín de un cofre: 3-4 materiales comunes (más cantidad en pisos altos) y a veces una poción.
+static func roll_chest(rng: RandomNumberGenerator, floor_number: int) -> Dictionary:
+	var pool: Array = []
+	for id: String in DEFS:
+		if String(DEFS[id]["kind"]) != "consumible":
+			pool.append(id)
+	var out: Dictionary = {}
+	for i in range(3 + rng.randi() % 2):
+		var id: String = pool[rng.randi() % pool.size()]
+		out[id] = int(out.get(id, 0)) + 1 + rng.randi() % (2 + floor_number / 3)
+	if rng.randf() < 0.3:
+		out["pocion_vida"] = 1
 	return out

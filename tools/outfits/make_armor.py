@@ -103,11 +103,11 @@ def limb(acc, B, bone, t0, t1, off, mat, thick=0.006, smooth=0, segs=22, axis=No
         acc.sheet(cos, faces, mat, uvf, thick)
 
 
-def torso(acc, B, z0, z1, off, mat, thick=0.006, smooth=0, face_ok=None, segs=40):
+def torso(acc, B, z0, z1, off, mat, thick=0.006, smooth=0, face_ok=None, segs=40, dz=0.011):
     """Clean ring-loft around the vertical axis (cuirasses, hauberks, bands). Radius = body surface from ray casts (blurred),
     + off(z, theta) with theta=0 at the front. face_ok(z, theta) can drop quads (e.g. diagonal straps, front-only plates)."""
     tree = bvh(B); capx = B.bone["clavicle_l"][1].x
-    nz = max(3, min(60, round((z1 - z0) / 0.011))); R = []
+    nz = max(3, min(160, round((z1 - z0) / dz))); R = []
     last = 0.15
     for k in range(nz + 1):
         z = z0 + (z1 - z0) * k / nz; row = []
@@ -237,7 +237,7 @@ def head_frame(B):
 def dome_profile(R, h, steps, pointy=0.0, rim=None):
     pts = list(rim or [])
     for k in range(1, steps + 1):
-        phi = (math.pi / 2) * k / steps * 0.985
+        phi = (math.pi / 2) * k / steps
         pts.append((R * math.cos(phi) ** (1 + pointy), h * math.sin(phi)))
     return pts
 
@@ -439,12 +439,14 @@ def boots(acc, B, mat="plate", off=0.016, lead=0.0):
 def base_legs(acc, B):
     """Linen trousers, leather boots with a turned cuff and a sole (the Ranger ones are baggy and swallow thin plates)."""
     zp = B.bone["pelvis"][0].z
-    torso(acc, B, zp - 0.03, zp + 0.07, lambda z, th: 0.014, "pants", 0.005)
+    acc.slot = "legs"
+    torso(acc, B, zp - 0.03, zp + 0.07, lambda z, th: 0.008, "pants", 0.004)
     limb(acc, B, "thigh", 0.0, 1.0, lambda t, th: 0.014, "pants", 0.005)
-    limb(acc, B, "calf", 0.0, 1.0, lambda t, th: 0.013, "pants", 0.005)
-    limb(acc, B, "calf", 0.55, 1.0, lambda t, th: 0.02, "leather", 0.005, 1)          # boot shaft
-    limb(acc, B, "calf", 0.5, 0.58, lambda t, th: 0.03, "leather", 0.005)             # turned-down cuff
-    limb(acc, B, "calf", 0.55, 0.575, lambda t, th: 0.034, "trim", 0.004)
+    limb(acc, B, "calf", 0.0, 0.22, lambda t, th: 0.013, "pants", 0.005)
+    acc.slot = "boots"
+    limb(acc, B, "calf", 0.2, 1.0, lambda t, th: 0.02, "leather", 0.005, 1)          # boot shaft
+    limb(acc, B, "calf", 0.2, 0.28, lambda t, th: 0.03, "leather", 0.005)             # turned-down cuff
+    limb(acc, B, "calf", 0.25, 0.275, lambda t, th: 0.034, "trim", 0.004)
     boots(acc, B, "leather", 0.014)
     for sd in (-1, 1):                                                                 # dark sole slab
         add_box(acc, Vector((sd * B.bone["foot_l"][0].x, -0.035, 0.007)), (0.047, 0.108, 0.008), "trim")
@@ -504,11 +506,15 @@ def build_footman(B):
     """Soldado de Leva: gambesón acolchado, cuello de malla, tabardo rojo, yelmo nasal."""
     acc = Acc(B)
     base_legs(acc, B)
+    acc.slot = "head"
     helmet_nasal(acc, B)
+    acc.slot = "chest"
     zt, zp = tunic(acc, B, 0.0)
     torso(acc, B, zt - 0.03, zt + 0.04, lambda z, th: 0.028, "mail", 0.005, smooth=1)   # mail collar
-    vambraces(acc, B, "leather")
     pauldron_small(acc, B)
+    acc.slot = "hands"
+    vambraces(acc, B, "leather")
+    acc.slot = "chest"
     surcoat(acc, B, zt - 0.04, 0.62, 0.13, "cloth", 0.02, True, True, 0.06)
     return acc
 
@@ -517,12 +523,15 @@ def build_knight(B):
     """Escudero de Acero: peto de acero sobre túnica, hombreras pequeñas, brazales, tabardo azul."""
     acc = Acc(B)
     base_legs(acc, B)
+    acc.slot = "head"
     helmet_great(acc, B)
+    acc.slot = "chest"
     zt, zp = tunic(acc, B, 0.0)
     breastplate(acc, B, "plate", 0.03, 0.012)
     pauldron_small(acc, B)
-    vambraces(acc, B, "plate")
     surcoat(acc, B, zp + 0.03, 0.62, 0.11, "cloth", 0.03, True, True, 0.05)
+    acc.slot = "hands"
+    vambraces(acc, B, "plate")
     return acc
 
 
@@ -530,7 +539,9 @@ def build_hoplite(B):
     """Panoplia de Bronce: coraza de bronce, pteruges de cuero, hombreras de disco, grebas atadas."""
     acc = Acc(B)
     base_legs(acc, B)
+    acc.slot = "head"
     helmet_corinthian(acc, B)
+    acc.slot = "chest"
     zt = zt_chest(B); zp = B.bone["pelvis"][0].z
     torso(acc, B, zp + 0.0, zt, lambda z, th: 0.017, "plate", 0.006, smooth=0)
     torso(acc, B, zt - 0.01, zt + 0.045, lambda z, th: 0.016, "plate", 0.005, smooth=1)
@@ -538,9 +549,12 @@ def build_hoplite(B):
     band(acc, B, None, zt - 0.03, zt, 0.026, "trim")
     band(acc, B, None, zp + 0.03, zp + 0.09, 0.027, "leather")
     band(acc, B, None, zp + 0.092, zp + 0.1, 0.028, "trim")
-    pteruges(acc, B, zp + 0.06, 20, 0.18, 0.2, "leather", 2)
     pauldron_disc(acc, B)
+    acc.slot = "legs"
+    pteruges(acc, B, zp + 0.06, 20, 0.18, 0.2, "leather", 2)
+    acc.slot = "hands"
     vambraces(acc, B, "leather")
+    acc.slot = "legs"
     limb(acc, B, "calf", 0.12, 0.62, lambda t, th: 0.03 + (0.01 if math.cos(th) > 0.35 else 0), "plate", 0.006, 2)   # media greba de bronce
     return acc
 
@@ -549,7 +563,9 @@ def build_norse(B):
     """Cota del Norte: jerkin de cuero con bandolera, cofia de malla, hombreras redondas, yelmo astado."""
     acc = Acc(B)
     base_legs(acc, B)
+    acc.slot = "head"
     helmet_norse(acc, B)
+    acc.slot = "chest"
     zt, zp = tunic(acc, B, 0.0, "leather")
     zl = B.bone["spine_01"][0].z + 0.02
     def strap(zc, thc):
@@ -557,8 +573,9 @@ def build_norse(B):
         return abs(thc) < 1.5 and abs(thc - c) < 0.17
     torso(acc, B, zl, zt, lambda z, th: 0.034, "trim", 0.004, face_ok=strap, segs=120)
     torso(acc, B, zt - 0.025, zt + 0.035, lambda z, th: 0.03, "mail", 0.005, smooth=1)
-    vambraces(acc, B, "leather")
     pauldron_round(acc, B, 0.85)
+    acc.slot = "hands"
+    vambraces(acc, B, "leather")
     return acc
 
 
@@ -566,11 +583,15 @@ def build_dark(B):
     """Hierro Ennegrecido: peto oscuro con púas, hombreras de dos láminas, brazales, faldón rasgado."""
     acc = Acc(B)
     base_legs(acc, B)
+    acc.slot = "head"
     helmet_dark(acc, B)
+    acc.slot = "chest"
     zt, zp = tunic(acc, B, 0.0)
     breastplate(acc, B, "plate", 0.032, 0.02)
     pauldron_stack(acc, B, 2, True, True, 0.9)
+    acc.slot = "hands"
     vambraces(acc, B, "plate")
+    acc.slot = "legs"
     pteruges(acc, B, zp + 0.0, 12, 0.3, 0.19, "cloth", 1)
     return acc
 
@@ -583,6 +604,6 @@ if __name__ == "__main__":
         for name in only:
             B = Body(sex)
             acc = SETS[name](B)
-            L.export(acc, f"{sex}_Armor_{name.capitalize()}")
+            L.export_split(acc, f"{sex}_Armor_{name.capitalize()}")
             print("built", sex, name, len(acc.verts), "verts", len(acc.faces), "faces")
     print("armor done")

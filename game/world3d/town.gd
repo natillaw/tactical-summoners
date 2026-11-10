@@ -21,6 +21,11 @@ const BUILDINGS := [
 	{"id": "tailor", "label": "Sastrería", "center": Vector2(560.0, 1480.0), "nx": 4, "nz": 4, "yaw": PI * 0.5, "style": "Plaster", "roof": "6x6", "npc": "Maren, la Sastre", "look": {"sex": "female", "skin": "claro", "hair": "long", "hair_color": "rubio", "outfit": "ranger"}},
 	{"id": "carpenter", "label": "Carpintería", "center": Vector2(1840.0, 560.0), "nx": 4, "nz": 4, "yaw": -PI * 0.5, "style": "UnevenBrick", "roof": "6x6", "npc": "Tobin, el Carpintero", "look": {"sex": "male", "skin": "moreno", "hair": "parted", "hair_color": "castaño", "outfit": "peasant"}},
 ]
+## Animación de cada NPC (clips UAL): trabajan o conversan en vez de quedarse en T-pose.
+const STATION_ANIM := {
+	"blacksmith": "ual2/TreeChopping", "alchemy": "ual2/Farm_Watering", "tavern": "ual2/Idle_FoldArms",
+	"leatherworker": "ual1/Interact", "tailor": "ual1/Idle_Talking", "carpenter": "ual2/TreeChopping",
+}
 const STATION_PROPS := {
 	"blacksmith": ["Anvil", "WeaponStand", "Workbench", "Whetstone", "Barrel"],
 	"alchemy": ["Cauldron", "Table_Large", "Potion_1", "Potion_2", "Potion_4", "Shelf_Small_Bottles"],
@@ -124,11 +129,11 @@ static func _scatter(rng: RandomNumberGenerator, decor: Array, obstacles: Array,
 	for b: Dictionary in BUILDINGS:
 		keep_clear.append([b["center"], 260.0])
 	keep_clear.append([TOWER_CENTER, TOWER_RADIUS + 90.0])
-	var pines := ["Pine_1", "Pine_2", "Pine_3"]
+	var pines := ["Pine_1", "Pine_2", "Pine_3", "CommonTree_1", "CommonTree_2", "CommonTree_3", "CommonTree_4"]
 	var flora := ["Grass_Common_Tall", "Grass_Common_Short", "Flower_3_Group", "Flower_4_Group", "Clover_1", "Fern_1"]
 	# Camino de la plaza al portal y del spawn a la plaza (se mantiene despejado).
 	var road := [Vector2(1200.0, 1560.0), Vector2(1200.0, 1100.0), PORTAL_POS + Vector2(0.0, 60.0)]
-	for attempt in range(520):
+	for attempt in range(380):
 		var point := Vector2(rng.randf_range(20.0, SIZE.x - 20.0), rng.randf_range(20.0, SIZE.y - 20.0))
 		var edge := minf(minf(point.x, SIZE.x - point.x), minf(point.y, SIZE.y - point.y))
 		if rng.randf() > lerpf(1.0, 0.05, clampf(edge / 300.0, 0.0, 1.0)):
@@ -352,7 +357,13 @@ static func _station_props(parent: Node3D, station: Dictionary, _data: Dictionar
 	rig.rotation.y = float(station["yaw"])  # mira hacia la puerta (+Z local)
 	parent.add_child(rig)
 	rig.setup_model(CharacterBuilder.build(station["look"]))
-	rig.play("idle")
+	var clip: String = STATION_ANIM.get(String(station["id"]), "ual1/Idle")
+	if rig.has(clip):
+		rig.player.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
+		rig.player.play(clip, 0.0, 0.8 + randf() * 0.3)  # desfase de ritmo para que no vayan sincronizados
+		rig.player.seek(randf() * 1.5, true)
+	else:
+		rig.play("ual1/Idle")
 	var tag := Label3D.new()
 	tag.text = "%s
 <%s>" % [station["npc"], station["label"]]
@@ -486,10 +497,16 @@ void fragment() {
 
 
 static func _portal(parent: Node3D) -> void:
+	make_portal(parent, PORTAL_POS, Color(0.65, 0.4, 1.0), 1.0)
+
+
+## Arco de piedra con vórtice: el portal del pueblo (violeta) y la salida de cada piso (verde, más pequeña).
+static func make_portal(parent: Node3D, pos_px: Vector2, tint: Color, size: float) -> Node3D:
 	var stone := _stone_material(Color(0.62, 0.6, 0.62))
 	var root := Node3D.new()
 	root.name = "Portal"
-	root.position = View3D.to3(PORTAL_POS)
+	root.position = View3D.to3(pos_px)
+	root.scale = Vector3.ONE * size
 	parent.add_child(root)
 	for dx in [-2.75, 2.75]:
 		var pillar := MeshInstance3D.new()
@@ -513,6 +530,7 @@ static func _portal(parent: Node3D) -> void:
 	shader.code = PORTAL_SHADER
 	var mat := ShaderMaterial.new()
 	mat.shader = shader
+	mat.set_shader_parameter("tint", tint)
 	quad.material = mat
 	sheet.mesh = quad
 	sheet.position = Vector3(0.0, 3.5, 0.0)
@@ -527,6 +545,7 @@ static func _portal(parent: Node3D) -> void:
 	light.light_energy = 3.0
 	light.omni_range = 14.0
 	root.add_child(light)
+	return root
 
 
 static func _lights_and_fences(parent: Node3D, data: Dictionary) -> void:

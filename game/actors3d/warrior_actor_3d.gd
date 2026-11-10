@@ -110,6 +110,11 @@ var _bar_fill: MeshInstance3D
 var _name_label: Label3D
 var _mark_icon: MeshInstance3D
 var _was_alert: bool = false
+var _dot_type: int = -2
+var _dot_fx: CPUParticles3D
+## En el pueblo no se pelea: idle y caminata normales, armas guardadas.
+var peaceful: bool = false
+var _offhand: Node3D
 var _aim_stance: float = 0.0
 var _spin_rate: float = 15.0
 var _spin_limit: float = 1e9
@@ -132,9 +137,9 @@ func setup(p_sim: WarriorSim, p_arena: Arena3D) -> void:
 			CharacterBuilder._tint(mi, Color(1.0, 0.66, 0.6))  # tinte rojizo: se distingue del jugador
 	elif CharacterProfile.chosen:
 		var look_opts: Dictionary = CharacterProfile.appearance.duplicate()
-		var set_outfit := ArmorSets.outfit_for(CharacterProfile.armor)  # el set equipado manda sobre la ropa elegida
-		if set_outfit != "":
-			look_opts["outfit"] = set_outfit
+		var worn := ArmorSets.gear_for(CharacterProfile.armor)  # piezas de set equipadas, una a una
+		if not worn.is_empty():
+			look_opts["gear"] = worn
 		rig.setup_model(CharacterBuilder.build(look_opts))
 	else:
 		rig.setup(model_path)
@@ -148,6 +153,7 @@ func setup(p_sim: WarriorSim, p_arena: Arena3D) -> void:
 		sword.rotate_object_local(Vector3.UP, deg_to_rad(-90.0))  # girar sobre el eje del puño deja el arco vertical (medido en 3 poses)
 	if weapon_paths.size() > 2:
 		var offhand := (load(weapon_paths[2]) as PackedScene).instantiate() as Node3D
+		_offhand = offhand
 		rig.attach_to_hand(offhand, "l")
 		offhand.scale = Vector3.ONE * weapon_scale
 	var tip_len := 0.92 if String(weapon_paths[1]) == "sword" else 0.4
@@ -269,7 +275,22 @@ func _build_overhead() -> void:
 
 
 ## Icono flotante giratorio sobre los objetivos marcados (Mark for Death / Hunter's Mark).
+## DoT visible en el enemigo: sangrado (gotas rojas) o veneno (burbujas verdes).
+func _update_dot_visual() -> void:
+	var type: int = sim.dots.dominant_type() if sim.alive else -1
+	if type == _dot_type:
+		return
+	_dot_type = type
+	if _dot_fx != null:
+		_dot_fx.queue_free()
+		_dot_fx = null
+	if type >= 0:
+		_dot_fx = ArcaneFx.dot_aura_for(type)
+		add_child(_dot_fx)
+
+
 func _update_mark_icon() -> void:
+	_update_dot_visual()
 	if sim.brain != null:  # al alertarse, el enemigo ruge (el sonido depende de la clase)
 		var alert_now: bool = sim.brain.alerted
 		if alert_now and not _was_alert and sim.alive:
@@ -421,6 +442,15 @@ func _aiming_stance() -> bool:
 	return sim.class_id == &"ranger" and _aim_stance > 0.0
 
 
+## Modo pueblo: guarda las armas y usa animaciones tranquilas.
+func set_peaceful(value: bool) -> void:
+	peaceful = value
+	if sword != null:
+		sword.visible = not value
+	if _offhand != null:
+		_offhand.visible = not value
+
+
 func _update_locomotion() -> void:
 	_aim_stance = maxf(0.0, _aim_stance - get_process_delta_time())
 	if sim.guarding and sim.guard_kind == "block":
@@ -444,6 +474,8 @@ func _update_locomotion() -> void:
 			rig.play(back_clip, 0.12, clampf(speed_m / 3.4, 0.7, 1.5))
 		else:
 			rig.play(ANIM_RUN, 0.12, -clampf(speed_m / RUN_ANIM_SPEED, 0.6, 1.6))  # sin clip de retroceso: carrera al revés
+	elif speed_m > 0.4 and peaceful:
+		rig.play("ual1/Walk", 0.15, clampf(speed_m / 1.5, 0.6, 1.6))
 	elif speed_m > 0.4:
 		var anim := ANIM_SPRINT if sim.current_move_speed_multiplier() > 1.15 else ANIM_RUN
 		var ref := RUN_ANIM_SPEED * (1.6 if anim == ANIM_SPRINT else 1.0)
@@ -480,6 +512,8 @@ func _moving_back() -> bool:
 
 
 func _idle_anim() -> String:
+	if peaceful:
+		return "ual1/Idle"
 	match sim.class_id:
 		&"rogue":
 			return "class/knife_idle"
@@ -912,6 +946,14 @@ func _spawn_hit_fx(skill: Dictionary, hit_position: Vector2, heavy: bool) -> voi
 		arena.spawn_shockwave(hit_position, 50.0, Color(1.0, 0.55, 0.15, 0.9), 0.4, 0.7)
 	if (skill.get("effects", {}) as Dictionary).has("stun"):
 		ArcaneFx.burst(arena, View3D.to3(hit_position, 1.6), Color(1.0, 0.9, 0.3), 24, 2.0, 0.13)
+	match String(skill.get("id", "")):
+		"eviscerate":  # remate: corte grande y salpicadura roja
+			ArcaneFx.flash_sprite(arena, View3D.to3(hit_position, 1.2), "slash_04", Color(1.0, 0.35, 0.3), 3.2, 0.3, randf_range(-0.5, 0.5))
+			ArcaneFx.burst(arena, View3D.to3(hit_position, 1.2), Color(0.85, 0.05, 0.08), 36, 3.2, 0.13)
+		"death_sentence":
+			ArcaneFx.flash_sprite(arena, View3D.to3(hit_position, 1.2), "star_06", Color(0.9, 0.2, 0.9), 2.4, 0.3)
+		"hamstring":
+			ArcaneFx.burst(arena, View3D.to3(hit_position, 0.6), Color(0.8, 0.05, 0.05), 20, 2.0, 0.11)
 
 
 func _on_attack_finished(_skill: Dictionary) -> void:
@@ -1095,9 +1137,16 @@ func _update_orbs() -> void:
 			var rgb: Array = (p["skill"] as Dictionary).get("color", [1.0, 0.8, 0.4])
 			var big := 1.5 if float((p["skill"] as Dictionary).get("hit_radius", 10.0)) > 12.0 else 1.0
 			var skill_data: Dictionary = p["skill"]
-			var orb: Node3D = ArcaneFx.make_orb(Color(rgb[0], rgb[1], rgb[2]), big) if DamageSystem.type_of(skill_data) == DamageSystem.Type.ARCANE else ArcaneFx.make_arrow(Color(rgb[0], rgb[1], rgb[2]))
+			var orb: Node3D
+			if String(skill_data.get("id", "")) == "mark_for_death":
+				orb = ArcaneFx.make_spinning_knife(Color(rgb[0], rgb[1], rgb[2]))
+			else:
+				orb = ArcaneFx.make_orb(Color(rgb[0], rgb[1], rgb[2]), big) if DamageSystem.type_of(skill_data) == DamageSystem.Type.ARCANE else ArcaneFx.make_arrow(Color(rgb[0], rgb[1], rgb[2]))
 			arena.add_child(orb)
 			_orbs[id] = orb
+		var spinner := (_orbs[id] as Node3D).get_node_or_null("Spinner") as Node3D
+		if spinner != null:
+			spinner.rotation.z = Time.get_ticks_msec() * 0.03  # el cuchillo gira mientras vuela
 		(_orbs[id] as Node3D).position = View3D.to3(p["pos"], 1.15)
 		(_orbs[id] as Node3D).rotation.y = View3D.yaw_for(p["dir"])
 	for id: int in _orbs.keys():

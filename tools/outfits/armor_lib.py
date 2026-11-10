@@ -51,12 +51,12 @@ class Body:
 class Acc:
     """Accumulates sheets/solids with per-face material + per-loop UV + optional forced weights."""
     def __init__(self, body):
-        self.B = body; self.verts = []; self.faces = []; self.mat = []; self.uv = []; self.smooth = []; self.force = {}; self.ao = {}
+        self.B = body; self.verts = []; self.faces = []; self.mat = []; self.uv = []; self.smooth = []; self.force = {}; self.ao = {}; self.slot = "chest"; self.fslot = []
 
     def _add(self, cos, faces, mat, uvs, smooth=True, force=None):
         base = len(self.verts); self.verts += cos
         for f, uv in zip(faces, uvs):
-            self.faces.append([base + i for i in f]); self.mat.append(mat); self.uv.append(uv); self.smooth.append(smooth)
+            self.faces.append([base + i for i in f]); self.mat.append(mat); self.uv.append(uv); self.smooth.append(smooth); self.fslot.append(self.slot)
         if force:
             for i in range(len(cos)):
                 self.force[base + i] = force
@@ -66,7 +66,7 @@ class Acc:
         """Open surface -> thick shell (outer faces + inner faces + rim). uvf(co, normal)->(u, v) per vertex."""
         n = len(cos)
         if smooth is None:
-            smooth = mat not in ("plate", "trim")   # metal plates stay faceted: crisp, sharp
+            smooth = True   # smooth shading; hard edges come from set_sharp_from_angle in to_object
         if normals is None:
             normals = [Vector() for _ in cos]
             for f in faces:
@@ -107,7 +107,7 @@ class Acc:
         n_f = len(self.faces)
         for k in range(f0, n_f):
             self.faces.append([base + (i - v0) for i in reversed(self.faces[k])]); self.mat.append(self.mat[k])
-            self.uv.append(list(reversed(self.uv[k]))); self.smooth.append(self.smooth[k])
+            self.uv.append(list(reversed(self.uv[k]))); self.smooth.append(self.smooth[k]); self.fslot.append(self.fslot[k])
 
     def to_object(self, name):
         B = self.B
@@ -118,9 +118,13 @@ class Acc:
             for li, (u, v) in zip(p.loop_indices, uv):
                 uvl.data[li].uv = (u, v)
         for m in MATS:
-            mt = bpy.data.materials.new(m); mt.use_nodes = True; me.materials.append(mt)
+            mt = bpy.data.materials.get(m)
+            if mt is None:
+                mt = bpy.data.materials.new(m); mt.use_nodes = True
+            me.materials.append(mt)
         for p, m, s in zip(me.polygons, self.mat, self.smooth):
             p.material_index = MATS.index(m); p.use_smooth = s
+        me.set_sharp_from_angle(angle=math.radians(42))   # round where gentle, crisp where the metal folds
         ca = me.color_attributes.new("Col", 'FLOAT_COLOR', 'POINT')
         for i in range(len(self.verts)):
             a = self.ao.get(i, 1.0); ca.data[i].color = (a, a, a, 1.0)
@@ -315,3 +319,22 @@ def export(acc, name):
     bpy.ops.object.select_all(action='DESELECT'); ob.select_set(True); acc.B.arm.select_set(True)
     bpy.ops.export_scene.gltf(filepath=os.path.join(OUT_DIR, name + ".gltf"), export_format='GLTF_SEPARATE', use_selection=True,
         export_image_format='NONE', export_materials='EXPORT', export_vertex_color='ACTIVE', export_skins=True, export_animations=False, export_yup=True)
+    bpy.data.objects.remove(ob)
+
+
+def export_split(acc, name):
+    """One glTF per equipment slot (name_<slot>.gltf) so pieces can be mixed 1:1 in game."""
+    for slot in sorted(set(acc.fslot)):
+        sub = Acc(acc.B); vm = {}
+        for k, f in enumerate(acc.faces):
+            if acc.fslot[k] != slot:
+                continue
+            nf = []
+            for v in f:
+                if v not in vm:
+                    vm[v] = len(sub.verts); sub.verts.append(acc.verts[v])
+                    if v in acc.force: sub.force[vm[v]] = acc.force[v]
+                    if v in acc.ao: sub.ao[vm[v]] = acc.ao[v]
+                nf.append(vm[v])
+            sub.faces.append(nf); sub.mat.append(acc.mat[k]); sub.uv.append(acc.uv[k]); sub.smooth.append(acc.smooth[k]); sub.fslot.append(slot)
+        export(sub, f"{name}_{slot}")
