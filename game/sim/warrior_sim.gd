@@ -127,6 +127,8 @@ var buffer_timer: float = 0.0
 var cooldowns: Dictionary = {}
 var resource: ClassResource
 var ultimate_charge: float = 0.0
+## Id del arquetipo enemigo (para tablas de botín).
+var archetype_id: String = ""
 
 var parry_active: bool = false
 var parry_window_end: float = 0.0
