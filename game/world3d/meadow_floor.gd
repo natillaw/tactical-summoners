@@ -9,7 +9,7 @@
 class_name MeadowFloor
 extends RefCounted
 
-const SIZE := Vector2(1800.0, 1200.0)
+const SIZE := Vector2(3200.0, 2200.0)
 const NATURE := "res://assets/models/nature/"
 const PROPS := "res://assets/models/props_fantasy/"
 
@@ -38,68 +38,120 @@ const CAMPS := [
 const KILL_GOAL := 10
 
 
+## Mundo abierto: claros ("salas") cercados de árboles repartidos por un bosque con manchas de densidad,
+## unidos por senderos suaves que no son obligatorios. 3 claros con campamento, el resto de salas
+## (spawn, hallazgos) vacías. Nada fuerza un pasillo: se puede cruzar el bosque por cualquier lado.
 static func generate(seed_value: int, floor_number: int = 1) -> Dictionary:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
-	var spawn := Vector2(170.0, rng.randf_range(450.0, 750.0))
-	var path: Array = [spawn]
+	var clearings: Array = []  # {center, radius}
+	var spawn := Vector2(rng.randf_range(260.0, 420.0), rng.randf_range(600.0, 1600.0))
+	clearings.append({"center": spawn, "radius": 200.0})
+	var tries := 0
+	while clearings.size() < 7 and tries < 400:
+		tries += 1
+		var radius := rng.randf_range(220.0, 300.0)
+		var center := Vector2(rng.randf_range(520.0, SIZE.x - 300.0), rng.randf_range(320.0, SIZE.y - 320.0))
+		var ok := true
+		for c: Dictionary in clearings:
+			if center.distance_to(c["center"]) < float(c["radius"]) + radius + 260.0:
+				ok = false
+		if ok:
+			clearings.append({"center": center, "radius": radius})
+	# Tres salas a distintas distancias del spawn tienen campamento (cerca, media, lejos).
+	var order: Array = clearings.slice(1)
+	order.sort_custom(func(x: Dictionary, y: Dictionary) -> bool: return spawn.distance_to(x["center"]) < spawn.distance_to(y["center"]))
+	var camp_clearings: Array = []
+	var n := order.size()
+	for k in [0, n / 2, n - 1]:
+		if not camp_clearings.has(order[k]):
+			camp_clearings.append(order[k])
 	var camps: Array = []
-	var y := spawn.y
-	var base_x := [640.0, 1070.0, 1500.0]
-	for i in range(CAMPS.size()):
-		y = clampf(y + rng.randf_range(-280.0, 280.0), 280.0, 920.0)
-		var center := Vector2(float(base_x[i]) + rng.randf_range(-60.0, 60.0), y)
-		path.append(center + Vector2(-270.0, rng.randf_range(-130.0, 130.0)))
-		path.append(center)
+	for i in range(camp_clearings.size()):
+		var center: Vector2 = camp_clearings[i]["center"]
 		var options: Array = CAMPS[i]["options"]
 		var roster: Array = options[rng.randi() % options.size()]
 		var enemies: Array = []
 		for k in range(roster.size()):
 			var angle := TAU * (float(k) + rng.randf_range(-0.2, 0.2)) / float(roster.size())
-			var radius := rng.randf_range(65.0, 115.0)
-			enemies.append({"arch": roster[k], "pos": center + Vector2(cos(angle), sin(angle)) * radius, "level": 1 + int(i == 2)})
+			enemies.append({"arch": roster[k], "pos": center + Vector2(cos(angle), sin(angle)) * rng.randf_range(65.0, 115.0), "level": 1 + int(i == 2)})
 		camps.append({"name": CAMPS[i]["name"], "center": center, "enemies": enemies})
-	path.append(Vector2(1700.0, y + rng.randf_range(-80.0, 80.0)))
+	# Senderos: cada sala se une con la más cercana ya conectada (árbol de expansión), con curvas.
+	var trails: Array = []
+	var linked: Array = [clearings[0]]
+	var rest: Array = clearings.slice(1)
+	while not rest.is_empty():
+		var best_a: Dictionary = {}
+		var best_b: Dictionary = {}
+		var best_d := INF
+		for l: Dictionary in linked:
+			for r: Dictionary in rest:
+				var d: float = (l["center"] as Vector2).distance_to(r["center"])
+				if d < best_d:
+					best_d = d
+					best_a = l
+					best_b = r
+		trails.append(_trail(rng, best_a["center"], best_b["center"]))
+		linked.append(best_b)
+		rest.erase(best_b)
 
 	var decor: Array = []
 	var obstacles: Array = []
-	var taken: Array = []  # [pos, radio] de lo ya colocado, para que no se solape
+	var taken: Array = []
+	var ctx := {"clearings": clearings, "trails": trails, "spawn": spawn}
 	_place_camp_props(rng, camps, decor, obstacles, taken)
-	_place_trees(rng, path, camps, spawn, decor, obstacles, taken)
-	_place_scatter(rng, path, camps, spawn, decor, obstacles, taken)
-	_place_path_stones(rng, path, decor)
+	_place_rooms(rng, clearings, camps, spawn, decor, obstacles, taken)
+	_place_trees(rng, ctx, decor, obstacles, taken)
+	_place_scatter(rng, ctx, decor, obstacles, taken)
+	_place_trail_stones(rng, trails, decor)
 
 	var enemy_total := 0
 	for camp: Dictionary in camps:
 		enemy_total += (camp["enemies"] as Array).size()
 	return {
 		"seed": seed_value, "floor": floor_number, "name": "Praderas", "bounds": Rect2(Vector2.ZERO, SIZE),
-		"spawn": spawn, "path": path, "camps": camps, "decor": decor, "obstacles": obstacles,
+		"spawn": spawn, "clearings": clearings, "trails": trails, "camps": camps, "decor": decor, "obstacles": obstacles,
 		"quest": {"title": "Limpia las praderas", "kill": KILL_GOAL, "enemies": enemy_total},
 	}
+
+
+static func _trail(rng: RandomNumberGenerator, a: Vector2, b: Vector2) -> Array:
+	var points: Array = [a]
+	var normal := (b - a).normalized().orthogonal()
+	var segments := maxi(int(a.distance_to(b) / 220.0), 2)
+	var sway := rng.randf_range(-140.0, 140.0)
+	for i in range(1, segments):
+		var t := float(i) / float(segments)
+		points.append(a.lerp(b, t) + normal * (sin(t * PI) * sway + rng.randf_range(-30.0, 30.0)))
+	points.append(b)
+	return points
 
 
 # --- Colocación ----------------------------------------------------------------------------
 
 
-static func _path_distance(point: Vector2, path: Array) -> float:
+static func _trail_distance(point: Vector2, trails: Array) -> float:
 	var best := INF
-	for i in range(path.size() - 1):
-		var a: Vector2 = path[i]
-		var b: Vector2 = path[i + 1]
-		var closest := Geometry2D.get_closest_point_to_segment(point, a, b)
-		best = minf(best, point.distance_to(closest))
+	for trail: Array in trails:
+		for i in range(trail.size() - 1):
+			var closest := Geometry2D.get_closest_point_to_segment(point, trail[i], trail[i + 1])
+			best = minf(best, point.distance_to(closest))
 	return best
 
 
-static func _is_free(point: Vector2, radius: float, path: Array, camps: Array, spawn: Vector2, taken: Array, path_margin: float = 150.0) -> bool:
-	if _path_distance(point, path) < path_margin + radius * 0.5:
+## Distancia al borde del claro más cercano (negativa = dentro de un claro).
+static func _clearing_gap(point: Vector2, clearings: Array) -> float:
+	var best := INF
+	for c: Dictionary in clearings:
+		best = minf(best, point.distance_to(c["center"]) - float(c["radius"]))
+	return best
+
+
+static func _is_free(point: Vector2, radius: float, ctx: Dictionary, taken: Array, trail_margin: float = 70.0) -> bool:
+	if _trail_distance(point, ctx["trails"]) < trail_margin + radius * 0.5:
 		return false
-	if point.distance_to(spawn) < 170.0:
+	if _clearing_gap(point, ctx["clearings"]) < 45.0:
 		return false
-	for camp: Dictionary in camps:
-		if point.distance_to(camp["center"]) < 260.0:
-			return false
 	for item: Array in taken:
 		if point.distance_to(item[0]) < float(item[1]) + radius:
 			return false
@@ -134,20 +186,53 @@ static func _place_camp_props(rng: RandomNumberGenerator, camps: Array, decor: A
 			taken.append([pos, 24.0])
 
 
-static func _place_trees(rng: RandomNumberGenerator, path: Array, camps: Array, spawn: Vector2, decor: Array, obstacles: Array, taken: Array) -> void:
-	# Bosque dentro de la zona: más denso cuanto más cerca del borde (encierra el nivel).
-	for attempt in range(700):
-		var point := Vector2(rng.randf_range(40.0, SIZE.x - 40.0), rng.randf_range(40.0, SIZE.y - 40.0))
-		var edge := minf(minf(point.x, SIZE.x - point.x), minf(point.y, SIZE.y - point.y))
-		var density := lerpf(1.0, 0.12, clampf(edge / 330.0, 0.0, 1.0))
-		if rng.randf() > density or not _is_free(point, 26.0, path, camps, spawn, taken):
+static func _place_rooms(rng: RandomNumberGenerator, clearings: Array, camps: Array, spawn: Vector2, decor: Array, obstacles: Array, taken: Array) -> void:
+	# Salas sin campamento: algo que encontrar (cofre, banco, bandera) en el centro.
+	for c: Dictionary in clearings:
+		var center: Vector2 = c["center"]
+		var is_camp := false
+		for camp: Dictionary in camps:
+			if camp["center"] == center:
+				is_camp = true
+		if is_camp or center == spawn:
 			continue
-		var scale := rng.randf_range(0.9, 1.5)
-		_add(decor, NATURE, TREES[rng.randi() % TREES.size()], point, rng.randf() * TAU, scale)
-		obstacles.append({"position": point, "radius": 14.0 * scale})
-		taken.append([point, 40.0 * scale])
-	# Anillo exterior (solo visual, sin colisión) para que no se vea el vacío.
-	for attempt in range(520):
+		_add(decor, PROPS, "Chest_Wood", center, rng.randf() * TAU, 1.0)
+		obstacles.append({"position": center, "radius": 16.0})
+		taken.append([center, 40.0])
+		for prop in ["Bench", "Banner_1", "Barrel", "Stool"]:
+			var angle := rng.randf() * TAU
+			_add(decor, PROPS, prop, center + Vector2(cos(angle), sin(angle)) * rng.randf_range(70.0, 120.0), angle, 1.0)
+
+
+static func _place_trees(rng: RandomNumberGenerator, ctx: Dictionary, decor: Array, obstacles: Array, taken: Array) -> void:
+	var clearings: Array = ctx["clearings"]
+	# 1) Muro de árboles alrededor de cada sala; los senderos abren las entradas.
+	for c: Dictionary in clearings:
+		var center: Vector2 = c["center"]
+		var radius: float = c["radius"]
+		var count := int(TAU * (radius + 40.0) / 52.0)
+		for k in range(count):
+			var angle := TAU * (float(k) + rng.randf_range(-0.3, 0.3)) / float(count)
+			var point := center + Vector2(cos(angle), sin(angle)) * (radius + rng.randf_range(20.0, 75.0))
+			if not Rect2(Vector2(30, 30), SIZE - Vector2(60, 60)).has_point(point):
+				continue
+			if _trail_distance(point, ctx["trails"]) < 62.0 or _clearing_gap(point, clearings) < -6.0:
+				continue
+			_tree(rng, point, decor, obstacles, taken)
+	# 2) Bosque con manchas: el ruido decide dónde es denso y dónde pradera abierta.
+	var noise := FastNoiseLite.new()
+	noise.seed = rng.randi()
+	noise.frequency = 0.0022
+	for attempt in range(1300):
+		var point := Vector2(rng.randf_range(30.0, SIZE.x - 30.0), rng.randf_range(30.0, SIZE.y - 30.0))
+		var edge := minf(minf(point.x, SIZE.x - point.x), minf(point.y, SIZE.y - point.y))
+		var patch := clampf(noise.get_noise_2dv(point) * 1.6 + 0.35, 0.0, 1.0)
+		var density := clampf(patch + lerpf(0.9, 0.0, clampf(edge / 380.0, 0.0, 1.0)), 0.0, 1.0)
+		if rng.randf() > density or not _is_free(point, 26.0, ctx, taken):
+			continue
+		_tree(rng, point, decor, obstacles, taken)
+	# 3) Anillo exterior (solo visual) para que no se vea el vacío.
+	for attempt in range(180):
 		var side := rng.randi() % 4
 		var depth := rng.randf_range(10.0, 380.0)
 		var along := rng.randf()
@@ -160,70 +245,126 @@ static func _place_trees(rng: RandomNumberGenerator, path: Array, camps: Array, 
 		_add(decor, NATURE, TREES[rng.randi() % TREES.size()], point, rng.randf() * TAU, rng.randf_range(1.0, 1.7))
 
 
-static func _place_scatter(rng: RandomNumberGenerator, path: Array, camps: Array, spawn: Vector2, decor: Array, obstacles: Array, taken: Array) -> void:
-	for attempt in range(60):  # rocas grandes con colisión
+static func _tree(rng: RandomNumberGenerator, point: Vector2, decor: Array, obstacles: Array, taken: Array) -> void:
+	var scale := rng.randf_range(0.9, 1.5)
+	_add(decor, NATURE, TREES[rng.randi() % TREES.size()], point, rng.randf() * TAU, scale)
+	obstacles.append({"position": point, "radius": 14.0 * scale})
+	taken.append([point, 28.0 * scale])
+
+
+static func _place_scatter(rng: RandomNumberGenerator, ctx: Dictionary, decor: Array, obstacles: Array, taken: Array) -> void:
+	var trails: Array = ctx["trails"]
+	for attempt in range(120):  # rocas con colisión
 		var point := Vector2(rng.randf_range(60.0, SIZE.x - 60.0), rng.randf_range(60.0, SIZE.y - 60.0))
-		if _is_free(point, 30.0, path, camps, spawn, taken):
+		if _is_free(point, 30.0, ctx, taken):
 			var scale := rng.randf_range(0.9, 1.6)
 			_add(decor, NATURE, ROCKS[rng.randi() % ROCKS.size()], point, rng.randf() * TAU, scale)
 			obstacles.append({"position": point, "radius": 24.0 * scale})
 			taken.append([point, 38.0 * scale])
-			if obstacles.size() > 150:
-				break
-	for attempt in range(80):  # arbustos (sin colisión)
-		var point := Vector2(rng.randf_range(30.0, SIZE.x - 30.0), rng.randf_range(30.0, SIZE.y - 30.0))
-		if _path_distance(point, path) > 70.0:
-			_add(decor, NATURE, "Fern_1" if rng.randf() < 0.5 else "Clover_1", point, rng.randf() * TAU, rng.randf_range(0.8, 1.4))
-	for attempt in range(330):  # hierba por todas partes, flores cerca del camino
+	for attempt in range(520):  # hierba y flores: densas en claros y senderos, ralas en el bosque
 		var point := Vector2(rng.randf_range(0.0, SIZE.x), rng.randf_range(0.0, SIZE.y))
-		var near_path := _path_distance(point, path) < 220.0
-		if _path_distance(point, path) < 45.0:
+		var gap := _clearing_gap(point, ctx["clearings"])
+		if _trail_distance(point, trails) < 35.0:
 			continue
-		if near_path and rng.randf() < 0.3:
+		if gap > 120.0 and rng.randf() < 0.45:
+			continue
+		if rng.randf() < 0.22:
 			_add(decor, NATURE, FLOWERS[rng.randi() % FLOWERS.size()], point, rng.randf() * TAU, rng.randf_range(0.8, 1.3))
 		else:
 			_add(decor, NATURE, GRASS[rng.randi() % GRASS.size()], point, rng.randf() * TAU, rng.randf_range(0.8, 1.5))
-	for attempt in range(14):
+	for attempt in range(26):
 		var point := Vector2(rng.randf_range(60.0, SIZE.x - 60.0), rng.randf_range(60.0, SIZE.y - 60.0))
-		if _path_distance(point, path) > 120.0:
+		if _clearing_gap(point, ctx["clearings"]) > 60.0:
 			_add(decor, NATURE, "Mushroom_Common", point, rng.randf() * TAU, rng.randf_range(0.9, 1.5))
 
 
-static func _place_path_stones(rng: RandomNumberGenerator, path: Array, decor: Array) -> void:
-	for i in range(path.size() - 1):
-		var a: Vector2 = path[i]
-		var b: Vector2 = path[i + 1]
-		var length := a.distance_to(b)
-		var steps := int(length / 75.0)
-		for s in range(steps):
-			var t := float(s) / float(maxi(steps, 1))
-			var across := (b - a).normalized().orthogonal() * rng.randf_range(-30.0, 30.0)
-			_add(decor, NATURE, STEPS[rng.randi() % STEPS.size()], a.lerp(b, t) + across, rng.randf() * TAU, rng.randf_range(0.55, 0.8))
+static func _place_trail_stones(rng: RandomNumberGenerator, trails: Array, decor: Array) -> void:
+	for trail: Array in trails:
+		for i in range(trail.size() - 1):
+			var a: Vector2 = trail[i]
+			var b: Vector2 = trail[i + 1]
+			var steps := int(a.distance_to(b) / 75.0)
+			for k in range(steps):
+				var across := (b - a).normalized().orthogonal() * rng.randf_range(-28.0, 28.0)
+				_add(decor, NATURE, STEPS[rng.randi() % STEPS.size()], a.lerp(b, float(k) / float(maxi(steps, 1))) + across, rng.randf() * TAU, rng.randf_range(0.55, 0.8))
 
 
-# --- Visual ---------------------------------------------------------------------------------
+const CELL := 360.0  # px: tamaño de chunk (permite que la cámara descarte lo lejano)
+const NO_SHADOW := ["Pine", "Tree", "Rock_", "Bush", "Grass", "Fern", "Clover", "Flower", "Petal", "Plant", "RockPath", "Mushroom"]
 
 
+## Decoración en MultiMesh: una sola draw call por (modelo, malla, chunk) en vez de un nodo por objeto.
 static func build(parent: Node3D, data: Dictionary) -> void:
 	_build_environment(parent)
 	_build_ground(parent, data)
 	var holder := Node3D.new()
 	holder.name = "FloorDecor"
 	parent.add_child(holder)
-	var cache: Dictionary = {}
+	var groups: Dictionary = {}  # "ruta|cx|cy" -> Array de transforms
 	for item: Dictionary in data["decor"]:
-		var path := String(item["scene"])
-		if not cache.has(path):
-			cache[path] = load(path) as PackedScene
-			_fix_materials(cache[path])
-		var scene: PackedScene = cache[path]
-		if scene == null:
-			continue
-		var node := scene.instantiate() as Node3D
-		node.position = View3D.to3(item["pos"])
-		node.rotation.y = float(item["yaw"])
-		node.scale = Vector3.ONE * float(item["scale"])
-		holder.add_child(node)
+		var pos: Vector2 = item["pos"]
+		var key := "%s|%d|%d" % [item["scene"], floori(pos.x / CELL), floori(pos.y / CELL)]
+		var xf := Transform3D(Basis(Vector3.UP, float(item["yaw"])).scaled(Vector3.ONE * float(item["scale"])), View3D.to3(pos))
+		if not groups.has(key):
+			groups[key] = []
+		groups[key].append(xf)
+	var protos: Dictionary = {}  # ruta -> Array de [mesh, transform local]
+	for key: String in groups:
+		var path := key.split("|")[0]
+		if not protos.has(path):
+			protos[path] = _mesh_parts(path)
+		for part: Array in protos[path]:
+			var mm := MultiMesh.new()
+			mm.transform_format = MultiMesh.TRANSFORM_3D
+			mm.mesh = part[0]
+			var list: Array = groups[key]
+			var origin := Vector3.ZERO
+			for xf: Transform3D in list:
+				origin += xf.origin
+			origin /= float(list.size())
+			origin.y = 0.0
+			mm.instance_count = list.size()
+			for n in range(list.size()):
+				var local := list[n] as Transform3D
+				local.origin -= origin
+				mm.set_instance_transform(n, local * (part[1] as Transform3D))
+			var node := MultiMeshInstance3D.new()
+			node.position = origin
+			node.multimesh = mm
+			node.name = path.get_file().get_basename()
+			var shadowless := false
+			for tag: String in NO_SHADOW:
+				if path.contains(tag):
+					shadowless = true
+			node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if shadowless else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+			# Distancia de dibujo por tipo (el chunk se mide desde su centro): calidad cerca, ahorro lejos.
+			var reach := 55.0
+			if path.contains("Grass") or path.contains("Fern") or path.contains("Clover") or path.contains("Flower") or path.contains("Petal") or path.contains("Plant") or path.contains("Mushroom"):
+				reach = 30.0
+			elif path.contains("RockPath"):
+				reach = 40.0
+			node.visibility_range_end = reach + CELL / 80.0  # + semidiagonal del chunk en metros
+			node.visibility_range_end_margin = 3.0
+			holder.add_child(node)
+
+
+static func _mesh_parts(path: String) -> Array:
+	var scene := load(path) as PackedScene
+	var out: Array = []
+	if scene == null:
+		return out
+	_fix_materials(scene)
+	var root := scene.instantiate() as Node3D
+	for node in root.find_children("*", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		var local := Transform3D.IDENTITY
+		var walker: Node3D = mi
+		while walker != null and walker != root:
+			local = walker.transform * local
+			walker = walker.get_parent() as Node3D
+		out.append([mi.mesh, local])
+	root.free()
+	return out
 
 
 ## Los glTF del kit traen colores de vértice (viento/AO) que Godot usaría como albedo: salen rojos y azules.
@@ -272,7 +413,7 @@ static func _build_environment(parent: Node3D) -> void:
 	sun.light_energy = 1.35
 	sun.light_color = Color(1.0, 0.95, 0.85)
 	sun.shadow_enabled = true
-	sun.directional_shadow_max_distance = 70.0
+	sun.directional_shadow_max_distance = 35.0
 	parent.add_child(sun)
 
 
@@ -292,10 +433,10 @@ static func _build_ground(parent: Node3D, data: Dictionary) -> void:
 	var ground_mat := StandardMaterial3D.new()
 	ground_mat.albedo_texture = texture
 	ground_mat.roughness = 1.0
-	ground_mat.uv1_scale = Vector3(14.0, 14.0, 1.0)
+	ground_mat.uv1_scale = Vector3((SIZE.x / 40.0 + 80.0) / 10.0, (SIZE.y / 40.0 + 80.0) / 10.0, 1.0)
 	var ground := MeshInstance3D.new()
 	var plane := PlaneMesh.new()
-	plane.size = Vector2(150.0, 120.0)
+	plane.size = SIZE / 40.0 + Vector2(80.0, 80.0)
 	ground.mesh = plane
 	ground.material_override = ground_mat
 	ground.position = Vector3(SIZE.x / 80.0, 0.0, SIZE.y / 80.0)
@@ -304,25 +445,35 @@ static func _build_ground(parent: Node3D, data: Dictionary) -> void:
 	var dirt := StandardMaterial3D.new()
 	dirt.albedo_color = Color(0.50, 0.38, 0.25)
 	dirt.roughness = 1.0
-	var path: Array = data["path"]
-	for i in range(path.size() - 1):
-		var a: Vector2 = path[i]
-		var b: Vector2 = path[i + 1]
-		var segment := MeshInstance3D.new()
-		var box := BoxMesh.new()
-		box.size = Vector3(2.6, 0.03, View3D.meters(a.distance_to(b)) + 1.4)
-		box.material = dirt
-		segment.mesh = box
-		var mid := View3D.to3((a + b) * 0.5, 0.012)
-		segment.position = mid
-		segment.rotation.y = atan2(View3D.to3(b).x - View3D.to3(a).x, View3D.to3(b).z - View3D.to3(a).z)
-		parent.add_child(segment)
-		var joint := MeshInstance3D.new()  # junta redondeada entre tramos
-		var disc := CylinderMesh.new()
-		disc.top_radius = 1.3
-		disc.bottom_radius = 1.3
-		disc.height = 0.03
-		disc.material = dirt
-		joint.mesh = disc
-		joint.position = View3D.to3(b, 0.012)
-		parent.add_child(joint)
+	for trail: Array in data["trails"]:
+		for i in range(trail.size() - 1):
+			var a: Vector2 = trail[i]
+			var b: Vector2 = trail[i + 1]
+			var segment := MeshInstance3D.new()
+			var box := BoxMesh.new()
+			box.size = Vector3(2.4, 0.03, View3D.meters(a.distance_to(b)) + 1.4)
+			box.material = dirt
+			segment.mesh = box
+			segment.position = View3D.to3((a + b) * 0.5, 0.012)
+			segment.rotation.y = atan2(View3D.to3(b).x - View3D.to3(a).x, View3D.to3(b).z - View3D.to3(a).z)
+			parent.add_child(segment)
+			var joint := MeshInstance3D.new()
+			var disc := CylinderMesh.new()
+			disc.top_radius = 1.2
+			disc.bottom_radius = 1.2
+			disc.height = 0.03
+			disc.material = dirt
+			joint.mesh = disc
+			joint.position = View3D.to3(b, 0.012)
+			parent.add_child(joint)
+	# Suelo de tierra apisonada en cada claro.
+	for c: Dictionary in data["clearings"]:
+		var floor_disc := MeshInstance3D.new()
+		var cyl := CylinderMesh.new()
+		cyl.top_radius = View3D.meters(float(c["radius"])) * 0.4
+		cyl.bottom_radius = cyl.top_radius
+		cyl.height = 0.02
+		cyl.material = dirt
+		floor_disc.mesh = cyl
+		floor_disc.position = View3D.to3(c["center"], 0.008)
+		parent.add_child(floor_disc)

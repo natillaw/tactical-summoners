@@ -228,8 +228,9 @@ func _propagate_alerts() -> void:
 		return
 	for fighter: WarriorSim in fighters:
 		var b: BotBrain = fighter.brain
-		if b != null and hot.has(b.group):
+		if b != null and hot.has(b.group) and not b.alerted:
 			b.alerted = true
+			b.wake = rng.randf_range(0.5, 2.4)
 
 
 func reset() -> void:

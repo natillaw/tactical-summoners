@@ -282,3 +282,6 @@ piezas del Medieval Village / Fantasy Props MegaKit; animación propia de estoca
 - `MeadowFloor` (game/world3d/meadow_floor.gd): generador por semilla (camino sinuoso, 3 campamentos = 10 enemigos, bosque que encierra, props de campamento) + builder visual. `Arena3D.build_floor`. Misión "mata 10" en main_3d (Enter = otro mapa, F3 = alterna entrenamiento).
 - IA: `BotBrain.aggro_range/group/alerted` — el campamento entero se alerta cuando uno te ve o es golpeado.
 - Assets del kit (escala x0.4–0.6 para esta cámara). Hojas de CommonTree/TwistedTree/Bush salen rojas en Godot (causa sin resolver): por ahora solo pinos.
+- Rendimiento del piso: decoración en MultiMesh por (modelo, malla, chunk de 9 m) con distancia de dibujo por tipo; sin sombras en vegetación; sombra solar a 35 m. El cuello era el overdraw de hojas (fill-rate), no los polígonos. `tests/perf_floor.gd` compara categorías en el mismo proceso (la GPU varía entre ejecuciones y los primeros segundos son más lentos).
+- Mundo abierto: 3200x2200 px, 7 claros ("salas") cercados de árboles + senderos opcionales + bosque con manchas de densidad; 3 claros con campamento (10 enemigos).
+- Balance piso 1: enemigos con daño x0.5 y vida x0.8, aggro 260 px, y los aliados alertados despiertan escalonados (0.5–2.4 s) en vez de cargar todos a la vez.
