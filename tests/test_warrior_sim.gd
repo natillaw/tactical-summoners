@@ -26,10 +26,8 @@ func _run() -> void:
 	_test_heavy_strikes()
 	_test_piercing_thrust()
 	_test_basic_damage_order()
-	_test_combat_roll()
 	_test_charge_hits_and_slows()
 	_test_charge_miss_no_rage()
-	_test_parry_deflects_and_counters()
 	_test_seismic_break()
 	_test_bladestorm_ultimate()
 	_test_bladestorm_requires_rage()
@@ -61,6 +59,7 @@ func _run() -> void:
 	_test_ranger_rework()
 	_test_flank_stacks_castbar()
 	_test_class_enemies_and_balance_sim()
+	_test_defense_and_poise()
 
 	print("== %d checks, %d failed ==" % [_checks, _failures])
 	print("RESULT: %s" % ("PASS" if _failures == 0 else "FAIL"))
@@ -102,23 +101,23 @@ func _test_piercing_thrust() -> void:
 		hits.append(damage)
 	)
 
-	_step(world, 40, _input(Vector2(0, -1), false, true))
+	_step(world, 40, _input(Vector2(0, -1), false, false, Vector2.ZERO, false, true))
 
 	_check(hits.size() == 1, "Piercing Thrust conecta un único golpe en línea")
 	_check(dummy.health < dummy.max_health, "Piercing Thrust aplica daño real")
 	_check(world.warrior.rage() > 0.0, "Piercing Thrust genera Rage")
 	if not hits.is_empty():
 		_check(float(hits[0]) >= world.warrior.stats.get_stat(&"weapon_min") * 1.8 - 0.01, "Piercing Thrust usa su multiplicador de 1.8x")
-	_check(world.warrior.cooldown_left("M2") > 0.0, "Piercing Thrust deja cooldown activo")
-	_check(not world.warrior._can_start("M2"), "Piercing Thrust no se puede repetir durante el cooldown")
+	_check(world.warrior.cooldown_left("Q") > 0.0, "Piercing Thrust deja cooldown activo")
+	_check(not world.warrior._can_start("Q"), "Piercing Thrust no se puede repetir durante el cooldown")
 
 	_step(world, 130, null)
-	_check(is_zero_approx(world.warrior.cooldown_left("M2")), "el cooldown de Piercing Thrust termina")
+	_check(is_zero_approx(world.warrior.cooldown_left("Q")), "el cooldown de Piercing Thrust termina")
 
 
 func _test_basic_damage_order() -> void:
 	var light := _first_hit("M1", 77)
-	var heavy := _first_hit("M2", 77)
+	var heavy := _first_hit("Q", 77)
 	_check(not light.is_empty() and not heavy.is_empty(), "ambas básicas conectan un golpe")
 	if not light.is_empty() and not heavy.is_empty():
 		_check(float(heavy[0]) > float(light[0]), "Piercing Thrust pega más fuerte que Heavy Strikes")
@@ -152,13 +151,13 @@ func _test_charge_hits_and_slows() -> void:
 	var dummy: DummySim = world.add_dummy(Vector2(600, 300), false)
 	var start := world.warrior.position
 
-	_step(world, 30, _input(Vector2(1, 0), false, false, Vector2.ZERO, false, false, true))
+	_step(world, 30, _input(Vector2(1, 0), false, false, Vector2.ZERO, true))
 
 	_check(dummy.health < dummy.max_health, "Charge impacta y daña al dummy")
 	_check(dummy.stun_timer > 0.0, "Charge aturde al chocar")
 	_check(world.warrior.rage() >= 20.0, "Charge genera Rage al impactar")
 	_check(world.warrior.position.distance_to(start) > 80.0, "Charge desplaza al Warrior")
-	_check(world.warrior.cooldown_left("E") > 0.0, "Charge deja cooldown activo")
+	_check(world.warrior.cooldown_left("SHIFT") > 0.0, "Charge deja cooldown activo")
 
 
 func _test_charge_miss_no_rage() -> void:
@@ -167,7 +166,7 @@ func _test_charge_miss_no_rage() -> void:
 	var dummy: DummySim = world.add_dummy(Vector2(100, 100), false)
 	var rage_before := world.warrior.rage()
 
-	_step(world, 40, _input(Vector2(1, 0), false, false, Vector2.ZERO, false, false, true))
+	_step(world, 40, _input(Vector2(1, 0), false, false, Vector2.ZERO, true))
 
 	_check(dummy.health >= dummy.max_health, "Charge sin objetivo no daña")
 	_check(is_equal_approx(world.warrior.rage(), rage_before), "Charge sin impacto no genera Rage")
@@ -321,17 +320,17 @@ func _test_cooldown_blocks_recast() -> void:
 		starts[0] += 1
 	)
 
-	_step(world, 1, _input(Vector2(0, -1), false, true))
-	_step(world, 10, _input(Vector2(0, -1), false, true))
+	_step(world, 1, _input(Vector2(0, -1), false, false, Vector2.ZERO, false, true))
+	_step(world, 10, _input(Vector2(0, -1), false, false, Vector2.ZERO, false, true))
 	_check(starts[0] == 1, "mantener pulsado no repite el ataque")
 
 	_step(world, 1, _input(Vector2(0, -1), false, false))
-	_step(world, 1, _input(Vector2(0, -1), false, true))
+	_step(world, 1, _input(Vector2(0, -1), false, false, Vector2.ZERO, false, true))
 	_step(world, 10, _input(Vector2(0, -1), false, false))
 	_check(starts[0] == 1, "el cooldown bloquea el recast")
 
 	_step(world, 140, null)
-	_step(world, 1, _input(Vector2(0, -1), false, true))
+	_step(world, 1, _input(Vector2(0, -1), false, false, Vector2.ZERO, false, true))
 	_check(starts[0] == 2, "tras el cooldown el ataque vuelve a estar disponible")
 
 
@@ -339,19 +338,19 @@ func _test_loadout_affects_casts() -> void:
 	var world := _make_world(false, 5)
 	var start := world.warrior.position
 
-	world.warrior.assign_slot(&"Q", &"combat_roll")
-	_check(String(world.warrior.ability_for_slot("Q")["id"]) == "combat_roll", "assign_slot cambia la habilidad del slot")
+	world.warrior.assign_slot(&"E", &"charge")
+	_check(String(world.warrior.ability_for_slot("E")["id"]) == "charge", "assign_slot cambia la habilidad del slot")
 
 	world.warrior.debug_refill()
-	_step(world, 30, _input(Vector2(1, 0), false, false, Vector2.ZERO, false, true))
+	_step(world, 30, _input(Vector2(1, 0), false, false, Vector2.ZERO, false, false, true))
 	_check(world.warrior.position.distance_to(start) > 100.0, "el slot reasignado ejecuta la nueva habilidad")
 
-	world.warrior.assign_slot(&"Q", &"heavy_strikes")
-	_check(String(world.warrior.ability_for_slot("Q")["id"]) == "combat_roll", "assign_slot rechaza habilidades no seleccionables")
+	world.warrior.assign_slot(&"E", &"heavy_strikes")
+	_check(String(world.warrior.ability_for_slot("E")["id"]) == "charge", "assign_slot rechaza habilidades no seleccionables")
 
-	world.warrior.set_loadout({"SHIFT": &"bogus", "Q": &"parry"})
-	_check(String(world.warrior.ability_for_slot("SHIFT")["id"]) == "combat_roll", "set_loadout repara ids inválidos")
-	_check(String(world.warrior.ability_for_slot("Q")["id"]) == "parry", "set_loadout conserva ids válidos")
+	world.warrior.set_loadout({"SHIFT": &"bogus", "E": &"piercing_thrust"})
+	_check(String(world.warrior.ability_for_slot("SHIFT")["id"]) == "charge", "set_loadout repara ids inválidos")
+	_check(String(world.warrior.ability_for_slot("E")["id"]) == "piercing_thrust", "set_loadout conserva ids válidos")
 
 
 func _test_debug_refill() -> void:
@@ -446,7 +445,8 @@ func _input(
 	message.peer_id = 1
 	message.move_dir = move
 	message.aim_dir = aim.normalized()
-	message.actions = {"m1": m1, "m2": m2, "shift": shift, "q": q, "e": e, "r": r, "f": f}
+	# r = skill de la tecla 1; f = ultimate (tecla R)
+	message.actions = {"m1": m1, "m2": m2, "shift": shift, "q": q, "e": e, "s1": r, "r": f}
 	return message
 
 
@@ -475,7 +475,7 @@ func _first_hit(slot: String, seed_value: int) -> Array:
 	world.warrior.attack_hit.connect(func(_skill: Dictionary, _target: Object, damage: float, _critical: bool, _pos: Vector2) -> void:
 		hits.append(damage)
 	)
-	_step(world, 40, _input(Vector2(0, -1), slot == "M1", slot == "M2"))
+	_step(world, 40, _input(Vector2(0, -1), slot == "M1", false, Vector2.ZERO, false, slot == "Q"))
 	return hits
 
 
@@ -694,7 +694,7 @@ func _test_dots_registry_ground() -> void:
 	ward.debug_refill()
 	var hp2: float = target.health
 	_step(w2, 3, msg)
-	msg.actions["r"] = false
+	msg.actions["s1"] = false
 	_step(w2, 60, msg)
 	_check(target.health < hp2, "Seismic cae en el punto apuntado (lejos del jugador)")
 	_check(ward.clamp_ground_point(far, ward.ability_for_slot("R")).distance_to(ward.position) <= 260.01, "El punto de suelo se limita al alcance")
@@ -714,7 +714,7 @@ func _test_mage() -> void:
 	w2.warrior.set_class(&"mage")
 	var t2: DummySim = w2.dummies[0]
 	t2.position = w2.warrior.position + Vector2(0, -150)
-	_step(w2, 50, _input(Vector2(0, -1), false, true))
+	_step(w2, 90, _input(Vector2(0, -1), false, false, Vector2.ZERO, false, true))  # Arcane Orb (Q), cast de 0.9 s
 	var after_hit: float = t2.health
 	_step(w2, 90, null)
 	_check(t2.health < after_hit, "Fireball quema al objetivo después del impacto")
@@ -863,7 +863,7 @@ func _test_anim_skills() -> void:
 	msg.has_aim_point = true
 	ward.debug_refill()
 	_step(world3, 3, msg)
-	msg.actions["r"] = false
+	msg.actions["s1"] = false
 	var air_peak := 0.0
 	for i in 70:
 		world3.submit_input(_duplicate_input(msg))
@@ -884,7 +884,7 @@ func _test_rogue_rework() -> void:
 	var start: Vector2 = w.position
 	var hp: float = e.health
 	w.aim_dir = Vector2(0, -1)
-	w.buffered_slot = "M2"
+	w.buffered_slot = "S2"
 	w.buffer_timer = 1.0
 	_step(world, 45, _input(Vector2(0, -1), false, false))
 	_check(w.position.distance_to(start) > 35.0 and e.health < hp, "Cross Cut salta hacia delante y golpea al aterrizar")
@@ -942,7 +942,7 @@ func _test_ranger_rework() -> void:
 	msg.aim_point = t.position
 	msg.has_aim_point = true
 	_step(world2, 3, msg)
-	msg.actions["f"] = false
+	msg.actions["r"] = false
 	var hits := [0]
 	t.hit.connect(func(_a: float, _p: Vector2) -> void: hits[0] += 1)
 	for i in 240:
@@ -1012,7 +1012,7 @@ func _test_flank_stacks_castbar() -> void:
 	r.aim_dir = Vector2(0, -1)
 	var before: float = t.health
 	r.debug_refill()
-	r.buffered_slot = "M2"
+	r.buffered_slot = "S2"
 	r.buffer_timer = 1.0
 	_step(world2, 40, _input(Vector2(0, -1), false, false))
 	_check(r.cast_progress() > 0.2 and r.cast_progress() < 0.9, "La barra de cast del disparo concentrado avanza (%.2f)" % r.cast_progress())
@@ -1020,7 +1020,7 @@ func _test_flank_stacks_castbar() -> void:
 	_step(world2, 5, moving)
 	_check(r.cast_progress() < 0.0 and is_equal_approx(t.health, before), "Moverse cancela el cast y no sale disparo")
 	_step(world2, 60, _input(Vector2(0, -1), false, false))
-	r.buffered_slot = "M2"
+	r.buffered_slot = "S2"
 	r.buffer_timer = 1.0
 	_step(world2, 140, _input(Vector2(0, -1), false, false))
 	_check(t.health < before, "Quieto, el disparo concentrado sale con la barra llena")
@@ -1053,3 +1053,75 @@ func _test_class_enemies_and_balance_sim() -> void:
 	_check(int(duel["wins"]["A"]) + int(duel["wins"]["B"]) + int(duel["wins"]["empate"]) == 3, "Los duelos 1v1 registran sus resultados")
 	var team := BalanceSim.team_match({"a": [{"class": "warrior"}, {"class": "mage"}], "b": [{"class": "rogue"}], "max_seconds": 30, "seed": 5})
 	_check((team["fighters"] as Array).size() == 3, "Los combates por equipos (2v1) funcionan")
+
+
+func _test_defense_and_poise() -> void:
+	# --- Warrior: Block y Perfect Parry ---
+	var world := _make_world(false, 141)
+	var w = world.warrior
+	w.reset(w.position)
+	var foe: DummySim = world.dummies[0]
+	foe.position = w.position + Vector2(0, -60)
+	w.aim_dir = Vector2(0, -1)
+	var hold = _input(Vector2(0, -1), false, true)  # M2 mantenido
+	_step(world, 3, hold)
+	_check(w.guarding, "Mantener M2 activa el Block")
+	var hp: float = w.health
+	var dealt: float = w.take_damage(50.0, foe.position, {"attacker": foe, "poise": 20.0})
+	_check(is_zero_approx(dealt) and is_equal_approx(w.health, hp) and foe.stun_timer > 0.0, "Perfect Parry anula el golpe físico y rompe el poise del atacante")
+	foe.stun_timer = 0.0
+	foe.stagger_immunity = 0.0
+	var spell: float = w.take_damage(50.0, foe.position, {"attacker": foe, DamageSystem.KEY: DamageSystem.Type.FIRE})
+	_check(is_zero_approx(spell) and is_zero_approx(foe.stun_timer), "Un hechizo parado perfectamente solo se anula (sin romper poise)")
+	_step(world, 30, hold)
+	var reduced: float = w.take_damage(100.0, foe.position, {"attacker": foe, "poise": 5.0})
+	_check(reduced > 0.0 and reduced <= 25.0, "Block normal reduce ~80%% el daño físico (%.0f de 100)" % reduced)
+	var behind: float = w.take_damage(100.0, w.position + Vector2(0, 80), {"attacker": foe, "poise": 5.0})
+	_check(behind > 90.0, "Por la espalda no hay bloqueo")
+	# --- Poise: stagger, inmunidad temporal y hechizos ---
+	var world2 := _make_world(false, 142)
+	var t: DummySim = world2.dummies[0]
+	for i in 8:
+		t.take_damage(5.0, Vector2(1, 1), {"poise": 12.0})
+	_check(t.stun_timer > 0.0, "Acumular daño de poise provoca stagger")
+	t.stun_timer = 0.0
+	t.take_damage(5.0, Vector2(1, 1), {"poise": 100.0})
+	_check(is_zero_approx(t.stun_timer), "Tras un stagger hay inmunidad temporal (sin cadenas infinitas)")
+	var t2: DummySim = world2.add_dummy(Vector2(300, 300), false)
+	t2.take_damage(5.0, Vector2(1, 1), {"poise": 500.0, DamageSystem.KEY: DamageSystem.Type.FIRE})
+	_check(is_zero_approx(t2.stun_timer), "Los hechizos no rompen poise")
+	_check(w.max_poise > 90.0, "La armadura del Warrior es su poise (%d)" % int(w.max_poise))
+	# --- Mago: Mana Shield y Arcane Deflection ---
+	var world3 := _make_world(false, 143)
+	var m = world3.warrior
+	m.set_class(&"mage")
+	m.reset(m.position)
+	var attacker: DummySim = world3.dummies[0]
+	attacker.position = m.position + Vector2(0, -80)
+	var shield = _input(Vector2(0, -1), false, true)
+	_step(world3, 3, shield)
+	var hp_attacker: float = attacker.health
+	var deflected: float = m.take_damage(30.0, attacker.position, {"attacker": attacker, "poise": 20.0})
+	_check(is_zero_approx(deflected) and attacker.health < hp_attacker and attacker.stun_timer > 0.0, "Arcane Deflection devuelve el golpe y rompe el poise (físico)")
+	_step(world3, 30, shield)
+	var mana_before: float = m.rage()
+	var hp_m: float = m.health
+	var absorbed: float = m.take_damage(20.0, attacker.position, {"attacker": attacker, "poise": 5.0})
+	_check(is_zero_approx(absorbed) and is_equal_approx(m.health, hp_m) and m.rage() < mana_before - 15.0, "Mana Shield absorbe el daño gastando maná (%.0f)" % (mana_before - m.rage()))
+	m.set_class(&"warrior")
+	# --- Rogue: Dodge Roll con ventana de invulnerabilidad ---
+	var world4 := _make_world(false, 144)
+	var r = world4.warrior
+	r.set_class(&"rogue")
+	r.reset(r.position)
+	r.debug_refill()
+	r.buffered_slot = "M2"
+	r.buffer_timer = 1.0
+	var move_right = _input(Vector2(1, 0), false, false, Vector2(1, 0))
+	_step(world4, 2, move_right)
+	_step(world4, 6, move_right)  # ~0.13 s: dentro de la ventana (0.03-0.22 s)
+	var in_window: float = r.take_damage(40.0, r.position + Vector2(40, 0), {})
+	_step(world4, 40, move_right)  # termina el roll
+	var after: float = r.take_damage(40.0, r.position + Vector2(40, 0), {})
+	_check(is_zero_approx(in_window) and after > 0.0, "Dodge Roll es invulnerable solo dentro de su ventana")
+	r.set_class(&"warrior")

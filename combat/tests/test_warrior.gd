@@ -51,11 +51,12 @@ func _test_basics() -> void:
 	_check(basics.has("M1") and basics.has("M2"), "M1 and M2 exist")
 
 	var m1: Dictionary = basics["M1"]
-	var m2: Dictionary = basics["M2"]
+	var block: Dictionary = basics["M2"]
+	var m2: Dictionary = WarriorKit.PIERCING_THRUST  # el M2 original (estocada) ahora es la skill Q
 	_check(String(m1["slot"]) == "M1", "M1 is bound to slot M1")
-	_check(String(m2["slot"]) == "M2", "M2 is bound to slot M2")
-	_check(String(m1["kind"]) == "basic" and String(m2["kind"]) == "basic", "both basics are kind=basic")
-	_check(bool(m1["implemented"]) and bool(m2["implemented"]), "M1 and M2 are implemented")
+	_check(String(block["slot"]) == "M2", "M2 is bound to slot M2")
+	_check(String(m1["kind"]) == "basic" and String(block["kind"]) == "defense", "M1 is basic and M2 is the class defense")
+	_check(bool(m1["implemented"]) and bool(block["implemented"]), "M1 and M2 are implemented")
 
 	for skill: Dictionary in [m1, m2]:
 		_check(float(skill["windup"]) > 0.0, "%s has windup" % skill["name"])
@@ -88,10 +89,8 @@ func _test_passive() -> void:
 
 
 func _test_special_and_ultimate() -> void:
-	_check(String(WarriorKit.SPECIAL["id"]) == "parry", "Special is the Parry counter")
-	_check(is_equal_approx(float(WarriorKit.SPECIAL["cost"]), 20.0), "Parry costs 20 Rage")
-	_check(float(WarriorKit.SPECIAL["cooldown"]) > 0.0, "Parry has a cooldown")
-	_check(bool(WarriorKit.SPECIAL["implemented"]), "Parry is playable")
+	_check(String(WarriorKit.M2["id"]) == "block" and String(WarriorKit.M2["cast"]) == "guard", "M2 is Block (held guard)")
+	_check(float(WarriorKit.M2["perfect_window"]) > 0.0 and float(WarriorKit.M2["cost"]) == 0.0, "Block has a perfect-parry window and costs no Rage")
 	_check(bool(WarriorKit.SPECIAL["selectable"]), "Parry can join the loadout")
 	_check(String(WarriorKit.ULTIMATE["id"]) == "bladestorm", "Ultimate is Bladestorm")
 	_check(is_equal_approx(float(WarriorKit.ULTIMATE["charge"]), 100.0), "Ultimate charges to 100")
@@ -102,7 +101,7 @@ func _test_special_and_ultimate() -> void:
 
 func _test_skill_book() -> void:
 	var book := WarriorKit.get_skill_book()
-	_check(book.size() == 7, "Skill Book has 7 entries (Combat Tower kit)")
+	_check(book.size() == 6, "Skill Book has 6 entries (M1, Block, Charge, Thrust, Seismic, Bladestorm)")
 
 	var seen: Dictionary = {}
 	for entry: Dictionary in book:
@@ -115,15 +114,16 @@ func _test_skill_book() -> void:
 		_check(float(entry["cooldown"]) >= 0.0, "%s has a cooldown" % id)
 		_check(bool(entry["implemented"]), "%s is implemented" % id)
 
-	_check(WarriorKit.all_ids().size() == 7, "all_ids returns the 7 ids")
+	_check(WarriorKit.all_ids().size() == 6, "all_ids returns the 6 ids")
 
-	_check(WarriorKit.get_pool().size() == 5, "the pool is the 5 selectable abilities")
-	_check(WarriorKit.SELECTABLE_SLOTS.size() == 5, "the loadout has five selectable slots")
+	_check(WarriorKit.get_pool().size() == 4, "the pool is the 4 selectable abilities")
+	_check(WarriorKit.SELECTABLE_SLOTS.size() == 6, "the loadout has six selectable slots (Shift, Q, E, 1, 2, R)")
 
 	var loadout := WarriorKit.default_loadout()
-	_check(loadout.size() == 5, "the default loadout is complete")
+	_check(loadout.size() == 6, "the default loadout is complete")
 	for slot: String in WarriorKit.SELECTABLE_SLOTS:
-		_check(WarriorKit.has_ability(StringName(String(loadout[slot]))), "%s holds a real ability" % slot)
+		if String(loadout[slot]) != "":  # E y 2 quedan libres para skills futuras del Warrior
+			_check(WarriorKit.has_ability(StringName(String(loadout[slot]))), "%s holds a real ability" % slot)
 	_check(WarriorKit.sanitize_loadout({"SHIFT": &"bogus"})["SHIFT"] == WarriorKit.DEFAULT_LOADOUT["SHIFT"], "sanitize_loadout repairs bad ids")
 
 	var roles := ""

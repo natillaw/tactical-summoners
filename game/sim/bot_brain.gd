@@ -79,6 +79,14 @@ func think(sim: WarriorSim, world: Object, delta: float) -> Dictionary:
 		_pressed[key] = int(_pressed[key]) - 1
 		if int(_pressed[key]) <= 0:
 			_pressed.erase(key)
+	# M2 (defensa): bloquear/escudo mantenido si el rival ataca de cerca; roll/paso con algo de azar.
+	var m2 := sim.ability_for_slot("M2")
+	var threatened: bool = distance < 150.0 and ((target.has_method("is_attacking") and target.is_attacking()) or (target.has_method("is_telegraphing") and target.is_telegraphing()))
+	var m2_cast := String(m2.get("cast", ""))
+	if m2_cast in ["guard", "mana_shield"]:
+		out["actions"]["m2"] = threatened and sim.rage() > 5.0
+	elif threatened and rng.randf() < 0.05 and sim._can_start("M2"):
+		_pressed["m2"] = 3
 	# M1 mantenido mientras haya blanco a tiro (sin coste en la mayoría de clases).
 	var m1: Dictionary = sim.ability_for_slot("M1")
 	actions["m1"] = _in_range(m1, distance, target) and not (float(m1.get("cost", 0.0)) > sim.rage() + 0.001)
@@ -120,7 +128,7 @@ func _in_range(ability: Dictionary, distance: float, target: Object) -> bool:
 ## Elige una skill útil ahora (prioridad: ultimate > fuertes > M2 > movilidad). Devuelve el slot.
 func _choose_skill(sim: WarriorSim, target: Object, dir: Vector2, distance: float, ranged: bool, out: Dictionary) -> String:
 	var hp_ratio := sim.health / maxf(sim.max_health, 1.0)
-	for slot: String in ["F", "R", "E", "Q", "M2", "SHIFT"]:
+	for slot: String in ["F", "R", "S2", "E", "Q", "SHIFT"]:
 		var ability := sim.ability_for_slot(slot)
 		if ability.is_empty() or not sim._can_start(slot):
 			continue

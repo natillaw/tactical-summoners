@@ -111,6 +111,8 @@ func set_level(lvl: int) -> void:
 	attack_damage = 17.0 + 5.0 * level
 	xp_reward = 30 + 10 * level
 	health = ratio * max_health if alive else 0.0
+	max_poise = 60.0 + 3.0 * level
+	poise = max_poise
 	health_changed.emit(health, max_health)
 
 
@@ -227,7 +229,7 @@ func _decide_attack(warrior: Object, dir: Vector2, distance: float) -> bool:
 		options.append("seismic")
 	if _spin_cooldown <= 0.0 and hp <= 0.5 and distance <= float(WarriorKit.BLADESTORM["radius"]) - 5.0:
 		options.append("spin")
-	var thrust_r := float(WarriorKit.M2["range"])
+	var thrust_r := float(WarriorKit.PIERCING_THRUST["range"])
 	if _thrust_cooldown <= 0.0 and distance >= 80.0 and distance <= thrust_r:
 		options.append("thrust")
 	var m1_reach := float(WarriorKit.M1["range"]) + TARGET_RADIUS
@@ -314,7 +316,7 @@ func _update_m1(delta: float, warrior: Object, dir: Vector2, distance: float) ->
 				act_time -= float(kit["windup"])
 				var mults: Array = kit["damage_mult"]
 				var mult := float(mults[clampi(combo_index, 0, mults.size() - 1)])
-				_strike(warrior, facing, float(kit["range"]), float(kit["arc"]), attack_damage * M1_DAMAGE_SCALE * mult)
+				_strike(warrior, facing, float(kit["range"]), float(kit["arc"]), attack_damage * M1_DAMAGE_SCALE * mult, {"poise": 8.0})
 		1:
 			if act_time >= float(kit["active"]):
 				act_phase = 2
@@ -360,7 +362,7 @@ func _update_spin(delta: float, warrior: Object, dir: Vector2) -> void:
 			_spin_tick += delta
 			while _spin_tick >= SPIN_INTERVAL:
 				_spin_tick -= SPIN_INTERVAL
-				_strike(warrior, facing, attack_range, 360.0, attack_damage * SPIN_MULT)
+				_strike(warrior, facing, attack_range, 360.0, attack_damage * SPIN_MULT, {"poise": 5.0})
 			if act_time >= SPIN_SECONDS:
 				act_phase = 2
 				act_time -= SPIN_SECONDS
@@ -394,7 +396,7 @@ func _update_charge(delta: float, warrior: Object) -> void:
 		charge_timer = 0.0
 		attack_direction = charge_direction
 		attack_range = CHARGE_REACH
-		if _strike(warrior, charge_direction, CHARGE_REACH, 360.0, attack_damage * CHARGE_MULT, {"stun": CHARGE_STUN}):
+		if _strike(warrior, charge_direction, CHARGE_REACH, 360.0, attack_damage * CHARGE_MULT, {"stun": CHARGE_STUN, "poise": 35.0}):
 			charge_hit.emit()
 	if charge_timer <= 0.0:
 		charge_timer = 0.0

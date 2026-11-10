@@ -22,7 +22,7 @@ const RAGE := Color(0.93, 0.35, 0.20, 1.0)
 const ULTIMATE := Color(0.55, 0.80, 1.0, 1.0)
 const SHIELD := Color(0.62, 0.82, 0.95, 1.0)
 
-const BAR_KEYS := ["M1", "M2", "SHIFT", "Q", "E", "R", "F"]
+const BAR_KEYS := ["M1", "M2", "SHIFT", "Q", "E", "R", "S2", "F"]
 const SLOT_W := 52.0
 const SLOT_H := 44.0
 const SLOT_GAP := 3.0
@@ -143,6 +143,7 @@ func _draw_status(warrior: WarriorSim) -> void:
 		Vector2(16, 39), 7, TEXT, HORIZONTAL_ALIGNMENT_CENTER, 234
 	)
 
+	_bar(Rect2(16, 41, 234, 3), clampf(warrior.poise / maxf(warrior.max_poise, 1.0), 0.0, 1.0), Color(0.95, 0.85, 0.4, 1.0))  # poise
 	var resource_name := String(ClassRegistry.active_kit().RESOURCE_NAME)
 	var resource_color := RAGE
 	if resource_name == "Mana":

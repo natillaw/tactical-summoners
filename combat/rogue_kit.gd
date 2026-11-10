@@ -17,11 +17,13 @@ const RESOURCE_REGEN_DELAY: float = 0.0
 const RESOURCE_OOC_MULT: float = 1.0
 const ULTIMATE_COST: float = 100.0
 const SPECIAL_COST: float = 30.0
+## Armadura = Poise: cuánto daño de poise aguanta antes de entrar en stagger.
+const ARMOR: float = 45.0
 
 const SLOT_M1 := "M1"
 const SLOT_M2 := "M2"
-const SELECTABLE_SLOTS: Array = ["SHIFT", "Q", "E", "R", "F"]
-const SLOT_ORDER: Array = ["M1", "M2", "SHIFT", "Q", "E", "R", "F"]
+const SELECTABLE_SLOTS: Array = ["SHIFT", "Q", "E", "R", "S2", "F"]
+const SLOT_ORDER: Array = ["M1", "M2", "SHIFT", "Q", "E", "R", "S2", "F"]
 
 const ACTION_KEYS := {
 	"M1": "m1",
@@ -29,8 +31,9 @@ const ACTION_KEYS := {
 	"SHIFT": "shift",
 	"Q": "q",
 	"E": "e",
-	"R": "r",
-	"F": "f",
+	"R": "s1",
+	"S2": "s2",
+	"F": "r",
 }
 
 const SLOT_LABELS := {
@@ -39,8 +42,9 @@ const SLOT_LABELS := {
 	"SHIFT": "SHIFT",
 	"Q": "Q",
 	"E": "E",
-	"R": "R",
-	"F": "F",
+	"R": "1",
+	"S2": "2",
+	"F": "R",
 }
 
 ## M1: tajo rápido con una daga (alterna de mano). Básico spameable, sin coste.
@@ -55,11 +59,21 @@ const M1: Dictionary = {
 	"combo_reset_window": 0.85,
 }
 
-## M2: cruce de dagas, más daño.
+## M2: Dodge Roll. Ventana de invulnerabilidad estilo Dark Souls; cuesta Energy.
 const M2: Dictionary = {
-	"id": &"cross_cut", "name": "Cross Cut", "short": "CUT", "slot": "M2",
+	"id": &"combat_roll", "name": "Dodge Roll", "short": "ROLL", "slot": "M2",
+	"kind": "defense", "role": "Defensa", "implemented": true, "selectable": false,
+	"description": "Voltereta hacia donde te mueves (o hacia atrás). Es invulnerable entre 0.03 y 0.22 s: si el golpe llega ahí, lo esquivas por completo. Cuesta Energy.",
+	"cast": "dash", "anim": "run", "dash_dir": "move", "iframes": [0.03, 0.22], "evade": true,
+	"windup": 0.04, "active": 0.30, "recovery": 0.16, "cooldown": 0.6, "cost": 30.0,
+	"distance": 175.0, "damage_mult": 0.0, "move_factor": 0.0,
+}
+
+## M2: cruce de dagas, más daño.
+const CROSS_CUT: Dictionary = {
+	"id": &"cross_cut", "name": "Cross Cut", "short": "CUT", "slot": "S2",
 	"kind": "basic", "role": "Daño", "description": "Saltas hacia delante y cruzas ambas dagas al aterrizar. -20% de daño de frente.",
-	"implemented": true, "selectable": false, "cast": "leap_slam", "anim": "slash",
+	"implemented": true, "selectable": true, "cast": "leap_slam", "anim": "slash",
 	"full_clip": {"clip": "class/mutant_jump_attack", "from": 0.32, "to": 0.58, "contact": 0.44, "late": true},
 	"lunge": 110.0, "leap_height": 45.0, "flank": true,
 	"windup": 0.15, "active": 0.30, "recovery": 0.25, "cooldown": 0.0, "cost": 60.0,
@@ -131,11 +145,16 @@ const SPECIAL: Dictionary = SHADOWSTEP
 const ULTIMATE: Dictionary = DEATH_SENTENCE
 
 const DEFAULT_LOADOUT: Dictionary = {
-	"SHIFT": &"shadowstep", "Q": &"vanish", "E": &"cheap_shot", "R": &"fan_of_knives", "F": &"death_sentence",
+	"SHIFT": &"shadowstep",
+	"Q": &"vanish",
+	"E": &"cheap_shot",
+	"R": &"fan_of_knives",
+	"S2": &"cross_cut",
+	"F": &"death_sentence",
 }
 
-const ALL_ABILITIES: Array = [M1, M2, SHADOWSTEP, VANISH, CHEAP_SHOT, FAN_OF_KNIVES, DEATH_SENTENCE]
-const POOL_ABILITIES: Array = [SHADOWSTEP, VANISH, CHEAP_SHOT, FAN_OF_KNIVES, DEATH_SENTENCE]
+const ALL_ABILITIES: Array = [M1, M2, SHADOWSTEP, VANISH, CHEAP_SHOT, FAN_OF_KNIVES, CROSS_CUT, DEATH_SENTENCE]
+const POOL_ABILITIES: Array = [SHADOWSTEP, VANISH, CHEAP_SHOT, FAN_OF_KNIVES, CROSS_CUT, DEATH_SENTENCE]
 
 
 static func create_rage_resource() -> Rage:

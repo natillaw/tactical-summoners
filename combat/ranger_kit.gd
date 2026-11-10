@@ -17,11 +17,13 @@ const RESOURCE_REGEN_DELAY: float = 0.0
 const RESOURCE_OOC_MULT: float = 1.0
 const ULTIMATE_COST: float = 100.0
 const SPECIAL_COST: float = 30.0
+## Armadura = Poise: cuánto daño de poise aguanta antes de entrar en stagger.
+const ARMOR: float = 55.0
 
 const SLOT_M1 := "M1"
 const SLOT_M2 := "M2"
-const SELECTABLE_SLOTS: Array = ["SHIFT", "Q", "E", "R", "F"]
-const SLOT_ORDER: Array = ["M1", "M2", "SHIFT", "Q", "E", "R", "F"]
+const SELECTABLE_SLOTS: Array = ["SHIFT", "Q", "E", "R", "S2", "F"]
+const SLOT_ORDER: Array = ["M1", "M2", "SHIFT", "Q", "E", "R", "S2", "F"]
 
 const ACTION_KEYS := {
 	"M1": "m1",
@@ -29,8 +31,9 @@ const ACTION_KEYS := {
 	"SHIFT": "shift",
 	"Q": "q",
 	"E": "e",
-	"R": "r",
-	"F": "f",
+	"R": "s1",
+	"S2": "s2",
+	"F": "r",
 }
 
 const SLOT_LABELS := {
@@ -39,8 +42,9 @@ const SLOT_LABELS := {
 	"SHIFT": "SHIFT",
 	"Q": "Q",
 	"E": "E",
-	"R": "R",
-	"F": "F",
+	"R": "1",
+	"S2": "2",
+	"F": "R",
 }
 
 ## M1: disparo único de cadencia estable (no cuesta Energy).
@@ -54,11 +58,22 @@ const M1: Dictionary = {
 	"rage_gain": 0.0, "move_factor": 0.6, "color": [1.0, 0.92, 0.65],
 }
 
-## M2: disparo cargado, más potente, más alcance y atraviesa. La carga frena el movimiento.
+## M2: Evasive Step. Paso evasivo hacia donde te mueves; esquivar con la ventana perfecta te potencia el siguiente disparo.
 const M2: Dictionary = {
-	"id": &"charged_shot", "name": "Concentrated Shot", "short": "FOCUS", "slot": "M2",
+	"id": &"evasive_step", "name": "Evasive Step", "short": "STEP", "slot": "M2",
+	"kind": "defense", "role": "Defensa", "implemented": true, "selectable": false,
+	"description": "Paso evasivo con el arco (sin bloqueo): invulnerable entre 0.02 y 0.16 s. Si esquivas un golpe en esa ventana, evasión completa y tus disparos hacen +40% de daño durante 1.5 s. Cuesta Energy.",
+	"cast": "dash", "anim": "run", "dash_dir": "move", "iframes": [0.02, 0.16], "evade": true, "reward": "empower",
+	"dash_clip": "class/standing_dive_forward",
+	"windup": 0.03, "active": 0.24, "recovery": 0.14, "cooldown": 1.5, "cost": 20.0,
+	"distance": 150.0, "damage_mult": 0.0, "move_factor": 0.0,
+}
+
+## M2: disparo cargado, más potente, más alcance y atraviesa. La carga frena el movimiento.
+const CONCENTRATED_SHOT: Dictionary = {
+	"id": &"charged_shot", "name": "Concentrated Shot", "short": "FOCUS", "slot": "S2",
 	"kind": "basic", "role": "Daño / penetración", "description": "Disparo concentrado: barra de cast de 1.4 s. Solo sale con la barra llena; si te mueves o te golpean, se cancela. Atraviesa enemigos.",
-	"implemented": true, "selectable": false, "cast": "projectile", "anim": "cast", "cast_bar": true,
+	"implemented": true, "selectable": true, "cast": "projectile", "anim": "cast", "cast_bar": true,
 	"clip": {"anim": "class/standing_aim_overdraw", "start": 0.3, "contact": 1.33, "end": 1.8},
 	"windup": 1.4, "active": 0.05, "recovery": 0.30, "cooldown": 1.0, "cost": 20.0,
 	"speed": 800.0, "range": 760.0, "hit_radius": 10.0, "damage_mult": 3.2, "pierce": true,
@@ -127,11 +142,16 @@ const SPECIAL: Dictionary = MULTISHOT
 const ULTIMATE: Dictionary = RAIN_OF_ARROWS
 
 const DEFAULT_LOADOUT: Dictionary = {
-	"SHIFT": &"evasive_leap", "Q": &"multishot", "E": &"kick", "R": &"explosive_arrow", "F": &"rain_of_arrows",
+	"SHIFT": &"evasive_leap",
+	"Q": &"multishot",
+	"E": &"kick",
+	"R": &"explosive_arrow",
+	"S2": &"charged_shot",
+	"F": &"rain_of_arrows",
 }
 
-const ALL_ABILITIES: Array = [M1, M2, EVASIVE_LEAP, MULTISHOT, KICK, EXPLOSIVE_ARROW, RAIN_OF_ARROWS]
-const POOL_ABILITIES: Array = [EVASIVE_LEAP, MULTISHOT, KICK, EXPLOSIVE_ARROW, RAIN_OF_ARROWS]
+const ALL_ABILITIES: Array = [M1, M2, EVASIVE_LEAP, MULTISHOT, KICK, EXPLOSIVE_ARROW, CONCENTRATED_SHOT, RAIN_OF_ARROWS]
+const POOL_ABILITIES: Array = [EVASIVE_LEAP, MULTISHOT, KICK, EXPLOSIVE_ARROW, CONCENTRATED_SHOT, RAIN_OF_ARROWS]
 
 
 static func create_rage_resource() -> Rage:
