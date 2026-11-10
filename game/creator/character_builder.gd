@@ -43,6 +43,21 @@ const OUTFITS := {
 	"peasant": {"name": "Campesino", "dir": "outfits/", "file": "Peasant.gltf", "sex": true},
 	"ranger": {"name": "Explorador", "dir": "outfits/", "file": "Ranger.gltf", "sex": true, "hide": ["Hood"]},
 	"ranger_hood": {"name": "Explorador (capucha)", "dir": "outfits/", "file": "Ranger.gltf", "sex": true},
+
+	# Sets de inicio por clase (recolores/variantes generados con tools/outfits/*.py a partir de Ranger y Peasant).
+	# "parts": lista de piezas; "tex" cambia la textura base de la pieza; "only"/"hide" filtran mallas por nombre;
+	# "mat_from" toma el material de otra malla ya injertada (piezas extra sin textura propia).
+	"warrior": {"name": "Guerrero", "parts": [
+		{"file": "Ranger.gltf", "sex": true, "hide": ["Hood"], "tex": "Ranger_BaseColor_warrior"},
+		{"file": "Warrior_Acc_PauldronR.gltf", "sex": true, "optional": true, "mat_from": "Pauldron"},
+	]},
+	"mage": {"name": "Mago", "parts": [
+		{"file": "Peasant.gltf", "sex": true, "tex": "Peasant_BaseColor_mage"},
+		{"file": "Mage_Robe.gltf", "sex": true, "mat_from": "Body"},
+		{"file": "Ranger.gltf", "sex": true, "only": ["Hood"], "tex": "Ranger_BaseColor_mage"},
+	]},
+	"archer": {"name": "Arquero", "parts": [{"file": "Ranger.gltf", "sex": true, "hide": ["Hood"], "tex": "Ranger_BaseColor_archer"}]},
+	"rogue": {"name": "Pícaro", "parts": [{"file": "Ranger.gltf", "sex": true, "tex": "Ranger_BaseColor_rogue"}]},
 }
 
 
@@ -92,14 +107,30 @@ static func build(opts: Dictionary) -> Node3D:
 			_tint(mi, brow_color)
 
 	var outfit: Dictionary = OUTFITS.get(String(o["outfit"]), OUTFITS["none"])
-	var path := ""
-	if outfit.has("file"):
-		var file := String(outfit["file"])
-		if bool(outfit.get("sex", false)):
+	var parts: Array = outfit.get("parts", [])
+	if parts.is_empty() and outfit.has("file"):
+		parts = [{"file": outfit["file"], "dir": outfit["dir"], "sex": outfit.get("sex", false), "hide": outfit.get("hide", [])}]
+	var grafted: Array[MeshInstance3D] = []
+	for part: Dictionary in parts:
+		var file := String(part["file"])
+		if bool(part.get("sex", false)):
 			file = ("Male_" if sex == "male" else "Female_") + file
-		path = DIR + String(outfit["dir"]) + file
-	if path != "":
-		_graft(path, skeleton, outfit.get("hide", []))
+		var path := DIR + String(part.get("dir", "outfits/")) + file
+		if not ResourceLoader.exists(path):
+			if bool(part.get("optional", false)):
+				continue  # p. ej. la mujer ya trae las dos hombreras
+			push_warning("CharacterBuilder: falta " + path)
+			continue
+		var tex: Texture2D = null
+		if part.has("tex"):
+			tex = load(DIR + "outfits/T_" + String(part["tex"]) + ".png") as Texture2D
+		var meshes := _graft(path, skeleton, part.get("hide", []), part.get("only", []))
+		for mi: MeshInstance3D in meshes:
+			if part.has("mat_from"):
+				_borrow_material(mi, grafted, String(part["mat_from"]))
+			elif tex != null:
+				_retexture(mi, tex)
+		grafted.append_array(meshes)
 	return root
 
 
@@ -111,13 +142,20 @@ static func _meshes(node: Node) -> Array[MeshInstance3D]:
 
 
 ## Mueve las mallas de otra escena al esqueleto `skeleton`; devuelve las mallas injertadas.
-static func _graft(path: String, skeleton: Skeleton3D, hide_names: Array) -> Array[MeshInstance3D]:
+static func _graft(path: String, skeleton: Skeleton3D, hide_names: Array, only_names: Array = []) -> Array[MeshInstance3D]:
 	var grafted: Array[MeshInstance3D] = []
 	var scene := (load(path) as PackedScene).instantiate()
 	for mi: MeshInstance3D in _meshes(scene):
 		var skip := false
 		for h: String in hide_names:
 			skip = skip or h in String(mi.name)
+		for n: String in only_names:
+			skip = skip or not (n in String(mi.name))
+		if not only_names.is_empty():
+			var keep := false
+			for n: String in only_names:
+				keep = keep or n in String(mi.name)
+			skip = not keep or (skip and false)
 		mi.get_parent().remove_child(mi)
 		if skip:
 			mi.free()
@@ -127,6 +165,28 @@ static func _graft(path: String, skeleton: Skeleton3D, hide_names: Array) -> Arr
 		grafted.append(mi)
 	scene.free()
 	return grafted
+
+
+## Cambia la textura base de las superficies que usan el atlas de la ropa (la piel de los brazos no se toca).
+static func _retexture(mi: MeshInstance3D, tex: Texture2D) -> void:
+	for i in range(mi.mesh.get_surface_count()):
+		var base := mi.get_active_material(i)
+		if base is StandardMaterial3D:
+			var old := (base as StandardMaterial3D).albedo_texture
+			if old != null and ("Ranger" in old.resource_path or "Peasant" in old.resource_path):
+				var mat := (base as StandardMaterial3D).duplicate() as StandardMaterial3D
+				mat.albedo_texture = tex
+				mi.set_surface_override_material(i, mat)
+
+
+## Piezas extra sin material propio: copian el de otra malla ya injertada cuyo nombre contenga `key`.
+static func _borrow_material(mi: MeshInstance3D, pool: Array[MeshInstance3D], key: String) -> void:
+	for other: MeshInstance3D in pool:
+		if key in String(other.name):
+			var mat := other.get_active_material(0)
+			for i in range(mi.mesh.get_surface_count()):
+				mi.set_surface_override_material(i, mat)
+			return
 
 
 static func _tint(mi: MeshInstance3D, color: Color) -> void:

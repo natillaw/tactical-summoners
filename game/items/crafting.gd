@@ -14,12 +14,15 @@ const RECIPES := [
 	{"id": "yelmo_cobre", "station": "blacksmith", "name": "Yelmo de Cobre", "cost": {"mena_cobre": 3, "cuero_basto": 2}, "armor": "head", "stats": {"stamina": 3.0, "armor": 6.0}},
 	{"id": "peto_cobre", "station": "blacksmith", "name": "Peto de Cobre", "cost": {"mena_cobre": 6, "cuero_basto": 3}, "armor": "chest", "stats": {"stamina": 5.0, "strength": 1.0, "armor": 12.0}},
 	{"id": "grebas_cuero", "station": "blacksmith", "name": "Grebas de Cuero", "cost": {"cuero_basto": 3, "fibra": 3, "hueso": 1}, "armor": "legs", "stats": {"stamina": 3.0, "armor": 5.0}},
+	{"id": "guantes_cuero", "station": "blacksmith", "name": "Guantes de Cuero", "cost": {"cuero_basto": 2, "fibra": 2}, "armor": "hands", "stats": {"strength": 1.0, "armor": 3.0, "attack_power_bonus": 2.0}},
 	{"id": "botas_cuero", "station": "blacksmith", "name": "Botas de Cuero", "cost": {"cuero_basto": 2, "fibra": 2}, "armor": "boots", "stats": {"stamina": 2.0, "armor": 3.0, "crit_chance": 0.01}},
 	# Alquimia
 	{"id": "pocion_vida", "station": "alchemy", "name": "Poción de Vida", "cost": {"hierba_curativa": 2, "flor_silvestre": 1}, "gives": "pocion_vida", "amount": 1},
 	{"id": "elixir_fuerza", "station": "alchemy", "name": "Elixir de Fuerza", "cost": {"hongo": 2, "hierba_curativa": 1}, "gives": "elixir_fuerza", "amount": 1},
 	{"id": "pocion_arcana", "station": "alchemy", "name": "Poción Arcana", "cost": {"polvo_arcano": 1, "flor_silvestre": 1}, "gives": "pocion_arcana", "amount": 1},
 ]
+## Calidad al forjar (se revela al terminar): único y legendario no se pueden fabricar.
+const ODDS := [[ItemRarity.Tier.POCO_COMUN, 0.85], [ItemRarity.Tier.RARO, 0.13], [ItemRarity.Tier.EPICO, 0.02]]
 const ITEM_LEVEL := 3  # todo lo del piso 1 se fabrica como objeto poco común de nivel 3
 
 
@@ -41,39 +44,50 @@ static func cost_text(recipe: Dictionary) -> String:
 	return ", ".join(parts)
 
 
-## Fabrica la receta: gasta materiales y entrega/equipa el resultado. Devuelve el mensaje para el jugador.
-static func craft(recipe: Dictionary, warrior: WarriorSim) -> String:
+static func roll_quality(rng: RandomNumberGenerator) -> int:
+	var r := rng.randf()
+	var acc := 0.0
+	for odd: Array in ODDS:
+		acc += float(odd[1])
+		if r < acc:
+			return int(odd[0])
+	return ItemRarity.Tier.POCO_COMUN
+
+
+## Fabrica la receta: gasta materiales y entrega el resultado (la calidad se sortea al forjar).
+## Devuelve el mensaje para el jugador. `rng` opcional para tests.
+static func craft(recipe: Dictionary, warrior: WarriorSim, rng: RandomNumberGenerator = null) -> String:
 	if not can_craft(recipe):
 		return "Faltan materiales"
+	if rng == null:
+		rng = RandomNumberGenerator.new()
+		rng.randomize()
 	for id: String in recipe["cost"]:
 		Materials.inventory[id] = int(Materials.inventory.get(id, 0)) - int(recipe["cost"][id])
 	if recipe.has("gives"):
 		Materials.add(String(recipe["gives"]), int(recipe["amount"]))
 		return "Creaste: %s" % recipe["name"]
+	var quality := roll_quality(rng)
 	var item: Item
 	if recipe.has("weapon"):
-		var rng := RandomNumberGenerator.new()
-		rng.seed = hash(String(recipe["id"]))
-		item = ItemFactory.roll_weapon(rng, ITEM_LEVEL, ItemRarity.Tier.POCO_COMUN, String(recipe["weapon"]))
+		item = ItemFactory.roll_weapon(rng, ITEM_LEVEL, quality, String(recipe["weapon"]))
 		item.item_name = String(recipe["name"])
 		item.id = String(recipe["id"])
-		item.stats.clear()
-		item.stats["attack_power_bonus"] = 2.0
-		if item.dps() > (warrior.weapon.dps() if warrior.weapon != null else 0.0):
-			warrior.equip_weapon(item)
-			CharacterProfile.weapon = item
-			return "Forjaste y equipaste: %s (%.1f DPS)" % [item.item_name, item.dps()]
-		return "Forjaste %s, pero tu arma actual es mejor" % item.item_name
-	item = Item.new()
-	item.id = String(recipe["id"])
-	item.item_name = String(recipe["name"])
-	item.slot = String(recipe["armor"])
-	item.rarity = ItemRarity.Tier.POCO_COMUN
-	item.item_level = ITEM_LEVEL
-	item.stats = (recipe["stats"] as Dictionary).duplicate()
-	warrior.equip_armor(item)
-	CharacterProfile.armor[item.slot] = item
-	return "Forjaste y equipaste: %s" % item.item_name
+	else:
+		item = Item.new()
+		item.id = String(recipe["id"])
+		item.item_name = String(recipe["name"])
+		item.slot = String(recipe["armor"])
+		item.rarity = quality
+		item.item_level = ITEM_LEVEL
+		var power := float(ItemRarity.POWER[quality])
+		for k: String in recipe["stats"]:
+			item.stats[k] = float(recipe["stats"][k]) * (power if k != "crit_chance" else 1.0)
+		for i in int(ItemRarity.AFFIXES[quality]) - 1:  # extras de las calidades altas
+			var stat: String = ItemFactory.AFFIX_STATS[rng.randi() % ItemFactory.AFFIX_STATS.size()]
+			item.stats[stat] = float(item.stats.get(stat, 0.0)) + (0.01 if stat == "crit_chance" else float(1 + rng.randi() % 3))
+	var equipped := Gear.give(item, warrior)
+	return "Forjaste %s [%s]%s" % [item.item_name, ItemRarity.display(item.rarity), " y lo equipaste" if equipped else " (va a tu mochila)"]
 
 
 static func category_of(recipe: Dictionary) -> String:
@@ -87,13 +101,15 @@ static func category_of(recipe: Dictionary) -> String:
 static func describe_result(recipe: Dictionary) -> String:
 	if recipe.has("weapon"):
 		var base: Dictionary = ItemFactory.WEAPON_TYPES[recipe["weapon"]]
-		var dps := (2.0 + 0.7 * ITEM_LEVEL) * float(ItemRarity.POWER[ItemRarity.Tier.POCO_COMUN])
-		return "[color=#59d959]Poco común[/color]  ·  %s  ·  Nv.%d
-%.1f DPS  ·  vel %.1f  ·  +2 poder de ataque" % [base["name"], ITEM_LEVEL, dps, float(base["speed"])]
+		var dps := (2.0 + 0.7 * ITEM_LEVEL)
+		return "%s  ·  Nv.%d
+~%.1f DPS  ·  vel %.1f
+[color=#aaaaaa]La calidad se revela al forjar.[/color]" % [base["name"], ITEM_LEVEL, dps, float(base["speed"])]
 	if recipe.has("armor"):
-		var lines: Array = ["[color=#59d959]Poco común[/color]  ·  %s  ·  Nv.%d" % [String(recipe["armor"]).capitalize(), ITEM_LEVEL]]
+		var lines: Array = ["%s  ·  Nv.%d" % [Gear.SLOT_NAMES[recipe["armor"]], ITEM_LEVEL]]
 		for k: String in recipe["stats"]:
 			lines.append("+%s %s" % [("%d%%" % int(recipe["stats"][k] * 100.0)) if k == "crit_chance" else str(int(recipe["stats"][k])), k])
+		lines.append("[color=#aaaaaa]La calidad se revela al forjar.[/color]")
 		return "
 ".join(lines)
 	match String(recipe["gives"]):

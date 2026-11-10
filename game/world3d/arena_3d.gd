@@ -45,6 +45,7 @@ var warrior_actor: WarriorActor3D
 var dummy_actors: Array[DummyActor3D] = []
 var enemy_actors: Array[WarriorActor3D] = []
 var gather_nodes: Array = []
+var enemy_index: Dictionary = {}  # WarriorSim -> índice en el piso (para guardar el progreso)
 var town_buildings: Array = []
 
 var _sfx_pool: Array[AudioStreamPlayer] = []
@@ -116,7 +117,7 @@ func build_town(p_world: CombatWorld, data: Dictionary) -> void:
 
 
 ## Piso de la torre (ver MeadowFloor): sin Level del editor, enemigos por campamento.
-func build_floor(p_world: CombatWorld, data: Dictionary) -> void:
+func build_floor(p_world: CombatWorld, data: Dictionary, save: Dictionary = {}) -> void:
 	world = p_world
 	_rng.seed = int(data["seed"])
 	var level := get_node_or_null("Level")
@@ -129,6 +130,11 @@ func build_floor(p_world: CombatWorld, data: Dictionary) -> void:
 	_static_parent = self
 	MeadowFloor.build(self, data)
 	gather_nodes = MeadowFloor.build_gather(self, data)
+	var taken_before: Array = save.get("gathered", [])
+	for i in range(gather_nodes.size()):
+		if i in taken_before:
+			gather_nodes[i]["left"] = false
+			(gather_nodes[i]["node"] as Node3D).visible = false
 	_build_sfx_pool()
 	fx = Node3D.new()
 	fx.name = "Fx"
@@ -139,9 +145,14 @@ func build_floor(p_world: CombatWorld, data: Dictionary) -> void:
 	add_child(warrior_actor)
 	warrior_actor.setup(world.warrior, self)
 	var group := 0
+	var index := 0
+	var dead_before: Array = save.get("dead", [])
 	for camp: Dictionary in data["camps"]:
 		for e: Dictionary in camp["enemies"]:
-			spawn_class_enemy(StringName(String(e["arch"])), e["pos"], int(e["level"]), group, 260.0)
+			if not (index in dead_before):  # enemigos ya derrotados en una visita anterior no reaparecen
+				var fighter := spawn_class_enemy(StringName(String(e["arch"])), e["pos"], int(e["level"]), group, 260.0)
+				enemy_index[fighter] = index
+			index += 1
 		group += 1
 
 

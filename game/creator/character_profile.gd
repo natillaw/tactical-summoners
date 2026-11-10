@@ -8,6 +8,11 @@ static var chosen: bool = false
 static var mode: String = "town"
 static var weapon: Item = null
 static var level: int = 1
+## Objetos que no llevas puestos.
+static var bag: Array = []
+## Pisos ya generados: piso -> {seed, dead (índices de enemigos muertos), gathered (nodos recogidos), done}.
+static var floor_saves: Dictionary = {}
+static var current_floor: int = 1
 static var xp: int = 0
 static var started: bool = false
 static var armor: Dictionary = {}
