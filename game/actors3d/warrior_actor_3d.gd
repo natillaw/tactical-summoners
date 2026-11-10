@@ -136,8 +136,11 @@ func setup(p_sim: WarriorSim, p_arena: Arena3D) -> void:
 		var opts := CharacterBuilder.random_options(look)
 		opts["outfit"] = ["ranger", "ranger_hood", "peasant"][look.randi() % 3]
 		rig.setup_model(CharacterBuilder.build(opts))
+		# Tamaño por tier: el esbirro es más pequeño, el élite algo mayor y el jefe se ve de lejos.
+		var tier_scale: float = {"minion": 0.88, "elite": 1.08, "boss": 1.4}.get(EnemyArchetypes.tier_of(sim.archetype_id), 1.0) if EnemyArchetypes.TYPES.has(sim.archetype_id) else 1.0
+		rig.scale = Vector3.ONE * tier_scale
 		for mi: MeshInstance3D in rig.meshes:
-			CharacterBuilder._tint(mi, Color(1.0, 0.66, 0.6))  # tinte rojizo: se distingue del jugador
+			CharacterBuilder._tint(mi, Color(1.0, 0.5, 0.45))  # tinte rojo marcado: se distingue del jugador de un vistazo
 	elif ally_mode:
 		var villager := RandomNumberGenerator.new()
 		villager.seed = 4242
@@ -239,6 +242,9 @@ func _build_team_ring() -> void:
 	_team_ring = FxShape.new().setup(FxShape.Mode.RING, 0.8, color)
 	_team_ring.set_param("inner", 0.82)
 	_team_ring.set_param("fill", 0.08)
+	if enemy_mode:  # anillo enemigo más grueso y relleno: se lee aunque el modelo quede tapado
+		_team_ring.set_param("inner", 0.68)
+		_team_ring.set_param("fill", 0.28)
 	_team_ring.position.y = 0.03
 	_team_ring.visible = false
 	add_child(_team_ring)
