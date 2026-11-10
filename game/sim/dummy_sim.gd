@@ -258,6 +258,11 @@ func take_damage(amount: float, source_position: Vector2 = Vector2.ZERO, effects
 
 
 func apply_effects(effects: Dictionary, source: Vector2 = Vector2.ZERO) -> void:
+	var mark := float(effects.get("mark", 0.0))
+	if mark > 0.0:
+		vulnerable_amount = 0.25  # marcado: +25% de daño recibido
+		vulnerable_timer = maxf(vulnerable_timer, mark)
+		effect_applied.emit("vulnerable", mark)
 	var root := float(effects.get("root", 0.0))
 	if root > 0.0:
 		var applied := cc.apply("root", root)

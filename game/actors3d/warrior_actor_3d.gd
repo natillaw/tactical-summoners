@@ -302,6 +302,8 @@ func _update_overhead() -> void:
 		tag += "[SILENCIADO] "
 	if sim.root_timer > 0.0:
 		tag += "[ATADO] "
+	if sim.mark_timer > 0.0:
+		tag += "[MARCADO] "
 	if sim.stun_timer > 0.0:
 		tag += "[ATURDIDO] "
 	_name_label.text = "%s%s  Nv.%d" % [tag, sim.display_name, sim.progression.level]
@@ -388,15 +390,17 @@ func _process(delta: float) -> void:
 func _update_facing(delta: float) -> void:
 	# Cámara estilo Smite: el personaje siempre mira hacia donde mira la cámara (siempre se ve su
 	# espalda). Al moverse en diagonal el cuerpo se inclina hasta 60° hacia el movimiento.
-	var follows_aim: bool = enemy_mode or arena.topdown  # top-down: el personaje siempre mira al puntero
-	var cam_yaw := View3D.yaw_for(sim.aim_dir if follows_aim else arena.cam_forward_sim())
-	var target_yaw := cam_yaw
+	var albion := arena.topdown and not enemy_mode  # top-down estilo Albion: mira hacia donde corre
+	var cam_yaw := View3D.yaw_for(sim.aim_dir if enemy_mode else arena.cam_forward_sim())
+	var target_yaw := _yaw if albion else cam_yaw
 	var rate := TURN_SPEED_ATTACK if arena.topdown else TURN_SPEED
 	if sim.is_attacking():
 		target_yaw = View3D.yaw_for(sim.attack_aim) - _align_yaw
 		if String(sim.current_skill.get("dash_dir", "")) == "move":
 			target_yaw = View3D.yaw_for(sim._dash_dir)
 		rate = TURN_SPEED_ATTACK
+	elif albion and sim.velocity.length_squared() > 64.0:
+		target_yaw = View3D.yaw_for(sim.velocity)
 	elif sim.velocity.length_squared() > 64.0:
 		var offset := wrapf(View3D.yaw_for(sim.velocity) - cam_yaw, -PI, PI)
 		if absf(offset) <= deg_to_rad(100.0):
@@ -451,6 +455,8 @@ func _update_locomotion() -> void:
 ## ¿Se mueve de espaldas respecto a donde mira la cámara? (animación de carrera al revés)
 ## Ángulo (grados) entre hacia dónde mira el personaje/cámara y su movimiento: 0 = adelante, + = derecha.
 func _move_angle() -> float:
+	if arena.topdown and not enemy_mode:
+		return 0.0  # el cuerpo ya mira hacia donde corre: siempre carrera hacia delante
 	var reference: Vector2 = sim.aim_dir if (enemy_mode or arena.topdown) else arena.cam_forward_sim()
 	return rad_to_deg(reference.angle_to(sim.velocity))
 
@@ -799,6 +805,10 @@ func _class_slam(at: Vector2, radius: float, skill: Dictionary) -> bool:
 			arena.play_sfx(SFX_HIT_HEAVY, -2.0, 0.85)
 			_shake(5.0, 0.25)
 			rig.hitstop(0.1)
+		"bear_trap":
+			ArcaneFx.ice_shards(arena, ground, meters_r, 8, Color(0.78, 0.74, 0.66))
+			arena.spawn_shockwave(at, radius, Color(0.9, 0.8, 0.6), 0.4, 0.75)
+			arena.play_sfx(SFX_SLAM, -5.0, 1.3)
 		"rain_of_arrows":
 			ArcaneFx.arrow_rain(arena, ground, meters_r, 24)
 			arena.spawn_shockwave(at, radius, Color(1.0, 0.85, 0.5, 0.8), 0.5, 0.85)
@@ -879,6 +889,9 @@ func _spawn_hit_fx(skill: Dictionary, hit_position: Vector2, heavy: bool) -> voi
 		color = ArcaneFx.POISON
 		ArcaneFx.burst(arena, View3D.to3(hit_position, 1.0), ArcaneFx.POISON, 30, 2.5, 0.12)
 	ArcaneFx.hit_sparks(arena, View3D.to3(hit_position, 1.1), color, View3D.dir3(sim.attack_aim), 18, heavy)
+	if (skill.get("effects", {}) as Dictionary).has("mark"):
+		ArcaneFx.burst(arena, View3D.to3(hit_position, 1.2), Color(1.0, 0.55, 0.15), 30, 2.5, 0.12)
+		arena.spawn_shockwave(hit_position, 50.0, Color(1.0, 0.55, 0.15, 0.9), 0.4, 0.7)
 	if (skill.get("effects", {}) as Dictionary).has("stun"):
 		ArcaneFx.burst(arena, View3D.to3(hit_position, 1.6), Color(1.0, 0.9, 0.3), 24, 2.0, 0.13)
 

@@ -101,7 +101,7 @@ func _test_special_and_ultimate() -> void:
 
 func _test_skill_book() -> void:
 	var book := WarriorKit.get_skill_book()
-	_check(book.size() == 6, "Skill Book has 6 entries (M1, Block, Charge, Thrust, Seismic, Bladestorm)")
+	_check(book.size() == 8, "Skill Book has 8 entries")
 
 	var seen: Dictionary = {}
 	for entry: Dictionary in book:
@@ -114,9 +114,9 @@ func _test_skill_book() -> void:
 		_check(float(entry["cooldown"]) >= 0.0, "%s has a cooldown" % id)
 		_check(bool(entry["implemented"]), "%s is implemented" % id)
 
-	_check(WarriorKit.all_ids().size() == 6, "all_ids returns the 6 ids")
+	_check(WarriorKit.all_ids().size() == 8, "all_ids returns the 8 ids")
 
-	_check(WarriorKit.get_pool().size() == 4, "the pool is the 4 selectable abilities")
+	_check(WarriorKit.get_pool().size() == 6, "the pool is the 6 selectable abilities")
 	_check(WarriorKit.SELECTABLE_SLOTS.size() == 6, "the loadout has six selectable slots (Shift, Q, E, 1, 2, R)")
 
 	var loadout := WarriorKit.default_loadout()

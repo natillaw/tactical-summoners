@@ -87,7 +87,7 @@ const ARCANE_ORB: Dictionary = {
 	"implemented": true, "selectable": true, "cast": "projectile", "cast_bar": true, "anim": "cast",
 	"damage_type": 7,  # DamageSystem.Type.ARCANE
 	"windup": 0.9, "active": 0.05, "recovery": 0.25, "cooldown": 2.5, "cost": 10.0,
-	"speed": 420.0, "range": 520.0, "hit_radius": 14.0, "damage_mult": 1.8,
+	"speed": 420.0, "range": 520.0, "hit_radius": 14.0, "bonus_vs": {"rooted": 1.4, "slowed": 1.2}, "damage_mult": 1.8,
 	"effects": {"dot": {"damage_type": 7, "dps_mult": 0.35, "duration": 4.0}},
 	"rage_gain": 0.0, "move_factor": 0.0, "color": [0.85, 0.55, 1.0],
 }
@@ -123,7 +123,7 @@ const STARFALL: Dictionary = {
 	"implemented": true, "selectable": true, "cast": "aoe", "cast_bar": true, "anim": "cast", "target": "ground",
 	"damage_type": 7,
 	"windup": 1.6, "active": 0.10, "recovery": 0.30, "cooldown": 14.0, "cost": 40.0,
-	"range": 320.0, "radius": 100.0, "damage_mult": 4.0,
+	"range": 320.0, "radius": 100.0, "bonus_vs": {"rooted": 1.6, "slowed": 1.3}, "damage_mult": 4.0,
 	"rage_gain": 0.0, "move_factor": 0.0,
 }
 
