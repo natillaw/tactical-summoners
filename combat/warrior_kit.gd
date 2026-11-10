@@ -109,7 +109,7 @@ const PIERCING_THRUST: Dictionary = {
 	"slot": "Q",
 	"kind": "basic",
 	"role": "Daño / alcance",
-	"description": "Estocada estrecha y precisa que atraviesa a los enemigos en línea.",
+	"description": "Estocada en línea que atraviesa. Combo: +50% de daño contra aturdidos y +30% contra ralentizados.",
 	"implemented": true,
 	"selectable": true,
 	"cast": "line",
@@ -122,6 +122,7 @@ const PIERCING_THRUST: Dictionary = {
 	"range": 125.0,
 	"width": 34.0,
 	"damage_mult": 1.8,
+	"bonus_vs": {"stunned": 1.5, "slowed": 1.3},
 	"rage_gain": 10.0,
 	"move_factor": 0.15,
 	"vfx": "melee/thrust",
@@ -270,6 +271,7 @@ const SEISMIC_BREAK: Dictionary = {
 	"range": 260.0,
 	"radius": 120.0,
 	"damage_mult": 3.5,
+	"bonus_vs": {"marked": 1.4, "rooted": 1.3},
 	"rage_gain": 0.0,
 	"effects": {"interrupt": true},
 	"move_factor": 0.0,
@@ -323,6 +325,27 @@ const BLADESTORM: Dictionary = {
 	"sfx": "bladestorm",
 }
 
+const SUNDER_ARMOR: Dictionary = {
+	"id": &"sunder_armor", "name": "Sunder Armor", "short": "SUNDER", "slot": "E",
+	"kind": "control", "role": "Debilitar / combo", "description": "Golpe que rompe la armadura: el objetivo queda MARCADO (+25% de daño de todas las fuentes) 6 s. Combo: Seismic Break pega +40% a un objetivo marcado.",
+	"implemented": true, "selectable": true, "cast": "melee", "anim": "slash", "melee_clips": [2],
+	"windup": 0.16, "active": 0.08, "recovery": 0.25, "cooldown": 8.0, "cost": 15.0,
+	"range": 85.0, "arc": 110.0, "damage_mult": 0.8, "effects": {"mark": 6.0},
+	"rage_gain": 10.0, "move_factor": 0.3,
+	"vfx": "melee/sword-slash", "impact_vfx": "impacts/hit-spark", "vfx_scale": 0.58, "vfx_speed": 1.35, "impact_scale": 0.55, "impact_speed": 1.3, "sfx": "slash",
+}
+
+const HAMSTRING: Dictionary = {
+	"id": &"hamstring", "name": "Hamstring", "short": "HAMSTR", "slot": "S2",
+	"kind": "control", "role": "Control / combo", "description": "Tajo a las piernas: ralentiza 50% 3 s y hace sangrar. Combo: Piercing Thrust pega +30% a un objetivo ralentizado, y Charge lo aturde para rematar.",
+	"implemented": true, "selectable": true, "cast": "melee", "anim": "slash", "melee_clips": [1],
+	"windup": 0.14, "active": 0.08, "recovery": 0.22, "cooldown": 7.0, "cost": 10.0,
+	"range": 85.0, "arc": 100.0, "damage_mult": 0.9,
+	"effects": {"slow": {"factor": 0.5, "duration": 3.0}, "dot": {"damage_type": 0, "dps_mult": 0.3, "duration": 3.0}},
+	"rage_gain": 8.0, "move_factor": 0.35,
+	"vfx": "melee/sword-slash", "impact_vfx": "impacts/hit-spark", "vfx_scale": 0.58, "vfx_speed": 1.35, "impact_scale": 0.55, "impact_speed": 1.3, "sfx": "slash",
+}
+
 ## Pasiva: Last Stand. A vida baja gana daño y velocidad temporalmente.
 const PASSIVE: Dictionary = {
 	"id": &"last_stand",
@@ -347,14 +370,14 @@ const ULTIMATE: Dictionary = BLADESTORM
 const DEFAULT_LOADOUT: Dictionary = {
 	"SHIFT": &"charge",
 	"Q": &"piercing_thrust",
-	"E": &"",
+	"E": &"sunder_armor",
 	"R": &"seismic_break",
-	"S2": &"",
+	"S2": &"hamstring",
 	"F": &"bladestorm",
 }
 
-const ALL_ABILITIES: Array = [M1, M2, CHARGE, PIERCING_THRUST, SEISMIC_BREAK, BLADESTORM]
-const POOL_ABILITIES: Array = [CHARGE, PIERCING_THRUST, SEISMIC_BREAK, BLADESTORM]
+const ALL_ABILITIES: Array = [M1, M2, CHARGE, PIERCING_THRUST, SUNDER_ARMOR, SEISMIC_BREAK, HAMSTRING, BLADESTORM]
+const POOL_ABILITIES: Array = [CHARGE, PIERCING_THRUST, SUNDER_ARMOR, SEISMIC_BREAK, HAMSTRING, BLADESTORM]
 
 
 static func create_rage_resource() -> Rage:

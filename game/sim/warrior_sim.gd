@@ -85,6 +85,7 @@ var knock_vel: Vector2 = Vector2.ZERO
 var knock_timer: float = 0.0
 var silence_timer: float = 0.0
 var root_timer: float = 0.0
+var mark_timer: float = 0.0
 var _followup_time: float = 0.0
 var _followups_done: int = 0
 ## Poise (= armadura): al llegar a 0 hay stagger. Defensa M2 mantenida (Block / Mana Shield).
@@ -351,6 +352,7 @@ func _to_vec(value: Variant) -> Vector2:
 
 
 func _tick_timers(delta: float) -> void:
+	mark_timer = maxf(0.0, mark_timer - delta)
 	root_timer = maxf(0.0, root_timer - delta)
 	silence_timer = maxf(0.0, silence_timer - delta)
 	stagger_immunity = maxf(0.0, stagger_immunity - delta)
@@ -569,6 +571,38 @@ func _can_start(slot: String) -> bool:
 
 
 ## Flanqueo: el objetivo mira en la misma dirección que la línea jugador -> objetivo.
+## Multiplicador de combo: el daño sube si el objetivo tiene ciertos estados (skill.bonus_vs).
+func _status_bonus(target: Object, skill: Dictionary) -> float:
+	var table: Dictionary = skill.get("bonus_vs", {})
+	var bonus := 1.0
+	for key: String in table:
+		if _target_has(target, key):
+			bonus *= float(table[key])
+	return bonus
+
+
+func _target_has(target: Object, state: String) -> bool:
+	match state:
+		"stunned":
+			return _prop(target, "stun_timer") > 0.0
+		"rooted":
+			return _prop(target, "root_timer") > 0.0
+		"slowed":
+			return _prop(target, "slow_timer") > 0.0
+		"silenced":
+			return _prop(target, "silence_timer") > 0.0
+		"marked":
+			return _prop(target, "mark_timer") > 0.0 or _prop(target, "vulnerable_timer") > 0.0
+		"poisoned":
+			return target.dots.stacks_of(DamageSystem.Type.POISON) > 0
+	return false
+
+
+func _prop(target: Object, name: String) -> float:
+	var value: Variant = target.get(name)
+	return float(value) if value != null else 0.0
+
+
 func _is_behind(target: Object) -> bool:
 	var away: Vector2 = (target.position - position).normalized()
 	return (target.facing as Vector2).dot(away) > 0.25
@@ -922,6 +956,7 @@ func _hit_target(target: Object, mult: float, effects: Dictionary, skill: Dictio
 	damage *= float(mods.get("damage_mult", 1.0))
 	if empowered_timer > 0.0:
 		damage *= 1.4
+	damage *= _status_bonus(target, sk)  # combos: bonus_vs {estado: multiplicador}
 	if invisible_timer > 0.0:
 		damage *= 1.6  # Ambush: el primer golpe desde el sigilo pega +60%
 	var critical: bool = result["critical"]
@@ -1090,6 +1125,8 @@ func take_damage(amount: float, source_position: Vector2 = Vector2.ZERO, effects
 			perfect_evade.emit()
 		return 0.0
 
+	if mark_timer > 0.0:
+		amount *= 1.25  # marcado (Sunder Armor)
 	amount = DamageSystem.mitigate(amount, DamageSystem.type_of(effects), resist)
 	var dealt := minf(amount, health)
 	health -= dealt
@@ -1156,6 +1193,9 @@ func _apply_status_effects(effects: Dictionary, source: Vector2) -> void:
 	var root := float(effects.get("root", 0.0))
 	if root > 0.0:
 		root_timer = maxf(root_timer, cc.apply("root", root))
+	var mark := float(effects.get("mark", 0.0))
+	if mark > 0.0:
+		mark_timer = maxf(mark_timer, mark)
 	var silence := float(effects.get("silence", 0.0))
 	if silence > 0.0:
 		silence_timer = maxf(silence_timer, silence)

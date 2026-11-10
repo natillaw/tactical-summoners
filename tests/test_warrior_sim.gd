@@ -62,6 +62,7 @@ func _run() -> void:
 	_test_defense_and_poise()
 	_test_mage_redesign_and_ai()
 	_test_quick_cast()
+	_test_combos()
 
 	print("== %d checks, %d failed ==" % [_checks, _failures])
 	print("RESULT: %s" % ("PASS" if _failures == 0 else "FAIL"))
@@ -832,6 +833,7 @@ func _test_anim_skills() -> void:
 	var d: DummySim = world2.dummies[0]
 	d.position = r.position + Vector2(0, -60)
 	var before: float = d.position.distance_to(r.position)
+	r.assign_slot(&"E", &"kick")
 	r.buffered_slot = "E"
 	r.buffer_timer = 1.0
 	r.aim_dir = Vector2(0, -1)
@@ -878,6 +880,7 @@ func _test_rogue_rework() -> void:
 	var start: Vector2 = w.position
 	var hp: float = e.health
 	w.aim_dir = Vector2(0, -1)
+	w.assign_slot(&"S2", &"cross_cut")
 	w.buffered_slot = "S2"
 	w.buffer_timer = 1.0
 	_step(world, 45, _input(Vector2(0, -1), false, false))
@@ -1209,3 +1212,40 @@ func _test_quick_cast() -> void:
 	var hp: float = target.health
 	_step(world, 90, msg)  # la tecla sigue pulsada: no hace falta soltar
 	_check(target.health < hp, "Quick cast: Seismic Break sale al pulsar, sin mantener y soltar")
+
+
+func _hit_damage(sim_class: StringName, slot: String, setup: Callable) -> float:
+	var world := _make_world(false, 171)
+	var w = world.warrior
+	w.set_class(sim_class)
+	w.reset(w.position)
+	var dummy: DummySim = world.dummies[0]
+	dummy.position = w.position + Vector2(0, -60)
+	dummy.facing = Vector2(0, -1)
+	w.aim_dir = Vector2(0, -1)
+	setup.call(dummy)
+	w._rng.seed = 11
+	w.current_skill = w.ability_for_slot(slot)
+	var before: float = dummy.health
+	w._hit_target(dummy, float(w.current_skill.get("damage_mult", 1.0)), {})
+	return before - dummy.health
+
+
+func _test_combos() -> void:
+	var plain := _hit_damage(&"warrior", "Q", func(_d: DummySim) -> void: pass)
+	var stunned := _hit_damage(&"warrior", "Q", func(d: DummySim) -> void: d.stun_timer = 1.0)
+	_check(stunned > plain * 1.4, "Combo Warrior: Piercing Thrust pega +50%% a un aturdido (%.0f vs %.0f)" % [stunned, plain])
+	var seismic_plain := _hit_damage(&"warrior", "R", func(_d: DummySim) -> void: pass)
+	var seismic_marked := _hit_damage(&"warrior", "R", func(d: DummySim) -> void: d.apply_effects({"mark": 5.0}))
+	_check(seismic_marked > seismic_plain * 1.5, "Combo Warrior: un objetivo marcado recibe más (marca +25%% y Seismic +40%%)")
+	var mage_plain := _hit_damage(&"mage", "S2", func(_d: DummySim) -> void: pass)
+	var mage_rooted := _hit_damage(&"mage", "S2", func(d: DummySim) -> void: d.root_timer = 2.0)
+	_check(mage_rooted > mage_plain * 1.5, "Combo Mago: Starfall pega +60%% a un atado (%.0f vs %.0f)" % [mage_rooted, mage_plain])
+	var rogue_plain := _hit_damage(&"rogue", "S2", func(_d: DummySim) -> void: pass)
+	var rogue_combo := _hit_damage(&"rogue", "S2", func(d: DummySim) -> void:
+		d.stun_timer = 1.0
+		d.dots.add(DamageSystem.Type.POISON, 5.0, 5.0))
+	_check(rogue_combo > rogue_plain * 2.0, "Combo Rogue: Eviscerate pega mucho más a un envenenado y aturdido (%.0f vs %.0f)" % [rogue_combo, rogue_plain])
+	var ranger_plain := _hit_damage(&"ranger", "S2", func(_d: DummySim) -> void: pass)
+	var ranger_rooted := _hit_damage(&"ranger", "S2", func(d: DummySim) -> void: d.root_timer = 2.0)
+	_check(ranger_rooted > ranger_plain * 1.4, "Combo Ranger: Concentrated Shot pega +50%% a un atado por Bear Trap")

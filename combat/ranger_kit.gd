@@ -76,7 +76,7 @@ const CONCENTRATED_SHOT: Dictionary = {
 	"implemented": true, "selectable": true, "cast": "projectile", "anim": "cast", "cast_bar": true,
 	"clip": {"anim": "class/standing_aim_overdraw", "start": 0.3, "contact": 1.33, "end": 1.8},
 	"windup": 1.4, "active": 0.05, "recovery": 0.30, "cooldown": 1.0, "cost": 20.0,
-	"speed": 800.0, "range": 760.0, "hit_radius": 10.0, "damage_mult": 3.2, "pierce": true,
+	"speed": 800.0, "range": 760.0, "hit_radius": 10.0, "damage_mult": 3.2, "bonus_vs": {"rooted": 1.5, "slowed": 1.25, "marked": 1.3}, "pierce": true,
 	"rage_gain": 0.0, "move_factor": 0.0, "color": [1.0, 0.85, 0.4],
 }
 
@@ -130,6 +130,16 @@ const RAIN_OF_ARROWS: Dictionary = {
 	"rage_gain": 0.0, "move_factor": 0.2,
 }
 
+const BEAR_TRAP: Dictionary = {
+	"id": &"bear_trap", "name": "Bear Trap", "short": "TRAP", "slot": "E",
+	"kind": "control", "role": "Control / combo", "description": "Apunta al suelo: una trampa ata a los que pisen la zona 2 s. Combo: Concentrated Shot pega +50% a un objetivo atado.",
+	"implemented": true, "selectable": true, "cast": "aoe", "anim": "cast", "target": "ground",
+	"clip": {"anim": "class/standing_draw_arrow", "start": 0.1, "contact": 0.33, "end": 0.7},
+	"windup": 0.25, "active": 0.10, "recovery": 0.20, "cooldown": 12.0, "cost": 25.0,
+	"range": 280.0, "radius": 80.0, "damage_mult": 0.4, "effects": {"root": 2.0},
+	"rage_gain": 0.0, "move_factor": 0.4,
+}
+
 ## Pasiva: a vida baja, más daño y velocidad.
 const PASSIVE: Dictionary = {
 	"id": &"predators_instinct", "name": "Predator's Instinct", "slot": "PASSIVE", "kind": "passive",
@@ -144,14 +154,14 @@ const ULTIMATE: Dictionary = RAIN_OF_ARROWS
 const DEFAULT_LOADOUT: Dictionary = {
 	"SHIFT": &"evasive_leap",
 	"Q": &"multishot",
-	"E": &"kick",
+	"E": &"bear_trap",
 	"R": &"explosive_arrow",
 	"S2": &"charged_shot",
 	"F": &"rain_of_arrows",
 }
 
-const ALL_ABILITIES: Array = [M1, M2, EVASIVE_LEAP, MULTISHOT, KICK, EXPLOSIVE_ARROW, CONCENTRATED_SHOT, RAIN_OF_ARROWS]
-const POOL_ABILITIES: Array = [EVASIVE_LEAP, MULTISHOT, KICK, EXPLOSIVE_ARROW, CONCENTRATED_SHOT, RAIN_OF_ARROWS]
+const ALL_ABILITIES: Array = [M1, M2, EVASIVE_LEAP, MULTISHOT, KICK, BEAR_TRAP, EXPLOSIVE_ARROW, CONCENTRATED_SHOT, RAIN_OF_ARROWS]
+const POOL_ABILITIES: Array = [EVASIVE_LEAP, MULTISHOT, KICK, BEAR_TRAP, EXPLOSIVE_ARROW, CONCENTRATED_SHOT, RAIN_OF_ARROWS]
 
 
 static func create_rage_resource() -> Rage:

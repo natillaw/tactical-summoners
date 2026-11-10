@@ -260,3 +260,11 @@ piezas del Medieval Village / Fantasy Props MegaKit; animación propia de estoca
 - **Lanzamiento rápido (X alterna, por defecto ON en top-down):** las skills de suelo salen al pulsar, hacia el cursor; con OFF se mantiene hold-to-aim (marcador + anillo de alcance de la skill).
 - **Legibilidad:** línea de apuntado hacia el cursor, anillo de alcance de las skills de suelo, anillo de equipo bajo los pies (dorado = tú, rojo = enemigo), barras de vida enemigas ×1.5, y **avisos en el suelo para los ataques de los enemigos de clase** (cono/línea/círculo con progreso) además de los del Soldado, con más relleno desde arriba.
 - **Locomotión:** si existen en `assets/models/anims/class/` los clips `jog_backward` (o `run_backward`) y `jog_strafe_left/right` (o `run_strafe_*`), tras `tools/bake_spells.gd` se usan automáticamente para correr hacia atrás / lateral; si no, carrera al revés.
+
+## 2026-11-09 — Facing estilo Albion y skills con combos
+- **Albion:** en top-down el personaje mira hacia donde corre; solo se orienta al cursor al atacar/castear. Siempre usa la carrera hacia delante (se acabó correr hacia atrás con el puntero al frente).
+- **Combos (motor):** `skill.bonus_vs = {estado: multiplicador}` (estados: stunned, rooted, slowed, silenced, marked, poisoned) y efecto `mark` (objetivo marcado: +25 % de daño recibido, 6 s).
+- **Warrior:** Sunder Armor (E, marca), Hamstring (2, slow + sangrado), Charge (aturde), Thrust (+50 % vs aturdido, +30 % vs ralentizado), Seismic (+40 % vs marcado, +30 % vs atado).
+- **Rogue:** Fan of Knives (veneno x3) -> Cheap Shot (stun, más largo por la espalda) -> **Eviscerate** (+60 % vs envenenado, +40 % vs aturdido); Cross Cut pasa al pool.
+- **Mago:** Arcane Bind / Time Rift / Pulse preparan a Starfall (+60 % vs atado, +30 % vs ralentizado) y Arcane Orb (+40 % vs atado).
+- **Ranger:** **Bear Trap** (E, ata 2 s) -> Concentrated Shot (+50 % vs atado, +25 % vs ralentizado, +30 % vs marcado); Kick pasa al pool.

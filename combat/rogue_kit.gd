@@ -136,6 +136,16 @@ const DEATH_SENTENCE: Dictionary = {
 	"rage_gain": 0.0, "move_factor": 0.0,
 }
 
+const EVISCERATE: Dictionary = {
+	"id": &"eviscerate", "name": "Eviscerate", "short": "EVISC", "slot": "S2",
+	"kind": "burst", "role": "Burst / remate", "description": "Puñalada brutal. Combo de ejecución: +60% de daño contra envenenados y +40% contra aturdidos (Fan of Knives -> Cheap Shot -> Eviscerate).",
+	"implemented": true, "selectable": true, "cast": "melee", "anim": "slash", "flank": true,
+	"full_clip": {"clip": "class/stabbing", "from": 0.1, "to": 0.5, "contact": 0.27},
+	"windup": 0.22, "active": 0.08, "recovery": 0.30, "cooldown": 5.0, "cost": 55.0,
+	"range": 75.0, "arc": 100.0, "damage_mult": 2.6, "bonus_vs": {"poisoned": 1.6, "stunned": 1.4},
+	"rage_gain": 0.0, "move_factor": 0.2,
+}
+
 ## Pasiva: a vida baja, más daño y velocidad.
 const PASSIVE: Dictionary = {
 	"id": &"cornered", "name": "Cornered", "slot": "PASSIVE", "kind": "passive",
@@ -152,12 +162,12 @@ const DEFAULT_LOADOUT: Dictionary = {
 	"Q": &"vanish",
 	"E": &"cheap_shot",
 	"R": &"fan_of_knives",
-	"S2": &"cross_cut",
+	"S2": &"eviscerate",
 	"F": &"death_sentence",
 }
 
-const ALL_ABILITIES: Array = [M1, M2, SHADOWSTEP, VANISH, CHEAP_SHOT, FAN_OF_KNIVES, CROSS_CUT, DEATH_SENTENCE]
-const POOL_ABILITIES: Array = [SHADOWSTEP, VANISH, CHEAP_SHOT, FAN_OF_KNIVES, CROSS_CUT, DEATH_SENTENCE]
+const ALL_ABILITIES: Array = [M1, M2, SHADOWSTEP, VANISH, CHEAP_SHOT, FAN_OF_KNIVES, EVISCERATE, CROSS_CUT, DEATH_SENTENCE]
+const POOL_ABILITIES: Array = [SHADOWSTEP, VANISH, CHEAP_SHOT, FAN_OF_KNIVES, EVISCERATE, CROSS_CUT, DEATH_SENTENCE]
 
 
 static func create_rage_resource() -> Rage:

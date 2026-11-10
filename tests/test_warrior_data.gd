@@ -47,7 +47,7 @@ func _test_design_documents() -> void:
 
 func _test_skill_book_shape() -> void:
 	var book := WarriorKit.get_skill_book()
-	_check(book.size() == 6, "exactamente 6 habilidades del kit de Combat Tower")
+	_check(book.size() == 8, "exactamente 8 habilidades del kit de Combat Tower")
 
 	var ids: Dictionary = {}
 	for entry: Dictionary in book:
@@ -62,7 +62,7 @@ func _test_skill_book_shape() -> void:
 		_check(float(entry["cooldown"]) >= 0.0, "%s tiene cooldown" % id)
 		_check(bool(entry["implemented"]), "%s está implementado" % id)
 
-	_check(WarriorKit.all_ids().size() == 6, "all_ids devuelve los 6 ids")
+	_check(WarriorKit.all_ids().size() == 8, "all_ids devuelve los 8 ids")
 
 
 func _test_ability_schema() -> void:
@@ -114,7 +114,7 @@ func _test_ability_schema() -> void:
 
 func _test_pool_and_loadout() -> void:
 	var pool := WarriorKit.get_pool()
-	_check(pool.size() == 4, "el pool son las 4 habilidades seleccionables")
+	_check(pool.size() == 6, "el pool son las 6 habilidades seleccionables")
 
 	var seen: Dictionary = {}
 	for entry: Dictionary in pool:
@@ -123,7 +123,7 @@ func _test_pool_and_loadout() -> void:
 		seen[id] = true
 		_check(bool(entry["implemented"]), "%s implementado" % id)
 
-	_check(WarriorKit.pool_ids().size() == 4, "pool_ids devuelve los 4 ids")
+	_check(WarriorKit.pool_ids().size() == 6, "pool_ids devuelve los 6 ids")
 	_check(WarriorKit.SELECTABLE_SLOTS.size() == 6, "hay seis slots seleccionables")
 	_check(WarriorKit.SLOT_ORDER.size() == 8, "el orden del HUD es M1, M2 y los seis slots")
 
@@ -136,7 +136,7 @@ func _test_pool_and_loadout() -> void:
 
 	_check(StringName(String(default["SHIFT"])) == &"charge", "SHIFT por defecto es Charge")
 	_check(StringName(String(default["Q"])) == &"piercing_thrust", "Q por defecto es Piercing Thrust")
-	_check(String(default["E"]) == "", "E está libre para una skill futura")
+	_check(StringName(String(default["E"])) == &"sunder_armor", "E por defecto es Sunder Armor")
 	_check(StringName(String(default["R"])) == &"seismic_break", "R por defecto es Seismic Break")
 	_check(StringName(String(default["F"])) == &"bladestorm", "F por defecto es Bladestorm")
 
@@ -163,7 +163,7 @@ func _test_no_variants() -> void:
 	var implemented: int = 0
 	for entry: Dictionary in entries:
 		implemented += 1 if bool(entry["implemented"]) else 0
-	_check(implemented == 4, "las 4 habilidades del pool están implementadas")
+	_check(implemented == 6, "las 6 habilidades del pool están implementadas")
 	_check(bool(WarriorKit.PASSIVE["implemented"]), "Last Stand está implementado")
 	_check(bool(WarriorKit.SPECIAL["implemented"]), "la Special es jugable")
 	_check(bool(WarriorKit.ULTIMATE["implemented"]), "el Ultimate es jugable")
