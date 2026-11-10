@@ -52,6 +52,9 @@ var _cam_focus: Vector3 = Vector3.ZERO
 var tp_zoom: float = 1.0
 const TP_ZOOM_MIN := 0.3
 const TP_ZOOM_MAX := 2.2
+## Modo top-down (estilo Battlerite/Albion): cámara aérea fija, ratón libre como puntero.
+var topdown: bool = false
+const TOPDOWN_OFFSET := Vector3(0.0, 13.0, 8.0)
 var tp_yaw: float = 0.0
 var tp_pitch: float = -0.35
 const TP_OFFSET := Vector3(0.9, 0.5, 4.2)
@@ -416,7 +419,16 @@ func _process(delta: float) -> void:
 		(torch["flame"] as Node3D).scale = Vector3(1.0, flick, 1.0)
 
 
+func toggle_topdown() -> void:
+	topdown = not topdown
+	camera.fov = 42.0 if topdown else 70.0
+
+
 func _place_camera(shake: Vector3) -> void:
+	if topdown:
+		camera.position = _cam_focus + TOPDOWN_OFFSET * tp_zoom + shake
+		camera.look_at(_cam_focus + Vector3(0, 0.4, 0) + shake)
+		return
 	var basis := Basis.from_euler(Vector3(tp_pitch, tp_yaw, 0.0))
 	camera.position = _cam_focus + Vector3(0, 1.4, 0) + basis * (TP_OFFSET * tp_zoom) + shake
 	camera.basis = basis
@@ -441,7 +453,8 @@ func cam_forward_sim() -> Vector2:
 func mouse_world() -> Variant:
 	if camera == null:
 		return null
-	var mouse := get_viewport().get_visible_rect().size * 0.5  # mira central
+	# Tercera persona: mira central. Top-down: el puntero del ratón.
+	var mouse := get_viewport().get_mouse_position() if topdown else get_viewport().get_visible_rect().size * 0.5
 	var origin := camera.project_ray_origin(mouse)
 	var normal := camera.project_ray_normal(mouse)
 	var t := -origin.y / normal.y if absf(normal.y) > 0.0001 else -1.0

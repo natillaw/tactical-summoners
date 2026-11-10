@@ -22,6 +22,7 @@ const ACTIONS := {
 	"slot_2": [KEY_2],
 	"interact": [KEY_F],
 	"toggle_loadout": [KEY_TAB],
+	"toggle_camera": [KEY_C],
 	"restart_training": [KEY_F2],
 	"refill_resources": [KEY_F4],
 	"toggle_debug_overlay": [KEY_F3],

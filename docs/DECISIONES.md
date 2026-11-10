@@ -250,3 +250,6 @@ piezas del Medieval Village / Fantasy Props MegaKit; animación propia de estoca
 ## 2026-11-09 — Arcane Bind (root) y rediseño del Rogue
 - **Arcane Bind** reemplaza a Arcane Pull: ata al objetivo 2.5 s (`root`: no se mueve ni hace dash, sí puede atacar/castear; con rendimientos decrecientes). VFX: cristales/cadenas que brotan del suelo y anillo de atadura mientras dura. Aplica a jugador, muñeco, Soldado y combatientes.
 - **Rogue:** M1 alterna puñalada (Mixamo Stabbing, derecha) y jab (izquierda); Cheap Shot = puñetazo (Punch_Cross); Shadowstep llega con una estocada (Dive Forward); Vanish lanza una bomba de humo (OverhandThrow) y da **Ambush** (+60 % al primer golpe desde el sigilo); Death Sentence = lance (Sword_Dash) + stun + ráfaga de 4 cortes alternando puñalada/jab + golpe final (`followups`).
+
+## 2026-11-09 — Modo top-down (tecla C)
+- **C** alterna entre tercera persona y top-down (estilo Battlerite/Albion): cámara aérea fija, ratón libre como puntero (apuntado de skills y de suelo hacia el cursor), el personaje gira al instante hacia el puntero, WASD relativo a la pantalla. La simulación ya era plana (2D), así que golpes, proyectiles, zonas y poise funcionan igual en ambos modos.
