@@ -131,6 +131,8 @@ var resource: ClassResource
 var ultimate_charge: float = 0.0
 ## Id del arquetipo enemigo (para tablas de botín).
 var archetype_id: String = ""
+## Marcado por la misión del piso (cazar al élite, duelo...): las barras de vida lo resaltan.
+var quest_target: bool = false
 
 var parry_active: bool = false
 var parry_window_end: float = 0.0

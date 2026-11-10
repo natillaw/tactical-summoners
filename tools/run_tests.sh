@@ -24,6 +24,8 @@ SUITES=(
     "net/tests/test_net.gd"
     "tests/test_meadow_floor.gd"
     "tests/test_town_crafting.gd"
+    "tests/test_missions.gd"
+    "tests/test_gear_designs.gd"
     "net/tests/test_reconciliation.gd"
     "combat/tests/test_stats.gd"
     "combat/tests/test_skill.gd"

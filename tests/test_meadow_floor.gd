@@ -34,7 +34,7 @@ func _init() -> void:
 		for camp: Dictionary in d["camps"]:
 			for e: Dictionary in camp["enemies"]:
 				total += 1
-				_check(int(e["level"]) == fl, "nivel del enemigo = piso (%d)" % fl)
+				_check(int(e["level"]) >= fl and int(e["level"]) <= fl + 1, "nivel del enemigo = piso (o +1 si es el duelo/guardián) (%d)" % fl)
 				for o: Dictionary in d["obstacles"]:
 					_check((e["pos"] as Vector2).distance_to(o["position"]) > float(o["radius"]) + 12.0, "enemigo fuera de obstáculos (piso %d)" % fl)
 		_check(int(d["quest"]["kill"]) == total, "la misión cuenta todos los enemigos (piso %d)" % fl)

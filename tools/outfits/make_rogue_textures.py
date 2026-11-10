@@ -11,14 +11,14 @@ def half(a):   # 4096 -> 2048 (2x2 block mean): the new atlases stay light; the 
     return a.reshape(h // 2, 2, w // 2, 2, c).mean(axis=(1, 3))
 
 
-def peasant(src, light, dark, leather_v=1.0):
+def peasant(src, light, dark, leather_v=1.0, dark_v=1.0):
     """light cloth -> light=(h, s, v-mul); dark cloth -> dark=(h, s); leather keeps hue, value*leather_v."""
     h, s, v = M.rgb2hsv(src[..., :3])
     lt = np.clip((v - 0.30) / 0.15, 0, 1) * np.clip((0.55 - s) / 0.2, 0, 1)
     dk = np.clip((0.25 - v) / 0.1, 0, 1) * np.clip((s - 0.1) / 0.1, 0, 1)
     nh, ns, nv = h.copy(), s.copy(), v.copy()
     nh = np.where(lt > 0, light[0], nh); ns = ns * (1 - lt) + np.clip(light[1] + s * 0.4, 0, 0.85) * lt; nv = nv * (1 - lt) + v * light[2] * lt
-    nh = np.where(dk > 0.5, dark[0], nh); ns = ns * (1 - dk) + np.clip(dark[1] + s * 0.5, 0, 0.8) * dk
+    nh = np.where(dk > 0.5, dark[0], nh); ns = ns * (1 - dk) + np.clip(dark[1] + s * 0.5, 0, 0.8) * dk; nv = nv * (1 - dk) + np.clip(v * dark_v + 0.1, 0, 0.55) * dk
     lw = (1 - lt) * (1 - dk); nv = nv * (1 - lw) + v * leather_v * lw
     out = src.copy(); out[..., :3] = np.clip(M.hsv2rgb(nh % 1.0, np.clip(ns, 0, 1), np.clip(nv, 0, 1)), 0, 1)
     return out

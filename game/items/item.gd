@@ -14,6 +14,7 @@ var weapon_min: float = 0.0
 var weapon_max: float = 0.0
 var weapon_speed: float = 2.6
 var stats: Dictionary = {}
+var model_id: String = ""         ## diseño propio del arma (WeaponCatalog.CUSTOM); "" = modelo según rareza
 var set_id: String = ""           ## set de armadura (decide el aspecto del personaje), ver ArmorSets
 var trait_id: String = ""         ## rasgo del tipo de arma (sangrado, aturdimiento…), pendiente de implementar
 var legendary_effect: String = "" ## efecto especial (solo legendarios), pendiente de implementar

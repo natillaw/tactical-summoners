@@ -21,6 +21,12 @@ const VARIANTS := {
 }
 ## Armas que se agarran por el centro del mango (origen en la guarda) frente a las que ya tienen el origen en el agarre.
 const GRIP_AT_HANDLE := ["sword", "axe", "mace", "dagger"]
+## Espadas con diseño propio (editadas sobre las de Quaternius, tools/weapons/make_swords.py): id del objeto -> [archivo, longitud en metros].
+const CUSTOM := {
+	"espada_recluta": ["custom/espada_recluta.glb", 0.95], "espada_xifos": ["custom/espada_xifos.glb", 0.85],
+	"espada_alfanje": ["custom/espada_alfanje.glb", 0.95], "espada_larga": ["custom/espada_larga.glb", 1.15],
+	"espada_colmillo": ["custom/espada_colmillo.glb", 1.3],
+}
 ## Arma de partida de cada clase (cuando lleva la espada inicial o es un enemigo sin arma propia).
 const CLASS_DEFAULT := {&"warrior": "sword", &"rogue": "dagger", &"mage": "staff", &"ranger": "bow"}
 ## Aspecto de los enemigos por arquetipo: [tipo, variante].
@@ -36,6 +42,7 @@ static var _bounds_cache: Dictionary = {}
 static func spec_for(sim: WarriorSim, enemy: bool) -> Dictionary:
 	var type: String = CLASS_DEFAULT.get(sim.class_id, "sword")
 	var variant := 0
+	var custom := ""
 	if enemy:
 		var look: Array = ENEMY_LOOK.get(sim.archetype_id, [])
 		if not look.is_empty():
@@ -46,15 +53,18 @@ static func spec_for(sim: WarriorSim, enemy: bool) -> Dictionary:
 	elif sim.weapon != null and sim.weapon.id != "starter_sword":
 		type = sim.weapon.weapon_type if VARIANTS.has(sim.weapon.weapon_type) else type
 		variant = int(sim.weapon.rarity)
+		if CUSTOM.has(sim.weapon.model_id):
+			type = "sword"
+			custom = sim.weapon.model_id
 	variant = clampi(variant, 0, (VARIANTS[type] as Array).size() - 1)
-	return {"type": type, "variant": variant, "dual": type == "dagger" and sim.class_id == &"rogue"}
+	return {"type": type, "variant": variant, "model": custom, "dual": type == "dagger" and sim.class_id == &"rogue"}
 
 
 ## {node, tip, hand}: `node` tiene +Y hacia la punta, origen en el agarre y la escala ya aplicada;
 ## `tip` = distancia del agarre a la punta (m); `hand` = "r" o "l" (el arco va en la izquierda).
 static func build(spec: Dictionary) -> Dictionary:
 	var type: String = spec["type"]
-	var entry: Array = (VARIANTS[type] as Array)[int(spec["variant"])]
+	var entry: Array = CUSTOM[spec["model"]] if CUSTOM.has(String(spec.get("model", ""))) else (VARIANTS[type] as Array)[int(spec["variant"])]
 	var file: String = entry[0]
 	var length: float = entry[1]
 	var scene := load(DIR + file) as PackedScene

@@ -106,11 +106,12 @@ def bandana(acc, B, trim=True, tail=True):
 
 
 def beak_mask(acc, B):
-    """Crow half-mask: leather cover over nose and mouth with a beak."""
-    head_wrap(acc, B, -0.5, 0.0, -1.35, 1.35, lambda p, t: 0.014, "leather", 10, 36, None, 0.004, 1, (0.2, 0.22))
+    """Crow half-mask: a snug leather cover over nose and mouth with a short curved beak following the nose line."""
+    head_wrap(acc, B, -0.5, 0.0, -1.3, 1.3, lambda p, t: 0.012, "leather", 10, 36, None, 0.004, 1, (0.12, 0.14))
     o, c, s = origin(B)
-    path = [Vector((0, c.y - 0.08, c.z - 0.03)), Vector((0, c.y - 0.115, c.z - 0.05)), Vector((0, c.y - 0.145, c.z - 0.085)), Vector((0, c.y - 0.155, c.z - 0.125))]
-    add_tube(acc, path, [0.036, 0.03, 0.019, 0.004], 10, "leather", force=HEADF)
+    path = [Vector((0, c.y - 0.078, c.z - 0.012)), Vector((0, c.y - 0.108, c.z - 0.034)), Vector((0, c.y - 0.138, c.z - 0.066)), Vector((0, c.y - 0.148, c.z - 0.094))]
+    add_tube(acc, path, [0.03, 0.025, 0.015, 0.004], 12, "leather", force=HEADF)
+    add_tube(acc, [path[1] + Vector((0, 0.004, -0.012)), path[2] + Vector((0, 0.002, -0.016)), path[3] + Vector((0, 0.0, -0.008))], [0.014, 0.009, 0.002], 8, "trim", force=HEADF)   # lower mandible
     tie_band(acc, B, 0.0, 0.18, 0.04, "leather")
 
 

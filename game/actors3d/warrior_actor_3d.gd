@@ -114,6 +114,8 @@ var _dot_type: int = -2
 var _dot_fx: CPUParticles3D
 ## En el pueblo no se pelea: idle y caminata normales, armas guardadas.
 var peaceful: bool = false
+## Aliado (rescate): aspecto de aldeano, no usa el del jugador ni el tinte rojo de los enemigos.
+var ally_mode: bool = false
 var _offhand: Node3D
 var _blade_tip: Node3D
 var _aim_stance: float = 0.0
@@ -136,6 +138,12 @@ func setup(p_sim: WarriorSim, p_arena: Arena3D) -> void:
 		rig.setup_model(CharacterBuilder.build(opts))
 		for mi: MeshInstance3D in rig.meshes:
 			CharacterBuilder._tint(mi, Color(1.0, 0.66, 0.6))  # tinte rojizo: se distingue del jugador
+	elif ally_mode:
+		var villager := RandomNumberGenerator.new()
+		villager.seed = 4242
+		var vopts := CharacterBuilder.random_options(villager)
+		vopts["outfit"] = "peasant"
+		rig.setup_model(CharacterBuilder.build(vopts))
 	elif CharacterProfile.chosen:
 		var look_opts: Dictionary = CharacterProfile.appearance.duplicate()
 		var worn := ArmorSets.gear_for(CharacterProfile.armor)  # piezas de set equipadas, una a una
@@ -227,7 +235,7 @@ func _on_weapon_swapped(_item: Item) -> void:
 ## Nombre + barra de vida sobre la cabeza (enemigos de clase).
 ## Anillo de equipo bajo los pies (top-down): dorado = tú, rojo = enemigo.
 func _build_team_ring() -> void:
-	var color := Color(1.0, 0.3, 0.25, 0.9) if enemy_mode else Color(1.0, 0.85, 0.4, 0.8)
+	var color := Color(1.0, 0.3, 0.25, 0.9) if enemy_mode else (Color(0.4, 1.0, 0.5, 0.9) if ally_mode else Color(1.0, 0.85, 0.4, 0.8))
 	_team_ring = FxShape.new().setup(FxShape.Mode.RING, 0.8, color)
 	_team_ring.set_param("inner", 0.82)
 	_team_ring.set_param("fill", 0.08)

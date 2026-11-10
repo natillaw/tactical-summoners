@@ -22,6 +22,8 @@ var _quick_cast_enabled: bool = true  # X alterna; solo aplica en top-down
 var _floor: Dictionary = {}
 var _town: Dictionary = {}
 var _floor_save: Dictionary = {}
+var floor_ctl: FloorController
+var reward_panel: RewardPanel
 var _exit_open: bool = false
 ## Niveles de calidad. El juego arranca en el más nítido (MSAA 2x) y baja solo si los FPS caen de ~52,
 ## para sostener los 60 sin perder definición más de lo necesario. F11 los recorre a mano.
@@ -39,6 +41,8 @@ var npc_panel: NpcPanel
 var char_panel: CharacterPanel
 var unit_bars: UnitBars
 var _elixir_time: float = 0.0
+var _elixir_factor: float = 1.25
+var _potions_used: int = 0
 var _quest_label: Label
 var _quest_done: bool = false
 var _mats_label: Label
@@ -72,9 +76,9 @@ func _ready() -> void:
 		"floor":
 			var fl := CharacterProfile.current_floor
 			if not CharacterProfile.floor_saves.has(fl):  # primera visita: se genera y queda guardado
-				CharacterProfile.floor_saves[fl] = {"seed": randi() % 1000000 + 1, "dead": [], "gathered": [], "done": false}
+				CharacterProfile.floor_saves[fl] = {"seed": randi() % 1000000 + 1, "dead": [], "gathered": [], "done": false, "mission_state": {}, "rewarded": false}
 			_floor_save = CharacterProfile.floor_saves[fl]
-			_floor = MeadowFloor.generate(int(_floor_save["seed"]), fl)
+			_floor = MeadowFloor.generate(int(_floor_save["seed"]), fl, CharacterProfile.force_mission)
 			_quest_done = bool(_floor_save["done"])
 			_exit_open = _quest_done
 			arena.build_floor(world, _floor, _floor_save)
@@ -83,6 +87,13 @@ func _ready() -> void:
 			for fighter: WarriorSim in world.fighters:
 				var f := fighter
 				f.died.connect(func() -> void: _on_enemy_died(f))
+			floor_ctl = FloorController.new()
+			add_child(floor_ctl)
+			floor_ctl.setup(self, arena, world, _floor, _floor_save)
+			reward_panel = RewardPanel.new()
+			reward_panel.sfx = Callable(self, "_ui_sfx")
+			$HudLayer.add_child(reward_panel)
+			floor_ctl.completed.connect(func(result: Dictionary) -> void: reward_panel.show_result(result))
 		"town":
 			_town = Town.generate(7)
 			arena.build_town(world, _town)
@@ -149,7 +160,7 @@ func _auto_quality_tick(delta: float) -> void:
 
 
 func _modal_open() -> bool:
-	return (npc_panel != null and npc_panel.visible) or (char_panel != null and char_panel.visible)
+	return (npc_panel != null and npc_panel.visible) or (char_panel != null and char_panel.visible) or (reward_panel != null and reward_panel.visible)
 
 
 func _save_progress() -> void:
@@ -159,6 +170,8 @@ func _save_progress() -> void:
 
 
 func _save_progress_state() -> void:
+	if floor_ctl != null and not _floor_save.is_empty():
+		floor_ctl.save_into(_floor_save)
 	if world != null and CharacterProfile.mode == "floor" and not _floor_save.is_empty():
 		var dead: Array = (_floor_save["dead"] as Array).duplicate()
 		for fighter: WarriorSim in arena.enemy_index:
@@ -187,7 +200,7 @@ func _goto(mode: String) -> void:
 func _build_quest_ui() -> void:
 	_quest_label = Label.new()
 	_quest_label.position = Vector2(260.0, 6.0)
-	_quest_label.add_theme_font_size_override("font_size", 14)
+	_quest_label.add_theme_font_size_override("font_size", 11)
 	_quest_label.add_theme_color_override("font_outline_color", Color.BLACK)
 	_quest_label.add_theme_constant_override("outline_size", 6)
 	$HudLayer.add_child(_quest_label)
@@ -213,7 +226,9 @@ func _toast(text: String) -> void:
 
 
 func _on_enemy_died(fighter: WarriorSim) -> void:
-	var drops := Materials.drops_for(fighter.archetype_id, _drop_rng)
+	if floor_ctl != null:
+		floor_ctl.on_enemy_died(fighter)
+	var drops := Materials.drops_for(fighter.archetype_id, _drop_rng, int(_floor.get("floor", 1)))
 	var parts: Array = []
 	for id: String in drops:
 		Materials.add(id, int(drops[id]))
@@ -246,6 +261,8 @@ func _interact() -> void:
 		CharacterProfile.current_floor = int(_floor["floor"]) + 1
 		_goto("floor")
 		return
+	if floor_ctl != null and floor_ctl.try_interact():
+		return
 	var st := _nearest_station()
 	if not st.is_empty():
 		if st["id"] == "portal":
@@ -261,31 +278,42 @@ func _interact() -> void:
 		_gather(near)
 
 
-func _use_potion(id: String) -> void:
+## Usa la poción del tipo pedido; si tienes la versión Mayor (grado 2) se gasta primero.
+func _use_potion(base_id: String) -> void:
+	var id: String = String(Materials.UPGRADE.get(base_id, base_id))
+	if int(Materials.inventory.get(id, 0)) <= 0:
+		id = base_id
 	if int(Materials.inventory.get(id, 0)) <= 0 or not world.warrior.alive or _modal_open():
 		return
+	var big := id != base_id
 	var w := world.warrior
-	match id:
+	match base_id:
 		"pocion_vida":
 			if w.health >= w.max_health:
 				return
-			w.health = minf(w.max_health, w.health + w.max_health * 0.4)
+			var frac := 0.7 if big else 0.4
+			w.health = minf(w.max_health, w.health + w.max_health * frac)
 			arena.play_sfx(&"drink", -6.0)
 			arena.play_sfx(&"heal", -10.0)
-			_toast("Poción de Vida: +40% de vida")
+			_toast("%s: +%d%% de vida" % [Materials.display(id), int(frac * 100.0)])
 		"elixir_fuerza":
 			if _elixir_time > 0.0:
 				return
-			w.mods["damage_mult"] = float(w.mods.get("damage_mult", 1.0)) * 1.25
+			_elixir_factor = 1.4 if big else 1.25
+			w.mods["damage_mult"] = float(w.mods.get("damage_mult", 1.0)) * _elixir_factor
 			_elixir_time = 60.0
 			arena.play_sfx(&"drink", -6.0)
 			arena.play_sfx(&"buff", -8.0)
-			_toast("Elixir de Fuerza: +25% de daño (60 s)")
+			_toast("%s: +%d%% de daño (60 s)" % [Materials.display(id), int((_elixir_factor - 1.0) * 100.0)])
 		"pocion_arcana":
-			w.resource.current_amount = minf(w.resource.max_amount, w.resource.current_amount + w.resource.max_amount * 0.6)
+			var share := 1.0 if big else 0.6
+			w.resource.current_amount = minf(w.resource.max_amount, w.resource.current_amount + w.resource.max_amount * share)
 			arena.play_sfx(&"drink", -6.0)
 			arena.play_sfx(&"absorb", -9.0)
-			_toast("Poción Arcana: recurso restaurado")
+			_toast("%s: recurso restaurado" % Materials.display(id))
+	_potions_used += 1
+	if floor_ctl != null:
+		floor_ctl.on_potion()
 	Materials.inventory[id] = int(Materials.inventory[id]) - 1
 
 
@@ -316,6 +344,8 @@ func _open_chest(entry: Dictionary) -> void:
 	arena.play_sfx(&"gather_wood", -9.0)
 	ArcaneFx.burst(arena, View3D.to3(entry["data"]["pos"], 0.8), Color(1.0, 0.85, 0.35), 30, 2.6, 0.13)
 	_toast("Cofre: " + ", ".join(parts))
+	if floor_ctl != null:
+		floor_ctl.on_chest({"pos": entry["data"]["pos"], "secret": entry["data"].get("secret", false), "trapped": entry["data"].get("trapped", false)})
 
 
 func _gather(entry: Dictionary) -> void:
@@ -335,11 +365,14 @@ func _gather(entry: Dictionary) -> void:
 		_: arena.play_sfx(&"gather_misc", -8.0)
 	ArcaneFx.burst(arena, at, Materials.DEFS[mat]["color"], 22, 2.2, 0.12)
 	var text := "+%d %s" % [amount, Materials.display(mat)]
-	if mat == "hierba_curativa":
+	if Materials.HEAL.has(mat):
 		var w := world.warrior
-		w.health = minf(w.max_health, w.health + Materials.HERB_HEAL * amount)
-		text += "  (+%d vida)" % int(Materials.HERB_HEAL * amount)
+		var healed: float = float(Materials.HEAL[mat]) * amount
+		w.health = minf(w.max_health, w.health + healed)
+		text += "  (+%d vida)" % int(healed)
 	_toast(text)
+	if floor_ctl != null:
+		floor_ctl.on_gather(String(entry["data"]["kind"]), amount)
 
 
 func _update_gather_ui(delta: float) -> void:
@@ -354,11 +387,15 @@ func _update_gather_ui(delta: float) -> void:
 	elif not station.is_empty():
 		_hint_label.text = ("[F] Entrar a la Torre: piso %d   (←/→ cambiar · máx %d)" % [CharacterProfile.current_floor, CharacterProfile.max_floor]) if station["id"] == "portal" else "[F] Hablar con %s" % station["npc"]
 	else:
-		_hint_label.text = "[F] Subir al piso %d" % (int(_floor["floor"]) + 1) if _nearest_exit() else "" if near.is_empty() else "[F] Recoger: %s" % Materials.NODES[near["data"]["kind"]]["label"]
+		var iact: Dictionary = floor_ctl.nearest_interact() if floor_ctl != null else {}
+		if not iact.is_empty():
+			_hint_label.text = "[F] %s" % iact["label"]
+		else:
+			_hint_label.text = "[F] Subir al piso %d" % (int(_floor["floor"]) + 1) if _nearest_exit() else "" if near.is_empty() else "[F] Recoger: %s" % Materials.NODES[near["data"]["kind"]]["label"]
 	if _elixir_time > 0.0:
 		_elixir_time -= delta
 		if _elixir_time <= 0.0:
-			world.warrior.mods["damage_mult"] = float(world.warrior.mods.get("damage_mult", 1.0)) / 1.25
+			world.warrior.mods["damage_mult"] = float(world.warrior.mods.get("damage_mult", 1.0)) / _elixir_factor
 	_toast_time = maxf(0.0, _toast_time - delta)
 	_toast_label.modulate.a = clampf(_toast_time, 0.0, 1.0)
 	var lines: Array = []
@@ -377,28 +414,11 @@ func _update_quest() -> void:
 		_quest_label.text = "PUEBLO · Portal al norte"
 		_quest_label.add_theme_color_override("font_color", Color(0.85, 0.95, 1.0))
 		return
-	var quest: Dictionary = _floor["quest"]
-	var kills: int = (_floor_save["dead"] as Array).size()
-	for fighter: WarriorSim in arena.enemy_index:
-		if not fighter.alive and not (int(arena.enemy_index[fighter]) in (_floor_save["dead"] as Array)):
-			kills += 1
-	var goal := int(quest["kill"])
-	if kills >= goal:
-		if not _quest_done:
-			arena.play_sfx(&"quest_done", -4.0)
-			CharacterProfile.max_floor = maxi(CharacterProfile.max_floor, mini(int(_floor["floor"]) + 1, MeadowFloor.MAX_FLOOR))
-		_quest_done = true
-		if arena.exit_portal != null:
-			arena.exit_portal.visible = int(_floor["floor"]) < MeadowFloor.MAX_FLOOR
-	if _quest_done:
-		_quest_label.text = "PISO %d · %s
-¡Misión cumplida! (%d/%d)
-%s" % [_floor["floor"], _floor["name"], kills, goal, ("Portal verde abierto: [F] sube al piso %d  ·  Enter: pueblo" % (int(_floor["floor"]) + 1)) if int(_floor["floor"]) < MeadowFloor.MAX_FLOOR else "¡Praderas completadas!  ·  Enter: pueblo"]
-		_quest_label.add_theme_color_override("font_color", Color(0.6, 1.0, 0.5))
-	else:
-		_quest_label.text = "PISO %d · %s
-Misión: %s (%d/%d)" % [_floor["floor"], _floor["name"], quest["title"], kills, goal]
-		_quest_label.add_theme_color_override("font_color", Color(1.0, 0.92, 0.6))
+	if floor_ctl == null:
+		return
+	_quest_done = floor_ctl.runtime.complete
+	_quest_label.text = floor_ctl.hud_text()
+	_quest_label.add_theme_color_override("font_color", Color(0.6, 1.0, 0.5) if _quest_done else Color(1.0, 0.92, 0.6))
 
 
 func _refresh_status() -> void:
@@ -444,7 +464,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				var order := ["town", "floor", "training"]
 				_goto(order[(order.find(CharacterProfile.mode) + 1) % order.size()])
 			KEY_ENTER, KEY_KP_ENTER:
-				if _quest_done:
+				if _quest_done and not _modal_open():
 					_goto("town")
 			KEY_F5: world.warrior.progression.set_level(world.warrior.progression.level + 5)
 			KEY_F6:
