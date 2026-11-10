@@ -22,7 +22,7 @@ const RESOURCE_REGEN_DELAY: float = 2.0
 const RESOURCE_OOC_MULT: float = 4.0
 const ULTIMATE_COST: float = 100.0
 const SPECIAL_COST: float = 30.0
-## Armadura = Poise: cuánto daño de poise aguanta antes de entrar en stagger.
+## Armadura base de la clase: reduce el daño físico recibido (armadura / (armadura + 320), tope 60 %).
 const ARMOR: float = 25.0
 
 const SLOT_M1 := "M1"
@@ -72,7 +72,7 @@ const M1: Dictionary = {
 const M2: Dictionary = {
 	"id": &"mana_shield", "name": "Mana Shield", "short": "SHIELD", "slot": "M2",
 	"kind": "defense", "role": "Defensa", "implemented": true, "selectable": false,
-	"description": "Mantén M2: escudo de maná en todas direcciones que absorbe daño gastando 1 maná por punto. Si se acaba el maná se rompe. En los primeros 0.2 s es Arcane Deflection: anula el golpe, lo devuelve al atacante y, si era físico, rompe su poise.",
+	"description": "Mantén M2: escudo de maná en todas direcciones que absorbe daño gastando 1 maná por punto. Si se acaba el maná se rompe. En los primeros 0.2 s es Arcane Deflection: anula el golpe, lo devuelve al atacante e interrumpe su cast.",
 	"cast": "mana_shield", "anim": "cast", "damage_type": 7, "perfect_window": 0.2, "mana_per_damage": 1.0,
 	"clip": {"name": "standing_2h_cast_spell_01", "start": 0.3, "contact": 0.63, "end": 1.2},
 	"windup": 0.0, "active": 0.0, "recovery": 0.0, "cooldown": 0.0, "cost": 0.0, "move_factor": 0.6,
@@ -86,7 +86,7 @@ const ARCANE_ORB: Dictionary = {
 	"kind": "basic", "role": "Daño / quemadura", "description": "Cast 0.9 s (quieto): orbe arcano lento que corroe al objetivo.",
 	"implemented": true, "selectable": true, "cast": "projectile", "cast_bar": true, "anim": "cast",
 	"damage_type": 7,  # DamageSystem.Type.ARCANE
-	"windup": 0.9, "active": 0.05, "recovery": 0.25, "cooldown": 2.5, "cost": 10.0,
+	"windup": 0.6, "active": 0.05, "recovery": 0.2, "cooldown": 2.5, "cost": 10.0,
 	"speed": 420.0, "range": 520.0, "hit_radius": 14.0, "bonus_vs": {"rooted": 1.4, "slowed": 1.2}, "damage_mult": 1.8,
 	"effects": {"dot": {"damage_type": 7, "dps_mult": 0.35, "duration": 4.0}},
 	"rage_gain": 0.0, "move_factor": 0.0, "color": [0.85, 0.55, 1.0],
@@ -122,7 +122,7 @@ const STARFALL: Dictionary = {
 	"kind": "control", "role": "Daño en área", "description": "Apunta al suelo: un starfallo cae con gran daño de fuego.",
 	"implemented": true, "selectable": true, "cast": "aoe", "cast_bar": true, "anim": "cast", "target": "ground",
 	"damage_type": 7,
-	"windup": 1.6, "active": 0.10, "recovery": 0.30, "cooldown": 14.0, "cost": 40.0,
+	"windup": 1.0, "active": 0.10, "recovery": 0.25, "cooldown": 12.0, "cost": 40.0,
 	"range": 320.0, "radius": 100.0, "bonus_vs": {"rooted": 1.6, "slowed": 1.3}, "damage_mult": 4.0,
 	"rage_gain": 0.0, "move_factor": 0.0,
 }
@@ -133,7 +133,7 @@ const ARCANE_SURGE: Dictionary = {
 	"kind": "ultimate", "role": "Ultimate", "description": "Ultimate. Cast 2.2 s (quieto): explosión arcana enorme donde apuntes; empuja y silencia 2.5 s a todos los alcanzados.",
 	"implemented": true, "selectable": true, "cast": "aoe", "cast_bar": true, "anim": "cast", "target": "ground",
 	"damage_type": 7,
-	"windup": 2.2, "active": 0.10, "recovery": 0.40, "cooldown": 180.0, "cost": 0.0, "charge": 0.0,
+	"windup": 1.4, "active": 0.10, "recovery": 0.30, "cooldown": 60.0, "cost": 0.0, "charge": 0.0,
 	"range": 320.0, "radius": 160.0, "damage_mult": 5.0,
 	"effects": {"knockback": 150.0, "silence": 2.5},
 	"rage_gain": 0.0, "move_factor": 0.0,
@@ -149,7 +149,7 @@ const ARCANE_BIND: Dictionary = {
 	"windup": 0.25, "active": 0.05, "recovery": 0.25, "cooldown": 11.0, "cost": 25.0,
 	"speed": 760.0, "range": 440.0, "hit_radius": 12.0, "damage_mult": 0.6,
 	"effects": {"root": 2.5},
-	"poise": 0.0, "rage_gain": 0.0, "move_factor": 0.4, "color": [0.85, 0.55, 1.0],
+	"rage_gain": 0.0, "move_factor": 0.4, "color": [0.85, 0.55, 1.0],
 }
 
 const ARCANE_SILENCE: Dictionary = {

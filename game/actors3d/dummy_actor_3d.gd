@@ -72,7 +72,6 @@ func setup(p_sim: DummySim, p_arena: Arena3D) -> void:
 	sim.attack_missed.connect(_on_attack_missed)
 	sim.died.connect(_on_died)
 	sim.revived.connect(_on_revived)
-	sim.staggered.connect(_on_staggered)
 
 
 ## Aspecto del muñeco (tinte + peana); EnemyActor3D lo sustituye.
@@ -228,16 +227,6 @@ func on_struck(from: Vector2, hitstop: float, heavy: bool) -> void:
 		var tw := create_tween()
 		tw.tween_property(rig, "position", push, 0.05).set_delay(hitstop)
 		tw.tween_property(rig, "position", Vector3.ZERO, 0.16).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-
-
-## Poise roto: reacciona con un golpe largo, destello y anillo.
-func _on_staggered(seconds: float) -> void:
-	if not sim.alive:
-		return
-	rig.play_clip(ANIM_HIT, 0.0, 1.0, 0.3, 0.1, maxf(seconds - 0.1, 0.3), anim_idle, 0.04)
-	ArcaneFx.burst(arena, View3D.to3(sim.position, 1.9), Color(1.0, 0.95, 0.7), 36, 3.0, 0.13)
-	arena.spawn_shockwave(sim.position, 60.0, Color(1.0, 0.9, 0.5, 0.9), 0.3, 0.75)
-	arena.play_sfx(SFX_IMPACT, -4.0, 0.8)
 
 
 func _on_telegraph_started(_direction: Vector2, radius: float, arc_degrees: float) -> void:

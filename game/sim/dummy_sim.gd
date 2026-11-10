@@ -18,7 +18,6 @@ signal revived()
 signal interrupted()
 signal effect_applied(effect_name: String, seconds: float)
 signal dot_damage(amount: float, meta: Dictionary)
-signal staggered(seconds: float)
 
 enum State { IDLE, TELEGRAPH, RECOVER, DEAD }
 
@@ -73,10 +72,6 @@ var knock_vel: Vector2 = Vector2.ZERO
 var knock_timer: float = 0.0
 var silence_timer: float = 0.0
 var root_timer: float = 0.0
-var poise: float = 60.0
-var max_poise: float = 60.0
-var stagger_immunity: float = 0.0
-var _since_poise_hit: float = 99.0
 var dots := DotTracker.new()
 ## Resistencias por tipo de daño (DamageSystem.Type → fracción).
 var resist: Dictionary = {}
@@ -134,10 +129,6 @@ func step(tick_number: int, delta: float, warrior: Object) -> void:
 func _tick_effects(delta: float) -> void:
 	root_timer = maxf(0.0, root_timer - delta)
 	silence_timer = maxf(0.0, silence_timer - delta)
-	stagger_immunity = maxf(0.0, stagger_immunity - delta)
-	_since_poise_hit += delta
-	if _since_poise_hit > 3.0 and poise < max_poise:
-		poise = minf(max_poise, poise + 20.0 * delta)
 	cc.tick(delta)
 	for hit: Dictionary in dots.tick(delta):
 		take_damage(float(hit["amount"]), position, {DamageSystem.KEY: int(hit["type"]), "tick": true})
@@ -217,8 +208,6 @@ func _strike(warrior: Object, direction: Vector2, reach: float, arc: float, dama
 			return false
 
 	var fx := effects.duplicate()
-	if not fx.has("poise"):
-		fx["poise"] = 20.0
 	fx["attacker"] = self
 	var dealt: float = warrior.take_damage(damage, position, fx)
 	if dealt <= 0.0:
@@ -244,9 +233,6 @@ func take_damage(amount: float, source_position: Vector2 = Vector2.ZERO, effects
 
 	if not effects.is_empty():
 		apply_effects(effects, source_position)
-		var poise_hit := float(effects.get("poise", 0.0))
-		if poise_hit > 0.0 and DamageSystem.type_of(effects) == DamageSystem.Type.PHYSICAL and health > 0.0:
-			_lose_poise(poise_hit)
 
 	if health <= 0.0:
 		health = 0.0
@@ -311,29 +297,6 @@ func apply_effects(effects: Dictionary, source: Vector2 = Vector2.ZERO) -> void:
 		effect_applied.emit("stun", stun)
 
 
-func _lose_poise(amount: float) -> void:
-	if amount <= 0.0 or stagger_immunity > 0.0 or not alive:
-		return
-	poise -= amount
-	_since_poise_hit = 0.0
-	if poise <= 0.0:
-		_stagger(0.9)
-
-
-func _stagger(seconds: float) -> void:
-	poise = max_poise
-	stagger_immunity = seconds + 3.0
-	stun_timer = maxf(stun_timer, seconds)
-	interrupt()
-	staggered.emit(seconds)
-	effect_applied.emit("stagger", seconds)
-
-
-func break_poise() -> void:
-	if alive:
-		_stagger(1.3)
-
-
 func interrupt() -> void:
 	interrupted_timer = 0.5
 	if state == State.TELEGRAPH:
@@ -357,8 +320,6 @@ func revive() -> void:
 	interrupted_timer = 0.0
 	stun_timer = 0.0
 	knock_timer = 0.0
-	poise = max_poise
-	stagger_immunity = 0.0
 	cc.reset()
 	dots.clear()
 	health_changed.emit(health, max_health)

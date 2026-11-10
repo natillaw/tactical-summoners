@@ -17,7 +17,7 @@ const RESOURCE_REGEN_DELAY: float = 0.0
 const RESOURCE_OOC_MULT: float = 1.0
 const ULTIMATE_COST: float = 100.0
 const SPECIAL_COST: float = 30.0
-## Armadura = Poise: cuánto daño de poise aguanta antes de entrar en stagger.
+## Armadura base de la clase: reduce el daño físico recibido (armadura / (armadura + 320), tope 60 %).
 const ARMOR: float = 45.0
 
 const SLOT_M1 := "M1"
@@ -130,7 +130,7 @@ const DEATH_SENTENCE: Dictionary = {
 	"full_clip": {"clip": "ual2/Sword_Dash", "from": 0.06, "to": 0.55, "contact": 0.28, "late": true},
 	"flurry_clips": [4, 3, 4, 3, 4],
 	"lunge": 140.0, "leap_height": 18.0,
-	"windup": 0.20, "active": 0.25, "recovery": 0.95, "cooldown": 180.0, "cost": 0.0, "charge": 0.0,
+	"windup": 0.20, "active": 0.25, "recovery": 0.95, "cooldown": 60.0, "cost": 0.0, "charge": 0.0,
 	"range": 95.0, "arc": 110.0, "damage_mult": 1.3, "effects": {"stun": 2.0},
 	"followups": {"count": 4, "interval": 0.15, "mult": 0.9, "final_mult": 2.6},
 	"rage_gain": 0.0, "move_factor": 0.0,
@@ -153,7 +153,7 @@ const MARK_FOR_DEATH: Dictionary = {
 	"full_clip": {"clip": "ual2/OverhandThrow", "from": 0.12, "to": 0.6, "contact": 0.28},
 	"windup": 0.12, "active": 0.05, "recovery": 0.20, "cooldown": 12.0, "cost": 15.0,
 	"speed": 720.0, "range": 430.0, "hit_radius": 10.0, "damage_mult": 0.5, "effects": {"mark": 8.0},
-	"poise": 0.0, "rage_gain": 0.0, "move_factor": 0.5, "color": [0.95, 0.3, 0.3],
+	"rage_gain": 0.0, "move_factor": 0.5, "color": [0.95, 0.3, 0.3],
 }
 
 ## Pasiva: a vida baja, más daño y velocidad.

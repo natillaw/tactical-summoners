@@ -62,7 +62,7 @@ func setup(p_sim: DummySim, p_arena: Arena3D) -> void:
 		var c := CLIP_ROLL
 		rig.play_clip(String(c["clip"]), float(c["from"]), float(c["to"]), float(c["contact"]), EnemySim.ROLL_TIME * 0.7, EnemySim.ROLL_TIME * 0.5, ANIM_SWORD_IDLE))
 	enemy.effect_applied.connect(func(effect: String, _s: float) -> void:
-		if effect == "stun" or effect == "stagger":
+		if effect == "stun":
 			rig.play_clip(ANIM_STUN, 0.0, 1.0, 0.3, 0.1, 0.8, ANIM_SWORD_IDLE))
 	enemy.m1_started.connect(_on_m1_started)
 	enemy.parry_started.connect(func() -> void:

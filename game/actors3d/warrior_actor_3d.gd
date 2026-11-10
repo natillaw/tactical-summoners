@@ -386,7 +386,6 @@ func _connect_signals() -> void:
 	sim.stunned.connect(_on_stunned)
 	sim.guard_changed.connect(_on_guard_changed)
 	sim.guard_result.connect(_on_guard_result)
-	sim.staggered.connect(_on_staggered)
 	sim.perfect_evade.connect(_on_perfect_evade)
 	sim.visibility_changed.connect(_set_invisible)
 	sim.cast_cancelled.connect(func(_skill: Dictionary) -> void: rig.stop_overlay())
@@ -1078,13 +1077,6 @@ func _on_guard_result(kind: String, _source: Vector2, _physical: bool) -> void:
 			arena.play_sfx(SFX_SLAM, -6.0, 1.4)
 			if _shield_fx != null:
 				_shield_fx.visible = false
-
-
-## Poise roto: destello y sacudida (la animación de golpe la pone _on_stunned).
-func _on_staggered(_seconds: float) -> void:
-	ArcaneFx.burst(arena, View3D.to3(sim.position, 1.9), Color(1.0, 0.95, 0.7), 36, 3.0, 0.13)
-	arena.spawn_shockwave(sim.position, 60.0, Color(1.0, 0.9, 0.5, 0.9), 0.3, 0.75)
-	_shake(2.4, 0.14)
 
 
 ## Esquiva perfecta del Ranger: destello dorado y siguiente ráfaga potenciada.

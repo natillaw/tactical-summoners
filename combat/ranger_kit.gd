@@ -17,7 +17,7 @@ const RESOURCE_REGEN_DELAY: float = 0.0
 const RESOURCE_OOC_MULT: float = 1.0
 const ULTIMATE_COST: float = 100.0
 const SPECIAL_COST: float = 30.0
-## Armadura = Poise: cuánto daño de poise aguanta antes de entrar en stagger.
+## Armadura base de la clase: reduce el daño físico recibido (armadura / (armadura + 320), tope 60 %).
 const ARMOR: float = 55.0
 
 const SLOT_M1 := "M1"
@@ -75,7 +75,7 @@ const CONCENTRATED_SHOT: Dictionary = {
 	"kind": "basic", "role": "Daño / penetración", "description": "Disparo concentrado: barra de cast de 1.4 s. Solo sale con la barra llena; si te mueves o te golpean, se cancela. Atraviesa enemigos.",
 	"implemented": true, "selectable": true, "cast": "projectile", "anim": "cast", "cast_bar": true,
 	"clip": {"anim": "class/standing_aim_overdraw", "start": 0.3, "contact": 1.33, "end": 1.8},
-	"windup": 1.4, "active": 0.05, "recovery": 0.30, "cooldown": 1.0, "cost": 20.0,
+	"windup": 0.9, "active": 0.05, "recovery": 0.25, "cooldown": 1.0, "cost": 20.0,
 	"speed": 800.0, "range": 760.0, "hit_radius": 10.0, "damage_mult": 3.2, "bonus_vs": {"rooted": 1.5, "slowed": 1.25, "marked": 1.3}, "pierce": true,
 	"rage_gain": 0.0, "move_factor": 0.0, "color": [1.0, 0.85, 0.4],
 }
@@ -125,7 +125,7 @@ const RAIN_OF_ARROWS: Dictionary = {
 	"kind": "ultimate", "role": "Ultimate", "description": "Ultimate: marca una zona y una lluvia de flechas cae durante 2 s, golpeando una y otra vez.",
 	"implemented": true, "selectable": true, "cast": "aoe", "anim": "cast", "target": "ground",
 	"clip": {"anim": "class/standing_draw_arrow", "start": 0.1, "contact": 0.33, "end": 0.7},
-	"windup": 0.80, "active": 2.1, "recovery": 0.35, "cooldown": 180.0, "cost": 0.0, "charge": 0.0,
+	"windup": 0.80, "active": 2.1, "recovery": 0.35, "cooldown": 60.0, "cost": 0.0, "charge": 0.0,
 	"range": 340.0, "radius": 170.0, "damage_mult": 1.2, "damage_interval": 0.35, "tick_mult": 0.8,
 	"rage_gain": 0.0, "move_factor": 0.2,
 }
@@ -147,7 +147,7 @@ const HUNTERS_MARK: Dictionary = {
 	"clip": {"anim": "class/standing_aim_recoil", "start": 0.0, "contact": 0.2, "end": 0.65},
 	"windup": 0.22, "active": 0.05, "recovery": 0.20, "cooldown": 10.0, "cost": 10.0,
 	"speed": 820.0, "range": 620.0, "hit_radius": 9.0, "damage_mult": 0.3, "effects": {"mark": 8.0},
-	"poise": 0.0, "rage_gain": 0.0, "move_factor": 0.5, "color": [1.0, 0.45, 0.2],
+	"rage_gain": 0.0, "move_factor": 0.5, "color": [1.0, 0.45, 0.2],
 }
 
 ## Pasiva: a vida baja, más daño y velocidad.

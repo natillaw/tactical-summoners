@@ -155,8 +155,6 @@ func _draw_status(warrior: WarriorSim) -> void:
 		if x < hp.end.x - 1.0:
 			draw_line(Vector2(x, hp.position.y), Vector2(x, hp.end.y), Color(0.03, 0.03, 0.05, 0.9), 1.0)
 	_draw_text("%d / %d" % [ceili(warrior.health), ceili(warrior.max_health)], Vector2(hp.position.x, hp.end.y - 2.0), 7, TEXT, HORIZONTAL_ALIGNMENT_CENTER, width)
-	# Poise: línea fina bajo la vida.
-	_bar(Rect2(left, STATUS_Y + 11.0, width, 1.5), clampf(warrior.poise / maxf(warrior.max_poise, 1.0), 0.0, 1.0), Color(0.95, 0.85, 0.4, 1.0))
 	# Recurso (rage / maná / energía).
 	var resource_name := String(ClassRegistry.active_kit().RESOURCE_NAME)
 	var resource_color := RAGE
