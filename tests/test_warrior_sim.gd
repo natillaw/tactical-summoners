@@ -969,9 +969,9 @@ func _test_flank_stacks_castbar() -> void:
 	w.aim_dir = Vector2(0, -1)
 	d.facing = Vector2(0, 1)  # mira hacia el jugador: de frente
 	w.debug_refill()
-	_check(not w._can_start("E"), "Cheap Shot no se puede lanzar de frente")
+	_check(w._can_start("E"), "Cheap Shot se puede lanzar de frente (stun corto)")
 	d.facing = Vector2(0, -1)  # de espaldas
-	_check(w._can_start("E"), "Cheap Shot sí se puede lanzar por la espalda")
+	_check(w._can_start("E"), "Cheap Shot también por la espalda (stun largo)")
 	d.facing = Vector2(0, 1)
 	var front := 0.0
 	var back := 0.0

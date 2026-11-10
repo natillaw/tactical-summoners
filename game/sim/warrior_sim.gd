@@ -897,6 +897,8 @@ func _hit_target(target: Object, mult: float, effects: Dictionary, skill: Dictio
 	var fx := effects.duplicate()
 	fx[DamageSystem.KEY] = type
 	fx["attacker"] = self
+	if sk.has("behind_stun") and _is_behind(target):
+		fx["stun"] = float(sk["behind_stun"])  # por la espalda el stun es más largo
 	if type == DamageSystem.Type.PHYSICAL:
 		fx["poise"] = float(sk.get("poise", clampf(6.0 + 10.0 * mult, 6.0, 60.0)))
 	if fx.has("dot"):

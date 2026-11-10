@@ -327,8 +327,8 @@ func _update_facing(delta: float) -> void:
 		rate = TURN_SPEED_ATTACK
 	elif sim.velocity.length_squared() > 64.0:
 		var offset := wrapf(View3D.yaw_for(sim.velocity) - cam_yaw, -PI, PI)
-		if absf(offset) <= deg_to_rad(45.0):
-			target_yaw = cam_yaw + offset  # diagonal hacia delante: el cuerpo se inclina; en lateral/atrás mira a la cámara
+		if absf(offset) <= deg_to_rad(100.0):
+			target_yaw = cam_yaw + clampf(offset, deg_to_rad(-60.0), deg_to_rad(60.0))  # el cuerpo se inclina hacia el movimiento
 	_yaw = lerp_angle(_yaw, target_yaw, 1.0 - exp(-rate * delta))
 
 	if _spinning:
@@ -382,8 +382,7 @@ func _move_angle() -> float:
 
 
 func _is_lateral() -> bool:
-	var a := absf(_move_angle())
-	return a > 45.0 and a <= 135.0
+	return false  # animaciones de strafe desactivadas (se veían mal)
 
 
 func _moving_back() -> bool:
