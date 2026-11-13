@@ -1645,7 +1645,9 @@ func use_skill_slot(i: int, enemies: Array, allies: Array, aim: Vector2 = Vector
 		combo = 0
 	elif sk.has("combo"):
 		combo = mini(SkillDefs.COMBO_MAX, combo + int(sk["combo"]))
-	if tgt != self:
+	if aim != Vector2.INF and aim.distance_to(position) > 4.0:
+		_face(aim - position)                    # aimed by the player: look where the skill goes (walking never turns to the cursor)
+	elif tgt != self:
 		_face(tgt.position - position)
 	var point := tgt.position
 	if String(sk["target"]) == "target_aoe" and _aim != Vector2.INF:
